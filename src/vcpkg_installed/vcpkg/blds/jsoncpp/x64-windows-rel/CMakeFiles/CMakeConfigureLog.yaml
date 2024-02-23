@@ -1,0 +1,322 @@
+
+---
+events:
+  -
+    kind: "message-v1"
+    backtrace:
+      - "C:/Program Files/Microsoft Visual Studio/2022/Community/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.27/Modules/CMakeDetermineSystem.cmake:206 (message)"
+      - "CMakeLists.txt:64 (project)"
+    message: |
+      The target system is: Windows - 10.0.22621 - AMD64
+      The host system is: Windows - 10.0.22621 - AMD64
+  -
+    kind: "message-v1"
+    backtrace:
+      - "C:/Program Files/Microsoft Visual Studio/2022/Community/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.27/Modules/CMakeDetermineCompilerId.cmake:17 (message)"
+      - "C:/Program Files/Microsoft Visual Studio/2022/Community/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.27/Modules/CMakeDetermineCompilerId.cmake:64 (__determine_compiler_id_test)"
+      - "C:/Program Files/Microsoft Visual Studio/2022/Community/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.27/Modules/CMakeDetermineCXXCompiler.cmake:126 (CMAKE_DETERMINE_COMPILER_ID)"
+      - "CMakeLists.txt:64 (project)"
+    message: |
+      Compiling the CXX compiler identification source file "CMakeCXXCompilerId.cpp" succeeded.
+      Compiler: C:/Program Files/Microsoft Visual Studio/2022/Community/VC/Tools/MSVC/14.38.33130/bin/Hostx64/x64/cl.exe 
+      Build flags: /nologo;/DWIN32;/D_WINDOWS;/W3;/utf-8;/GR;/EHsc;/MP
+      Id flags:  
+      
+      The output was:
+      0
+      CMakeCXXCompilerId.cpp
+      
+      
+      Compilation of the CXX compiler identification source "CMakeCXXCompilerId.cpp" produced "CMakeCXXCompilerId.exe"
+      
+      Compilation of the CXX compiler identification source "CMakeCXXCompilerId.cpp" produced "CMakeCXXCompilerId.obj"
+      
+      The CXX compiler identification is MSVC, found in:
+        C:/Program Files (x86)/Steam/steamapps/common/Quake 2/rerelease/mymod/src/vcpkg_installed/vcpkg/blds/jsoncpp/x64-windows-rel/CMakeFiles/3.27.2-msvc1/CompilerIdCXX/CMakeCXXCompilerId.exe
+      
+  -
+    kind: "message-v1"
+    backtrace:
+      - "C:/Program Files/Microsoft Visual Studio/2022/Community/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.27/Modules/CMakeDetermineCompilerId.cmake:1158 (message)"
+      - "C:/Program Files/Microsoft Visual Studio/2022/Community/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.27/Modules/CMakeDetermineCompilerId.cmake:221 (CMAKE_DETERMINE_MSVC_SHOWINCLUDES_PREFIX)"
+      - "C:/Program Files/Microsoft Visual Studio/2022/Community/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.27/Modules/CMakeDetermineCXXCompiler.cmake:126 (CMAKE_DETERMINE_COMPILER_ID)"
+      - "CMakeLists.txt:64 (project)"
+    message: |
+      Detecting CXX compiler /showIncludes prefix:
+        main.c
+        Note: including file: C:\\Program Files (x86)\\Steam\\steamapps\\common\\Quake 2\\rerelease\\mymod\\src\\vcpkg_installed\\vcpkg\\blds\\jsoncpp\\x64-windows-rel\\CMakeFiles\\ShowIncludes\\foo.h
+        
+      Found prefix "Note: including file: "
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "C:/Program Files/Microsoft Visual Studio/2022/Community/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.27/Modules/CMakeDetermineCompilerABI.cmake:57 (try_compile)"
+      - "C:/Program Files/Microsoft Visual Studio/2022/Community/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.27/Modules/CMakeTestCXXCompiler.cmake:26 (CMAKE_DETERMINE_COMPILER_ABI)"
+      - "CMakeLists.txt:64 (project)"
+    checks:
+      - "Detecting CXX compiler ABI info"
+    directories:
+      source: "C:/Program Files (x86)/Steam/steamapps/common/Quake 2/rerelease/mymod/src/vcpkg_installed/vcpkg/blds/jsoncpp/x64-windows-rel/CMakeFiles/CMakeScratch/TryCompile-qzmbku"
+      binary: "C:/Program Files (x86)/Steam/steamapps/common/Quake 2/rerelease/mymod/src/vcpkg_installed/vcpkg/blds/jsoncpp/x64-windows-rel/CMakeFiles/CMakeScratch/TryCompile-qzmbku"
+    cmakeVariables:
+      CMAKE_CXX_FLAGS: " /nologo /DWIN32 /D_WINDOWS /W3 /utf-8 /GR /EHsc /MP "
+      CMAKE_CXX_FLAGS_DEBUG: "/D_DEBUG /MDd /Z7 /Ob0 /Od /RTC1 "
+      CMAKE_EXE_LINKER_FLAGS: "/machine:x64"
+      CMAKE_MODULE_PATH: "C:/Program Files (x86)/Steam/steamapps/common/Quake 2/rerelease/mymod/src/vcpkg_installed/vcpkg/blds/jsoncpp/src/3918c327b1-034a82149a.clean/cmake"
+      CMAKE_MSVC_DEBUG_INFORMATION_FORMAT: ""
+      CMAKE_MSVC_RUNTIME_LIBRARY: "MultiThreaded$<$<CONFIG:Debug>:Debug>$<$<STREQUAL:dynamic,dynamic>:DLL>"
+      VCPKG_APPLOCAL_DEPS: "OFF"
+      VCPKG_CHAINLOAD_TOOLCHAIN_FILE: "C:/Program Files/Microsoft Visual Studio/2022/Community/VC/vcpkg/scripts/toolchains/windows.cmake"
+      VCPKG_TARGET_ARCHITECTURE: "x64"
+      VCPKG_TARGET_TRIPLET: "x64-windows"
+      Z_VCPKG_ROOT_DIR: "C:/Program Files/Microsoft Visual Studio/2022/Community/VC/vcpkg"
+    buildResult:
+      variable: "CMAKE_CXX_ABI_COMPILED"
+      cached: true
+      stdout: |
+        Change Dir: 'C:/Program Files (x86)/Steam/steamapps/common/Quake 2/rerelease/mymod/src/vcpkg_installed/vcpkg/blds/jsoncpp/x64-windows-rel/CMakeFiles/CMakeScratch/TryCompile-qzmbku'
+        
+        Run Build Command(s): "C:/Program Files/Microsoft Visual Studio/2022/Community/Common7/IDE/CommonExtensions/Microsoft/CMake/Ninja/ninja.exe" -v cmTC_5af05
+        [1/2] C:\\PROGRA~1\\MICROS~4\\2022\\COMMUN~1\\VC\\Tools\\MSVC\\1438~1.331\\bin\\Hostx64\\x64\\cl.exe  /nologo /TP   /nologo /DWIN32 /D_WINDOWS /W3 /utf-8 /GR /EHsc /MP   /D_DEBUG /MDd /Z7 /Ob0 /Od /RTC1 /showIncludes /FoCMakeFiles\\cmTC_5af05.dir\\CMakeCXXCompilerABI.cpp.obj /FdCMakeFiles\\cmTC_5af05.dir\\ /FS -c "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\Common7\\IDE\\CommonExtensions\\Microsoft\\CMake\\CMake\\share\\cmake-3.27\\Modules\\CMakeCXXCompilerABI.cpp"
+        [2/2] cmd.exe /C "cd . && "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\Common7\\IDE\\CommonExtensions\\Microsoft\\CMake\\CMake\\bin\\cmake.exe" -E vs_link_exe --intdir=CMakeFiles\\cmTC_5af05.dir --rc=C:\\PROGRA~2\\WI3CF2~1\\10\\bin\\100226~1.0\\x64\\rc.exe --mt=C:\\PROGRA~2\\WI3CF2~1\\10\\bin\\100226~1.0\\x64\\mt.exe --manifests  -- C:\\PROGRA~1\\MICROS~4\\2022\\COMMUN~1\\VC\\Tools\\MSVC\\1438~1.331\\bin\\Hostx64\\x64\\link.exe /nologo CMakeFiles\\cmTC_5af05.dir\\CMakeCXXCompilerABI.cpp.obj  /out:cmTC_5af05.exe /implib:cmTC_5af05.lib /pdb:cmTC_5af05.pdb /version:0.0 /machine:x64  /debug /INCREMENTAL /subsystem:console  kernel32.lib user32.lib gdi32.lib winspool.lib shell32.lib ole32.lib oleaut32.lib uuid.lib comdlg32.lib advapi32.lib && cd ."
+        
+      exitCode: 0
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "C:/Program Files/Microsoft Visual Studio/2022/Community/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.27/Modules/CheckIncludeFileCXX.cmake:89 (try_compile)"
+      - "src/lib_json/CMakeLists.txt:11 (check_include_file_cxx)"
+    checks:
+      - "Looking for C++ include clocale"
+    directories:
+      source: "C:/Program Files (x86)/Steam/steamapps/common/Quake 2/rerelease/mymod/src/vcpkg_installed/vcpkg/blds/jsoncpp/x64-windows-rel/CMakeFiles/CMakeScratch/TryCompile-ywpe1r"
+      binary: "C:/Program Files (x86)/Steam/steamapps/common/Quake 2/rerelease/mymod/src/vcpkg_installed/vcpkg/blds/jsoncpp/x64-windows-rel/CMakeFiles/CMakeScratch/TryCompile-ywpe1r"
+    cmakeVariables:
+      CMAKE_CXX_FLAGS: " /nologo /DWIN32 /D_WINDOWS /W3 /utf-8 /GR /EHsc /MP "
+      CMAKE_CXX_FLAGS_DEBUG: "/D_DEBUG /MDd /Z7 /Ob0 /Od /RTC1 "
+      CMAKE_EXE_LINKER_FLAGS: "/machine:x64"
+      CMAKE_MODULE_PATH: "C:/Program Files (x86)/Steam/steamapps/common/Quake 2/rerelease/mymod/src/vcpkg_installed/vcpkg/blds/jsoncpp/src/3918c327b1-034a82149a.clean/cmake"
+      CMAKE_MSVC_DEBUG_INFORMATION_FORMAT: ""
+      CMAKE_MSVC_RUNTIME_LIBRARY: "MultiThreaded$<$<CONFIG:Debug>:Debug>$<$<STREQUAL:dynamic,dynamic>:DLL>"
+      VCPKG_APPLOCAL_DEPS: "OFF"
+      VCPKG_CHAINLOAD_TOOLCHAIN_FILE: "C:/Program Files/Microsoft Visual Studio/2022/Community/VC/vcpkg/scripts/toolchains/windows.cmake"
+      VCPKG_TARGET_ARCHITECTURE: "x64"
+      VCPKG_TARGET_TRIPLET: "x64-windows"
+      Z_VCPKG_ROOT_DIR: "C:/Program Files/Microsoft Visual Studio/2022/Community/VC/vcpkg"
+    buildResult:
+      variable: "HAVE_CLOCALE"
+      cached: true
+      stdout: |
+        Change Dir: 'C:/Program Files (x86)/Steam/steamapps/common/Quake 2/rerelease/mymod/src/vcpkg_installed/vcpkg/blds/jsoncpp/x64-windows-rel/CMakeFiles/CMakeScratch/TryCompile-ywpe1r'
+        
+        Run Build Command(s): "C:/Program Files/Microsoft Visual Studio/2022/Community/Common7/IDE/CommonExtensions/Microsoft/CMake/Ninja/ninja.exe" -v cmTC_81b26
+        [1/2] C:\\PROGRA~1\\MICROS~4\\2022\\COMMUN~1\\VC\\Tools\\MSVC\\1438~1.331\\bin\\Hostx64\\x64\\cl.exe  /nologo /TP   /nologo /DWIN32 /D_WINDOWS /W3 /utf-8 /GR /EHsc /MP   /D_DEBUG /MDd /Z7 /Ob0 /Od /RTC1 /showIncludes /FoCMakeFiles\\cmTC_81b26.dir\\CheckIncludeFile.cxx.obj /FdCMakeFiles\\cmTC_81b26.dir\\ /FS -c "C:\\Program Files (x86)\\Steam\\steamapps\\common\\Quake 2\\rerelease\\mymod\\src\\vcpkg_installed\\vcpkg\\blds\\jsoncpp\\x64-windows-rel\\CMakeFiles\\CMakeScratch\\TryCompile-ywpe1r\\CheckIncludeFile.cxx"
+        [2/2] cmd.exe /C "cd . && "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\Common7\\IDE\\CommonExtensions\\Microsoft\\CMake\\CMake\\bin\\cmake.exe" -E vs_link_exe --intdir=CMakeFiles\\cmTC_81b26.dir --rc=C:\\PROGRA~2\\WI3CF2~1\\10\\bin\\100226~1.0\\x64\\rc.exe --mt=C:\\PROGRA~2\\WI3CF2~1\\10\\bin\\100226~1.0\\x64\\mt.exe --manifests  -- C:\\PROGRA~1\\MICROS~4\\2022\\COMMUN~1\\VC\\Tools\\MSVC\\1438~1.331\\bin\\Hostx64\\x64\\link.exe /nologo CMakeFiles\\cmTC_81b26.dir\\CheckIncludeFile.cxx.obj  /out:cmTC_81b26.exe /implib:cmTC_81b26.lib /pdb:cmTC_81b26.pdb /version:0.0 /machine:x64  /debug /INCREMENTAL /subsystem:console  kernel32.lib user32.lib gdi32.lib winspool.lib shell32.lib ole32.lib oleaut32.lib uuid.lib comdlg32.lib advapi32.lib && cd ."
+        
+      exitCode: 0
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "C:/Program Files/Microsoft Visual Studio/2022/Community/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.27/Modules/CheckSymbolExists.cmake:140 (try_compile)"
+      - "C:/Program Files/Microsoft Visual Studio/2022/Community/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.27/Modules/CheckCXXSymbolExists.cmake:72 (__CHECK_SYMBOL_EXISTS_IMPL)"
+      - "src/lib_json/CMakeLists.txt:12 (check_cxx_symbol_exists)"
+    checks:
+      - "Looking for localeconv"
+    directories:
+      source: "C:/Program Files (x86)/Steam/steamapps/common/Quake 2/rerelease/mymod/src/vcpkg_installed/vcpkg/blds/jsoncpp/x64-windows-rel/CMakeFiles/CMakeScratch/TryCompile-c8nxx4"
+      binary: "C:/Program Files (x86)/Steam/steamapps/common/Quake 2/rerelease/mymod/src/vcpkg_installed/vcpkg/blds/jsoncpp/x64-windows-rel/CMakeFiles/CMakeScratch/TryCompile-c8nxx4"
+    cmakeVariables:
+      CMAKE_CXX_FLAGS: " /nologo /DWIN32 /D_WINDOWS /W3 /utf-8 /GR /EHsc /MP "
+      CMAKE_CXX_FLAGS_DEBUG: "/D_DEBUG /MDd /Z7 /Ob0 /Od /RTC1 "
+      CMAKE_EXE_LINKER_FLAGS: "/machine:x64"
+      CMAKE_MODULE_PATH: "C:/Program Files (x86)/Steam/steamapps/common/Quake 2/rerelease/mymod/src/vcpkg_installed/vcpkg/blds/jsoncpp/src/3918c327b1-034a82149a.clean/cmake"
+      CMAKE_MSVC_DEBUG_INFORMATION_FORMAT: ""
+      CMAKE_MSVC_RUNTIME_LIBRARY: "MultiThreaded$<$<CONFIG:Debug>:Debug>$<$<STREQUAL:dynamic,dynamic>:DLL>"
+      VCPKG_APPLOCAL_DEPS: "OFF"
+      VCPKG_CHAINLOAD_TOOLCHAIN_FILE: "C:/Program Files/Microsoft Visual Studio/2022/Community/VC/vcpkg/scripts/toolchains/windows.cmake"
+      VCPKG_TARGET_ARCHITECTURE: "x64"
+      VCPKG_TARGET_TRIPLET: "x64-windows"
+      Z_VCPKG_ROOT_DIR: "C:/Program Files/Microsoft Visual Studio/2022/Community/VC/vcpkg"
+    buildResult:
+      variable: "HAVE_LOCALECONV"
+      cached: true
+      stdout: |
+        Change Dir: 'C:/Program Files (x86)/Steam/steamapps/common/Quake 2/rerelease/mymod/src/vcpkg_installed/vcpkg/blds/jsoncpp/x64-windows-rel/CMakeFiles/CMakeScratch/TryCompile-c8nxx4'
+        
+        Run Build Command(s): "C:/Program Files/Microsoft Visual Studio/2022/Community/Common7/IDE/CommonExtensions/Microsoft/CMake/Ninja/ninja.exe" -v cmTC_036e7
+        [1/2] C:\\PROGRA~1\\MICROS~4\\2022\\COMMUN~1\\VC\\Tools\\MSVC\\1438~1.331\\bin\\Hostx64\\x64\\cl.exe  /nologo /TP   /nologo /DWIN32 /D_WINDOWS /W3 /utf-8 /GR /EHsc /MP   /D_DEBUG /MDd /Z7 /Ob0 /Od /RTC1 /showIncludes /FoCMakeFiles\\cmTC_036e7.dir\\CheckSymbolExists.cxx.obj /FdCMakeFiles\\cmTC_036e7.dir\\ /FS -c "C:\\Program Files (x86)\\Steam\\steamapps\\common\\Quake 2\\rerelease\\mymod\\src\\vcpkg_installed\\vcpkg\\blds\\jsoncpp\\x64-windows-rel\\CMakeFiles\\CMakeScratch\\TryCompile-c8nxx4\\CheckSymbolExists.cxx"
+        [2/2] cmd.exe /C "cd . && "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\Common7\\IDE\\CommonExtensions\\Microsoft\\CMake\\CMake\\bin\\cmake.exe" -E vs_link_exe --intdir=CMakeFiles\\cmTC_036e7.dir --rc=C:\\PROGRA~2\\WI3CF2~1\\10\\bin\\100226~1.0\\x64\\rc.exe --mt=C:\\PROGRA~2\\WI3CF2~1\\10\\bin\\100226~1.0\\x64\\mt.exe --manifests  -- C:\\PROGRA~1\\MICROS~4\\2022\\COMMUN~1\\VC\\Tools\\MSVC\\1438~1.331\\bin\\Hostx64\\x64\\link.exe /nologo CMakeFiles\\cmTC_036e7.dir\\CheckSymbolExists.cxx.obj  /out:cmTC_036e7.exe /implib:cmTC_036e7.lib /pdb:cmTC_036e7.pdb /version:0.0 /machine:x64  /debug /INCREMENTAL /subsystem:console  kernel32.lib user32.lib gdi32.lib winspool.lib shell32.lib ole32.lib oleaut32.lib uuid.lib comdlg32.lib advapi32.lib && cd ."
+        
+      exitCode: 0
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "C:/Program Files/Microsoft Visual Studio/2022/Community/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.27/Modules/CheckIncludeFileCXX.cmake:89 (try_compile)"
+      - "C:/Program Files/Microsoft Visual Studio/2022/Community/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.27/Modules/CheckTypeSize.cmake:254 (check_include_file_cxx)"
+      - "src/lib_json/CMakeLists.txt:24 (check_type_size)"
+    checks:
+      - "Looking for C++ include sys/types.h"
+    directories:
+      source: "C:/Program Files (x86)/Steam/steamapps/common/Quake 2/rerelease/mymod/src/vcpkg_installed/vcpkg/blds/jsoncpp/x64-windows-rel/CMakeFiles/CMakeScratch/TryCompile-8mj61j"
+      binary: "C:/Program Files (x86)/Steam/steamapps/common/Quake 2/rerelease/mymod/src/vcpkg_installed/vcpkg/blds/jsoncpp/x64-windows-rel/CMakeFiles/CMakeScratch/TryCompile-8mj61j"
+    cmakeVariables:
+      CMAKE_CXX_FLAGS: " /nologo /DWIN32 /D_WINDOWS /W3 /utf-8 /GR /EHsc /MP "
+      CMAKE_CXX_FLAGS_DEBUG: "/D_DEBUG /MDd /Z7 /Ob0 /Od /RTC1 "
+      CMAKE_EXE_LINKER_FLAGS: "/machine:x64"
+      CMAKE_MODULE_PATH: "C:/Program Files (x86)/Steam/steamapps/common/Quake 2/rerelease/mymod/src/vcpkg_installed/vcpkg/blds/jsoncpp/src/3918c327b1-034a82149a.clean/cmake"
+      CMAKE_MSVC_DEBUG_INFORMATION_FORMAT: ""
+      CMAKE_MSVC_RUNTIME_LIBRARY: "MultiThreaded$<$<CONFIG:Debug>:Debug>$<$<STREQUAL:dynamic,dynamic>:DLL>"
+      VCPKG_APPLOCAL_DEPS: "OFF"
+      VCPKG_CHAINLOAD_TOOLCHAIN_FILE: "C:/Program Files/Microsoft Visual Studio/2022/Community/VC/vcpkg/scripts/toolchains/windows.cmake"
+      VCPKG_TARGET_ARCHITECTURE: "x64"
+      VCPKG_TARGET_TRIPLET: "x64-windows"
+      Z_VCPKG_ROOT_DIR: "C:/Program Files/Microsoft Visual Studio/2022/Community/VC/vcpkg"
+    buildResult:
+      variable: "HAVE_SYS_TYPES_H"
+      cached: true
+      stdout: |
+        Change Dir: 'C:/Program Files (x86)/Steam/steamapps/common/Quake 2/rerelease/mymod/src/vcpkg_installed/vcpkg/blds/jsoncpp/x64-windows-rel/CMakeFiles/CMakeScratch/TryCompile-8mj61j'
+        
+        Run Build Command(s): "C:/Program Files/Microsoft Visual Studio/2022/Community/Common7/IDE/CommonExtensions/Microsoft/CMake/Ninja/ninja.exe" -v cmTC_58c27
+        [1/2] C:\\PROGRA~1\\MICROS~4\\2022\\COMMUN~1\\VC\\Tools\\MSVC\\1438~1.331\\bin\\Hostx64\\x64\\cl.exe  /nologo /TP   /nologo /DWIN32 /D_WINDOWS /W3 /utf-8 /GR /EHsc /MP   /D_DEBUG /MDd /Z7 /Ob0 /Od /RTC1 /showIncludes /FoCMakeFiles\\cmTC_58c27.dir\\CheckIncludeFile.cxx.obj /FdCMakeFiles\\cmTC_58c27.dir\\ /FS -c "C:\\Program Files (x86)\\Steam\\steamapps\\common\\Quake 2\\rerelease\\mymod\\src\\vcpkg_installed\\vcpkg\\blds\\jsoncpp\\x64-windows-rel\\CMakeFiles\\CMakeScratch\\TryCompile-8mj61j\\CheckIncludeFile.cxx"
+        [2/2] cmd.exe /C "cd . && "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\Common7\\IDE\\CommonExtensions\\Microsoft\\CMake\\CMake\\bin\\cmake.exe" -E vs_link_exe --intdir=CMakeFiles\\cmTC_58c27.dir --rc=C:\\PROGRA~2\\WI3CF2~1\\10\\bin\\100226~1.0\\x64\\rc.exe --mt=C:\\PROGRA~2\\WI3CF2~1\\10\\bin\\100226~1.0\\x64\\mt.exe --manifests  -- C:\\PROGRA~1\\MICROS~4\\2022\\COMMUN~1\\VC\\Tools\\MSVC\\1438~1.331\\bin\\Hostx64\\x64\\link.exe /nologo CMakeFiles\\cmTC_58c27.dir\\CheckIncludeFile.cxx.obj  /out:cmTC_58c27.exe /implib:cmTC_58c27.lib /pdb:cmTC_58c27.pdb /version:0.0 /machine:x64  /debug /INCREMENTAL /subsystem:console  kernel32.lib user32.lib gdi32.lib winspool.lib shell32.lib ole32.lib oleaut32.lib uuid.lib comdlg32.lib advapi32.lib && cd ."
+        
+      exitCode: 0
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "C:/Program Files/Microsoft Visual Studio/2022/Community/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.27/Modules/CheckIncludeFileCXX.cmake:89 (try_compile)"
+      - "C:/Program Files/Microsoft Visual Studio/2022/Community/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.27/Modules/CheckTypeSize.cmake:259 (check_include_file_cxx)"
+      - "src/lib_json/CMakeLists.txt:24 (check_type_size)"
+    checks:
+      - "Looking for C++ include stdint.h"
+    directories:
+      source: "C:/Program Files (x86)/Steam/steamapps/common/Quake 2/rerelease/mymod/src/vcpkg_installed/vcpkg/blds/jsoncpp/x64-windows-rel/CMakeFiles/CMakeScratch/TryCompile-26f27p"
+      binary: "C:/Program Files (x86)/Steam/steamapps/common/Quake 2/rerelease/mymod/src/vcpkg_installed/vcpkg/blds/jsoncpp/x64-windows-rel/CMakeFiles/CMakeScratch/TryCompile-26f27p"
+    cmakeVariables:
+      CMAKE_CXX_FLAGS: " /nologo /DWIN32 /D_WINDOWS /W3 /utf-8 /GR /EHsc /MP "
+      CMAKE_CXX_FLAGS_DEBUG: "/D_DEBUG /MDd /Z7 /Ob0 /Od /RTC1 "
+      CMAKE_EXE_LINKER_FLAGS: "/machine:x64"
+      CMAKE_MODULE_PATH: "C:/Program Files (x86)/Steam/steamapps/common/Quake 2/rerelease/mymod/src/vcpkg_installed/vcpkg/blds/jsoncpp/src/3918c327b1-034a82149a.clean/cmake"
+      CMAKE_MSVC_DEBUG_INFORMATION_FORMAT: ""
+      CMAKE_MSVC_RUNTIME_LIBRARY: "MultiThreaded$<$<CONFIG:Debug>:Debug>$<$<STREQUAL:dynamic,dynamic>:DLL>"
+      VCPKG_APPLOCAL_DEPS: "OFF"
+      VCPKG_CHAINLOAD_TOOLCHAIN_FILE: "C:/Program Files/Microsoft Visual Studio/2022/Community/VC/vcpkg/scripts/toolchains/windows.cmake"
+      VCPKG_TARGET_ARCHITECTURE: "x64"
+      VCPKG_TARGET_TRIPLET: "x64-windows"
+      Z_VCPKG_ROOT_DIR: "C:/Program Files/Microsoft Visual Studio/2022/Community/VC/vcpkg"
+    buildResult:
+      variable: "HAVE_STDINT_H"
+      cached: true
+      stdout: |
+        Change Dir: 'C:/Program Files (x86)/Steam/steamapps/common/Quake 2/rerelease/mymod/src/vcpkg_installed/vcpkg/blds/jsoncpp/x64-windows-rel/CMakeFiles/CMakeScratch/TryCompile-26f27p'
+        
+        Run Build Command(s): "C:/Program Files/Microsoft Visual Studio/2022/Community/Common7/IDE/CommonExtensions/Microsoft/CMake/Ninja/ninja.exe" -v cmTC_d8998
+        [1/2] C:\\PROGRA~1\\MICROS~4\\2022\\COMMUN~1\\VC\\Tools\\MSVC\\1438~1.331\\bin\\Hostx64\\x64\\cl.exe  /nologo /TP   /nologo /DWIN32 /D_WINDOWS /W3 /utf-8 /GR /EHsc /MP   /D_DEBUG /MDd /Z7 /Ob0 /Od /RTC1 /showIncludes /FoCMakeFiles\\cmTC_d8998.dir\\CheckIncludeFile.cxx.obj /FdCMakeFiles\\cmTC_d8998.dir\\ /FS -c "C:\\Program Files (x86)\\Steam\\steamapps\\common\\Quake 2\\rerelease\\mymod\\src\\vcpkg_installed\\vcpkg\\blds\\jsoncpp\\x64-windows-rel\\CMakeFiles\\CMakeScratch\\TryCompile-26f27p\\CheckIncludeFile.cxx"
+        [2/2] cmd.exe /C "cd . && "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\Common7\\IDE\\CommonExtensions\\Microsoft\\CMake\\CMake\\bin\\cmake.exe" -E vs_link_exe --intdir=CMakeFiles\\cmTC_d8998.dir --rc=C:\\PROGRA~2\\WI3CF2~1\\10\\bin\\100226~1.0\\x64\\rc.exe --mt=C:\\PROGRA~2\\WI3CF2~1\\10\\bin\\100226~1.0\\x64\\mt.exe --manifests  -- C:\\PROGRA~1\\MICROS~4\\2022\\COMMUN~1\\VC\\Tools\\MSVC\\1438~1.331\\bin\\Hostx64\\x64\\link.exe /nologo CMakeFiles\\cmTC_d8998.dir\\CheckIncludeFile.cxx.obj  /out:cmTC_d8998.exe /implib:cmTC_d8998.lib /pdb:cmTC_d8998.pdb /version:0.0 /machine:x64  /debug /INCREMENTAL /subsystem:console  kernel32.lib user32.lib gdi32.lib winspool.lib shell32.lib ole32.lib oleaut32.lib uuid.lib comdlg32.lib advapi32.lib && cd ."
+        
+      exitCode: 0
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "C:/Program Files/Microsoft Visual Studio/2022/Community/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.27/Modules/CheckIncludeFileCXX.cmake:89 (try_compile)"
+      - "C:/Program Files/Microsoft Visual Studio/2022/Community/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.27/Modules/CheckTypeSize.cmake:260 (check_include_file_cxx)"
+      - "src/lib_json/CMakeLists.txt:24 (check_type_size)"
+    checks:
+      - "Looking for C++ include stddef.h"
+    directories:
+      source: "C:/Program Files (x86)/Steam/steamapps/common/Quake 2/rerelease/mymod/src/vcpkg_installed/vcpkg/blds/jsoncpp/x64-windows-rel/CMakeFiles/CMakeScratch/TryCompile-fj70nh"
+      binary: "C:/Program Files (x86)/Steam/steamapps/common/Quake 2/rerelease/mymod/src/vcpkg_installed/vcpkg/blds/jsoncpp/x64-windows-rel/CMakeFiles/CMakeScratch/TryCompile-fj70nh"
+    cmakeVariables:
+      CMAKE_CXX_FLAGS: " /nologo /DWIN32 /D_WINDOWS /W3 /utf-8 /GR /EHsc /MP "
+      CMAKE_CXX_FLAGS_DEBUG: "/D_DEBUG /MDd /Z7 /Ob0 /Od /RTC1 "
+      CMAKE_EXE_LINKER_FLAGS: "/machine:x64"
+      CMAKE_MODULE_PATH: "C:/Program Files (x86)/Steam/steamapps/common/Quake 2/rerelease/mymod/src/vcpkg_installed/vcpkg/blds/jsoncpp/src/3918c327b1-034a82149a.clean/cmake"
+      CMAKE_MSVC_DEBUG_INFORMATION_FORMAT: ""
+      CMAKE_MSVC_RUNTIME_LIBRARY: "MultiThreaded$<$<CONFIG:Debug>:Debug>$<$<STREQUAL:dynamic,dynamic>:DLL>"
+      VCPKG_APPLOCAL_DEPS: "OFF"
+      VCPKG_CHAINLOAD_TOOLCHAIN_FILE: "C:/Program Files/Microsoft Visual Studio/2022/Community/VC/vcpkg/scripts/toolchains/windows.cmake"
+      VCPKG_TARGET_ARCHITECTURE: "x64"
+      VCPKG_TARGET_TRIPLET: "x64-windows"
+      Z_VCPKG_ROOT_DIR: "C:/Program Files/Microsoft Visual Studio/2022/Community/VC/vcpkg"
+    buildResult:
+      variable: "HAVE_STDDEF_H"
+      cached: true
+      stdout: |
+        Change Dir: 'C:/Program Files (x86)/Steam/steamapps/common/Quake 2/rerelease/mymod/src/vcpkg_installed/vcpkg/blds/jsoncpp/x64-windows-rel/CMakeFiles/CMakeScratch/TryCompile-fj70nh'
+        
+        Run Build Command(s): "C:/Program Files/Microsoft Visual Studio/2022/Community/Common7/IDE/CommonExtensions/Microsoft/CMake/Ninja/ninja.exe" -v cmTC_8ed53
+        [1/2] C:\\PROGRA~1\\MICROS~4\\2022\\COMMUN~1\\VC\\Tools\\MSVC\\1438~1.331\\bin\\Hostx64\\x64\\cl.exe  /nologo /TP   /nologo /DWIN32 /D_WINDOWS /W3 /utf-8 /GR /EHsc /MP   /D_DEBUG /MDd /Z7 /Ob0 /Od /RTC1 /showIncludes /FoCMakeFiles\\cmTC_8ed53.dir\\CheckIncludeFile.cxx.obj /FdCMakeFiles\\cmTC_8ed53.dir\\ /FS -c "C:\\Program Files (x86)\\Steam\\steamapps\\common\\Quake 2\\rerelease\\mymod\\src\\vcpkg_installed\\vcpkg\\blds\\jsoncpp\\x64-windows-rel\\CMakeFiles\\CMakeScratch\\TryCompile-fj70nh\\CheckIncludeFile.cxx"
+        [2/2] cmd.exe /C "cd . && "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\Common7\\IDE\\CommonExtensions\\Microsoft\\CMake\\CMake\\bin\\cmake.exe" -E vs_link_exe --intdir=CMakeFiles\\cmTC_8ed53.dir --rc=C:\\PROGRA~2\\WI3CF2~1\\10\\bin\\100226~1.0\\x64\\rc.exe --mt=C:\\PROGRA~2\\WI3CF2~1\\10\\bin\\100226~1.0\\x64\\mt.exe --manifests  -- C:\\PROGRA~1\\MICROS~4\\2022\\COMMUN~1\\VC\\Tools\\MSVC\\1438~1.331\\bin\\Hostx64\\x64\\link.exe /nologo CMakeFiles\\cmTC_8ed53.dir\\CheckIncludeFile.cxx.obj  /out:cmTC_8ed53.exe /implib:cmTC_8ed53.lib /pdb:cmTC_8ed53.pdb /version:0.0 /machine:x64  /debug /INCREMENTAL /subsystem:console  kernel32.lib user32.lib gdi32.lib winspool.lib shell32.lib ole32.lib oleaut32.lib uuid.lib comdlg32.lib advapi32.lib && cd ."
+        
+      exitCode: 0
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "C:/Program Files/Microsoft Visual Studio/2022/Community/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.27/Modules/CheckTypeSize.cmake:146 (try_compile)"
+      - "C:/Program Files/Microsoft Visual Studio/2022/Community/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.27/Modules/CheckTypeSize.cmake:271 (__check_type_size_impl)"
+      - "src/lib_json/CMakeLists.txt:24 (check_type_size)"
+    checks:
+      - "Check size of lconv"
+    directories:
+      source: "C:/Program Files (x86)/Steam/steamapps/common/Quake 2/rerelease/mymod/src/vcpkg_installed/vcpkg/blds/jsoncpp/x64-windows-rel/CMakeFiles/CMakeScratch/TryCompile-y1iamv"
+      binary: "C:/Program Files (x86)/Steam/steamapps/common/Quake 2/rerelease/mymod/src/vcpkg_installed/vcpkg/blds/jsoncpp/x64-windows-rel/CMakeFiles/CMakeScratch/TryCompile-y1iamv"
+    cmakeVariables:
+      CMAKE_CXX_FLAGS: " /nologo /DWIN32 /D_WINDOWS /W3 /utf-8 /GR /EHsc /MP "
+      CMAKE_CXX_FLAGS_DEBUG: "/D_DEBUG /MDd /Z7 /Ob0 /Od /RTC1 "
+      CMAKE_EXE_LINKER_FLAGS: "/machine:x64"
+      CMAKE_MODULE_PATH: "C:/Program Files (x86)/Steam/steamapps/common/Quake 2/rerelease/mymod/src/vcpkg_installed/vcpkg/blds/jsoncpp/src/3918c327b1-034a82149a.clean/cmake"
+      CMAKE_MSVC_DEBUG_INFORMATION_FORMAT: ""
+      CMAKE_MSVC_RUNTIME_LIBRARY: "MultiThreaded$<$<CONFIG:Debug>:Debug>$<$<STREQUAL:dynamic,dynamic>:DLL>"
+      VCPKG_APPLOCAL_DEPS: "OFF"
+      VCPKG_CHAINLOAD_TOOLCHAIN_FILE: "C:/Program Files/Microsoft Visual Studio/2022/Community/VC/vcpkg/scripts/toolchains/windows.cmake"
+      VCPKG_TARGET_ARCHITECTURE: "x64"
+      VCPKG_TARGET_TRIPLET: "x64-windows"
+      Z_VCPKG_ROOT_DIR: "C:/Program Files/Microsoft Visual Studio/2022/Community/VC/vcpkg"
+    buildResult:
+      variable: "HAVE_LCONV_SIZE"
+      cached: true
+      stdout: |
+        Change Dir: 'C:/Program Files (x86)/Steam/steamapps/common/Quake 2/rerelease/mymod/src/vcpkg_installed/vcpkg/blds/jsoncpp/x64-windows-rel/CMakeFiles/CMakeScratch/TryCompile-y1iamv'
+        
+        Run Build Command(s): "C:/Program Files/Microsoft Visual Studio/2022/Community/Common7/IDE/CommonExtensions/Microsoft/CMake/Ninja/ninja.exe" -v cmTC_b5287
+        [1/2] C:\\PROGRA~1\\MICROS~4\\2022\\COMMUN~1\\VC\\Tools\\MSVC\\1438~1.331\\bin\\Hostx64\\x64\\cl.exe  /nologo /TP   /nologo /DWIN32 /D_WINDOWS /W3 /utf-8 /GR /EHsc /MP   /D_DEBUG /MDd /Z7 /Ob0 /Od /RTC1 /showIncludes /FoCMakeFiles\\cmTC_b5287.dir\\LCONV_SIZE.cpp.obj /FdCMakeFiles\\cmTC_b5287.dir\\ /FS -c "C:\\Program Files (x86)\\Steam\\steamapps\\common\\Quake 2\\rerelease\\mymod\\src\\vcpkg_installed\\vcpkg\\blds\\jsoncpp\\x64-windows-rel\\CMakeFiles\\CMakeScratch\\TryCompile-y1iamv\\LCONV_SIZE.cpp"
+        [2/2] cmd.exe /C "cd . && "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\Common7\\IDE\\CommonExtensions\\Microsoft\\CMake\\CMake\\bin\\cmake.exe" -E vs_link_exe --intdir=CMakeFiles\\cmTC_b5287.dir --rc=C:\\PROGRA~2\\WI3CF2~1\\10\\bin\\100226~1.0\\x64\\rc.exe --mt=C:\\PROGRA~2\\WI3CF2~1\\10\\bin\\100226~1.0\\x64\\mt.exe --manifests  -- C:\\PROGRA~1\\MICROS~4\\2022\\COMMUN~1\\VC\\Tools\\MSVC\\1438~1.331\\bin\\Hostx64\\x64\\link.exe /nologo CMakeFiles\\cmTC_b5287.dir\\LCONV_SIZE.cpp.obj  /out:cmTC_b5287.exe /implib:cmTC_b5287.lib /pdb:cmTC_b5287.pdb /version:0.0 /machine:x64  /debug /INCREMENTAL /subsystem:console  kernel32.lib user32.lib gdi32.lib winspool.lib shell32.lib ole32.lib oleaut32.lib uuid.lib comdlg32.lib advapi32.lib && cd ."
+        
+      exitCode: 0
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "C:/Program Files/Microsoft Visual Studio/2022/Community/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.27/Modules/Internal/CheckSourceCompiles.cmake:101 (try_compile)"
+      - "C:/Program Files/Microsoft Visual Studio/2022/Community/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.27/Modules/CheckSourceCompiles.cmake:77 (cmake_check_source_compiles)"
+      - "C:/Program Files/Microsoft Visual Studio/2022/Community/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.27/Modules/CheckStructHasMember.cmake:79 (CHECK_SOURCE_COMPILES)"
+      - "src/lib_json/CMakeLists.txt:26 (check_struct_has_member)"
+    checks:
+      - "Performing Test HAVE_DECIMAL_POINT"
+    directories:
+      source: "C:/Program Files (x86)/Steam/steamapps/common/Quake 2/rerelease/mymod/src/vcpkg_installed/vcpkg/blds/jsoncpp/x64-windows-rel/CMakeFiles/CMakeScratch/TryCompile-av2jni"
+      binary: "C:/Program Files (x86)/Steam/steamapps/common/Quake 2/rerelease/mymod/src/vcpkg_installed/vcpkg/blds/jsoncpp/x64-windows-rel/CMakeFiles/CMakeScratch/TryCompile-av2jni"
+    cmakeVariables:
+      CMAKE_CXX_FLAGS: " /nologo /DWIN32 /D_WINDOWS /W3 /utf-8 /GR /EHsc /MP "
+      CMAKE_CXX_FLAGS_DEBUG: "/D_DEBUG /MDd /Z7 /Ob0 /Od /RTC1 "
+      CMAKE_EXE_LINKER_FLAGS: "/machine:x64"
+      CMAKE_MODULE_PATH: "C:/Program Files (x86)/Steam/steamapps/common/Quake 2/rerelease/mymod/src/vcpkg_installed/vcpkg/blds/jsoncpp/src/3918c327b1-034a82149a.clean/cmake"
+      CMAKE_MSVC_DEBUG_INFORMATION_FORMAT: ""
+      CMAKE_MSVC_RUNTIME_LIBRARY: "MultiThreaded$<$<CONFIG:Debug>:Debug>$<$<STREQUAL:dynamic,dynamic>:DLL>"
+      VCPKG_APPLOCAL_DEPS: "OFF"
+      VCPKG_CHAINLOAD_TOOLCHAIN_FILE: "C:/Program Files/Microsoft Visual Studio/2022/Community/VC/vcpkg/scripts/toolchains/windows.cmake"
+      VCPKG_TARGET_ARCHITECTURE: "x64"
+      VCPKG_TARGET_TRIPLET: "x64-windows"
+      Z_VCPKG_ROOT_DIR: "C:/Program Files/Microsoft Visual Studio/2022/Community/VC/vcpkg"
+    buildResult:
+      variable: "HAVE_DECIMAL_POINT"
+      cached: true
+      stdout: |
+        Change Dir: 'C:/Program Files (x86)/Steam/steamapps/common/Quake 2/rerelease/mymod/src/vcpkg_installed/vcpkg/blds/jsoncpp/x64-windows-rel/CMakeFiles/CMakeScratch/TryCompile-av2jni'
+        
+        Run Build Command(s): "C:/Program Files/Microsoft Visual Studio/2022/Community/Common7/IDE/CommonExtensions/Microsoft/CMake/Ninja/ninja.exe" -v cmTC_755bc
+        [1/2] C:\\PROGRA~1\\MICROS~4\\2022\\COMMUN~1\\VC\\Tools\\MSVC\\1438~1.331\\bin\\Hostx64\\x64\\cl.exe  /nologo /TP -DHAVE_DECIMAL_POINT  /nologo /DWIN32 /D_WINDOWS /W3 /utf-8 /GR /EHsc /MP   /D_DEBUG /MDd /Z7 /Ob0 /Od /RTC1 /showIncludes /FoCMakeFiles\\cmTC_755bc.dir\\src.cxx.obj /FdCMakeFiles\\cmTC_755bc.dir\\ /FS -c "C:\\Program Files (x86)\\Steam\\steamapps\\common\\Quake 2\\rerelease\\mymod\\src\\vcpkg_installed\\vcpkg\\blds\\jsoncpp\\x64-windows-rel\\CMakeFiles\\CMakeScratch\\TryCompile-av2jni\\src.cxx"
+        [2/2] cmd.exe /C "cd . && "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\Common7\\IDE\\CommonExtensions\\Microsoft\\CMake\\CMake\\bin\\cmake.exe" -E vs_link_exe --intdir=CMakeFiles\\cmTC_755bc.dir --rc=C:\\PROGRA~2\\WI3CF2~1\\10\\bin\\100226~1.0\\x64\\rc.exe --mt=C:\\PROGRA~2\\WI3CF2~1\\10\\bin\\100226~1.0\\x64\\mt.exe --manifests  -- C:\\PROGRA~1\\MICROS~4\\2022\\COMMUN~1\\VC\\Tools\\MSVC\\1438~1.331\\bin\\Hostx64\\x64\\link.exe /nologo CMakeFiles\\cmTC_755bc.dir\\src.cxx.obj  /out:cmTC_755bc.exe /implib:cmTC_755bc.lib /pdb:cmTC_755bc.pdb /version:0.0 /machine:x64  /debug /INCREMENTAL /subsystem:console  kernel32.lib user32.lib gdi32.lib winspool.lib shell32.lib ole32.lib oleaut32.lib uuid.lib comdlg32.lib advapi32.lib && cd ."
+        
+      exitCode: 0
+...
