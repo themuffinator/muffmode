@@ -33,6 +33,7 @@ TODO:
 - Enhanced multiplayer match progression and controls. (WIP)
 - Server-side player configs and stats (WIP)
 - Mod-based language localisation
+- Horde mode?
 
 CREDITS:
 --------
