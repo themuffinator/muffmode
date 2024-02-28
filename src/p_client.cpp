@@ -100,6 +100,32 @@ bool P_UseCoopInstancedItems() {
 }
 
 //=======================================================================
+
+static bool ClientUsesCustomModel(gclient_t *cl) {
+#if 0
+	char val[MAX_INFO_VALUE] = { 0 };
+	gi.Info_ValueForKey(cl->pers.userinfo, "skin", val, sizeof(val));
+	std::string_view t(val);
+
+	const char *originals[] = {
+		"male", "female", "cyborg"
+	};
+
+	if (size_t i = t.find_first_of('/'); i != std::string_view::npos)
+		t = t.substr(0, i);
+
+	for (size_t i = 0; i < sizeof(originals); i++) {
+		if (!Q_strcasecmp(originals[i], t.data())) {
+			//TODO: now check skins
+			gi.Com_PrintFmt_("{}: a={} b={}\n", __FUNCTION__, originals[i], t.data());
+			return true;
+		}	
+	}
+#endif
+	return true;
+}
+
+//=======================================================================
 // PLAYER CONFIGS
 //=======================================================================
 
@@ -426,9 +452,9 @@ void ClientObituary(edict_t *self, edict_t *inflictor, edict_t *attacker, mod_t 
 				if (IsTeamplay() && OnSameTeam(self, attacker)) {
 					gi.LocClient_Print(attacker, PRINT_CENTER, "You fragged {}, your team mate :(", self->client->pers.netname);
 				} else {
-					if (attacker->client->kill_count && !(attacker->client->kill_count % 10)) {
-						gi.LocBroadcast_Print(PRINT_CENTER, "{} is on a {} spree\nwith {} frags!\n", attacker->client->pers.netname, freeze->integer ? "freezing" : "fragging", attacker->client->kill_count);
-					} else if (self->client->kill_count >= 10) {
+					if (attacker->client->resp.kill_count && !(attacker->client->resp.kill_count % 10)) {
+						gi.LocBroadcast_Print(PRINT_CENTER, "{} is on a {} spree\nwith {} frags!\n", attacker->client->pers.netname, freeze->integer ? "freezing" : "fragging", attacker->client->resp.kill_count);
+					} else if (self->client->resp.kill_count >= 10) {
 						gi.LocBroadcast_Print(PRINT_CENTER, "{} ended {}'s\n{} spree!\n", attacker->client->pers.netname, freeze->integer ? "freezing" : "fragging", self->client->pers.netname);
 					} else if (!IsTeamplay()) {
 						gi.LocClient_Print(attacker, PRINT_CENTER, "You {} {}\n{} place with {}", freeze->integer ? "froze" : "fragged",
@@ -655,16 +681,17 @@ DIE(player_die) (edict_t *self, edict_t *inflictor, edict_t *attacker, int damag
 		if (attacker == self || mod.friendly_fire) {
 			if (!mod.no_point_loss)
 				G_AdjustPlayerScore(attacker->client, -1, !!teamplay->integer, -1);
-			attacker->client->kill_count = 0;
+			attacker->client->resp.kill_count = 0;
 		} else {
 			G_AdjustPlayerScore(attacker->client, 1, !!teamplay->integer, 1);
-			attacker->client->kill_count++;
+			if (attacker->health > 0)
+				attacker->client->resp.kill_count++;
 		}
 	} else {
 		if (!mod.no_point_loss)
 			G_AdjustPlayerScore(self->client, -1, !!teamplay->integer, -1);
 	}
-	self->client->kill_count = 0;
+	self->client->resp.kill_count = 0;
 	//-scoring
 
 		//	self->solid = SOLID_NOT;
@@ -2785,7 +2812,13 @@ void ClientUserinfoChanged(edict_t *ent, const char *userinfo) {
 	} else {
 		ent->client->pers.bob_skip = false;
 	}
-
+#if 0
+	if (ClientUsesCustomModel(ent->client)) {
+		gi.Com_Print("PLAYER USES CUSTOM MODEL\n");
+	} else {
+		gi.Com_Print("PLAYER USES STANDARD MODEL\n");
+	}
+#endif
 	// save off the userinfo in case we want to check something later
 	Q_strlcpy(ent->client->pers.userinfo, userinfo, sizeof(ent->client->pers.userinfo));
 }

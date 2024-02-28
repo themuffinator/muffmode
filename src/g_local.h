@@ -2954,6 +2954,8 @@ struct client_respawn_t {
 	spectator_state_t	spectator_state;
 	int					spectator_client;	// for chasecam and follow mode
 	int					wins, losses;		// duel stats
+
+	int32_t				kill_count;	// for rampage award, reset on respawn
 };
 
 // [Paril-KEX] seconds until we are fully invisible after
@@ -3182,8 +3184,6 @@ struct gclient_t {
 	bool		ready_to_exit;
 
 	int			last_match_timer_update;
-
-	int32_t		kill_count;	// for rampage award
 };
 
 // ==========================================
