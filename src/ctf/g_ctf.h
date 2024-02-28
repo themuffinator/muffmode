@@ -52,7 +52,6 @@ void Menu_Dirty();
 
 void Menu_Open_Join(edict_t *ent);
 void Cmd_Vote_f(edict_t *ent);
-void Voting_Admin_f(edict_t *ent);
 void Match_ResetAllPlayers();
 void GT_CTF_ResetFlags();
 
