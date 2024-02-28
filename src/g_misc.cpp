@@ -2084,10 +2084,22 @@ static TOUCH(teleporter_touch) (edict_t *self, edict_t *other, const trace_t &tr
 	other->s.old_origin = dest->s.origin;
 	other->s.origin[2] += 10;
 
-	// clear the velocity and hold them in place briefly
-	other->velocity = {};
-	other->client->ps.pmove.pm_time = 160; // hold time
-	other->client->ps.pmove.pm_flags |= PMF_TIME_TELEPORT;
+	if (g_teleporter_nofreeze->value == 0) {
+		// clear the velocity and hold them in place briefly
+		other->velocity = {};
+		other->client->ps.pmove.pm_time = 160;		// hold time
+		other->client->ps.pmove.pm_flags |= PMF_TIME_TELEPORT;
+	} else {
+		// preserve velocity and 'spit' them out of destination
+		float	len;
+
+		other->velocity[2] = 0;
+		
+		len = other->velocity.length();
+
+		AngleVectors(dest->s.angles, other->velocity, NULL, NULL);
+		other->velocity *= len;
+	}
 
 	// draw the teleport splash at source and on the player
 	if (!self->spawnflags.has(SPAWNFLAG_TELEPORTER_NO_TELEPORT_EFFECT))

@@ -77,8 +77,6 @@ enum
 	CONFIG_N64_PHYSICS,
 	CONFIG_HEALTH_BAR_NAME, // active health bar name
 
-	//CONFIG_MATCH_TIMER,
-
 	CONFIG_STORY,
 
 	CONFIG_LAST

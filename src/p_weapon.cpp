@@ -1432,7 +1432,7 @@ GRAPPLE
 
 // self is grapple, not player
 static void Weapon_Grapple_Reset(edict_t *self) {
-	if (!self->owner->client->grapple_ent)
+	if (!self || !self->owner->client || !self->owner->client->grapple_ent)
 		return;
 
 	gi.sound(self->owner, CHAN_WEAPON, gi.soundindex("weapons/grapple/grreset.wav"), self->owner->client->silencer_shots ? 0.2f : 1.0f, ATTN_NORM, 0);
@@ -1687,6 +1687,32 @@ void Weapon_Grapple(edict_t *ent) {
 			ent->client->ps.gunframe = 5;
 		ent->client->weaponstate = WEAPON_FIRING;
 	}
+}
+
+
+/*
+======================================================================
+
+OFF-HAND HOOK
+
+======================================================================
+*/
+
+static void Weapon_Hook_DoFire(edict_t *ent, const vec3_t &g_offset, int damage, effects_t effect) {
+	if (ent->client->grapple_state > GRAPPLE_STATE_FLY)
+		return; // it's already out
+
+	vec3_t start, dir;
+	P_ProjectSource(ent, ent->client->v_angle, vec3_t{ 24, 8, -8 + 2 } + g_offset, start, dir);
+
+	if (Weapon_Grapple_FireHook(ent, start, dir, damage, g_grapple_fly_speed->value, effect))
+		gi.sound(ent, CHAN_WEAPON, gi.soundindex("weapons/grapple/grfire.wav"), ent->client->silencer_shots ? 0.2f : 1.0f, ATTN_NORM, 0);
+
+	PlayerNoise(ent, start, PNOISE_WEAPON);
+}
+
+void Weapon_Hook(edict_t *ent) {
+	Weapon_Grapple_DoFire(ent, vec3_origin, g_grapple_damage->integer, EF_NONE);
 }
 
 

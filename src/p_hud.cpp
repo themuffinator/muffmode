@@ -181,7 +181,7 @@ void G_ReportMatchDetails(bool is_end) {
 	player_ranks = {};
 
 	// teamplay is simple
-	if (G_TeamplayEnabled()) {
+	if (IsTeamplay()) {
 		Teams_CalcRankings(player_ranks);
 
 		gi.WriteByte(2);
@@ -219,7 +219,7 @@ void G_ReportMatchDetails(bool is_end) {
 		// leave spectators out of this data, they don't need to be seen.
 		if (player->client->pers.spawned && !ClientIsSpectating(player->client)) {
 			// just in case...
-			if (G_TeamplayEnabled() && ClientIsSpectating(player->client))
+			if (IsTeamplay() && ClientIsSpectating(player->client))
 				continue;
 
 			num_players++;
@@ -232,14 +232,14 @@ void G_ReportMatchDetails(bool is_end) {
 		// leave spectators out of this data, they don't need to be seen.
 		if (player->client->pers.spawned && !ClientIsSpectating(player->client)) {
 			// just in case...
-			if (G_TeamplayEnabled() && ClientIsSpectating(player->client))
+			if (IsTeamplay() && ClientIsSpectating(player->client))
 				continue;
 
 			gi.WriteByte(player->s.number - 1);
 			gi.WriteLong(player->client->resp.score);
 			gi.WriteByte(player_ranks[player->s.number - 1]);
 
-			if (G_TeamplayEnabled())
+			if (IsTeamplay())
 				gi.WriteByte(player->client->resp.team == TEAM_RED ? 0 : 1);
 		}
 	}
@@ -571,7 +571,7 @@ void BeginIntermission(edict_t *targ) {
 		edict_t *cl_ent;
 
 		// ZOID
-		if (G_TeamplayEnabled()) {
+		if (IsTeamplay()) {
 			TeamsScoreboardMessage(ent, killer);
 			return;
 		}
@@ -898,7 +898,7 @@ void BeginIntermission(edict_t *targ) {
 			d = forward.dot(dir);
 
 			// we have teammate indicators that are better for this
-			if (G_TeamplayEnabled() && ent->client->resp.team == who->client->resp.team)
+			if (IsTeamplay() && ent->client->resp.team == who->client->resp.team)
 				continue;
 
 			if (d > bd && loc_CanSee(ent, who)) {

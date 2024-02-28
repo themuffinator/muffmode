@@ -1116,14 +1116,8 @@ void G_SetClientFrame(edict_t *ent)
 
 	client = ent->client;
 
-	if (client->ps.pmove.pm_flags & PMF_DUCKED)
-		duck = true;
-	else
-		duck = false;
-	if (xyspeed)
-		run = true;
-	else
-		run = false;
+	duck = client->ps.pmove.pm_flags & PMF_DUCKED ? true : false;
+	run = xyspeed ? true : false;
 
 	// check for stand/duck and stop/go transitions
 	if (duck != client->anim_duck && client->anim_priority < ANIM_DEATH)

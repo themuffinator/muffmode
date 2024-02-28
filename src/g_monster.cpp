@@ -456,7 +456,7 @@ void M_SetEffects(edict_t *ent)
 }
 
 bool M_AllowSpawn( edict_t * self ) {
-	if ( deathmatch->integer && !ai_allow_dm_spawn->integer ) {
+	if ( deathmatch->integer && !(ai_allow_dm_spawn->integer || horde->integer) ) {
 		return false;
 	}
 	return true;
@@ -698,8 +698,13 @@ void M_ProcessPain(edict_t *e)
 			monster_death_use(e);
 		}
 
+		if (!e->deadflag) {
+			int32_t score_value = ceil(e->monsterinfo.base_health / 100);
+			if (score_value < 1) score_value = 1;
+			Horde_AdjustPlayerScore(e->monsterinfo.damage_attacker->client, score_value);
+		}
 		e->die(e, e->monsterinfo.damage_inflictor, e->monsterinfo.damage_attacker, e->monsterinfo.damage_blood, e->monsterinfo.damage_from, e->monsterinfo.damage_mod);
-		
+
 		// [Paril-KEX] medic commander only gets his slots back after the monster is gibbed, since we can revive them
 		if (e->health <= e->gib_health)
 		{
@@ -986,7 +991,7 @@ THINK(monster_think) (edict_t *self) -> void
 	if (!self->inuse || self->think != monster_think)
 		return;
 
-	if (self->hackflags & HACKFLAG_ATTACK_PLAYER)
+	if (self->hackflags & HACKFLAG_ATTACK_PLAYER || horde->integer)
 	{
 		if (!self->enemy && g_edicts[1].inuse)
 		{
@@ -1268,7 +1273,7 @@ bool monster_start(edict_t *self)
 	self->s.old_origin = self->s.origin;
 	self->monsterinfo.initial_power_armor_type = self->monsterinfo.power_armor_type;
 	self->monsterinfo.max_power_armor_power = self->monsterinfo.power_armor_power;
-
+	//gi.Com_PrintFmt("MONSTER SPAWN: {}, maxhealth = {}\n", *self, self->max_health);
 	if (!self->monsterinfo.checkattack)
 		self->monsterinfo.checkattack = M_CheckAttack;
 

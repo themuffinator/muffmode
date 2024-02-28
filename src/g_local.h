@@ -15,7 +15,7 @@ constexpr const char *GAMEMOD_VERSION = "0.12.23";
 constexpr const int32_t GIB_HEALTH = -40;
 
 enum gametype_t {
-	GT_NONE,	//campaign mode
+	GT_HORDE,	//horde mode
 	GT_FFA,
 	GT_DUEL,
 	GT_TDM,
@@ -1940,6 +1940,7 @@ extern cvar_t *freeze;
 extern cvar_t *clanarena;
 
 extern cvar_t *coop;
+extern cvar_t *horde;
 
 extern cvar_t *skill;
 extern cvar_t *fraglimit;
@@ -2058,6 +2059,7 @@ extern cvar_t *g_coop_enable_lives;
 extern cvar_t *g_coop_num_lives;
 extern cvar_t *g_coop_instanced_items;
 extern cvar_t *g_allow_grapple;
+extern cvar_t *g_grapple_offhand;
 extern cvar_t *g_grapple_fly_speed;
 extern cvar_t *g_grapple_pull_speed;
 extern cvar_t *g_grapple_damage;
@@ -2084,11 +2086,11 @@ extern cvar_t *g_mover_speed_scale;
 extern cvar_t *g_mover_debug;
 
 extern cvar_t *g_warmup_countdown;
+extern cvar_t *g_warmup_ready_percentage;
 
 //ctf
 extern cvar_t *competition;
 extern cvar_t *matchlock;
-extern cvar_t *matchtime;
 extern cvar_t *matchsetuptime;
 extern cvar_t *matchstarttime;
 extern cvar_t *admin_password;
@@ -2096,6 +2098,7 @@ extern cvar_t *allow_admin;
 extern cvar_t *warn_unbalanced;
 //-ctf
 extern cvar_t *g_eyecam;
+extern cvar_t *g_teleporter_nofreeze;
 
 #define world (&g_edicts[0])
 
@@ -2170,6 +2173,8 @@ void		droptofloor(edict_t *ent);
 void		P_ToggleFlashlight(edict_t *ent, bool state);
 bool		Entity_IsVisibleToPlayer(edict_t *ent, edict_t *player);
 void		Compass_Update(edict_t *ent, bool first);
+item_id_t	DoRandomRespawn(edict_t *ent);
+void		DoRespawn(edict_t *ent);
 
 //
 // g_utils.c
@@ -2208,22 +2213,27 @@ void G_TouchTriggers(edict_t *ent);
 void G_TouchProjectiles(edict_t *ent, vec3_t previous_origin);
 
 char *G_CopyString(const char *in, int32_t tag);
-char *G_CopyString(const char *in, size_t len, int32_t tag);
 
 void G_PlayerNotifyGoal(edict_t *player);
 
 const char *Teams_TeamName(int team);
 const char *Teams_OtherTeamName(int team);
 int Teams_OtherTeamNum(team_t team);
-bool G_TeamplayEnabled();
+bool IsTeamplay();
 void CalculateRanks();
 void G_AdjustPlayerScore(gclient_t *cl, int32_t offset, bool adjust_team, int32_t team_offset);
+void Horde_AdjustPlayerScore(gclient_t *cl, int32_t offset);
 void G_SetPlayerScore(gclient_t *cl, int32_t value);
 void G_AdjustTeamScore(int team, int32_t offset);
 void G_SetTeamScore(int team, int32_t value);
 const char *G_PlaceString(int rank);
 bool ItemSpawnsEnabled();
 bool loc_CanSee(edict_t *targ, edict_t *inflictor);
+bool IsMatch();
+bool IsMatchSetup();
+bool IsMatchOn();
+bool Voting_Begin(edict_t *ent, voting_t type, const char *msg);
+void Team_Join(edict_t *ent, team_t desired_team, bool inactive);
 
 //
 // g_spawn.c
@@ -2620,6 +2630,10 @@ void Weapon_Grapple(edict_t *ent);
 void Weapon_Grapple_DoReset(gclient_t *cl);
 void Weapon_Grapple_Pull(edict_t *self);
 
+// HOOK
+void Weapon_Hook(edict_t *ent);
+void Weapon_Hook_Pull(edict_t *self);
+
 constexpr gtime_t GRENADE_TIMER = 3_sec;
 constexpr float GRENADE_MINSPEED = 400.f;
 constexpr float GRENADE_MAXSPEED = 800.f;
@@ -2745,8 +2759,6 @@ void Hunter_Launch(edict_t *self);
 // g_newdm.c
 //
 void	 InitGameRules();
-item_id_t DoRandomRespawn(edict_t *ent);
-void	 PrecacheForRandomRespawn();
 bool	 Tag_PickupToken(edict_t *ent, edict_t *other);
 void	 Tag_DropToken(edict_t *ent, gitem_t *item);
 void	 fire_doppleganger(edict_t *ent, const vec3_t &start, const vec3_t &aimdir);

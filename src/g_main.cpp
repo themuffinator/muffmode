@@ -36,6 +36,7 @@ cvar_t *teamplay;
 cvar_t *freeze;
 cvar_t *clanarena;
 cvar_t *coop;
+cvar_t *horde;
 
 cvar_t *skill;
 cvar_t *fraglimit;
@@ -113,6 +114,7 @@ cvar_t* g_coop_enable_lives;
 cvar_t* g_coop_num_lives;
 cvar_t* g_coop_instanced_items;
 cvar_t* g_allow_grapple;
+cvar_t* g_grapple_offhand;
 cvar_t* g_grapple_fly_speed;
 cvar_t* g_grapple_pull_speed;
 cvar_t* g_grapple_damage;
@@ -182,11 +184,11 @@ cvar_t *g_mover_speed_scale;
 cvar_t *g_mover_debug;
 
 cvar_t *g_warmup_countdown;
+cvar_t *g_warmup_ready_percentage;
 
 //ctf
 cvar_t *competition;
 cvar_t *matchlock;
-cvar_t *matchtime;
 cvar_t *matchsetuptime;
 cvar_t *matchstarttime;
 cvar_t *admin_password;
@@ -194,6 +196,7 @@ cvar_t *allow_admin;
 cvar_t *warn_unbalanced;
 //-ctf
 cvar_t *g_eyecam;
+cvar_t *g_teleporter_nofreeze;
 
 static cvar_t *g_frames_per_frame;
 
@@ -232,7 +235,7 @@ static void G_InitGametype() {
 	constexpr const char *COOP = "coop";
 
 	constexpr const char *C[GT_NUM_GAMETYPES] = {
-		"coop",
+		"horde",
 		"deathmatch",
 		"duel",
 		"teamplay",
@@ -259,6 +262,9 @@ static void G_InitGametype() {
 		// force duel off
 		if (duel->integer)
 			gi.cvar_set(C[GT_DUEL], "0");
+		// force horde off
+		if (horde->integer)
+			gi.cvar_set(C[GT_HORDE], "0");
 	}
 	if (clanarena->integer) {
 		force_dm = true;
@@ -274,6 +280,9 @@ static void G_InitGametype() {
 		// force duel off
 		if (duel->integer)
 			gi.cvar_set(C[GT_DUEL], "0");
+		// force horde off
+		if (horde->integer)
+			gi.cvar_set(C[GT_HORDE], "0");
 	}
 	if (ctf->integer) {
 		force_dm = true;
@@ -286,6 +295,9 @@ static void G_InitGametype() {
 		// force duel off
 		if (duel->integer)
 			gi.cvar_set(C[GT_DUEL], "0");
+		// force horde off
+		if (horde->integer)
+			gi.cvar_set(C[GT_HORDE], "0");
 	}
 	if (teamplay->integer) {
 		force_dm = true;
@@ -295,8 +307,20 @@ static void G_InitGametype() {
 		// force duel off
 		if (duel->integer)
 			gi.cvar_set(C[GT_DUEL], "0");
+		// force horde off
+		if (horde->integer)
+			gi.cvar_set(C[GT_HORDE], "0");
 	}
 	if (duel->integer) {
+		force_dm = true;
+		// force coop off
+		if (coop->integer)
+			gi.cvar_set(COOP, "0");
+		// force horde off
+		if (horde->integer)
+			gi.cvar_set(C[GT_HORDE], "0");
+	}
+	if (horde->integer) {
 		force_dm = true;
 		// force coop off
 		if (coop->integer)
@@ -310,7 +334,7 @@ static void G_InitGametype() {
 	}
 
 	// force even maxplayers value during teamplay
-	if (G_TeamplayEnabled()) {
+	if (IsTeamplay()) {
 		int pmax = maxplayers->integer;
 
 		if (pmax != floor(pmax / 2))
@@ -340,6 +364,7 @@ void PreInitGame()
 	freeze = gi.cvar("freeze", "0", CVAR_SERVERINFO | CVAR_LATCH);
 	clanarena = gi.cvar("clanarena", "0", CVAR_SERVERINFO | CVAR_LATCH);
 	coop = gi.cvar("coop", "0", CVAR_LATCH);
+	horde = gi.cvar("horde", "0", CVAR_LATCH);
 
 	//gi.AddCommandString("cl_notifytime -1\n");
 
@@ -413,6 +438,7 @@ void InitGame()
 	g_coop_num_lives = gi.cvar("g_coop_num_lives", "2", CVAR_LATCH);
 	g_coop_instanced_items = gi.cvar("g_coop_instanced_items", "1", CVAR_LATCH);
 	g_allow_grapple = gi.cvar("g_allow_grapple", "auto", CVAR_NOFLAGS);
+	g_grapple_offhand = gi.cvar("g_grapple_offhand", "1", CVAR_NOFLAGS);
 	g_grapple_fly_speed = gi.cvar("g_grapple_fly_speed", G_Fmt("{}", CTF_DEFAULT_GRAPPLE_SPEED).data(), CVAR_NOFLAGS);
 	g_grapple_pull_speed = gi.cvar("g_grapple_pull_speed", G_Fmt("{}", CTF_DEFAULT_GRAPPLE_PULL_SPEED).data(), CVAR_NOFLAGS);
 	g_grapple_damage = gi.cvar("g_grapple_damage", "10", CVAR_NOFLAGS);
@@ -485,6 +511,7 @@ void InitGame()
 	g_mover_debug = gi.cvar("g_mover_debug", "0", CVAR_NOFLAGS);
 
 	g_warmup_countdown = gi.cvar("g_warmup_countdown", "10", CVAR_NOFLAGS);
+	g_warmup_ready_percentage = gi.cvar("g_warmup_ready_percentage", "0.51f", CVAR_NOFLAGS);
 
 	g_frames_per_frame = gi.cvar("g_frames_per_frame", "1", CVAR_NOFLAGS);
 
@@ -542,7 +569,6 @@ void InitGame()
 //ctf
 	competition = gi.cvar("competition", "0", CVAR_SERVERINFO);
 	matchlock = gi.cvar("matchlock", "1", CVAR_SERVERINFO);
-	matchtime = gi.cvar("matchtime", "20", CVAR_SERVERINFO);
 	matchsetuptime = gi.cvar("matchsetuptime", "10", CVAR_NOFLAGS);
 	matchstarttime = gi.cvar("matchstarttime", "20", CVAR_NOFLAGS);
 	admin_password = gi.cvar("admin_password", "", CVAR_NOFLAGS);
@@ -550,6 +576,7 @@ void InitGame()
 	warn_unbalanced = gi.cvar("warn_unbalanced", "0", CVAR_NOFLAGS);
 //-ctf
 	g_eyecam = gi.cvar("g_eyecam", "1", CVAR_NOFLAGS);
+	g_teleporter_nofreeze = gi.cvar("g_teleporter_nofreeze", "0", CVAR_NOFLAGS);
 
 	// items
 	InitItems();
@@ -732,7 +759,7 @@ static void CheckTournament(void) {
 	} else if (deathmatch->integer && level.warmup_time != 0_sec) {
 		bool	not_enough = false;
 
-		if (G_TeamplayEnabled()) {
+		if (IsTeamplay()) {
 			int counts[TEAM_NUM_TEAMS];
 			counts[TEAM_BLUE] = TeamConnectedCount(-1, TEAM_BLUE);
 			counts[TEAM_RED] = TeamConnectedCount(-1, TEAM_RED);
@@ -1047,7 +1074,7 @@ static bool ScoreIsTied(void) {
 		return false;
 	}
 	
-	if (G_TeamplayEnabled()) {
+	if (IsTeamplay()) {
 		return level.team_scores[TEAM_RED] == level.team_scores[TEAM_BLUE];
 	}
 
@@ -1138,7 +1165,7 @@ static void CheckExitRules(void) {
 		}
 	}
 #endif
-	if (G_TeamplayEnabled()) {
+	if (IsTeamplay()) {
 		if (level.team_scores[TEAM_RED] >= scorelimit) {
 			gi.LocBroadcast_Print(PRINT_HIGH, "Red Team hit the score limit.\n");
 			//LogExit("Score limit hit.");
@@ -1454,12 +1481,12 @@ void CheckDMRules()
 		return;
 
 	// ZOID
-	if (ctf->integer && CheckVotingRules())
+	if (ctf->integer && Match_CheckRules())
 	{
 		EndDMLevel();
 		return;
 	}
-	if (CTFInMatch())
+	if (IsMatch())
 		return; // no checking in match mode
 				// ZOID
 
@@ -1506,6 +1533,15 @@ void CheckDMRules()
 			}
 		}
 	}
+}
+
+bool Match_NextMap() {
+	if (level.match == MATCH_POST) {
+		level.match = MATCH_SETUP;
+		Match_ResetAllPlayers();
+		return true;
+	}
+	return false;
 }
 
 /*
@@ -1559,7 +1595,7 @@ void ExitLevel()
 				player->client->pers.lives = g_coop_num_lives->integer + 1;
 	}
 
-	if (CTFNextMap())
+	if (Match_NextMap())
 		return;
 
 	if (level.changemap == nullptr)

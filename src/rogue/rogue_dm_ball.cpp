@@ -562,7 +562,7 @@ void SP_dm_dball_ball(edict_t *self)
 /*QUAKED dm_dball_team1_start (1 .5 .5) (-16 -16 -24) (16 16 32)
 Deathball team 1 start point
 */
-void SP_dm_dball_team1_start(edict_t *self)
+void SP_dm_dball_team_red_start(edict_t *self)
 {
 	if (!deathmatch->integer)
 	{
@@ -579,7 +579,7 @@ void SP_dm_dball_team1_start(edict_t *self)
 /*QUAKED dm_dball_team2_start (1 .5 .5) (-16 -16 -24) (16 16 32)
 Deathball team 2 start point
 */
-void SP_dm_dball_team2_start(edict_t *self)
+void SP_dm_dball_team_blue_start(edict_t *self)
 {
 	if (!deathmatch->integer)
 	{

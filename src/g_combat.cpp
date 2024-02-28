@@ -508,7 +508,7 @@ bool OnSameTeam(edict_t *ent1, edict_t *ent2)
 	// [Paril-KEX] coop 'team' support
 	if (coop->integer)
 		return ent1->client && ent2->client;
-	else if (G_TeamplayEnabled() && ent1->client && ent2->client)
+	else if (IsTeamplay() && ent1->client && ent2->client)
 	{
 		if (ent1->client->resp.team == ent2->client->resp.team)
 			return true;
@@ -566,7 +566,7 @@ void T_Damage(edict_t *targ, edict_t *inflictor, edict_t *attacker, const vec3_t
 			// if we're not a nuke & friendly fire is disabled, just kill the damage
 			if (!g_friendly_fire->integer) {
 				/*
-				if (G_TeamplayEnabled() && OnSameTeam(targ, attacker)) {
+				if (IsTeamplay() && OnSameTeam(targ, attacker)) {
 					attacker->client->pers.dmg_team += damage;
 
 					if (attacker->client->pers.dmg_team >= 100) {
@@ -754,7 +754,7 @@ void T_Damage(edict_t *targ, edict_t *inflictor, edict_t *attacker, const vec3_t
 
 	// ZOID
 	// team armor protect
-	if (G_TeamplayEnabled() && targ->client && attacker->client &&
+	if (IsTeamplay() && targ->client && attacker->client &&
 		targ->client->resp.team == attacker->client->resp.team && targ != attacker &&
 		g_teamplay_armor_protect->integer)
 	{
@@ -816,7 +816,7 @@ void T_Damage(edict_t *targ, edict_t *inflictor, edict_t *attacker, const vec3_t
 			}
 		}
 		// team damage checks and warnings
-		if (G_TeamplayEnabled() && OnSameTeam(targ, attacker)) {
+		if (IsTeamplay() && OnSameTeam(targ, attacker)) {
 			attacker->client->pers.dmg_team += take + psave + asave;
 
 			if (attacker->client->pers.dmg_team >= 100) {
@@ -859,7 +859,7 @@ void T_Damage(edict_t *targ, edict_t *inflictor, edict_t *attacker, const vec3_t
 				SpawnDamage(te_sparks, point, normal, take);
 		}
 
-		if (!CTFMatchSetup())
+		if (!IsMatchSetup())
 			targ->health = targ->health - take;
 
 		if ((targ->flags & FL_IMMORTAL) && targ->health <= 0)

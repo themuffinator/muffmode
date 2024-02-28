@@ -36,8 +36,6 @@ constexpr gtime_t CTF_TECH_TIMEOUT = 60_sec; // seconds before techs spawn again
 constexpr int32_t CTF_DEFAULT_GRAPPLE_SPEED = 650; // speed of grapple in flight
 constexpr float	  CTF_DEFAULT_GRAPPLE_PULL_SPEED = 650; // speed player is pulled at
 
-void CTFSpawn();
-
 bool GT_CTF_PickupFlag(edict_t *ent, edict_t *other);
 void GT_CTF_DropFlag(edict_t *ent, gitem_t *item);
 void GT_CTF_Effects(edict_t *player);
@@ -45,7 +43,7 @@ void Teams_CalcScores();
 void Teams_CalcRankings(std::array<uint32_t, MAX_CLIENTS> &player_ranks); // [Paril-KEX]
 void CheckEndTDMLevel(); // [Paril-KEX]
 void GT_CTF_DeadDropFlag(edict_t *self);
-void CTFTeam_f(edict_t *ent);
+//void CTFTeam_f(edict_t *ent);
 void GT_CTF_FlagSetup(edict_t *ent);
 void GT_CTF_ResetFlag(team_t team);
 void GT_CTF_ScoreBonuses(edict_t *targ, edict_t *inflictor, edict_t *attacker);
@@ -54,25 +52,14 @@ void Menu_Dirty();
 
 void Menu_Open_Join(edict_t *ent);
 void Cmd_Vote_f(edict_t *ent);
-void CTFReady(edict_t *ent);
-void CTFNotReady(edict_t *ent);
-bool CTFNextMap();
-bool CTFMatchSetup();
-bool CTFMatchOn();
-void CTFAdmin(edict_t *ent);
-bool CTFInMatch();
-void CTFStats(edict_t *ent);
-void CTFWarp(edict_t *ent);
-void CTFBoot(edict_t *ent);
-void CTFPlayerList(edict_t *ent);
+void Voting_Admin_f(edict_t *ent);
 void Match_ResetAllPlayers();
 void GT_CTF_ResetFlags();
 
-bool CheckVotingRules();
+bool Match_CheckRules();
 
 void UpdateChaseCam(edict_t *ent);
 void ChaseNext(edict_t *ent);
 void ChasePrev(edict_t *ent);
 
-void CTFObserver(edict_t *ent);
 void Team_Join(edict_t *ent, team_t desired_team, bool inactive);

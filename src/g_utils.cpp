@@ -674,15 +674,6 @@ void G_AssignPlayerTeam(gclient_t *who) {
 		who->resp.team = brandom() ? TEAM_RED : TEAM_BLUE;
 }
 
-/*
-=================
-G_TeamplayEnabled
-=================
-*/
-bool G_TeamplayEnabled() {
-	return ctf->integer || teamplay->integer || freeze->integer || clanarena->integer;
-}
-
 #if 0
 int Score_PlayerSort(const void *a, const void *b) {
 	int anum, bnum;
@@ -793,7 +784,7 @@ void CalculateRanks() {
 	qsort(level.sorted_clients, level.num_connected_clients, sizeof(level.sorted_clients[0]), SortRanks);
 
 	// set the rank value for all clients that are connected and not spectators
-	if (G_TeamplayEnabled()) {
+	if (IsTeamplay()) {
 		// in team games, rank is just the order of the teams, 0=red, 1=blue, 2=tied
 		for (i = 0; i < level.num_connected_clients; i++) {
 			cl = &game.clients[level.sorted_clients[i]];
@@ -844,9 +835,22 @@ void G_AdjustPlayerScore(gclient_t *cl, int32_t offset, bool adjust_team, int32_
 		CalculateRanks();
 	}
 
-	if (adjust_team && team_offset && G_TeamplayEnabled()) {
+	if (adjust_team && team_offset && IsTeamplay()) {
 		G_AdjustTeamScore(cl->resp.team, team_offset);
 	}
+}
+
+/*
+===================
+Horde_AdjustPlayerScore
+===================
+*/
+void Horde_AdjustPlayerScore(gclient_t *cl, int32_t offset) {
+	if (!horde->integer) return;
+	if (!cl) return;
+
+	gi.Com_PrintFmt("monster kill score = {}\n", offset);
+	G_AdjustPlayerScore(cl, offset, false, 0);
 }
 
 /*
@@ -985,3 +989,24 @@ bool loc_CanSee(edict_t *targ, edict_t *inflictor) {
 	return false;
 }
 
+bool IsTeamplay() {
+	return ctf->integer || teamplay->integer || freeze->integer || clanarena->integer;
+}
+
+bool IsMatch() {
+	if (level.match > MATCH_NONE)
+		return true;
+	return false;
+}
+
+bool IsMatchSetup() {
+	if (level.match == MATCH_SETUP || level.match == MATCH_PREGAME)
+		return true;
+	return false;
+}
+
+bool IsMatchOn() {
+	if (level.match == MATCH_GAME)
+		return true;
+	return false;
+}

@@ -14,19 +14,27 @@ void SP_info_player_deathmatch(edict_t *ent);
 void SP_info_player_team_red(edict_t *self);
 void SP_info_player_team_blue(edict_t *self);
 void SP_info_player_coop(edict_t *ent);
+void SP_info_player_coop_lava(edict_t *self);
 void SP_info_player_intermission(edict_t *ent);
+void SP_info_teleport_destination(edict_t *self);
 void SP_info_ctf_teleport_destination(edict_t *self);
+void SP_info_landmark(edict_t *self); // [Paril-KEX]
+void SP_info_world_text(edict_t *self);
+void SP_info_nav_lock(edict_t *self); // [Paril-KEX]
 
 void SP_func_plat(edict_t *ent);
+void SP_func_plat2(edict_t *ent);
 void SP_func_rotating(edict_t *ent);
 void SP_func_button(edict_t *ent);
 void SP_func_door(edict_t *ent);
 void SP_func_door_secret(edict_t *ent);
+void SP_func_door_secret2(edict_t *ent);
 void SP_func_door_rotating(edict_t *ent);
 void SP_func_water(edict_t *ent);
 void SP_func_train(edict_t *ent);
 void SP_func_conveyor(edict_t *self);
 void SP_func_wall(edict_t *self);
+void SP_func_force_wall(edict_t *ent);
 void SP_func_object(edict_t *self);
 void SP_func_explosive(edict_t *self);
 void SP_func_timer(edict_t *self);
@@ -106,13 +114,10 @@ void SP_light_mine1(edict_t *ent);
 void SP_light_mine2(edict_t *ent);
 void SP_info_null(edict_t *self);
 void SP_info_notnull(edict_t *self);
-void SP_info_landmark (edict_t* self); // [Paril-KEX]
-void SP_info_world_text(edict_t * self);
 void SP_misc_player_mannequin(edict_t * self);
 void SP_misc_model(edict_t *self); // [Paril-KEX]
 void SP_path_corner(edict_t *self);
 void SP_point_combat(edict_t *self);
-void SP_info_nav_lock(edict_t *self); // [Paril-KEX]
 
 void SP_misc_explobox(edict_t *self);
 void SP_misc_banner(edict_t *self);
@@ -193,11 +198,6 @@ void SP_monster_boss5(edict_t *self);
 
 //===========
 // ROGUE
-void SP_func_plat2(edict_t *ent);
-void SP_func_door_secret2(edict_t *ent);
-void SP_func_force_wall(edict_t *ent);
-void SP_info_player_coop_lava(edict_t *self);
-void SP_info_teleport_destination(edict_t *self);
 void SP_monster_stalker(edict_t *self);
 void SP_monster_turret(edict_t *self);
 
@@ -208,8 +208,8 @@ void SP_monster_widow2(edict_t *self);
 void SP_dm_tag_token(edict_t *self);
 void SP_dm_dball_goal(edict_t *self);
 void SP_dm_dball_ball(edict_t *self);
-void SP_dm_dball_team1_start(edict_t *self);
-void SP_dm_dball_team2_start(edict_t *self);
+void SP_dm_dball_team_red_start(edict_t *self);
+void SP_dm_dball_team_blue_start(edict_t *self);
 void SP_dm_dball_ball_start(edict_t *self);
 void SP_dm_dball_speed_change(edict_t *self);
 void SP_monster_kamikaze(edict_t *self);
@@ -226,14 +226,22 @@ static const std::initializer_list<spawn_t> spawns = {
 	{ "info_player_team_red", SP_info_player_team_red },
 	{ "info_player_team_blue", SP_info_player_team_blue },
 	{ "info_player_coop", SP_info_player_coop },
+	{ "info_player_coop_lava", SP_info_player_coop_lava },
 	{ "info_player_intermission", SP_info_player_intermission },
+	{ "info_teleport_destination", SP_info_teleport_destination },
 	{ "info_ctf_teleport_destination", SP_info_ctf_teleport_destination },
+	{ "info_null", SP_info_null },
+	{ "info_notnull", SP_info_notnull },
+	{ "info_landmark", SP_info_landmark },
+	{ "info_world_text", SP_info_world_text },
+	{ "info_nav_lock", SP_info_nav_lock },
 
 	{ "func_plat", SP_func_plat },
 	{ "func_plat2", SP_func_plat2 },
 	{ "func_button", SP_func_button },
 	{ "func_door", SP_func_door },
 	{ "func_door_secret", SP_func_door_secret },
+	{ "func_door_secret2", SP_func_door_secret2 },
 	{ "func_door_rotating", SP_func_door_rotating },
 	{ "func_rotating", SP_func_rotating },
 	{ "func_train", SP_func_train },
@@ -242,6 +250,7 @@ static const std::initializer_list<spawn_t> spawns = {
 	{ "func_areaportal", SP_func_areaportal },
 	{ "func_clock", SP_func_clock },
 	{ "func_wall", SP_func_wall },
+	{ "func_force_wall", SP_func_force_wall },
 	{ "func_object", SP_func_object },
 	{ "func_timer", SP_func_timer },
 	{ "func_explosive", SP_func_explosive },
@@ -317,14 +326,9 @@ static const std::initializer_list<spawn_t> spawns = {
 	{ "light", SP_light },
 	{ "light_mine1", SP_light_mine1 },
 	{ "light_mine2", SP_light_mine2 },
-	{ "info_null", SP_info_null },
 	{ "func_group", SP_info_null },
-	{ "info_notnull", SP_info_notnull },
-	{ "info_landmark", SP_info_landmark },
-	{ "info_world_text", SP_info_world_text },
 	{ "path_corner", SP_path_corner },
 	{ "point_combat", SP_point_combat },
-	{ "info_nav_lock", SP_info_nav_lock },
 
 	{ "misc_explobox", SP_misc_explobox },
 	{ "misc_banner", SP_misc_banner },
@@ -409,10 +413,6 @@ static const std::initializer_list<spawn_t> spawns = {
 
 	//==============
 	// ROGUE
-	{ "func_door_secret2", SP_func_door_secret2 },
-	{ "func_force_wall", SP_func_force_wall },
-	{ "info_teleport_destination", SP_info_teleport_destination },
-	{ "info_player_coop_lava", SP_info_player_coop_lava },
 	{ "monster_stalker", SP_monster_stalker },
 	{ "monster_turret", SP_monster_turret },
 	{ "monster_daedalus", SP_monster_hover },
@@ -424,8 +424,8 @@ static const std::initializer_list<spawn_t> spawns = {
 	{ "dm_tag_token", SP_dm_tag_token },
 	{ "dm_dball_goal", SP_dm_dball_goal },
 	{ "dm_dball_ball", SP_dm_dball_ball },
-	{ "dm_dball_team1_start", SP_dm_dball_team1_start },
-	{ "dm_dball_team2_start", SP_dm_dball_team2_start },
+	{ "dm_dball_team1_start", SP_dm_dball_team_red_start },
+	{ "dm_dball_team2_start", SP_dm_dball_team_blue_start },
 	{ "dm_dball_ball_start", SP_dm_dball_ball_start },
 	{ "dm_dball_speed_change", SP_dm_dball_speed_change },
 	{ "monster_kamikaze", SP_monster_kamikaze },
@@ -445,25 +445,29 @@ static void SpawnEnt_MapFixes(edict_t *ent) {
 		}
 		return;
 	}
-	if (!Q_strcasecmp(level.mapname, "q2dm1")) {
-		if (!Q_strcasecmp(ent->classname, "item_health_mega") && ent->s.origin == vec3_t{ 480, 1376, 912 }) {
-			ent->s.angles = { 0, -45, 0 };
+	if (!Q_strcasecmp(ent->classname, "item_health_mega")) {
+		if (!Q_strcasecmp(level.mapname, "q2dm1")) {
+			if (ent->s.origin == vec3_t{ 480, 1376, 912 }) {
+				ent->s.angles = { 0, -45, 0 };
+			}
+			return;
 		}
-		return;
-	}
-	if (!Q_strcasecmp(level.mapname, "q2dm8")) {
-		if (!Q_strcasecmp(ent->classname, "item_health_mega") && ent->s.origin == vec3_t{ -832, 192, -232 }) {
-			ent->s.angles = { 0, 90, 0 };
+		if (!Q_strcasecmp(level.mapname, "q2dm8")) {
+			if (ent->s.origin == vec3_t{ -832, 192, -232 }) {
+				ent->s.angles = { 0, 90, 0 };
+			}
+			return;
 		}
-		return;
-	}
-	if (!Q_strcasecmp(level.mapname, "fact3")) {
-		if (!Q_strcasecmp(ent->classname, "item_health_mega") && ent->s.origin == vec3_t{-80, 568, 144}) {
-			ent->s.angles = { 0, -90, 0 };
+		if (!Q_strcasecmp(level.mapname, "fact3")) {
+			if (ent->s.origin == vec3_t{ -80, 568, 144 }) {
+				ent->s.angles = { 0, -90, 0 };
+			}
+			return;
 		}
-		return;
 	}
 }
+
+// ----------
 
 /*
 ===============
@@ -491,7 +495,15 @@ void ED_CallSpawn(edict_t *ent)
 	// PGM
 
 	ent->sv.init = false;
-
+#if 0
+	if (horde->integer) {
+		// remove monsters from map, we will spawn them in during wave starts
+		if (!strnicmp(ent->classname, "monster_", 8)) {
+			G_FreeEdict(ent);
+			return;
+		}
+	}
+#endif
 	// FIXME - PMM classnames hack
 	if (!strcmp(ent->classname, "weapon_nailgun"))
 		ent->classname = GetItemByIndex(IT_WEAPON_ETF_RIFLE)->classname;
@@ -924,6 +936,9 @@ static const char *GT_SpawnString() {
 	if (teamplay->integer) {
 		return "team";
 	}
+	if (horde->integer) {
+		return "horde";
+	}
 	if (duel->integer) {
 		return "tournament";
 	}
@@ -1162,7 +1177,7 @@ static inline bool G_InhibitEntity(edict_t *ent)
 	}
 #if 0
 	else if (deathmatch->integer) {
-		if (G_TeamplayEnabled()) {
+		if (IsTeamplay()) {
 			if (atoi(ent->notteam)) {
 				return true;
 			}
@@ -1428,6 +1443,22 @@ static bool VerifyEntityString(const char *entities) {
 	return true;
 }
 
+static void PrecacheForRandomRespawn() {
+	gitem_t *it;
+	int		 i;
+	int		 itflags;
+
+	it = itemlist;
+	for (i = 0; i < IT_TOTAL; i++, it++) {
+		itflags = it->flags;
+
+		if (!itflags || (itflags & (IF_NOT_GIVEABLE | IF_TECH | IF_NOT_RANDOM)) || !it->pickup || !it->world_model)
+			continue;
+
+		PrecacheItem(it);
+	}
+}
+
 /*
 ==============
 SpawnEntities
@@ -1609,9 +1640,10 @@ void SpawnEntities(const char *mapname, const char *entities, const char *spawnp
 
 	G_FindTeams();
 
-	// ZOID
-	CTFSpawn();
-	// ZOID
+	if (competition->integer > 1) {
+		level.match = MATCH_SETUP;
+		level.matchtime = level.time + gtime_t::from_min(matchsetuptime->value);
+	}
 
 	Tech_SetupSpawn();
 
@@ -1711,7 +1743,7 @@ static void G_InitStatusbar()
 		sb.ifstat(STAT_HEALTH_BARS).yt(24).health_bars().endifstat();
 	}
 	else {
-		if (G_TeamplayEnabled()) {
+		if (IsTeamplay()) {
 			G_Teams_PrecacheAssets();
 
 			// ctf/tdm
@@ -1730,10 +1762,8 @@ static void G_InitStatusbar()
 				sb.ifstat(STAT_CTF_FLAG_PIC).yt(26).xr(-24).pic(STAT_CTF_FLAG_PIC).endifstat();
 			}
 
-			if (ctf->integer) {
-				// match
-				sb.ifstat(STAT_CTF_MATCH).xl(0).yb(-78).stat_string(STAT_CTF_MATCH).endifstat();
-			}
+			// match
+			sb.ifstat(STAT_CTF_MATCH).xl(0).yb(-78).stat_string(STAT_CTF_MATCH).endifstat();
 
 			// team info
 			sb.ifstat(STAT_CTF_TEAMINFO).xl(0).yb(-88).stat_string(STAT_CTF_TEAMINFO).endifstat();
@@ -1842,6 +1872,18 @@ static void G_SetGametypeName(void) {
 				s = "NadeFest Duel";
 			} else {
 				s = "Duel";
+			}
+		} else if (horde->integer) {
+			if (g_instagib->integer) {
+				s = "Insta-Horde";
+			} else if (g_vampiric_damage->integer) {
+				s = "Vampiric Horde";
+			} else if (g_frenzy->integer) {
+				s = "Frenzy Horde";
+			} else if (g_nadefest->integer) {
+				s = "NadeFest Horde";
+			} else {
+				s = "Horde Mode";
 			}
 		} else if (deathmatch->integer) {
 			if (g_instagib->integer) {
@@ -1959,7 +2001,7 @@ void SP_worldspawn(edict_t *ent)
 	// [Paril-KEX]
 	if (!deathmatch->integer)
 		gi.configstring(CS_GAME_STYLE, G_Fmt("{}", (int32_t) game_style_t::GAME_STYLE_PVE).data());
-	else if (G_TeamplayEnabled())
+	else if (IsTeamplay())
 		gi.configstring(CS_GAME_STYLE, G_Fmt("{}", (int32_t) game_style_t::GAME_STYLE_TDM).data());
 	else
 		gi.configstring(CS_GAME_STYLE, G_Fmt("{}", (int32_t) game_style_t::GAME_STYLE_FFA).data());
