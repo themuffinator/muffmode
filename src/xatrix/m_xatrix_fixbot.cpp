@@ -101,7 +101,7 @@ edict_t *fixbot_FindDeadMonster(edict_t *self)
 
 static void fixbot_set_fly_parameters(edict_t *self, bool heal, bool weld)
 {
-	self->monsterinfo.fly_position_time = 0_sec;
+	self->monsterinfo.fly_position_time = 0_ms;
 	self->monsterinfo.fly_acceleration = 5.f;
 	self->monsterinfo.fly_speed = 110.f;
 	self->monsterinfo.fly_buzzard = false;

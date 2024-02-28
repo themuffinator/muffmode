@@ -637,7 +637,7 @@ static void G_WarmupEnd(void) {
 
 	memset(level.team_scores, 0, sizeof(level.team_scores));
 
-	level.warmup_time = 0_sec;
+	level.warmup_time = 0_ms;
 	level.warmup_state = WARMUP_NONE;
 	level.start_time = level.time;
 
@@ -744,7 +744,7 @@ static void CheckTournament(void) {
 					level.warmup_time = level.time + gtime_t::from_sec(g_warmup_countdown->integer);
 					level.warmup_state = WARMUP_COUNTDOWN;
 				} else {
-					level.warmup_time = 0_sec;
+					level.warmup_time = 0_ms;
 					level.warmup_state = WARMUP_NONE;
 				}
 			}
@@ -794,7 +794,7 @@ static void CheckTournament(void) {
 				level.warmup_time = level.time + gtime_t::from_sec(g_warmup_countdown->integer);
 				level.warmup_state = WARMUP_COUNTDOWN;
 			} else {
-				level.warmup_time = 0_sec;
+				level.warmup_time = 0_ms;
 				level.warmup_state = WARMUP_NONE;
 			}
 			return;
@@ -1754,7 +1754,7 @@ inline void G_RunFrame_(bool main_loop)
 				{
 					int32_t playernum = ent - g_edicts - 1;
 					gi.configstring(CS_PLAYERSKINS + playernum, "");
-					ent->timestamp = 0_sec;
+					ent->timestamp = 0_ms;
 				}
 			}
 			continue;

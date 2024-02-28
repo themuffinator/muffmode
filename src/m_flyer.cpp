@@ -504,7 +504,7 @@ static void flyer_set_fly_parameters(edict_t *self, bool melee)
 		// engage thrusters for a slice
 		self->monsterinfo.fly_pinned = false;
 		self->monsterinfo.fly_thrusters = true;
-		self->monsterinfo.fly_position_time = 0_sec;
+		self->monsterinfo.fly_position_time = 0_ms;
 		self->monsterinfo.fly_acceleration = 20.f;
 		self->monsterinfo.fly_speed = 210.f;
 		self->monsterinfo.fly_min_distance = 0.f;

@@ -1010,3 +1010,45 @@ bool IsMatchOn() {
 		return true;
 	return false;
 }
+
+/*
+=================
+G_TimeString
+=================
+*/
+const char *G_TimeString(const int64_t msec) {
+	int hours, mins, seconds;
+
+	seconds = msec / 1000;
+	mins = seconds / 60;
+	seconds -= mins * 60;
+	hours = mins / 60;
+	mins -= hours * 60;
+
+	if (hours > 0) {
+		return G_Fmt("{}:{:02}:{:02}", hours, mins, seconds).data();
+	} else {
+		return G_Fmt("{:02}:{:02}", mins, seconds).data();
+	}
+}
+/*
+=================
+G_TimeStringMs
+=================
+*/
+const char *G_TimeStringMs(const int64_t msec) {
+	int hours, mins, seconds, ms = msec;
+
+	seconds = ms / 1000;
+	ms -= seconds * 1000;
+	mins = seconds / 60;
+	seconds -= mins * 60;
+	hours = mins / 60;
+	mins -= hours * 60;
+
+	if (hours > 0) {
+		return G_Fmt("{}:{:02}:{:02}.{}", hours, mins, seconds, ms).data();
+	} else {
+		return G_Fmt("{:02}:{:02}.{}", mins, seconds, ms).data();
+	}
+}

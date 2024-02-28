@@ -1809,7 +1809,7 @@ void G_PostRespawn(edict_t *self) {
 	self->client->ps.pmove.pm_flags = PMF_TIME_TELEPORT;
 	self->client->ps.pmove.pm_time = 112;
 
-	self->client->respawn_min_time = 0_sec;
+	self->client->respawn_min_time = 0_ms;
 	self->client->respawn_time = level.time;
 }
 
@@ -2029,7 +2029,7 @@ static bool InitPlayerTeam(edict_t *ent) {
 		ent->svflags &= ~SVF_NOCLIENT;
 		ent->client->resp.ctf_state = 0;
 		ent->client->resp.inactive = false;
-		ent->client->resp.inactivity_time = 0_sec;
+		ent->client->resp.inactivity_time = 0_ms;
 
 		if (IsTeamplay() && ent->client->resp.team != TEAM_SPECTATOR) {
 			char value[MAX_INFO_VALUE] = { 0 };

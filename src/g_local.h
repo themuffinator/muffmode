@@ -79,24 +79,6 @@ extern int imageindex_ctfsb1;
 extern int imageindex_ctfsb2;
 extern int modelindex_flag1, modelindex_flag2; // [Paril-KEX]
 
-typedef struct {
-	player_team_state_state_t	state;
-
-	int			location;
-
-	int			captures;
-	int			baseDefense;
-	int			carrierDefense;
-	int			flagRecovery;
-	int			fragCarrier;
-	int			assists;
-
-	int			hurtCarrierTime;
-	int			returnedFlagTime;
-	int			flagPickupTime;
-	int			fraggedCarrierTime;
-} player_team_state_t;
-
 //==================================================================
 
 constexpr vec3_t PLAYER_MINS = { -16, -16, -24 };
@@ -1178,6 +1160,25 @@ struct ghost_t {
 	edict_t *ent;
 };
 
+typedef struct {
+	player_team_state_state_t	state;
+
+	gtime_t		returned_flag_time;
+	gtime_t		flag_pickup_time;
+	gtime_t		fragged_carrier_time;
+
+	int			location;
+
+	int			captures;
+	int			base_defense;
+	int			carrier_defense;
+	int			frag_recovery;
+	int			frag_carrier;
+	int			assists;
+
+	int			hurt_carrier_time;
+} player_team_state_t;
+
 //
 // this structure is cleared as each map is entered
 // it is read/written to the level.sav file for savegames
@@ -2234,6 +2235,8 @@ bool IsMatchSetup();
 bool IsMatchOn();
 bool Voting_Begin(edict_t *ent, voting_t type, const char *msg);
 void Team_Join(edict_t *ent, team_t desired_team, bool inactive);
+const char *G_TimeString(const int64_t msec);
+const char *G_TimeStringMs(const int64_t msec);
 
 //
 // g_spawn.c

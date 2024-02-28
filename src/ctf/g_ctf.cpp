@@ -289,11 +289,16 @@ bool GT_CTF_PickupFlag(edict_t *ent, edict_t *other) {
 
 		if (!(ent->spawnflags & SPAWNFLAG_ITEM_DROPPED)) {
 			// the flag is at home base.  if the player has the enemy
-			// flag, he's just won!
+			// flag, he's just scored a capture!
 
 			if (other->client->pers.inventory[enemy_flag_item]) {
-				gi.LocBroadcast_Print(PRINT_HIGH, "$g_flag_captured",
-					other->client->pers.netname, Teams_OtherTeamName(team));
+				if (other->client->pers.team_state.flag_pickup_time) {
+					gi.LocBroadcast_Print(PRINT_HIGH, "{} TEAM CAPTURED the flag! ({} captured in {})\n",
+						Teams_TeamName(team), other->client->pers.netname, G_TimeStringMs((level.time - other->client->pers.team_state.flag_pickup_time).milliseconds()));
+				} else {
+					gi.LocBroadcast_Print(PRINT_HIGH, "{} TEAM CAPTURED the flag! (captured by {})\n",
+						Teams_TeamName(team), other->client->pers.netname);
+				}
 				other->client->pers.inventory[enemy_flag_item] = 0;
 
 				level.last_flag_capture = level.time;
@@ -347,6 +352,9 @@ bool GT_CTF_PickupFlag(edict_t *ent, edict_t *other) {
 	}
 
 	// hey, its not our flag, pick it up
+	if (!(ent->spawnflags & SPAWNFLAG_ITEM_DROPPED)) {
+		other->client->pers.team_state.flag_pickup_time = level.time;
+	}
 	gi.LocBroadcast_Print(PRINT_HIGH, "$g_got_flag",
 		other->client->pers.netname, Teams_TeamName(team));
 	G_AdjustPlayerScore(other->client, CTF_FLAG_BONUS, false, 0);
@@ -416,7 +424,7 @@ void GT_CTF_DeadDropFlag(edict_t *self) {
 		gi.LocBroadcast_Print(PRINT_HIGH, "$g_lost_flag",
 			self->client->pers.netname, Teams_TeamName(TEAM_BLUE));
 	}
-
+	self->client->pers.team_state.flag_pickup_time = 0_ms;
 	if (dropped) {
 		dropped->think = GT_CTF_DropFlagThink;
 		dropped->nextthink = level.time + CTF_AUTO_FLAG_RETURN_TIMEOUT;
@@ -428,6 +436,8 @@ void GT_CTF_DropFlag(edict_t *ent, gitem_t *item) {
 
 	if (!ctf->integer)
 		return;
+
+	ent->client->pers.team_state.flag_pickup_time = 0_ms;
 
 	if (brandom())
 		gi.LocClient_Print(ent, PRINT_HIGH, "$g_lusers_drop_flags");
@@ -692,7 +702,7 @@ void Match_ResetAllPlayers() {
 		ent->client->resp.team = TEAM_SPECTATOR;
 		ent->client->resp.ready = false;
 		ent->client->resp.inactive = false;
-		ent->client->resp.inactivity_time = 0_sec;
+		ent->client->resp.inactivity_time = 0_ms;
 
 		ent->svflags = SVF_NONE;
 		ent->flags &= ~FL_GODMODE;

@@ -1927,7 +1927,7 @@ void Team_Join(edict_t *ent, team_t desired_team, bool inactive) {
 	ent->client->resp.team = desired_team;
 	ent->client->resp.ctf_state = 0;
 	ent->client->resp.inactive = false;
-	ent->client->resp.inactivity_time = 0_sec;
+	ent->client->resp.inactivity_time = 0_ms;
 	ent->client->resp.switch_team_time = level.time + 5_sec;
 	ent->client->resp.spectator_state = desired_team == TEAM_SPECTATOR ? SPECTATOR_FREE : SPECTATOR_NOT;
 	ent->client->resp.spectator_client = 0;
