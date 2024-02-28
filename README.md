@@ -13,6 +13,7 @@ FEATURES:
 - Enhanced teamplay with team balancing, improved team handling, communicating joined team to players and friendly fire warnings.
 - Extensive controls over specific map item spawns and entity string overrides.
 - EyeCam, smooth with aim prediction
+- Many more features, see release changelogs for a more info!
 
 INITIAL RELEASE v0.12.24 BETA:
 ---------------
