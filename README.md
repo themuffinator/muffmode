@@ -15,7 +15,7 @@ FEATURES:
 - EyeCam, smooth with aim prediction
 - Many more features, see release changelogs for a more info!
 
-INITIAL RELEASE v0.12.24 BETA:
+v0.12.24 BETA:
 ---------------
 MuffMode 0.12.24
 
