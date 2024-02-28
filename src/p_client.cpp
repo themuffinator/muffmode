@@ -439,6 +439,9 @@ void ClientObituary(edict_t *self, edict_t *inflictor, edict_t *attacker, mod_t 
 			}
 		}
 
+		if (base)
+			return;
+
 		gi.LocBroadcast_Print(PRINT_MEDIUM, "$g_mod_generic_died", self->client->pers.netname);
 		if (deathmatch->integer && !mod.no_point_loss) {
 			if (gamerules->integer) {
