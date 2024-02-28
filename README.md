@@ -1,4 +1,4 @@
-# Welcome to the Muff Mode wiki!
+# Welcome to the Muff Mode!
 
 ## What is Muff Mode?
 Muff Mode is a server-side mod for [QUAKE II Remastered](https://github.com/id-Software/quake2-rerelease-dll). With a focus on multiplayer, it provides an in-game menu,  bug fixes, minor gameplay tweaks and a host of new settings and features to create a more well-rounded experience.
