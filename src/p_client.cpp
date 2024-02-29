@@ -1640,7 +1640,7 @@ bool SelectSpawnPoint(edict_t *ent, vec3_t &origin, vec3_t &angles, bool force_s
 			select_spawn_result_t result = SelectDeathmatchSpawnPoint(ent->client->spawn_origin, g_dm_spawn_farthest->integer, force_spawn, true, ClientIsSpectating(ent->client));
 
 			if (!result.any_valid)
-				gi.Com_Error("no valid spawn points found");
+				gi.Com_Error("No valid spawn points found.");
 
 			spot = result.spot;
 		}
@@ -1704,7 +1704,7 @@ bool SelectSpawnPoint(edict_t *ent, vec3_t &origin, vec3_t &angles, bool force_s
 
 	return true;
 }
-#if 0
+
 /*
 ===========
 SelectSpectatorSpawnPoint
@@ -1718,7 +1718,7 @@ edict_t *SelectSpectatorSpawnPoint(vec3_t origin, vec3_t angles) {
 
 	return level.spawn_spots[SPAWN_SPOT_INTERMISSION]; // was NULL
 }
-#endif
+
 //======================================================================
 
 void InitBodyQue() {

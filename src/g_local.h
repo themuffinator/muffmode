@@ -1218,7 +1218,7 @@ struct level_locals_t {
 	// spawn spots	//Q3
 	edict_t		*spawn_spots[NUM_SPAWN_SPOTS];
 	int			num_spawn_spots;
-	int			num_spawn_spots_teams;
+	int			num_spawn_spots_team;
 	int			num_spawn_spots_free;
 
 	int32_t		pic_health;
@@ -2683,7 +2683,7 @@ void		G_Impact(edict_t *e1, const trace_t &trace);
 void SaveClientData();
 void FetchClientEntData(edict_t *ent);
 void EndDMLevel();
-//void FindIntermissionPoint(void);
+void FindIntermissionPoint(void);
 
 //
 // g_chase.c
@@ -3418,6 +3418,9 @@ struct edict_t {
 	const char *notteam;
 	const char *notfree;
 	//-muff
+
+	// team for spawn spot
+	team_t		fteam;
 };
 
 //=============

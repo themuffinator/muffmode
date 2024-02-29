@@ -1459,6 +1459,66 @@ static void PrecacheForRandomRespawn() {
 	}
 }
 
+static void G_LocateSpawnSpots(void) {
+	edict_t		*ent;
+	int			n;
+	const char	*s = nullptr;
+	size_t		sl = 0;
+
+	level.spawn_spots[SPAWN_SPOT_INTERMISSION] = NULL;
+	level.num_spawn_spots_free = 0;
+	level.num_spawn_spots_team = 0;
+
+	// locate all spawn spots
+	n = 0;
+	for (ent = g_edicts; ent < &g_edicts[globals.num_edicts]; ent++) {
+
+		if (!ent->inuse || !ent->classname)
+			continue;
+
+		s = "info_player_";
+		sl = strlen(s);
+
+		if (Q_strncasecmp(ent->classname, s, sl))
+			continue;
+
+		// intermission/ffa spots
+		if (!Q_strncasecmp(ent->classname, s, sl)) {
+			if (!Q_strcasecmp(ent->classname + sl, "intermission")) {
+				if (level.spawn_spots[SPAWN_SPOT_INTERMISSION] == NULL) {
+					level.spawn_spots[SPAWN_SPOT_INTERMISSION] = ent; // put in the last slot
+					ent->fteam = TEAM_FREE;
+				}
+				continue;
+			}
+			if (!Q_strcasecmp(ent->classname + sl, "deathmatch")) {
+				level.spawn_spots[n] = ent; n++;
+				level.num_spawn_spots_free++;
+				ent->fteam = TEAM_FREE;
+				ent->count = 1; // means its not initial spawn point
+				continue;
+			}
+			if (!Q_strcasecmp(ent->classname + sl, "team_red")) {
+				level.spawn_spots[n] = ent; n++;
+				level.num_spawn_spots_team++;
+				ent->fteam = TEAM_RED;
+				ent->count = 1; // means its not initial spawn point
+				continue;
+			}
+			if (!Q_strcasecmp(ent->classname + sl, "team_blue")) {
+				level.spawn_spots[n] = ent; n++;
+				level.num_spawn_spots_team++;
+				ent->fteam = TEAM_BLUE;
+				ent->count = 1; // means its not initial spawn point
+				continue;
+			}
+			continue;
+		}
+	}
+
+	level.num_spawn_spots = n;
+}
+
 /*
 ==============
 SpawnEntities
@@ -1666,6 +1726,8 @@ void SpawnEntities(const char *mapname, const char *entities, const char *spawnp
 			DMGame.PostInitSetup();
 	}
 	// ROGUE
+
+	G_LocateSpawnSpots();
 
 	setup_shadow_lights();
 }
