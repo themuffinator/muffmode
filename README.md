@@ -26,6 +26,10 @@ Muff Mode is a server-side mod for [QUAKE II Remastered](https://github.com/id-S
 ## Server Settings
  - **g_corpse_sink_time**: sets time in seconds for corpses to sink and disappear (default: 60)
  - **g_dm_force_join**: replaces g_teamplay_force_join, the menu forces the cvar change so this gets around that, it now applies to regular DM too so the change makes sense.
+ - **g_dm_no_self_damage**: when set to 1, disables any self damage after calculating knockback (default: 0)
+ - **g_dm_powerup_drop**: when set to 1, dropps carried powerups upon death (default: 1)
+ - **g_dm_powerups_style**: when set to 1, enables Q3A powerup rules for all major powerups - introduces an initial spawn delay (30 to 60 sec), sets 120 sec respawn delay, makes powerup spawn and pickup sounds global. (default: 1)
+ - **g_dm_respawn_delay_min**: the counterpart to g_dm_force_respawn_time, this sets a minimum respawn delay after dying (default: 1)
  - **g_dm_respawn_point_min_dist**: sets minimum distance to respawn away from previous spawn point (default: 256, max = 512, 0 = disabled)
  - **g_dm_respawn_point_min_dist_debug**: when set to 1, prints avoiding spawn points when g_dm_respawn_point_min_dist is used (default: 0)
  - **g_eyecam**: enables eyecam, 0 reverts to chase cam (default: 1)
@@ -35,16 +39,13 @@ Muff Mode is a server-side mod for [QUAKE II Remastered](https://github.com/id-S
  - **g_knockback_scale**: scales all knockback resulting from damage received (default 1.0)
  - **g_mover_speed_scale**: sets speed scaling factor for all movers in maps (doors, rotators, lifts etc.) (default: 1.0f)
  - **g_no_powerups**: disable powerup pickups (Quad, Protection, Double, DuelFire, Invisibility, etc.)
+ - **g_showhelp**: when set to 1, prints a quick explanation about game modifications to players. (default: 0)
  - **g_teamplay_allow_team_pick**: When set to 0, denies the ability to pick a specific team during teamplay. This changes the join menu accordingly. (default 0)
  - **g_teamplay_force_balance**: When set to 1, prohibits joining a team with too many players. (default: 0)
  - **g_teamplay_force_balance**: force team balancing (default 0)
  - **g_teleporter_nofreeze**: When set to 1, does not freeze player velocity when teleporting. (default: 0)
  - **g_warmup_ready_percentage**: in match mode, sets percentile of ready players out of total players required to start the match. Set to 0 to disable readying up. (default: 0.51f)
  - **maxplayers**: Set max number of players in the game (ie: non-spectators), it is capped to maxclients. In team games, team max size will be maxplayers/2 and rounded down.
-- **g_dm_no_self_damage**: when set to 1, disables any self damage after calculating knockback (default: 0)
-- **g_dm_powerup_drop**: when set to 1, dropps carried powerups upon death (default: 1)
-- **g_dm_powerups_style**: when set to 1, enables Q3A powerup rules for all major powerups - introduces an initial spawn delay (30 to 60 sec), sets 120 sec respawn delay, makes powerup spawn and pickup sounds global. (default: 1)
-- **g_dm_respawn_delay_min**: the counterpart to g_dm_force_respawn_time, this sets a minimum respawn delay after dying (default: 1)
 
 ### Offhand Hook
 - Added 'hook' and 'unhook' commands to use off-hand hook. Use `g_grapple_offhand 1` to enable this.
