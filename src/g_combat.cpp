@@ -501,8 +501,8 @@ bool OnSameTeam(edict_t *ent1, edict_t *ent2)
 
 	if (g_quadhog->integer) {
 		if (ent1->client->pu_time_quad > level.time || ent2->client->pu_time_quad > level.time)
-			return true;
-		return false;
+			return false;
+		return true;
 	}
 
 	// [Paril-KEX] coop 'team' support
@@ -521,9 +521,6 @@ bool OnSameTeam(edict_t *ent1, edict_t *ent2)
 // they wouldn't damage each other
 bool CheckTeamDamage(edict_t *targ, edict_t *attacker)
 {
-	if (g_quadhog->integer)
-		return false;
-
 	// always damage teammates if friendly fire is enabled
 	if (g_friendly_fire->integer)
 		return false;
@@ -816,7 +813,7 @@ void T_Damage(edict_t *targ, edict_t *inflictor, edict_t *attacker, const vec3_t
 			}
 		}
 		// team damage checks and warnings
-		if (IsTeamplay() && OnSameTeam(targ, attacker)) {
+		if (OnSameTeam(targ, attacker)) {
 			attacker->client->pers.dmg_team += take + psave + asave;
 
 			if (attacker->client->pers.dmg_team >= 100) {

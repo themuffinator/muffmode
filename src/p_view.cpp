@@ -896,10 +896,11 @@ void G_SetClientEffects(edict_t *ent)
 	if (freeze->integer && !level.intermission_time && ent->client->frozen && !ent->client->resp.thawer) {	// || level.framenum & 8) {
 		ent->s.effects |= EF_COLOR_SHELL;
 		ent->s.renderfx |= (RF_SHELL_RED | RF_SHELL_GREEN | RF_SHELL_BLUE);
+	} else {
+		ent->s.effects = EF_NONE;
 	}
 /*freeze*/
 
-	ent->s.effects = EF_NONE;
 	ent->s.renderfx &= RF_STAIR_STEP;
 	ent->s.renderfx |= RF_IR_VISIBLE;
 	ent->s.alpha = 1.0;

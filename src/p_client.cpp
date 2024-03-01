@@ -532,7 +532,12 @@ static void TossClientItems(edict_t *self) {
 
 		drop->touch = Touch_Item;
 		drop->nextthink = self->client->pu_time_quad;
-		drop->think = G_FreeEdict;
+		drop->think = g_quadhog->integer ? QuadHog_DoSpawn : G_FreeEdict;
+
+		if (g_quadhog->integer) {
+			drop->s.renderfx |= RF_SHELL_BLUE;
+			drop->s.effects |= EF_COLOR_SHELL;
+		}
 
 		// decide how many seconds it has left
 		drop->count = self->client->pu_time_quad.seconds<int>() - level.time.seconds<int>();
@@ -3367,6 +3372,13 @@ void ClientThink(edict_t *ent, usercmd_t *ucmd) {
 	// check for inactivity timer
 	if (!ClientInactivityTimer(ent))
 		return;
+
+	if (g_quadhog->integer) {
+		if (ent->client->pu_time_quad > 0_sec && level.time >= ent->client->pu_time_quad) {
+			ent->client->pu_time_quad = 0_ms;
+			QuadHog_SetupSpawn(0_ms);
+		}
+	}
 
 	if ((ucmd->buttons & BUTTON_CROUCH) && pm_config.n64_physics) {
 		if (client->pers.n64_crouch_warn_times < 12 &&

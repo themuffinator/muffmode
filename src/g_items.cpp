@@ -769,6 +769,109 @@ void Vengeance_Launch(edict_t *self) {
 
 //======================================================================
 
+edict_t *QuadHog_FindSpawn() {
+	return SelectDeathmatchSpawnPoint(vec3_origin, false, true, true, false).spot;
+}
+
+static THINK(QuadHog_Think) (edict_t *quad) -> void {
+	edict_t *spot;
+
+	if ((spot = QuadHog_FindSpawn()) != nullptr) {
+		QuadHog_Spawn(quad->item, spot);
+		G_FreeEdict(quad);
+	} else {
+		quad->nextthink = level.time + 30_sec;
+		quad->think = QuadHog_Think;
+
+		gi.Com_Print("No Quad respawn point found\n");
+	}
+}
+
+static void QuadHod_ClearAll() {
+	edict_t *ent;
+
+	for (ent = g_edicts; ent < &g_edicts[globals.num_edicts]; ent++) {
+
+		if (!ent->inuse || !ent->classname)
+			continue;
+
+		if (!ent->item)
+			continue;
+
+		if (ent->item->id != IT_POWERUP_QUAD)
+			continue;
+
+		G_FreeEdict(ent);
+	}
+}
+
+void QuadHog_Spawn(gitem_t *item, edict_t *spot) {
+	edict_t *ent;
+	vec3_t	 forward, right;
+	vec3_t	 angles;
+
+	QuadHod_ClearAll();
+
+	ent = G_Spawn();
+
+	ent->classname = item->classname;
+	ent->item = item;
+	ent->spawnflags = SPAWNFLAG_ITEM_DROPPED;
+	ent->s.effects = item->world_model_flags;
+	ent->s.renderfx = RF_GLOW | RF_NO_LOD;
+	ent->mins = { -15, -15, -15 };
+	ent->maxs = { 15, 15, 15 };
+	gi.setmodel(ent, ent->item->world_model);
+	ent->solid = SOLID_TRIGGER;
+	ent->movetype = MOVETYPE_TOSS;
+	ent->touch = Touch_Item;
+	ent->owner = ent;
+
+	angles[0] = 0;
+	angles[1] = (float)irandom(360);
+	angles[2] = 0;
+
+	AngleVectors(angles, forward, right, nullptr);
+	ent->s.origin = spot->s.origin;
+	ent->s.origin[2] += 16;
+	ent->velocity = forward * 100;
+	ent->velocity[2] = 300;
+
+	ent->s.renderfx |= RF_SHELL_BLUE;
+	ent->s.effects |= EF_COLOR_SHELL;
+
+	ent->nextthink = level.time + 30_sec;
+	ent->think = QuadHog_DoSpawn;
+
+	gi.LocBroadcast_Print(PRINT_CENTER, "The Quad has spawned!\n");
+	gi.sound(ent, CHAN_RELIABLE | CHAN_NO_PHS_ADD | CHAN_AUX, gi.soundindex("misc/alarm.wav"), 1, ATTN_NONE, 0);
+
+	gi.linkentity(ent);
+}
+
+THINK(QuadHog_DoSpawn) (edict_t *ent) -> void {
+	edict_t *spot;
+
+	if ((spot = QuadHog_FindSpawn()) != nullptr)
+		QuadHog_Spawn(GetItemByIndex(IT_POWERUP_QUAD), spot);
+
+	if (ent)
+		G_FreeEdict(ent);
+}
+
+void QuadHog_SetupSpawn(gtime_t delay) {
+	edict_t *ent;
+
+	if (!g_quadhog->integer)
+		return;
+
+	ent = G_Spawn();
+	ent->nextthink = level.time + delay;
+	ent->think = QuadHog_DoSpawn;
+}
+
+//======================================================================
+
 /*------------------------------------------------------------------------*/
 /* TECH																	  */
 /*------------------------------------------------------------------------*/
@@ -815,7 +918,7 @@ static edict_t *FindTechSpawn() {
 	return SelectDeathmatchSpawnPoint(vec3_origin, false, true, true, false).spot;
 }
 
-THINK(Tech_think) (edict_t *tech) -> void {
+THINK(Tech_Think) (edict_t *tech) -> void {
 	edict_t *spot;
 
 	if ((spot = FindTechSpawn()) != nullptr) {
@@ -823,7 +926,7 @@ THINK(Tech_think) (edict_t *tech) -> void {
 		G_FreeEdict(tech);
 	} else {
 		tech->nextthink = level.time + CTF_TECH_TIMEOUT;
-		tech->think = Tech_think;
+		tech->think = Tech_Think;
 	}
 }
 
@@ -832,7 +935,7 @@ void Tech_Drop(edict_t *ent, gitem_t *item) {
 
 	tech = Drop_Item(ent, item);
 	tech->nextthink = level.time + CTF_TECH_TIMEOUT;
-	tech->think = Tech_think;
+	tech->think = Tech_Think;
 	ent->client->pers.inventory[item->id] = 0;
 }
 
@@ -848,7 +951,7 @@ void Tech_DeadDrop(edict_t *ent) {
 			dropped->velocity[0] = crandom_open() * 300;
 			dropped->velocity[1] = crandom_open() * 300;
 			dropped->nextthink = level.time + CTF_TECH_TIMEOUT;
-			dropped->think = Tech_think;
+			dropped->think = Tech_Think;
 			dropped->owner = nullptr;
 			ent->client->pers.inventory[tech_ids[i]] = 0;
 		}
@@ -886,7 +989,7 @@ static void Tech_Spawn(gitem_t *item, edict_t *spot) {
 	ent->velocity[2] = 300;
 
 	ent->nextthink = level.time + CTF_TECH_TIMEOUT;
-	ent->think = Tech_think;
+	ent->think = Tech_Think;
 
 	gi.linkentity(ent);
 }
@@ -1394,7 +1497,7 @@ static bool Pickup_Powerup(edict_t *ent, edict_t *other)
 			if (g_dm_powerups_style->integer && IsSuperPowerup(ent->item->id))
 				ent->item->quantity = 120;
 
-			SetRespawn(ent, gtime_t::from_sec(ent->item->quantity));
+				SetRespawn(ent, gtime_t::from_sec(ent->item->quantity));
 		}
 	}
 
@@ -1579,10 +1682,43 @@ static bool Pickup_General(edict_t *ent, edict_t *other)
 
 static void Drop_General(edict_t *ent, gitem_t *item)
 {
+	if (g_quadhog->integer && item->id == IT_POWERUP_QUAD)
+		return;
+
 	edict_t *dropped = Drop_Item(ent, item);
 	dropped->spawnflags |= SPAWNFLAG_ITEM_DROPPED_PLAYER;
 	dropped->svflags &= ~SVF_INSTANCED;
 	ent->client->pers.inventory[item->id]--;
+
+	if (item->flags & IF_POWERUP) {
+		switch (item->id) {
+		case IT_POWERUP_QUAD:
+			ent->client->pu_time_quad = 0_ms;
+			break;
+		case IT_POWERUP_DUELFIRE:
+			ent->client->pu_time_duelfire = 0_ms;
+			break;
+		case IT_POWERUP_PROTECTION:
+			ent->client->pu_time_protection = 0_ms;
+			break;
+		case IT_POWERUP_INVISIBILITY:
+			ent->client->pu_time_invisibility = 0_ms;
+			break;
+		case IT_POWERUP_DOUBLE:
+			ent->client->pu_time_double = 0_ms;
+			break;
+		case IT_POWERUP_SILENCER:
+			ent->client->silencer_shots = 0;
+			break;
+		case IT_POWERUP_REBREATHER:
+			ent->client->pu_time_rebreather = 0_ms;
+			break;
+		case IT_POWERUP_ENVIROSUIT:
+			ent->client->pu_time_enviro = 0_ms;
+			break;
+		}
+	}
+
 }
 
 //======================================================================
@@ -1726,7 +1862,11 @@ static bool Pickup_Pack(edict_t *ent, edict_t *other)
 
 static void Use_Powerup_BroadcastMsg(edict_t *ent, gitem_t *item, const char *name) {
 	if (g_dm_powerups_style->integer) {
-		gi.LocBroadcast_Print(PRINT_HIGH, "{} got the {}!\n", ent->client->pers.netname, item->pickup_name);
+		if (g_quadhog->integer && item->id == IT_POWERUP_QUAD) {
+			gi.LocBroadcast_Print(PRINT_CENTER, "{} is the Quad Hog!\n", ent->client->pers.netname);
+		} else {
+			gi.LocBroadcast_Print(PRINT_HIGH, "{} got the {}!\n", ent->client->pers.netname, item->pickup_name);
+		}
 		gi.sound(ent, CHAN_RELIABLE | CHAN_NO_PHS_ADD | CHAN_AUX, gi.soundindex(name), 1, ATTN_NONE, 0);
 	}
 }

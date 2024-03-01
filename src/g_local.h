@@ -2137,6 +2137,9 @@ bool AllowClientTeamSwitch(edict_t *ent);
 //
 // g_items.c
 //
+void		QuadHog_DoSpawn(edict_t *ent);
+void		QuadHog_SetupSpawn(gtime_t delay);
+void		QuadHog_Spawn(gitem_t *item, edict_t *spot);
 bool		IsSuperPowerup(item_id_t id);
 void		Tech_DeadDrop(edict_t *ent);
 void		Tech_Reset();

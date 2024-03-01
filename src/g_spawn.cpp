@@ -547,7 +547,6 @@ void ED_CallSpawn(edict_t *ent)
 					ent->classname = item->classname;
 				}
 			}
-			
 			if (g_dm_powerups_style->integer && IsSuperPowerup(item->id)) {
 				int32_t r = irandom(30, 60);
 				DelayPowerup(ent, item, gtime_t::from_sec(r));
@@ -1198,6 +1197,9 @@ static inline bool G_InhibitEntity(edict_t *ent)
 	else if (!coop->integer && ent->spawnflags.has(SPAWNFLAG_COOP_ONLY))
 		return true;
 
+	if (g_quadhog->integer && !strcmp(ent->classname, "item_quad"))
+		return true;
+
 	// skill
 	return ((skill->integer == 0) && ent->spawnflags.has(SPAWNFLAG_NOT_EASY)) ||
 		   ((skill->integer == 1) && ent->spawnflags.has(SPAWNFLAG_NOT_MEDIUM)) ||
@@ -1705,6 +1707,7 @@ void SpawnEntities(const char *mapname, const char *entities, const char *spawnp
 		level.matchtime = level.time + gtime_t::from_min(matchsetuptime->value);
 	}
 
+	QuadHog_SetupSpawn(5_sec);
 	Tech_SetupSpawn();
 
 	// ROGUE
@@ -1884,6 +1887,8 @@ static void G_SetGametypeName(void) {
 				s = "Frenzy CTF";
 			} else if (g_nadefest->integer) {
 				s = "NadeFest CTF";
+			} else if (g_quadhog->integer) {
+				s = "Quad Hog CTF";
 			} else {
 				s = "Capture the Flag";
 			}
@@ -1896,6 +1901,8 @@ static void G_SetGametypeName(void) {
 				s = "Frenzy Freeze";
 			} else if (g_nadefest->integer) {
 				s = "NadeFest Freeze";
+			} else if (g_quadhog->integer) {
+				s = "Quad Hog Freeze";
 			} else {
 				s = "Freeze Tag";
 			}
@@ -1908,6 +1915,8 @@ static void G_SetGametypeName(void) {
 				s = "Frenzy CA";
 			} else if (g_nadefest->integer) {
 				s = "NadeFest CA";
+			} else if (g_quadhog->integer) {
+				s = "Quad Hog CA";
 			} else {
 				s = "Clan Arena";
 			}
@@ -1920,6 +1929,8 @@ static void G_SetGametypeName(void) {
 				s = "Frenzy TDM";
 			} else if (g_nadefest->integer) {
 				s = "NadeFest TDM";
+			} else if (g_quadhog->integer) {
+				s = "Quad Hog TDM";
 			} else {
 				s = "Team Deathmatch";
 			}
@@ -1932,6 +1943,8 @@ static void G_SetGametypeName(void) {
 				s = "Frenzy Duel";
 			} else if (g_nadefest->integer) {
 				s = "NadeFest Duel";
+			} else if (g_quadhog->integer) {
+				s = "Quad Hog Duel";
 			} else {
 				s = "Duel";
 			}
@@ -1944,6 +1957,8 @@ static void G_SetGametypeName(void) {
 				s = "Frenzy Horde";
 			} else if (g_nadefest->integer) {
 				s = "NadeFest Horde";
+			} else if (g_quadhog->integer) {
+				s = "Quad Hog Horde";
 			} else {
 				s = "Horde Mode";
 			}
@@ -1956,6 +1971,8 @@ static void G_SetGametypeName(void) {
 				s = "Frenzy Deathmatch";
 			} else if (g_nadefest->integer) {
 				s = "NadeFest";
+			} else if (g_quadhog->integer) {
+				s = "Quad Hog";
 			} else {
 				s = "Deathmatch";
 			}
