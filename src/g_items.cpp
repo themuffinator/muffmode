@@ -838,7 +838,7 @@ void QuadHog_Spawn(gitem_t *item, edict_t *spot, bool reset) {
 	ent->nextthink = level.time + 30_sec;
 	ent->think = QuadHog_DoSpawn;
 
-	gi.LocBroadcast_Print(PRINT_CENTER, "The Quad {}!\n", reset ? "respawned!" : "has spawned!");
+	gi.LocBroadcast_Print(PRINT_CENTER, "The Quad {}!\n", reset ? "respawned" : "has spawned");
 	gi.sound(ent, CHAN_RELIABLE | CHAN_NO_PHS_ADD | CHAN_AUX, gi.soundindex("misc/alarm.wav"), 1, ATTN_NONE, 0);
 
 	gi.linkentity(ent);
@@ -1496,6 +1496,10 @@ static bool Pickup_Powerup(edict_t *ent, edict_t *other)
 			ent->item->use(other, ent->item);
 	}
 
+	if (g_quadhog->integer && ent->item->id == IT_POWERUP_QUAD) {
+		ent->think = nullptr;
+		ent->nextthink = 0_ms;
+	}
 	if (deathmatch->integer)
 	{
 		if (!(ent->spawnflags & SPAWNFLAG_ITEM_DROPPED) && !is_dropped_from_death) {
