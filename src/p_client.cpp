@@ -532,7 +532,7 @@ static void TossClientItems(edict_t *self) {
 
 		drop->touch = Touch_Item;
 		drop->nextthink = self->client->pu_time_quad;
-		drop->think = g_quadhog->integer ? QuadHog_DoSpawn : G_FreeEdict;
+		drop->think = g_quadhog->integer ? QuadHog_DoReset : G_FreeEdict;
 
 		if (g_quadhog->integer) {
 			drop->s.renderfx |= RF_SHELL_BLUE;

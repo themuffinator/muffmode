@@ -773,20 +773,6 @@ edict_t *QuadHog_FindSpawn() {
 	return SelectDeathmatchSpawnPoint(vec3_origin, false, true, true, false).spot;
 }
 
-static THINK(QuadHog_Think) (edict_t *quad) -> void {
-	edict_t *spot;
-
-	if ((spot = QuadHog_FindSpawn()) != nullptr) {
-		QuadHog_Spawn(quad->item, spot);
-		G_FreeEdict(quad);
-	} else {
-		quad->nextthink = level.time + 30_sec;
-		quad->think = QuadHog_Think;
-
-		gi.Com_Print("No Quad respawn point found\n");
-	}
-}
-
 static void QuadHod_ClearAll() {
 	edict_t *ent;
 
@@ -805,7 +791,7 @@ static void QuadHod_ClearAll() {
 	}
 }
 
-void QuadHog_Spawn(gitem_t *item, edict_t *spot) {
+void QuadHog_Spawn(gitem_t *item, edict_t *spot, bool reset) {
 	edict_t *ent;
 	vec3_t	 forward, right;
 	vec3_t	 angles;
@@ -843,7 +829,7 @@ void QuadHog_Spawn(gitem_t *item, edict_t *spot) {
 	ent->nextthink = level.time + 30_sec;
 	ent->think = QuadHog_DoSpawn;
 
-	gi.LocBroadcast_Print(PRINT_CENTER, "The Quad has spawned!\n");
+	gi.LocBroadcast_Print(PRINT_CENTER, "The Quad {}!\n", reset ? "respawned!" : "has spawned!");
 	gi.sound(ent, CHAN_RELIABLE | CHAN_NO_PHS_ADD | CHAN_AUX, gi.soundindex("misc/alarm.wav"), 1, ATTN_NONE, 0);
 
 	gi.linkentity(ent);
@@ -853,7 +839,17 @@ THINK(QuadHog_DoSpawn) (edict_t *ent) -> void {
 	edict_t *spot;
 
 	if ((spot = QuadHog_FindSpawn()) != nullptr)
-		QuadHog_Spawn(GetItemByIndex(IT_POWERUP_QUAD), spot);
+		QuadHog_Spawn(GetItemByIndex(IT_POWERUP_QUAD), spot, false);
+
+	if (ent)
+		G_FreeEdict(ent);
+}
+
+THINK(QuadHog_DoReset) (edict_t *ent) -> void {
+	edict_t *spot;
+
+	if ((spot = QuadHog_FindSpawn()) != nullptr)
+		QuadHog_Spawn(GetItemByIndex(IT_POWERUP_QUAD), spot, true);
 
 	if (ent)
 		G_FreeEdict(ent);
