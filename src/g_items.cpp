@@ -778,7 +778,16 @@ static void QuadHod_ClearAll() {
 
 	for (ent = g_edicts; ent < &g_edicts[globals.num_edicts]; ent++) {
 
-		if (!ent->inuse || !ent->classname)
+		if (!ent->inuse)
+			continue;
+
+		if (ent->client) {
+			ent->client->pu_time_quad = 0_ms;
+			ent->client->pers.inventory[IT_POWERUP_QUAD] = 0;
+			continue;
+		}
+
+		if (!ent->classname)
 			continue;
 
 		if (!ent->item)
@@ -822,7 +831,7 @@ void QuadHog_Spawn(gitem_t *item, edict_t *spot, bool reset) {
 	ent->s.origin[2] += 16;
 	ent->velocity = forward * 100;
 	ent->velocity[2] = 300;
-
+	
 	ent->s.renderfx |= RF_SHELL_BLUE;
 	ent->s.effects |= EF_COLOR_SHELL;
 
@@ -1878,6 +1887,7 @@ void Use_Quad(edict_t *ent, gitem_t *item)
 	gtime_t timeout = quad_drop_timeout_hack ? quad_drop_timeout_hack : 30_sec;
 	quad_drop_timeout_hack = 0_ms;
 
+	ent->client->pers.inventory[item->id]--;
 	ent->client->pu_time_quad = max(level.time, ent->client->pu_time_quad) + timeout;
 
 	Use_Powerup_BroadcastMsg(ent, item, "items/damage.wav");

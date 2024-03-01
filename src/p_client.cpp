@@ -3377,7 +3377,6 @@ void ClientThink(edict_t *ent, usercmd_t *ucmd) {
 
 	if (g_quadhog->integer) {
 		if (ent->client->pu_time_quad > 0_sec && level.time >= ent->client->pu_time_quad) {
-			ent->client->pu_time_quad = 0_ms;
 			QuadHog_SetupSpawn(0_ms);
 		}
 	}
