@@ -3381,7 +3381,7 @@ void ClientThink(edict_t *ent, usercmd_t *ucmd) {
 		}
 	}
 	
-	if (!ent->client->resp.showed_help && ent->client->resp.switch_team_time) {
+	if (g_showhelp->integer && !ent->client->resp.showed_help && ent->client->resp.switch_team_time) {
 		if (level.time >= ent->client->resp.switch_team_time) {
 			if (g_quadhog->integer) {
 				gi.LocClient_Print(ent, PRINT_CENTER, "QUAD HOG\nFind the Quad Damage to become the Quad Hog!\nScore by fragging the Quad Hog or fragging while Quad Hog.");
