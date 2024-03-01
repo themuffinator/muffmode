@@ -3387,6 +3387,10 @@ void ClientThink(edict_t *ent, usercmd_t *ucmd) {
 				gi.LocClient_Print(ent, PRINT_CENTER, "QUAD HOG\nFind the Quad Damage to become the Quad Hog!\nScore by fragging the Quad Hog or fragging while Quad Hog.");
 			} else if (g_vampiric_damage->integer) {
 				gi.LocClient_Print(ent, PRINT_CENTER, "VAMPIRIC DAMAGE\nSurvive by inflicting damage on your foes,\ntheir pain makes you stronger!");
+			} else if (g_frenzy->integer) {
+				gi.LocClient_Print(ent, PRINT_CENTER, "WEAPONS FRENZY\nWeapons fire faster, rockets move faster, ammo regenerates.");
+			} else if (g_nadefest->integer) {
+				gi.LocClient_Print(ent, PRINT_CENTER, "NADE FEST\nOnly grenades, nothing else!");
 			}
 
 			ent->client->resp.showed_help = true;
