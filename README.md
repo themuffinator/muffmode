@@ -61,6 +61,8 @@ Muff Mode is a server-side mod for [QUAKE II Remastered](https://github.com/id-S
 	* **g_nadefest**: when set to 1, enables Nade Fest (default 0)
 * **Vampiric Damage**: your health slowly drains over time, the only way to boost your health is to inflict damage on your foes!
 	* **g_vampiric_damage**: when set to 1, enables Vampiric Damage mode (default: 0)
+* **Quad Hog**: find the Quad Damage to become the Quad Hog! Score frags by killing the Quad Hog or killing while the Quad Hog.
+	* **g_quadhog**: when set to 1, enables Quad Hog mode (default: 0)
 
 ### Gameplay Tweaks and Fixes
  * Instagib and Nade Fest now give players regeneration to recover from environmental damage, falling damage etc.
@@ -101,7 +103,6 @@ Muff Mode is a server-side mod for [QUAKE II Remastered](https://github.com/id-S
 - tastyspleen.net's mymap system for calling maps
 - gametype: Freeze Tag (WIP)
 - gametype: Clan Arena (WIP)
-- game modifier: quad hog (WIP)
 - cleanup and unify code, introduce a gametype and teams handling system similar to Q3's (WIP)
 - gametype: Duel (ala-Q3 tournament queueing system, loser goes, winner stays)
 - chat tokens
