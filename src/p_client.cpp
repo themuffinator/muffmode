@@ -1059,6 +1059,7 @@ static void InitClientResp(gclient_t *client) {
 	bool id_state = client->resp.id_state;
 	bool inactive = client->resp.inactive;
 	bool admin = client->resp.admin;
+	bool showed_help = client->resp.showed_help;
 
 	memset(&client->resp, 0, sizeof(client->resp));
 
@@ -1066,6 +1067,7 @@ static void InitClientResp(gclient_t *client) {
 	client->resp.id_state = id_state;
 	client->resp.inactive = inactive;
 	client->resp.admin = admin;
+	client->resp.showed_help = showed_help;
 
 	client->resp.entertime = level.time;
 	client->resp.coop_respawn = client->pers;
@@ -3377,6 +3379,18 @@ void ClientThink(edict_t *ent, usercmd_t *ucmd) {
 		if (ent->client->pu_time_quad > 0_sec && level.time >= ent->client->pu_time_quad) {
 			ent->client->pu_time_quad = 0_ms;
 			QuadHog_SetupSpawn(0_ms);
+		}
+	}
+	
+	if (!ent->client->resp.showed_help && ent->client->resp.switch_team_time) {
+		if (level.time >= ent->client->resp.switch_team_time) {
+			if (g_quadhog->integer) {
+				gi.LocClient_Print(ent, PRINT_CENTER, "QUAD HOG\nFind the Quad Damage to become the Quad Hog!\nScore by fragging the Quad Hog or fragging while Quad Hog.");
+			} else if (g_vampiric_damage->integer) {
+				gi.LocClient_Print(ent, PRINT_CENTER, "VAMPIRIC DAMAGE\nSurvive by inflicting damage on your foes,\ntheir pain makes you stronger!");
+			}
+
+			ent->client->resp.showed_help = true;
 		}
 	}
 

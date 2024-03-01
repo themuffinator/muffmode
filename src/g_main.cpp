@@ -198,6 +198,8 @@ cvar_t *warn_unbalanced;
 cvar_t *g_eyecam;
 cvar_t *g_teleporter_nofreeze;
 
+cvar_t *g_showhelp;
+
 static cvar_t *g_frames_per_frame;
 
 int imageindex_i_ctf1;
@@ -577,6 +579,8 @@ void InitGame()
 //-ctf
 	g_eyecam = gi.cvar("g_eyecam", "1", CVAR_NOFLAGS);
 	g_teleporter_nofreeze = gi.cvar("g_teleporter_nofreeze", "0", CVAR_NOFLAGS);
+
+	g_showhelp = gi.cvar("g_showhelp", "1", CVAR_NOFLAGS);
 
 	// items
 	InitItems();

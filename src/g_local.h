@@ -2101,6 +2101,8 @@ extern cvar_t *warn_unbalanced;
 extern cvar_t *g_eyecam;
 extern cvar_t *g_teleporter_nofreeze;
 
+extern cvar_t *g_showhelp;
+
 #define world (&g_edicts[0])
 
 uint32_t GetUnicastKey();
@@ -2960,6 +2962,8 @@ struct client_respawn_t {
 	int					wins, losses;		// duel stats
 
 	int32_t				kill_count;	// for rampage award, reset on respawn
+
+	bool				showed_help;
 };
 
 // [Paril-KEX] seconds until we are fully invisible after
