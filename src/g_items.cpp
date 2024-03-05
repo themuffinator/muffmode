@@ -2109,14 +2109,14 @@ void Drop_Ammo(edict_t *ent, gitem_t *item)
 
 //======================================================================
 
-THINK(MegaHealth_think) (edict_t *self) -> void
+static THINK(MegaHealth_think) (edict_t *self) -> void
 {
-	if (self->owner->health > self->owner->max_health
-		//ZOID
-		&& !Tech_HasRegeneration(self->owner)
-		//ZOID
-		)
-	{
+	int32_t health = self->max_health;
+	if (health < self->owner->max_health)
+		health = self->owner->max_health;
+
+	if (self->owner->health > health && !Tech_HasRegeneration(self->owner)) {
+
 		self->nextthink = level.time + 1_sec;
 		self->owner->health -= 1;
 		return;
@@ -2128,7 +2128,7 @@ THINK(MegaHealth_think) (edict_t *self) -> void
 		G_FreeEdict(self);
 }
 
-bool Pickup_Health(edict_t *ent, edict_t *other)
+static bool Pickup_Health(edict_t *ent, edict_t *other)
 {
 	int health_flags = (ent->style ? ent->style : ent->item->tag);
 
@@ -2156,12 +2156,7 @@ bool Pickup_Health(edict_t *ent, edict_t *other)
 			other->health = other->max_health;
 	}
 
-	if ((ent->item->tag & HEALTH_TIMED)
-		//ZOID
-		&& !Tech_HasRegeneration(other)
-		//ZOID
-		)
-	{
+	if ((ent->item->tag & HEALTH_TIMED) && !Tech_HasRegeneration(other)) {
 		if (!deathmatch->integer)
 		{
 			// mega health doesn't need to be special in SP
@@ -2176,6 +2171,11 @@ bool Pickup_Health(edict_t *ent, edict_t *other)
 			ent->flags |= FL_RESPAWN;
 			ent->svflags |= SVF_NOCLIENT;
 			ent->solid = SOLID_NOT;
+
+			//muff: set health value trigger at which to initiate respawn delay
+			// capped to max health as minimum
+			ent->max_health = ent->owner->health - count;
+
 		}
 	}
 	else
