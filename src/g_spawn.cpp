@@ -511,10 +511,6 @@ void ED_CallSpawn(edict_t *ent)
 		ent->classname = GetItemByIndex(IT_AMMO_FLECHETTES)->classname;
 	else if (!strcmp(ent->classname, "weapon_heatbeam"))
 		ent->classname = GetItemByIndex(IT_WEAPON_PLASMABEAM)->classname;
-	else if (!strcmp(ent->classname, "item_invulnerability"))
-		ent->classname = GetItemByIndex(IT_POWERUP_PROTECTION)->classname;
-	else if (!strcmp(ent->classname, "item_quadfire"))
-		ent->classname = GetItemByIndex(IT_POWERUP_DUELFIRE)->classname;
 	else if (!strcmp(ent->classname, "info_player_team1"))
 		ent->classname = "info_player_team_red";
 	else if (!strcmp(ent->classname, "info_player_team2"))
@@ -547,7 +543,7 @@ void ED_CallSpawn(edict_t *ent)
 					ent->classname = item->classname;
 				}
 			}
-			if (g_dm_powerups_style->integer && IsSuperPowerup(item->id)) {
+			if (g_dm_powerups_style->integer && item->flags & IF_SUPER_POWERUP) {
 				int32_t r = irandom(30, 60);
 				DelayPowerup(ent, item, gtime_t::from_sec(r));
 			} else {

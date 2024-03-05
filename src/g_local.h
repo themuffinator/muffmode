@@ -819,12 +819,14 @@ enum item_flags_t : uint32_t {
 	IF_NOT_RANDOM = bit_v<13>, // [Paril-KEX] item never shows up in randomizations
 
 	IF_POWER_ARMOR = bit_v<14>,
+	IF_SUPER_POWERUP = bit_v<15>,
+	IF_SPHERE = bit_v<16>,
 
 	IF_ANY = 0xFFFFFFFF
 };
 
 MAKE_ENUM_BITFLAGS(item_flags_t);
-constexpr item_flags_t IF_TYPE_MASK = (IF_WEAPON | IF_AMMO | IF_POWERUP | IF_ARMOR | IF_POWER_ARMOR | IF_KEY);
+constexpr item_flags_t IF_TYPE_MASK = (IF_WEAPON | IF_AMMO | IF_POWERUP | IF_SUPER_POWERUP | IF_SPHERE | IF_ARMOR | IF_POWER_ARMOR | IF_KEY);
 
 // health edict_t->style
 enum {
@@ -2145,7 +2147,6 @@ void		QuadHog_DoSpawn(edict_t *ent);
 void		QuadHog_DoReset(edict_t *ent);
 void		QuadHog_SetupSpawn(gtime_t delay);
 void		QuadHog_Spawn(gitem_t *item, edict_t *spot, bool reset);
-bool		IsSuperPowerup(item_id_t id);
 void		Tech_DeadDrop(edict_t *ent);
 void		Tech_Reset();
 void		Tech_SetupSpawn();

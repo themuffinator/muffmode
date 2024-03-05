@@ -104,7 +104,7 @@ static void SelectNextItem(edict_t *ent, item_flags_t itflags, bool menu = true)
 }
 
 static void Cmd_InvNextP_f(edict_t *ent) {
-	SelectNextItem(ent, IF_POWERUP);
+	SelectNextItem(ent, IF_POWERUP | IF_SUPER_POWERUP | IF_SPHERE);
 }
 
 static void Cmd_InvNextW_f(edict_t *ent) {
@@ -153,7 +153,7 @@ static void SelectPrevItem(edict_t *ent, item_flags_t itflags) {
 }
 
 static void Cmd_InvPrevP_f(edict_t *ent) {
-	SelectPrevItem(ent, IF_POWERUP);
+	SelectPrevItem(ent, IF_POWERUP | IF_SUPER_POWERUP | IF_SPHERE);
 }
 
 static void Cmd_InvPrevW_f(edict_t *ent) {

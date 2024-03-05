@@ -40,19 +40,6 @@ static gtime_t invisibility_drop_timeout_hack;
 void	   Use_Protection(edict_t *ent, gitem_t *item);
 static gtime_t protection_drop_timeout_hack;
 
-bool IsSuperPowerup(item_id_t id) {
-	switch (id) {
-	case IT_POWERUP_QUAD:
-	case IT_POWERUP_DUELFIRE:
-	case IT_POWERUP_PROTECTION:
-	case IT_POWERUP_INVISIBILITY:
-	case IT_POWERUP_DOUBLE:
-		return true;
-	default:
-		return false;
-	}
-}
-
 // ***************************
 //  DOPPLEGANGER
 // ***************************
@@ -1309,15 +1296,10 @@ inline item_id_t FindSubstituteItem(edict_t *ent) {
 
 		if (!itflags || (itflags & (IF_NOT_GIVEABLE | IF_TECH | IF_NOT_RANDOM)) || !it->pickup || !it->world_model)
 			continue;
-
+		
 		// don't respawn spheres if they're dmflag disabled.
-		if (g_no_spheres->integer) {
-			if (i == IT_ITEM_SPHERE_VENGEANCE ||
-				i == IT_ITEM_SPHERE_HUNTER ||
-				i == IT_ITEM_SPHERE_DEFENDER) {
-				continue;
-			}
-		}
+		if (g_no_spheres->integer && itflags & IF_SPHERE)
+			continue;
 
 		if (g_no_nukes->integer && i == IT_AMMO_NUKE)
 			continue;
@@ -1407,7 +1389,7 @@ THINK(DoRespawn) (edict_t *ent) -> void
 	}
 	
 	if (g_dm_powerups_style->integer) {
-		if (IsSuperPowerup(ent->item->id)) {
+		if (ent->item->flags & IF_SUPER_POWERUP) {
 			gi.LocBroadcast_Print(PRINT_HIGH, "{} has spawned!\n", ent->item->pickup_name);
 
 			gi.sound(ent, CHAN_RELIABLE | CHAN_NO_PHS_ADD | CHAN_AUX, gi.soundindex("misc/alarm.wav"), 1, ATTN_NONE, 0);
@@ -1451,8 +1433,7 @@ static bool IsInstantItemsEnabled()
 	return false;
 }
 
-static bool Pickup_Powerup(edict_t *ent, edict_t *other)
-{
+static bool Pickup_AllowPowerupPickup(edict_t *ent, edict_t *other) {
 	int quantity = other->client->pers.inventory[ent->item->id];
 	if ((skill->integer == 0 && quantity >= 3) ||
 		(skill->integer == 1 && quantity >= 2) ||
@@ -1460,6 +1441,14 @@ static bool Pickup_Powerup(edict_t *ent, edict_t *other)
 		return false;
 
 	if (coop->integer && !P_UseCoopInstancedItems() && (ent->item->flags & IF_STAY_COOP) && (quantity > 0))
+		return false;
+
+	return true;
+}
+
+static bool Pickup_SuperPowerup(edict_t *ent, edict_t *other)
+{
+	if (!Pickup_AllowPowerupPickup(ent, other))
 		return false;
 	
 	other->client->pers.inventory[ent->item->id]++;
@@ -1503,10 +1492,31 @@ static bool Pickup_Powerup(edict_t *ent, edict_t *other)
 	if (deathmatch->integer)
 	{
 		if (!(ent->spawnflags & SPAWNFLAG_ITEM_DROPPED) && !is_dropped_from_death) {
-			if (g_dm_powerups_style->integer && IsSuperPowerup(ent->item->id))
+			if (g_dm_powerups_style->integer)
 				ent->item->quantity = 120;
 
 				SetRespawn(ent, gtime_t::from_sec(ent->item->quantity));
+		}
+	}
+
+	return true;
+}
+
+static bool Pickup_MinorPowerup(edict_t *ent, edict_t *other) {
+	if (!Pickup_AllowPowerupPickup(ent, other))
+		return false;
+
+	other->client->pers.inventory[ent->item->id]++;
+
+	bool is_dropped_from_death = ent->spawnflags.has(SPAWNFLAG_ITEM_DROPPED_PLAYER) && !ent->spawnflags.has(SPAWNFLAG_ITEM_DROPPED);
+
+	if (IsInstantItemsEnabled() || is_dropped_from_death) {
+		ent->item->use(other, ent->item);
+	}
+
+	if (deathmatch->integer) {
+		if (!(ent->spawnflags & SPAWNFLAG_ITEM_DROPPED) && !is_dropped_from_death) {
+			SetRespawn(ent, gtime_t::from_sec(ent->item->quantity));
 		}
 	}
 
@@ -1699,7 +1709,7 @@ static void Drop_General(edict_t *ent, gitem_t *item)
 	dropped->svflags &= ~SVF_INSTANCED;
 	ent->client->pers.inventory[item->id]--;
 
-	if (item->flags & IF_POWERUP) {
+	if (item->flags & (IF_POWERUP | IF_SUPER_POWERUP | IF_SPHERE)) {
 		switch (item->id) {
 		case IT_POWERUP_QUAD:
 			ent->client->pu_time_quad = 0_ms;
@@ -2755,7 +2765,7 @@ bool CheckItemEnabled(gitem_t *item) {
 	}
 	
 	if (!ItemSpawnsEnabled()) {
-		if (item->flags & (IF_ARMOR | IF_POWER_ARMOR | IF_POWERUP | IF_HEALTH | IF_AMMO | IF_WEAPON)) {
+		if (item->flags & (IF_ARMOR | IF_POWER_ARMOR | IF_POWERUP | IF_SUPER_POWERUP | IF_SPHERE | IF_HEALTH | IF_AMMO | IF_WEAPON)) {
 			return false;
 		}
 	}
@@ -2766,17 +2776,12 @@ bool CheckItemEnabled(gitem_t *item) {
 		}
 	}
 	if (g_no_powerups->integer) {
-		if (item->pickup == Pickup_Powerup) {
+		if (item->flags & (IF_POWERUP | IF_SUPER_POWERUP | IF_SPHERE))
 			return false;
-		}
 	}
 	if (g_no_items->integer) {
-		if (item->pickup == Pickup_Powerup) {
+		if (item->flags & (IF_POWERUP | IF_SUPER_POWERUP | IF_SPHERE))
 			return false;
-		}
-		if (item->pickup == Pickup_Sphere) {
-			return false;
-		}
 		if (item->pickup == Pickup_Doppleganger) {
 			return false;
 		}
@@ -2796,16 +2801,12 @@ bool CheckItemEnabled(gitem_t *item) {
 			return false;
 		}
 	}
-	if (g_no_nukes->integer) {
-		if (item->id == IT_AMMO_NUKE) {
-			return false;
-		}
-	}
-	if (g_no_spheres->integer) {
-		if (item->pickup == Pickup_Sphere) {
-			return false;
-		}
-	}
+
+	if (g_no_nukes->integer && item->id == IT_AMMO_NUKE)
+		return false;
+
+	if (g_no_spheres->integer && item->flags & IF_SPHERE)
+		return false;
 
 	return true;
 }
@@ -2988,9 +2989,9 @@ static THINK(DelayPowerup_Think) (edict_t *ent) -> void {
 
 	// send an effect
 	ent->s.event = EV_ITEM_RESPAWN;
-#
+
 	if (g_dm_powerups_style->integer) {
-		if (IsSuperPowerup(ent->item->id)) {
+		if (ent->item->flags & (IF_POWERUP | IF_SUPER_POWERUP | IF_SPHERE)) {
 			gi.LocBroadcast_Print(PRINT_HIGH, "{} has spawned!\n", ent->item->pickup_name);
 
 			gi.sound(ent, CHAN_RELIABLE | CHAN_NO_PHS_ADD | CHAN_AUX, gi.soundindex("misc/alarm.wav"), 1, ATTN_NONE, 0);
@@ -4212,7 +4213,7 @@ model="models/items/ammo/rockets/medium/tris.md2"
 	{
 		/* id */ IT_POWERUP_QUAD,
 		/* classname */ "item_quad", 
-		/* pickup */ Pickup_Powerup,
+		/* pickup */ Pickup_SuperPowerup,
 		/* use */ Use_Quad,
 		/* drop */ Drop_General,
 		/* weaponthink */ nullptr,
@@ -4227,19 +4228,19 @@ model="models/items/ammo/rockets/medium/tris.md2"
 		/* quantity */ 60,
 		/* ammo */ IT_NULL,
 		/* chain */ IT_NULL,
-		/* flags */ IF_POWERUP | IF_POWERUP_WHEEL,
+		/* flags */ IF_SUPER_POWERUP | IF_POWERUP_WHEEL,
 		/* vwep_model */ nullptr,
 		/* armor_info */ nullptr,
 		/* tag */ POWERUP_QUAD,
 		/* precaches */ "items/damage.wav items/damage2.wav items/damage3.wav ctf/tech2x.wav"
 	},
 
-/*QUAKED item_duelfire (.3 .3 1) (-16 -16 -16) (16 16 16)
+/*QUAKED item_quadfire (.3 .3 1) (-16 -16 -16) (16 16 16)
 */
 	{
 		/* id */ IT_POWERUP_DUELFIRE,
-		/* classname */ "item_duelfire", 
-		/* pickup */ Pickup_Powerup,
+		/* classname */ "item_quadfire", 
+		/* pickup */ Pickup_SuperPowerup,
 		/* use */ Use_DuelFire,
 		/* drop */ Drop_General,
 		/* weaponthink */ nullptr,
@@ -4254,19 +4255,19 @@ model="models/items/ammo/rockets/medium/tris.md2"
 		/* quantity */ 60,
 		/* ammo */ IT_NULL,
 		/* chain */ IT_NULL,
-		/* flags */ IF_POWERUP | IF_POWERUP_WHEEL,
+		/* flags */ IF_SUPER_POWERUP | IF_POWERUP_WHEEL,
 		/* vwep_model */ nullptr,
 		/* armor_info */ nullptr,
 		/* tag */ POWERUP_DUELFIRE,
 		/* precaches */ "items/quadfire1.wav items/quadfire2.wav items/quadfire3.wav"
 	},
 
-/*QUAKED item_protection (.3 .3 1) (-16 -16 -16) (16 16 16)
+/*QUAKED item_invulnerability (.3 .3 1) (-16 -16 -16) (16 16 16)
 */
 	{
 		/* id */ IT_POWERUP_PROTECTION,
-		/* classname */ "item_protection",
-		/* pickup */ Pickup_Powerup,
+		/* classname */ "item_invulnerability",
+		/* pickup */ Pickup_SuperPowerup,
 		/* use */ Use_Protection,
 		/* drop */ Drop_General,
 		/* weaponthink */ nullptr,
@@ -4281,7 +4282,7 @@ model="models/items/ammo/rockets/medium/tris.md2"
 		/* quantity */ 60,
 		/* ammo */ IT_NULL,
 		/* chain */ IT_NULL,
-		/* flags */ IF_POWERUP | IF_POWERUP_WHEEL,
+		/* flags */ IF_SUPER_POWERUP | IF_POWERUP_WHEEL,
 		/* vwep_model */ nullptr,
 		/* armor_info */ nullptr,
 		/* tag */ POWERUP_PROTECTION,
@@ -4293,7 +4294,7 @@ model="models/items/ammo/rockets/medium/tris.md2"
 	{
 		/* id */ IT_POWERUP_INVISIBILITY,
 		/* classname */ "item_invisibility",
-		/* pickup */ Pickup_Powerup,
+		/* pickup */ Pickup_SuperPowerup,
 		/* use */ Use_Invisibility,
 		/* drop */ Drop_General,
 		/* weaponthink */ nullptr,
@@ -4308,7 +4309,7 @@ model="models/items/ammo/rockets/medium/tris.md2"
 		/* quantity */ 60,
 		/* ammo */ IT_NULL,
 		/* chain */ IT_NULL,
-		/* flags */ IF_POWERUP | IF_POWERUP_WHEEL,
+		/* flags */ IF_SUPER_POWERUP | IF_POWERUP_WHEEL,
 		/* vwep_model */ nullptr,
 		/* armor_info */ nullptr,
 		/* tag */ POWERUP_INVISIBILITY,
@@ -4320,7 +4321,7 @@ model="models/items/silencer/tris.md2"
 	{
 		/* id */ IT_POWERUP_SILENCER,
 		/* classname */ "item_silencer",
-		/* pickup */ Pickup_Powerup,
+		/* pickup */ Pickup_MinorPowerup,
 		/* use */ Use_Silencer,
 		/* drop */ Drop_General,
 		/* weaponthink */ nullptr,
@@ -4346,7 +4347,7 @@ model="models/items/silencer/tris.md2"
 	{
 		/* id */ IT_POWERUP_REBREATHER,
 		/* classname */ "item_breather",
-		/* pickup */ Pickup_Powerup,
+		/* pickup */ Pickup_MinorPowerup,
 		/* use */ Use_Breather,
 		/* drop */ Drop_General,
 		/* weaponthink */ nullptr,
@@ -4373,7 +4374,7 @@ model="models/items/silencer/tris.md2"
 	{
 		/* id */ IT_POWERUP_ENVIROSUIT,
 		/* classname */ "item_enviro",
-		/* pickup */ Pickup_Powerup,
+		/* pickup */ Pickup_MinorPowerup,
 		/* use */ Use_Envirosuit,
 		/* drop */ Drop_General,
 		/* weaponthink */ nullptr,
@@ -4451,7 +4452,7 @@ gives +1 to maximum health, +5 in deathmatch
 	{
 		/* id */ IT_ITEM_ADRENALINE,
 		/* classname */ "item_adrenaline",
-		/* pickup */ Pickup_Powerup,
+		/* pickup */ Pickup_MinorPowerup,
 		/* use */ Use_Adrenaline,
 		/* drop */ Drop_General,
 		/* weaponthink */ nullptr,
@@ -4529,7 +4530,7 @@ gives +1 to maximum health
 	{
 		/* id */ IT_ITEM_IR_GOGGLES,
 		/* classname */ "item_ir_goggles",
-		/* pickup */ Pickup_Powerup,
+		/* pickup */ Pickup_MinorPowerup,
 		/* use */ Use_IR,
 		/* drop */ Drop_General,
 		/* weaponthink */ nullptr,
@@ -4556,7 +4557,7 @@ gives +1 to maximum health
 	{
 		/* id */ IT_POWERUP_DOUBLE,
 		/* classname */ "item_double", 
-		/* pickup */ Pickup_Powerup,
+		/* pickup */ Pickup_SuperPowerup,
 		/* use */ Use_Double,
 		/* drop */ Drop_General,
 		/* weaponthink */ nullptr,
@@ -4571,7 +4572,7 @@ gives +1 to maximum health
 		/* quantity */ 60,
 		/* ammo */ IT_NULL,
 		/* chain */ IT_NULL,
-		/* flags */ IF_POWERUP | IF_POWERUP_WHEEL,
+		/* flags */ IF_SUPER_POWERUP | IF_POWERUP_WHEEL,
 		/* vwep_model */ nullptr,
 		/* armor_info */ nullptr,
 		/* tag */ POWERUP_DOUBLE,
@@ -4598,7 +4599,7 @@ gives +1 to maximum health
 		/* quantity */ 60,
 		/* ammo */ IT_NULL,
 		/* chain */ IT_NULL,
-		/* flags */ IF_POWERUP | IF_POWERUP_WHEEL,
+		/* flags */ IF_SPHERE | IF_POWERUP_WHEEL,
 		/* vwep_model */ nullptr,
 		/* armor_info */ nullptr,
 		/* tag */ POWERUP_SPHERE_VENGEANCE,
@@ -4625,7 +4626,7 @@ gives +1 to maximum health
 		/* quantity */ 120,
 		/* ammo */ IT_NULL,
 		/* chain */ IT_NULL,
-		/* flags */ IF_POWERUP | IF_POWERUP_WHEEL,
+		/* flags */ IF_SPHERE | IF_POWERUP_WHEEL,
 		/* vwep_model */ nullptr,
 		/* armor_info */ nullptr,
 		/* tag */ POWERUP_SPHERE_HUNTER,
@@ -4652,7 +4653,7 @@ gives +1 to maximum health
 		/* quantity */ 60,
 		/* ammo */ IT_NULL,
 		/* chain */ IT_NULL,
-		/* flags */ IF_POWERUP | IF_POWERUP_WHEEL,
+		/* flags */ IF_SPHERE | IF_POWERUP_WHEEL,
 		/* vwep_model */ nullptr,
 		/* armor_info */ nullptr,
 		/* tag */ POWERUP_SPHERE_DEFENDER,
