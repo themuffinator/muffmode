@@ -2,6 +2,12 @@
 // Licensed under the GNU General Public License 2.0.
 #include "g_local.h"
 
+void Weapon_Stats_Hit(gclient_t *cl, mod_t mod) {
+	if (!cl) return;
+
+	//cl->mstats.total_hits++;
+}
+
 /*
 =================
 fire_hit
@@ -69,6 +75,8 @@ bool fire_hit(edict_t *self, vec3_t aim, int damage, int kick)
 
 	if (!(tr.ent->svflags & SVF_MONSTER) && (!tr.ent->client))
 		return false;
+
+	Weapon_Stats_Hit(self->owner->client, MOD_HIT);
 
 	// do our special form of knockback here
 	v = (self->enemy->absmin + self->enemy->absmax) * 0.5f;
@@ -204,6 +212,8 @@ struct fire_lead_pierce_t : pierce_args_t
 		{
 			T_Damage(tr.ent, self, self, aimdir, tr.endpos, tr.plane.normal, damage, kick, mod.id == MOD_TESLA ? DAMAGE_ENERGY : DAMAGE_BULLET, mod);
 
+			Weapon_Stats_Hit(self->owner->client, mod);
+
 			// only deadmonster is pierceable, or actual dead monsters
 			// that haven't been made non-solid yet
 			if ((tr.ent->svflags & SVF_DEADMONSTER) ||
@@ -259,6 +269,9 @@ static void fire_lead(edict_t *self, const vec3_t &start, const vec3_t &aimdir, 
 		te_impact,
 		MASK_PROJECTILE | MASK_WATER
 	};
+
+	if (self->client)
+		self->client->mstats.total_shots++;
 
 	// [Paril-KEX]
 	if (self->client && !G_ShouldPlayersCollide(true))
@@ -365,8 +378,11 @@ TOUCH(blaster_touch) (edict_t *self, edict_t *other, const trace_t &tr, bool oth
 	if (self->owner && self->owner->client)
 		PlayerNoise(self->owner, self->s.origin, PNOISE_IMPACT);
 
-	if (other->takedamage)
+	if (other->takedamage) {
 		T_Damage(other, self, self->owner, self->velocity, self->s.origin, tr.plane.normal, self->dmg, 1, DAMAGE_ENERGY, static_cast<mod_id_t>(self->style));
+
+		Weapon_Stats_Hit(self->owner->client, MOD_BLASTER);
+	}
 	else
 	{
 		gi.WriteByte(svc_temp_entity);
@@ -454,6 +470,8 @@ static TOUCH(blaster2_touch) (edict_t *self, edict_t *other, const trace_t &tr, 
 				T_RadiusDamage(self, self->owner, (float)(self->dmg * 2), other, self->dmg_radius, DAMAGE_ENERGY, MOD_UNKNOWN);
 			T_Damage(other, self, self->owner, self->velocity, self->s.origin, tr.plane.normal, self->dmg, 1, DAMAGE_ENERGY, mod);
 			self->owner->takedamage = damagestat;
+
+			Weapon_Stats_Hit(self->owner->client, mod);
 		} else {
 			if (self->dmg >= 5)
 				T_RadiusDamage(self, self->owner, (float)(self->dmg * 2), other, self->dmg_radius, DAMAGE_ENERGY, MOD_UNKNOWN);
@@ -590,6 +608,8 @@ static THINK(Grenade_Explode) (edict_t *ent) -> void
 		else
 			mod = MOD_GRENADE;
 		T_Damage(ent->enemy, ent, ent->owner, dir, ent->s.origin, vec3_origin, (int) points, (int) points, DAMAGE_RADIUS, mod);
+
+		Weapon_Stats_Hit(ent->owner->client, mod);
 	}
 
 	if (ent->spawnflags.has(SPAWNFLAG_GRENADE_HELD))
@@ -791,7 +811,6 @@ fire_rocket
 TOUCH(rocket_touch) (edict_t *ent, edict_t *other, const trace_t &tr, bool other_touching_self) -> void
 {
 	vec3_t origin;
-
 	if (other == ent->owner)
 		return;
 
@@ -810,6 +829,8 @@ TOUCH(rocket_touch) (edict_t *ent, edict_t *other, const trace_t &tr, bool other
 	if (other->takedamage)
 	{
 		T_Damage(other, ent, ent->owner, ent->velocity, ent->s.origin, tr.plane.normal, ent->dmg, 0, DAMAGE_NONE, MOD_ROCKET);
+
+		Weapon_Stats_Hit(ent->owner->client, MOD_ROCKET);
 	}
 	else
 	{

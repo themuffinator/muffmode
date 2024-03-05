@@ -1008,6 +1008,8 @@ void Weapon_Generic(edict_t *ent, int FRAME_ACTIVATE_LAST, int FRAME_FIRE_LAST, 
 				{
  					Weapon_PowerupSound(ent);
 					fire(ent);
+
+					ent->client->mstats.total_shots++;
 					break;
 				}
 			}
@@ -1041,6 +1043,8 @@ void Weapon_Generic(edict_t *ent, int FRAME_ACTIVATE_LAST, int FRAME_FIRE_LAST, 
 				{
 					Weapon_PowerupSound(ent);
 					fire(ent);
+
+					ent->client->mstats.total_shots++;
 					break;
 				}
 			}
@@ -1124,6 +1128,7 @@ void Throw_Generic(edict_t *ent, int FRAME_FIRE_LAST, int FRAME_IDLE_LAST, int F
 	if (ent->health <= 0)
 	{
 		fire(ent, true);
+		ent->client->mstats.total_shots++;
 		return;
 	}
 
@@ -1234,6 +1239,8 @@ void Throw_Generic(edict_t *ent, int FRAME_FIRE_LAST, int FRAME_IDLE_LAST, int F
 					Weapon_PowerupSound(ent);
 					ent->client->weapon_sound = 0;
 					fire(ent, true);
+					ent->client->mstats.total_shots++;
+
 					ent->client->grenade_blew_up = true;
 
 					ent->client->grenade_finished_time = level.time + grenade_wait_time;
@@ -1265,6 +1272,7 @@ void Throw_Generic(edict_t *ent, int FRAME_FIRE_LAST, int FRAME_IDLE_LAST, int F
 					Weapon_PowerupSound(ent);
 					ent->client->weapon_sound = 0;
 					fire(ent, false);
+					ent->client->mstats.total_shots++;
 
 					if (!EXPLODE || !ent->client->grenade_blew_up)
 						ent->client->grenade_finished_time = level.time + grenade_wait_time;

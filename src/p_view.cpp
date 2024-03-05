@@ -1620,6 +1620,11 @@ void ClientEndServerFrame(edict_t *ent)
 	// accurately determined
 	SV_CalcBlend(ent);
 
+	if (ent->client->hit_target) {
+		ent->client->hit_target = false;
+		ent->client->mstats.total_hits++;
+	}
+
 	// chase cam stuff
 	if (ClientIsSpectating(ent->client))
 		G_SetSpectatorStats(ent);

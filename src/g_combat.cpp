@@ -672,6 +672,10 @@ void T_Damage(edict_t *targ, edict_t *inflictor, edict_t *attacker, const vec3_t
 		}
 	}
 
+	if (targ != attacker && attacker->client && !OnSameTeam(targ, attacker) && !attacker->client->hit_target) {
+		attacker->client->hit_target = true;
+	}
+
 	take = damage;
 	save = 0;
 
@@ -798,36 +802,43 @@ void T_Damage(edict_t *targ, edict_t *inflictor, edict_t *attacker, const vec3_t
 		}
 	}
 	// ROGUE
+	if (targ != attacker && targ->health > 0) {
+		int stat_take = take;
+		if (stat_take > targ->health)
+			stat_take = targ->health;
 
-	if (targ != attacker && attacker->client && targ->health > 0) {
-		// clan arena player scoring - 1 score per 100 damage dealt to opponents
-		if (clanarena->integer && !OnSameTeam(targ, attacker)) {
-			//TODO: cap this to target's theoretical max takeable damage (to 0 health)
-			attacker->client->pers.dmg_scorer += take + psave + asave;
+		if (attacker->client) {
+			// clan arena player scoring - 1 score per 100 damage dealt to opponents
+			if (clanarena->integer && !OnSameTeam(targ, attacker)) {
+				//TODO: cap this to target's theoretical max takeable damage (to 0 health)
+				attacker->client->pers.dmg_scorer += take + psave + asave;
 
-			if (attacker->client->pers.dmg_scorer >= 100) {
-				int32_t score_add = floor(attacker->client->pers.dmg_scorer / 100);
-				attacker->client->pers.dmg_scorer -= score_add * 100;
+				if (attacker->client->pers.dmg_scorer >= 100) {
+					int32_t score_add = floor(attacker->client->pers.dmg_scorer / 100);
+					attacker->client->pers.dmg_scorer -= score_add * 100;
 
-				G_AdjustPlayerScore(attacker->client, score_add, false, 0);
+					G_AdjustPlayerScore(attacker->client, score_add, false, 0);
+				}
 			}
-		}
-		// team damage checks and warnings
-		if (OnSameTeam(targ, attacker)) {
-			attacker->client->pers.dmg_team += take + psave + asave;
+			// team damage checks and warnings
+			if (OnSameTeam(targ, attacker)) {
+				attacker->client->pers.dmg_team += take + psave + asave;
 
-			if (attacker->client->pers.dmg_team >= 100) {
-				int32_t score_add = floor(attacker->client->pers.dmg_team / 100);
-				attacker->client->pers.dmg_team -= score_add * 100;
+				if (attacker->client->pers.dmg_team >= 100) {
+					int32_t score_add = floor(attacker->client->pers.dmg_team / 100);
+					attacker->client->pers.dmg_team -= score_add * 100;
 
-				gi.LocClient_Print(attacker, PRINT_CENTER, "You are on {} Team,\nstop attacking your team mates!\n", Teams_TeamName(attacker->client->resp.team));
+					gi.LocClient_Print(attacker, PRINT_CENTER, "You are on {} Team,\nstop attacking your team mates!\n", Teams_TeamName(attacker->client->resp.team));
+				}
 			}
-		}
 
-		// [Paril-KEX] player hit markers
-		if (!((targ->svflags & SVF_DEADMONSTER) || (targ->flags & FL_NO_DAMAGE_EFFECTS)) && mod.id != MOD_TARGET_LASER) {
-			attacker->client->ps.stats[STAT_HIT_MARKER] += take + psave + asave;
+			// [Paril-KEX] player hit markers
+			if (!((targ->svflags & SVF_DEADMONSTER) || (targ->flags & FL_NO_DAMAGE_EFFECTS)) && mod.id != MOD_TARGET_LASER) {
+				attacker->client->ps.stats[STAT_HIT_MARKER] += take + psave + asave;
+			}
+			attacker->client->mstats.total_dmg_dealt += stat_take + psave + asave;
 		}
+		targ->client->mstats.total_dmg_received += stat_take + psave + asave;
 	}
 
 	// do the damage

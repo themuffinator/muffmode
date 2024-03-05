@@ -200,6 +200,8 @@ cvar_t *g_teleporter_nofreeze;
 
 cvar_t *g_showhelp;
 
+cvar_t *g_matchstats;
+
 static cvar_t *g_frames_per_frame;
 
 int imageindex_i_ctf1;
@@ -581,6 +583,8 @@ void InitGame()
 	g_teleporter_nofreeze = gi.cvar("g_teleporter_nofreeze", "0", CVAR_NOFLAGS);
 
 	g_showhelp = gi.cvar("g_showhelp", "1", CVAR_NOFLAGS);
+
+	g_matchstats = gi.cvar("g_matchstats", "0", CVAR_NOFLAGS);
 
 	// items
 	InitItems();

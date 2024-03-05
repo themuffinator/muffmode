@@ -691,6 +691,9 @@ DIE(player_die) (edict_t *self, edict_t *inflictor, edict_t *attacker, int damag
 			G_AdjustPlayerScore(attacker->client, 1, !!teamplay->integer, 1);
 			if (attacker->health > 0)
 				attacker->client->resp.kill_count++;
+
+			attacker->client->mstats.total_kills++;
+			self->client->mstats.total_deaths++;
 		}
 	} else {
 		if (!mod.no_point_loss)
@@ -2148,6 +2151,7 @@ void ClientSpawn(edict_t *ent) {
 	gclient_t *client;
 	client_persistant_t saved;
 	client_respawn_t	resp;
+	client_match_stats_t mstats;
 
 	index = ent - g_edicts - 1;
 	client = ent->client;
@@ -2244,6 +2248,7 @@ void ClientSpawn(edict_t *ent) {
 	if (deathmatch->integer) {
 		client->pers.health = 0;
 		resp = client->resp;
+		mstats = client->mstats;
 	} else {
 		// [Kex] Maintain user info in singleplayer to keep the player skin. 
 		char userinfo[MAX_INFO_STRING];
@@ -2280,6 +2285,7 @@ void ClientSpawn(edict_t *ent) {
 	memset(client, 0, sizeof(*client));
 	client->pers = saved;
 	client->resp = resp;
+	client->mstats = mstats;
 
 	// on a new, fresh spawn (always in DM, clear inventory
 	// or new spawns in SP/coop)
@@ -3077,6 +3083,8 @@ bool ClientConnect(edict_t *ent, char *userinfo, const char *social_id, bool isB
 	CalculateRanks();
 
 	PCfg_ClientInitPConfig(ent);
+
+	memset(&ent->client->mstats, 0, sizeof(ent->client->mstats));
 
 	// [Paril-KEX] force a state update
 	ent->sv.init = false;

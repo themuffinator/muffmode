@@ -2103,6 +2103,8 @@ extern cvar_t *g_teleporter_nofreeze;
 
 extern cvar_t *g_showhelp;
 
+extern cvar_t *g_matchstats;
+
 #define world (&g_edicts[0])
 
 uint32_t GetUnicastKey();
@@ -2471,6 +2473,7 @@ bool M_CheckAttack_Base(edict_t *self, float stand_ground_chance, float melee_ch
 //
 // g_weapon.c
 //
+void Weapon_Stats_Hit(gclient_t *cl, mod_t mod);
 bool fire_hit(edict_t *self, vec3_t aim, int damage, int kick);
 void fire_bullet(edict_t *self, const vec3_t &start, const vec3_t &aimdir, int damage, int kick, int hspread,
 	int vspread, mod_t mod);
@@ -2863,6 +2866,17 @@ constexpr int32_t AUTO_SHIELD_MANUAL = -1;
 // if possible.
 constexpr int32_t AUTO_SHIELD_AUTO = 0;
 
+struct client_match_stats_t {
+	uint32_t	total_dmg_dealt;
+	uint32_t	total_dmg_received;
+
+	uint32_t	total_shots;
+	uint32_t	total_hits;
+
+	uint32_t	total_kills;
+	uint32_t	total_deaths;
+};
+
 // client data that stays across multiple level loads
 struct client_persistant_t {
 	char		 userinfo[MAX_INFO_STRING];
@@ -3192,6 +3206,9 @@ struct gclient_t {
 	bool		ready_to_exit;
 
 	int			last_match_timer_update;
+
+	client_match_stats_t mstats;
+	bool hit_target;
 };
 
 // ==========================================

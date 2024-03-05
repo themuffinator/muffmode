@@ -1139,6 +1139,86 @@ void Menu_Admin(edict_t *ent, pmenuhnd_t *p) {
 
 /*-----------------------------------------------------------------------*/
 
+const pmenu_t pmstatsmenu[] = {
+	{ "Player Match Stats", PMENU_ALIGN_CENTER, nullptr },
+	{ "", PMENU_ALIGN_CENTER, nullptr },
+	{ "", PMENU_ALIGN_LEFT, nullptr },
+	{ "", PMENU_ALIGN_LEFT, nullptr },
+	{ "", PMENU_ALIGN_LEFT, nullptr },
+	{ "", PMENU_ALIGN_LEFT, nullptr },
+	{ "", PMENU_ALIGN_LEFT, nullptr },
+	{ "", PMENU_ALIGN_LEFT, nullptr },
+	{ "", PMENU_ALIGN_LEFT, nullptr },
+	{ "", PMENU_ALIGN_LEFT, nullptr },
+	{ "", PMENU_ALIGN_LEFT, nullptr },
+	{ "", PMENU_ALIGN_LEFT, nullptr },
+	{ "", PMENU_ALIGN_LEFT, nullptr },
+	{ "", PMENU_ALIGN_LEFT, nullptr },
+	{ "", PMENU_ALIGN_LEFT, nullptr },
+	{ "", PMENU_ALIGN_LEFT, nullptr },
+	{ "", PMENU_ALIGN_LEFT, nullptr },
+	{ "$g_pc_return", PMENU_ALIGN_LEFT, Menu_ReturnToMain }
+};
+
+static void Menu_PMStats_Update(edict_t *ent) {
+
+	if (!g_matchstats->integer) return;
+
+	pmenu_t *entries = ent->client->menu->entries;
+	client_match_stats_t *st = &ent->client->mstats;
+	int i = 0;
+	char value[MAX_INFO_VALUE] = { 0 };
+	gi.Info_ValueForKey(g_edicts[1].client->pers.userinfo, "name", value, sizeof(value));
+
+	Q_strlcpy(entries[i].text, "Player Stats for Match", sizeof(entries[i].text));
+	i++;
+
+	if (value[0]) {
+		Q_strlcpy(entries[i].text, G_Fmt("{}", value).data(), sizeof(entries[i].text));
+		i++;
+	}
+
+	Q_strlcpy(entries[i].text, BREAKER, sizeof(entries[i].text));
+	i++;
+
+	Q_strlcpy(entries[i].text, G_Fmt("kills: {}", st->total_kills).data(), sizeof(entries[i].text));
+	i++;
+	Q_strlcpy(entries[i].text, G_Fmt("deaths: {}", st->total_deaths).data(), sizeof(entries[i].text));
+	i++;
+	if (st->total_kills) {
+		float val = st->total_kills > 0 ? ((float)st->total_kills / (float)st->total_deaths) : 0;
+		Q_strlcpy(entries[i].text, G_Fmt("k/d ratio: {:2}", val).data(), sizeof(entries[i].text));
+		i++;
+	}
+	i++;
+	Q_strlcpy(entries[i].text, G_Fmt("dmg dealt: {}", st->total_dmg_dealt).data(), sizeof(entries[i].text));
+	i++;
+	Q_strlcpy(entries[i].text, G_Fmt("dmg received: {}", st->total_dmg_received).data(), sizeof(entries[i].text));
+	i++;
+	if (st->total_dmg_dealt) {
+		float val = st->total_dmg_dealt ? ((float)st->total_dmg_dealt / (float)st->total_dmg_received) : 0;
+		Q_strlcpy(entries[i].text, G_Fmt("dmg ratio: {:02}", val).data(), sizeof(entries[i].text));
+		i++;
+	}
+	i++;
+	Q_strlcpy(entries[i].text, G_Fmt("shots fired: {}", st->total_shots).data(), sizeof(entries[i].text));
+	i++;
+	Q_strlcpy(entries[i].text, G_Fmt("shots on target: {}", st->total_hits).data(), sizeof(entries[i].text));
+	i++;
+	if (st->total_hits) {
+		int val = st->total_hits ? ((float)st->total_hits / (float)st->total_shots) * 100. : 0;
+		Q_strlcpy(entries[i].text, G_Fmt("total accuracy: {}%", val).data(), sizeof(entries[i].text));
+		i++;
+	}
+}
+
+static void Menu_PMStats(edict_t *ent, pmenuhnd_t *p) {
+	PMenu_Close(ent);
+	PMenu_Open(ent, pmstatsmenu, -1, sizeof(pmstatsmenu) / sizeof(pmenu_t), nullptr, Menu_PMStats_Update);
+}
+
+/*-----------------------------------------------------------------------*/
+
 void Team_Join_Free(edict_t *ent, pmenuhnd_t *p);
 void Team_Join_Red(edict_t *ent, pmenuhnd_t *p);
 void Team_Join_Blue(edict_t *ent, pmenuhnd_t *p);
@@ -1161,7 +1241,7 @@ static const int jmenu_teams_chase = 8;
 static const int jmenu_teams_reqmatch = 10;
 static const int jmenu_teams_hostinfo = 11;
 static const int jmenu_teams_svinfo = 12;
-static const int jmenu_teams_gamerules = 13;
+static const int jmenu_teams_player = 13;
 static const int jmenu_teams_admin = 14;
 
 static const int jmenu_free_join = 5;
@@ -1170,7 +1250,7 @@ static const int jmenu_free_chase = 7;
 static const int jmenu_free_reqmatch = 9;
 static const int jmenu_free_hostinfo = 10;
 static const int jmenu_free_svinfo = 11;
-static const int jmenu_free_gamerules = 12;
+static const int jmenu_free_player = 12;
 static const int jmenu_free_admin = 13;
 
 static const int jmenu_gamemod = 16;
@@ -1191,7 +1271,7 @@ const pmenu_t teams_join_menu[] = {
 	{ "Host Info", PMENU_ALIGN_LEFT, Menu_HostInfo },
 	{ "Match Info", PMENU_ALIGN_LEFT, Menu_ServerInfo },
 	//{ "Game Rules", PMENU_ALIGN_LEFT, Menu_GameRules },
-	{ "", PMENU_ALIGN_LEFT, nullptr },	//gamerules
+	{ "Player Stats", PMENU_ALIGN_LEFT, Menu_PMStats },
 	{ "", PMENU_ALIGN_LEFT, nullptr },
 	{ "", PMENU_ALIGN_LEFT, nullptr },
 	{ "", PMENU_ALIGN_CENTER, nullptr },
@@ -1212,7 +1292,7 @@ const pmenu_t free_join_menu[] = {
 	{ "Host Info", PMENU_ALIGN_LEFT, Menu_HostInfo },
 	{ "Match Info", PMENU_ALIGN_LEFT, Menu_ServerInfo },
 	//{ "Game Rules", PMENU_ALIGN_LEFT, Menu_GameRules },
-	{ "", PMENU_ALIGN_LEFT, nullptr },	//gamerules
+	{ "Player Stats", PMENU_ALIGN_LEFT, Menu_PMStats },
 	{ "", PMENU_ALIGN_LEFT, nullptr },
 	{ "", PMENU_ALIGN_LEFT, nullptr },
 	{ "", PMENU_ALIGN_LEFT, nullptr },
@@ -1666,6 +1746,16 @@ void Menu_Update_Join(edict_t *ent) {
 			}
 			entries[jmenu_free_join].SelectFunc = Team_Join_Free;
 		}
+	}
+
+	if (!g_matchstats->integer) {;
+		int index = IsTeamplay() ? jmenu_teams_player: jmenu_free_player;
+		Q_strlcpy(entries[index].text, "", sizeof(entries[index].text));
+		entries[index].SelectFunc = nullptr;
+	} else {
+		int index = IsTeamplay() ? jmenu_teams_player : jmenu_free_player;
+		Q_strlcpy(entries[index].text, "Player Stats", sizeof(entries[index].text));
+		entries[index].SelectFunc = Menu_PMStats;
 	}
 
 	// KEX_FIXME: what's this for?
