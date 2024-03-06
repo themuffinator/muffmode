@@ -838,7 +838,8 @@ void T_Damage(edict_t *targ, edict_t *inflictor, edict_t *attacker, const vec3_t
 			}
 			attacker->client->mstats.total_dmg_dealt += stat_take + psave + asave;
 		}
-		targ->client->mstats.total_dmg_received += stat_take + psave + asave;
+		if (targ->client)
+			targ->client->mstats.total_dmg_received += stat_take + psave + asave;
 	}
 
 	// do the damage
