@@ -711,7 +711,7 @@ edict_t *Sphere_Spawn(edict_t *owner, spawnflags_t spawnflags) {
 // Own_Sphere - attach the sphere to the client so we can
 //		directly access it later
 // =================
-void Own_Sphere(edict_t *self, edict_t *sphere) {
+static void Own_Sphere(edict_t *self, edict_t *sphere) {
 	if (!sphere)
 		return;
 
@@ -756,7 +756,7 @@ void Vengeance_Launch(edict_t *self) {
 
 //======================================================================
 
-edict_t *QuadHog_FindSpawn() {
+static edict_t *QuadHog_FindSpawn() {
 	return SelectDeathmatchSpawnPoint(vec3_origin, false, true, true, false).spot;
 }
 
@@ -868,7 +868,7 @@ void QuadHog_SetupSpawn(gtime_t delay) {
 /* TECH																	  */
 /*------------------------------------------------------------------------*/
 
-void Tech_PlayerHasATech(edict_t *who) {
+static void Tech_PlayerHasATech(edict_t *who) {
 	if (level.time - who->client->tech_last_message_time > 2_sec) {
 		gi.LocCenter_Print(who, "$g_already_have_tech");
 		who->client->tech_last_message_time = level.time;
@@ -887,7 +887,7 @@ gitem_t *Tech_WhatPlayerHas(edict_t *ent) {
 	return nullptr;
 }
 
-bool Tech_Pickup(edict_t *ent, edict_t *other) {
+static bool Tech_Pickup(edict_t *ent, edict_t *other) {
 	int i;
 
 	i = 0;
@@ -910,7 +910,7 @@ static edict_t *FindTechSpawn() {
 	return SelectDeathmatchSpawnPoint(vec3_origin, false, true, true, false).spot;
 }
 
-THINK(Tech_Think) (edict_t *tech) -> void {
+static THINK(Tech_Think) (edict_t *tech) -> void {
 	edict_t *spot;
 
 	if ((spot = FindTechSpawn()) != nullptr) {
@@ -922,7 +922,7 @@ THINK(Tech_Think) (edict_t *tech) -> void {
 	}
 }
 
-void Tech_Drop(edict_t *ent, gitem_t *item) {
+static void Tech_Drop(edict_t *ent, gitem_t *item) {
 	edict_t *tech;
 
 	tech = Drop_Item(ent, item);
@@ -986,7 +986,7 @@ static void Tech_Spawn(gitem_t *item, edict_t *spot) {
 	gi.linkentity(ent);
 }
 
-THINK(Tech_SpawnAll) (edict_t *ent) -> void {
+static THINK(Tech_SpawnAll) (edict_t *ent) -> void {
 	edict_t *spot;
 	int		 i;
 
@@ -1229,7 +1229,7 @@ gitem_t *FindItem(const char *pickup_name)
 
 //======================================================================
 
-inline item_flags_t GetSubstituteItemFlags(item_id_t id) {
+static inline item_flags_t GetSubstituteItemFlags(item_id_t id) {
 	const gitem_t *item = GetItemByIndex(id);
 
 	// we want to stay within the item class
@@ -1244,7 +1244,7 @@ inline item_flags_t GetSubstituteItemFlags(item_id_t id) {
 	return flags;
 }
 
-inline item_id_t FindSubstituteItem(edict_t *ent) {
+static inline item_id_t FindSubstituteItem(edict_t *ent) {
 	// never replace flags
 	if (ent->item->id == IT_FLAG_RED || ent->item->id == IT_FLAG_BLUE || ent->item->id == IT_ITEM_TAG_TOKEN)
 		return IT_NULL;
@@ -1364,8 +1364,7 @@ THINK(DoRespawn) (edict_t *ent) -> void
 		}
 	}
 
-	ent->svflags &= ~SVF_NOCLIENT;
-	ent->svflags &= ~SVF_RESPAWNING;
+	ent->svflags &= ~(SVF_NOCLIENT | SVF_RESPAWNING);
 	ent->solid = SOLID_TRIGGER;
 	gi.linkentity(ent);
 
@@ -1399,6 +1398,15 @@ THINK(DoRespawn) (edict_t *ent) -> void
 
 void SetRespawn(edict_t *ent, gtime_t delay, bool hide_self)
 {
+	if (!deathmatch->integer)
+		return;
+
+	if (ent->spawnflags.has(SPAWNFLAG_ITEM_DROPPED))
+		return;
+	
+	if ((ent->item->flags & IF_AMMO) && ent->spawnflags.has(SPAWNFLAG_ITEM_DROPPED_PLAYER))
+		return;
+
 	// already respawning
 	if (ent->think == DoRespawn && ent->nextthink >= level.time)
 		return;
@@ -1489,15 +1497,12 @@ static bool Pickup_SuperPowerup(edict_t *ent, edict_t *other)
 		ent->think = nullptr;
 		ent->nextthink = 0_ms;
 	}
-	if (deathmatch->integer)
-	{
-		if (!(ent->spawnflags & SPAWNFLAG_ITEM_DROPPED) && !is_dropped_from_death) {
-			if (g_dm_powerups_style->integer)
-				ent->item->quantity = 120;
 
-				SetRespawn(ent, gtime_t::from_sec(ent->item->quantity));
-		}
-	}
+	if (deathmatch->integer && g_dm_powerups_style->integer && !ent->spawnflags.has(SPAWNFLAG_ITEM_DROPPED | SPAWNFLAG_ITEM_DROPPED_PLAYER))
+		ent->item->quantity = 120;
+
+	if (!is_dropped_from_death)
+		SetRespawn(ent, gtime_t::from_sec(ent->item->quantity));
 
 	return true;
 }
@@ -1510,15 +1515,11 @@ static bool Pickup_MinorPowerup(edict_t *ent, edict_t *other) {
 
 	bool is_dropped_from_death = ent->spawnflags.has(SPAWNFLAG_ITEM_DROPPED_PLAYER) && !ent->spawnflags.has(SPAWNFLAG_ITEM_DROPPED);
 
-	if (IsInstantItemsEnabled() || is_dropped_from_death) {
+	if (IsInstantItemsEnabled() || is_dropped_from_death)
 		ent->item->use(other, ent->item);
-	}
 
-	if (deathmatch->integer) {
-		if (!(ent->spawnflags & SPAWNFLAG_ITEM_DROPPED) && !is_dropped_from_death) {
-			SetRespawn(ent, gtime_t::from_sec(ent->item->quantity));
-		}
-	}
+	if (!is_dropped_from_death)
+		SetRespawn(ent, gtime_t::from_sec(ent->item->quantity));
 
 	return true;
 }
@@ -1575,17 +1576,13 @@ static bool Pickup_Sphere(edict_t *ent, edict_t *other) {
 
 	other->client->pers.inventory[ent->item->id]++;
 
-	if (deathmatch->integer) {
-		if (!(ent->spawnflags & SPAWNFLAG_ITEM_DROPPED))
-			SetRespawn(ent, gtime_t::from_sec(ent->item->quantity));
-		if (g_dm_instant_items->integer) {
-			// PGM
-			if (ent->item->use)
-				ent->item->use(other, ent->item);
-			else
-				gi.Com_Print("Powerup has no use function!\n");
-			// PGM
-		}
+	SetRespawn(ent, gtime_t::from_sec(ent->item->quantity));
+
+	if (deathmatch->integer && g_dm_instant_items->integer) {
+		if (ent->item->use)
+			ent->item->use(other, ent->item);
+		else
+			gi.Com_Print("Powerup has no use function!\n");
 	}
 
 	return true;
@@ -1605,21 +1602,17 @@ static void Use_IR(edict_t *ent, gitem_t *item) {
 
 static void Use_Nuke(edict_t *ent, gitem_t *item) {
 	vec3_t forward, right, start;
-	int	   speed;
 
 	ent->client->pers.inventory[item->id]--;
 
 	AngleVectors(ent->client->v_angle, forward, right, nullptr);
 
 	start = ent->s.origin;
-	speed = 100;
-	fire_nuke(ent, start, forward, speed);
+	fire_nuke(ent, start, forward, 100);
 }
 
 static bool Pickup_Nuke(edict_t *ent, edict_t *other) {
-	int quantity;
-
-	quantity = other->client->pers.inventory[ent->item->id];
+	int quantity = other->client->pers.inventory[ent->item->id];
 
 	if (quantity >= 1)
 		return false;
@@ -1629,10 +1622,7 @@ static bool Pickup_Nuke(edict_t *ent, edict_t *other) {
 
 	other->client->pers.inventory[ent->item->id]++;
 
-	if (deathmatch->integer) {
-		if (!(ent->spawnflags & SPAWNFLAG_ITEM_DROPPED))
-			SetRespawn(ent, gtime_t::from_sec(ent->item->quantity));
-	}
+	SetRespawn(ent, gtime_t::from_sec(ent->item->quantity));
 
 	return true;
 }
@@ -1644,9 +1634,7 @@ static void Use_Doppleganger(edict_t *ent, gitem_t *item) {
 	vec3_t createPt, spawnPt;
 	vec3_t ang;
 
-	ang[PITCH] = 0;
-	ang[YAW] = ent->client->v_angle[YAW];
-	ang[ROLL] = 0;
+	ang = { 0, ent->client->v_angle[YAW], 0 };
 	AngleVectors(ang, forward, right, nullptr);
 
 	createPt = ent->s.origin + (forward * 48);
@@ -1666,7 +1654,7 @@ static void Use_Doppleganger(edict_t *ent, gitem_t *item) {
 static bool Pickup_Doppleganger(edict_t *ent, edict_t *other) {
 	int quantity;
 
-	if (!deathmatch->integer) // item is DM only
+	if (!deathmatch->integer)
 		return false;
 
 	quantity = other->client->pers.inventory[ent->item->id];
@@ -1675,8 +1663,7 @@ static bool Pickup_Doppleganger(edict_t *ent, edict_t *other) {
 
 	other->client->pers.inventory[ent->item->id]++;
 
-	if (!(ent->spawnflags & SPAWNFLAG_ITEM_DROPPED))
-		SetRespawn(ent, gtime_t::from_sec(ent->item->quantity));
+	SetRespawn(ent, gtime_t::from_sec(ent->item->quantity));
 
 	return true;
 }
@@ -1690,11 +1677,7 @@ static bool Pickup_General(edict_t *ent, edict_t *other)
 
 	other->client->pers.inventory[ent->item->id]++;
 
-	if (deathmatch->integer)
-	{
-		if (!(ent->spawnflags & SPAWNFLAG_ITEM_DROPPED))
-			SetRespawn(ent, gtime_t::from_sec(ent->item->quantity));
-	}
+	SetRespawn(ent, gtime_t::from_sec(ent->item->quantity));
 
 	return true;
 }
@@ -1760,8 +1743,7 @@ static bool Pickup_LegacyHead(edict_t *ent, edict_t *other)
 	other->max_health += 5;
 	other->health += 5;
 
-	if (!(ent->spawnflags & SPAWNFLAG_ITEM_DROPPED) && deathmatch->integer)
-		SetRespawn(ent, gtime_t::from_sec(ent->item->quantity));
+	SetRespawn(ent, gtime_t::from_sec(ent->item->quantity));
 
 	return true;
 }
@@ -1837,8 +1819,7 @@ static bool Pickup_Bandolier(edict_t *ent, edict_t *other)
 	G_AddAmmoAndCapQuantity(other, AMMO_BULLETS);
 	G_AddAmmoAndCapQuantity(other, AMMO_SHELLS);
 
-	if (!(ent->spawnflags & SPAWNFLAG_ITEM_DROPPED) && deathmatch->integer)
-		SetRespawn(ent, gtime_t::from_sec(ent->item->quantity));
+	SetRespawn(ent, gtime_t::from_sec(ent->item->quantity));
 
 	return true;
 }
@@ -1871,8 +1852,7 @@ static bool Pickup_Pack(edict_t *ent, edict_t *other)
 	G_AddAmmoAndCapQuantity(other, AMMO_DISRUPTOR);
 	// ROGUE
 
-	if (!(ent->spawnflags & SPAWNFLAG_ITEM_DROPPED) && deathmatch->integer)
-		SetRespawn(ent, gtime_t::from_sec(ent->item->quantity));
+	SetRespawn(ent, gtime_t::from_sec(ent->item->quantity));
 
 	return true;
 }
@@ -2052,7 +2032,7 @@ void G_CheckAutoSwitch(edict_t *ent, gitem_t *item, bool is_new)
 	ent->client->newweapon = item;
 }
 
-bool Pickup_Ammo(edict_t *ent, edict_t *other)
+static bool Pickup_Ammo(edict_t *ent, edict_t *other)
 {
 	int	 oldcount;
 	int	 count;
@@ -2074,12 +2054,11 @@ bool Pickup_Ammo(edict_t *ent, edict_t *other)
 	if (weapon)
 		G_CheckAutoSwitch(other, ent->item, !oldcount);
 
-	if (!(ent->spawnflags & (SPAWNFLAG_ITEM_DROPPED | SPAWNFLAG_ITEM_DROPPED_PLAYER)) && deathmatch->integer)
-		SetRespawn(ent, 30_sec);
+	SetRespawn(ent, 30_sec);
 	return true;
 }
 
-void Drop_Ammo(edict_t *ent, gitem_t *item)
+static void Drop_Ammo(edict_t *ent, gitem_t *item)
 {
 	// [Paril-KEX]
 	if (G_CheckInfiniteAmmo(item))
@@ -2122,9 +2101,9 @@ static THINK(MegaHealth_think) (edict_t *self) -> void
 		return;
 	}
 
-	if (!(self->spawnflags & SPAWNFLAG_ITEM_DROPPED) && deathmatch->integer)
-		SetRespawn(self, 20_sec);
-	else
+	SetRespawn(self, 20_sec);
+
+	if (self->spawnflags.has(SPAWNFLAG_ITEM_DROPPED))
 		G_FreeEdict(self);
 }
 
@@ -2138,17 +2117,13 @@ static bool Pickup_Health(edict_t *ent, edict_t *other)
 
 	int count = ent->count ? ent->count : ent->item->quantity;
 
-	// ZOID
 	if (deathmatch->integer && other->health >= 250 && count > 25)
 		return false;
-	// ZOID
 
 	other->health += count;
 
-	//ZOID
 	if (ctf->integer && other->health > 250 && count > 25)
 		other->health = 250;
-	//ZOID
 
 	if (!(health_flags & HEALTH_IGNORE_MAX))
 	{
@@ -2180,8 +2155,7 @@ static bool Pickup_Health(edict_t *ent, edict_t *other)
 	}
 	else
 	{
-		if (!(ent->spawnflags & SPAWNFLAG_ITEM_DROPPED) && deathmatch->integer)
-			SetRespawn(ent, 30_sec);
+		SetRespawn(ent, 30_sec);
 	}
 
 	return true;
@@ -2207,7 +2181,7 @@ item_id_t ArmorIndex(edict_t *ent)
 	return IT_NULL;
 }
 
-bool Pickup_Armor(edict_t *ent, edict_t *other)
+static bool Pickup_Armor(edict_t *ent, edict_t *other)
 {
 	item_id_t			 old_armor_index;
 	const gitem_armor_t *oldinfo;
@@ -2282,8 +2256,7 @@ bool Pickup_Armor(edict_t *ent, edict_t *other)
 		}
 	}
 
-	if (!(ent->spawnflags & SPAWNFLAG_ITEM_DROPPED) && deathmatch->integer)
-		SetRespawn(ent, 20_sec);
+	SetRespawn(ent, 20_sec);
 
 	return true;
 }
@@ -2307,7 +2280,7 @@ item_id_t PowerArmorType(edict_t *ent)
 	return IT_NULL;
 }
 
-void Use_PowerArmor(edict_t *ent, gitem_t *item)
+static void Use_PowerArmor(edict_t *ent, gitem_t *item)
 {
 	if (ent->flags & FL_POWER_ARMOR)
 	{
@@ -2332,29 +2305,19 @@ void Use_PowerArmor(edict_t *ent, gitem_t *item)
 	}
 }
 
-bool Pickup_PowerArmor(edict_t *ent, edict_t *other)
+static bool Pickup_PowerArmor(edict_t *ent, edict_t *other)
 {
-	int quantity;
-
-	quantity = other->client->pers.inventory[ent->item->id];
-
 	other->client->pers.inventory[ent->item->id]++;
 
-	if (deathmatch->integer)
-	{
-		if (!(ent->spawnflags & SPAWNFLAG_ITEM_DROPPED))
-			SetRespawn(ent, gtime_t::from_sec(ent->item->quantity));
-		// auto-use for DM only if we didn't already have one
-		if (!quantity)
-			G_CheckPowerArmor(other);
-	}
-	else
+	SetRespawn(ent, gtime_t::from_sec(ent->item->quantity));
+
+	if ((deathmatch->integer && !other->client->pers.inventory[ent->item->id]) || !deathmatch->integer)
 		G_CheckPowerArmor(other);
 
 	return true;
 }
 
-void Drop_PowerArmor(edict_t *ent, gitem_t *item)
+static void Drop_PowerArmor(edict_t *ent, gitem_t *item)
 {
 	if ((ent->flags & FL_POWER_ARMOR) && (ent->client->pers.inventory[item->id] == 1))
 		Use_PowerArmor(ent, item);
@@ -2493,7 +2456,7 @@ TOUCH(Touch_Item) (edict_t *ent, edict_t *other, const trace_t &tr, bool other_t
 
 //======================================================================
 
-TOUCH(drop_temp_touch) (edict_t *ent, edict_t *other, const trace_t &tr, bool other_touching_self) -> void
+static TOUCH(drop_temp_touch) (edict_t *ent, edict_t *other, const trace_t &tr, bool other_touching_self) -> void
 {
 	if (other == ent->owner)
 		return;
@@ -2501,7 +2464,7 @@ TOUCH(drop_temp_touch) (edict_t *ent, edict_t *other, const trace_t &tr, bool ot
 	Touch_Item(ent, other, tr, other_touching_self);
 }
 
-THINK(drop_make_touchable) (edict_t *ent) -> void
+static THINK(drop_make_touchable) (edict_t *ent) -> void
 {
 	ent->touch = Touch_Item;
 	if (deathmatch->integer)
@@ -2563,7 +2526,7 @@ edict_t *Drop_Item(edict_t *ent, gitem_t *item)
 	return dropped;
 }
 
-USE(Use_Item) (edict_t *ent, edict_t *other, edict_t *activator) -> void
+static USE(Use_Item) (edict_t *ent, edict_t *other, edict_t *activator) -> void
 {
 	ent->svflags &= ~SVF_NOCLIENT;
 	ent->use = nullptr;
@@ -5462,7 +5425,7 @@ void InitItems()
 }
 
 // [Paril-KEX]
-inline bool G_CanDropItem(const gitem_t &item)
+static inline bool G_CanDropItem(const gitem_t &item)
 {
 	if (!item.drop)
 		return false;
