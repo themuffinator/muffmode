@@ -1523,6 +1523,9 @@ void BroadcastTeamChange(edict_t *ent, int old_team, bool inactive) {
 	char name[MAX_INFO_VALUE] = { 0 };
 	int32_t client_num;
 
+	if (!deathmatch->integer)
+		return;
+
 	if (!ent->client)
 		return;
 
