@@ -1535,6 +1535,7 @@ void BroadcastTeamChange(edict_t *ent, int old_team, bool inactive) {
 	switch (ent->client->resp.team) {
 	case TEAM_FREE:
 		s = G_Fmt("{} joined the battle.\n", name).data();
+		//t = "%bind:inven:Toggles Menu%You have joined the game.";
 		t = "You have joined the game.";
 		break;
 	case TEAM_SPECTATOR:
@@ -1568,7 +1569,7 @@ void BroadcastTeamChange(edict_t *ent, int old_team, bool inactive) {
 	}
 
 	if (t) {
-		gi.LocClient_Print(ent, PRINT_CENTER, t);
+		gi.LocClient_Print(ent, PRINT_CENTER, G_Fmt("%bind:inven:Toggles Menu%{}", t).data() );
 	}
 }
 

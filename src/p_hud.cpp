@@ -548,7 +548,7 @@ void TeamsScoreboardMessage(edict_t * ent, edict_t * killer) {
 	if (level.intermission_time) {
 		fmt::format_to(std::back_inserter(string), FMT_STRING("ifgef {} yb -48 xv 0 loc_cstring2 0 \"$m_eou_press_button\" endif "), (level.intermission_server_frame + (5_sec).frames()));
 	} else
-		fmt::format_to(std::back_inserter(string), FMT_STRING("xv 0 yb -48 cstring2 \"{}\" "), "Press [TAB] to toggle menu.");
+		fmt::format_to(std::back_inserter(string), FMT_STRING("xv 0 yb -48 cstring2 \"{}\" "), "Show inventory to toggle menu.");
 
 	gi.WriteByte(svc_layout);
 	gi.WriteString(string.c_str());
@@ -671,7 +671,7 @@ void DeathmatchScoreboardMessage(edict_t * ent, edict_t * killer) {
 	if (level.intermission_time)
 		fmt::format_to(std::back_inserter(string), FMT_STRING("ifgef {} yb -48 xv 0 loc_cstring2 0 \"$m_eou_press_button\" endif "), (level.intermission_server_frame + (5_sec).frames()));
 	else
-		fmt::format_to(std::back_inserter(string), FMT_STRING("xv 0 yb -48 cstring2 \"{}\" "), "Press [TAB] to toggle menu.");
+		fmt::format_to(std::back_inserter(string), FMT_STRING("xv 0 yb -48 cstring2 \"{}\" "), "Show inventory to toggle menu.");
 
 	gi.WriteByte(svc_layout);
 	gi.WriteString(string.c_str());
