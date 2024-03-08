@@ -1086,8 +1086,8 @@ static bool ScoreIsTied(void) {
 		return level.team_scores[TEAM_RED] == level.team_scores[TEAM_BLUE];
 	}
 
-	a = game.clients[level.sorted_clients[0]].ps.stats[STAT_SCORE];
-	b = game.clients[level.sorted_clients[1]].ps.stats[STAT_SCORE];
+	a = game.clients[level.sorted_clients[0]].resp.score;
+	b = game.clients[level.sorted_clients[1]].resp.score;
 
 	return a == b;
 }
@@ -1197,7 +1197,7 @@ static void CheckExitRules(void) {
 				continue;
 			}
 
-			if (cl->ps.stats[STAT_SCORE] >= scorelimit) {
+			if (cl->resp.score >= scorelimit) {
 				gi.LocBroadcast_Print(PRINT_HIGH, "{} hit the score limit.\n", cl->pers.netname);
 				//LogExit("Score limit hit.");
 				EndDMLevel();

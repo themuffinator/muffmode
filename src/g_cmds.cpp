@@ -1005,8 +1005,8 @@ int PlayerSort(const void *a, const void *b) {
 	anum = *(const int *)a;
 	bnum = *(const int *)b;
 
-	anum = game.clients[anum].ps.stats[STAT_SCORE];
-	bnum = game.clients[bnum].ps.stats[STAT_SCORE];
+	anum = game.clients[anum].resp.score;
+	bnum = game.clients[bnum].resp.score;
 
 	if (anum < bnum)
 		return -1;

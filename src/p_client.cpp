@@ -458,7 +458,7 @@ void ClientObituary(edict_t *self, edict_t *inflictor, edict_t *attacker, mod_t 
 						gi.LocBroadcast_Print(PRINT_CENTER, "{} ended {}'s\n{} spree!\n", attacker->client->pers.netname, freeze->integer ? "freezing" : "fragging", self->client->pers.netname);
 					} else if (!IsTeamplay()) {
 						gi.LocClient_Print(attacker, PRINT_CENTER, "You {} {}\n{} place with {}", freeze->integer ? "froze" : "fragged",
-							self->client->pers.netname, G_PlaceString(attacker->client->ps.stats[STAT_RANK] + 1), attacker->client->ps.stats[STAT_SCORE]);
+							self->client->pers.netname, G_PlaceString(attacker->client->resp.rank + 1), attacker->client->resp.score);
 					}
 				}
 				gi.local_sound(attacker, CHAN_AUTO, gi.soundindex("nav_editor/select_node.wav"), 1, ATTN_NONE, 0);
@@ -2358,6 +2358,8 @@ void ClientSpawn(edict_t *ent) {
 	// weapon number will be added in changeweapon
 	P_AssignClientSkinnum(ent);
 
+	CalculateRanks();
+
 	ent->s.frame = 0;
 
 	PutClientOnSpawnPoint(ent, spawn_origin, spawn_angles);
@@ -2769,6 +2771,8 @@ void ClientUserinfoChanged(edict_t *ent, const char *userinfo) {
 	// set skin
 	if (!gi.Info_ValueForKey(userinfo, "skin", val, sizeof(val)))
 		Q_strlcpy(val, "male/grunt", sizeof(val));
+
+	ent->client->pers.skin_icon_index = gi.imageindex(G_Fmt("/players/{}_i", val).data());
 
 	int playernum = ent - g_edicts - 1;
 

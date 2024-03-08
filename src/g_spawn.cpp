@@ -1809,14 +1809,14 @@ static void G_InitStatusbar()
 
 			// ctf/tdm
 			// red team
-			sb.yb(-110).ifstat(STAT_TEAM_RED_PIC).xr(-26).pic(STAT_TEAM_RED_PIC).endifstat().xr(-78).num(3, STAT_TEAM_RED_CAPS);
+			sb.yb(-110).ifstat(STAT_MINISCORE_FIRST_PIC).xr(-26).pic(STAT_MINISCORE_FIRST_PIC).endifstat().xr(-78).num(3, STAT_MINISCORE_FIRST_SCORE);
 			// joined overlay
-			sb.ifstat(STAT_TEAM_RED_JOINED_PIC).yb(-112).xr(-28).pic(STAT_TEAM_RED_JOINED_PIC).endifstat();
+			sb.ifstat(STAT_MINISCORE_FIRST_POS).yb(-112).xr(-28).pic(STAT_MINISCORE_FIRST_POS).endifstat();
 
 			// blue team
-			sb.yb(-83).ifstat(STAT_TEAM_BLUE_PIC).xr(-26).pic(STAT_TEAM_BLUE_PIC).endifstat().xr(-78).num(3, STAT_TEAM_BLUE_CAPS);
+			sb.yb(-83).ifstat(STAT_MINISCORE_SECOND_PIC).xr(-26).pic(STAT_MINISCORE_SECOND_PIC).endifstat().xr(-78).num(3, STAT_MINISCORE_SECOND_SCORE);
 			// joined overlay
-			sb.ifstat(STAT_TEAM_BLUE_JOINED_PIC).yb(-85).xr(-28).pic(STAT_TEAM_BLUE_JOINED_PIC).endifstat();
+			sb.ifstat(STAT_MINISCORE_SECOND_POS).yb(-85).xr(-28).pic(STAT_MINISCORE_SECOND_POS).endifstat();
 
 			if (ctf->integer) {
 				// have flag graph
@@ -1824,15 +1824,11 @@ static void G_InitStatusbar()
 			}
 
 			// match
-			sb.ifstat(STAT_CTF_MATCH).xl(0).yb(-78).stat_string(STAT_CTF_MATCH).endifstat();
+			sb.ifstat(STAT_MATCH_STATE).xl(0).yb(-78).stat_string(STAT_MATCH_STATE).endifstat();
 
 			// team info
-			sb.ifstat(STAT_CTF_TEAMINFO).xl(0).yb(-88).stat_string(STAT_CTF_TEAMINFO).endifstat();
+			sb.ifstat(STAT_TEAMPLAY_INFO).xl(0).yb(-88).stat_string(STAT_TEAMPLAY_INFO).endifstat();
 		} else {
-			// dm
-			// frags
-			sb.xr(-50).yt(2).num(3, STAT_SCORE);
-
 			// spectator
 			sb.ifstat(STAT_SPECTATOR).xv(0).yb(-58).string2("SPECTATOR MODE").endifstat();	//104
 
@@ -1840,9 +1836,17 @@ static void G_InitStatusbar()
 			sb.ifstat(STAT_CHASE).xv(0).yb(-68).string("FOLLOWING").xv(80).stat_string(STAT_CHASE).endifstat();
 
 			// mini scores
+			imageindex_i_ctfj = gi.imageindex("i_ctfj");
 
-			//sb.yb(-110).ifstat(STAT_TEAM_RED_PIC).xr(-26).pic(STAT_TEAM_RED_PIC).endifstat().xr(-78).num(3, STAT_TEAM_RED_CAPS);
-			//sb.yb(-83).ifstat(STAT_TEAM_BLUE_PIC).xr(-26).pic(STAT_TEAM_BLUE_PIC).endifstat().xr(-78).num(3, STAT_TEAM_BLUE_CAPS);
+			sb.yb(-110).ifstat(STAT_MINISCORE_FIRST_PIC).xr(-26).pic(STAT_MINISCORE_FIRST_PIC).endifstat().xr(-78).num(3, STAT_MINISCORE_FIRST_SCORE);
+			sb.ifstat(STAT_MINISCORE_FIRST_POS).yb(-112).xr(-28).pic(STAT_MINISCORE_FIRST_POS).endifstat();
+
+			sb.yb(-83).ifstat(STAT_MINISCORE_SECOND_PIC).xr(-26).pic(STAT_MINISCORE_SECOND_PIC).endifstat().xr(-78).num(3, STAT_MINISCORE_SECOND_SCORE);
+			sb.ifstat(STAT_MINISCORE_SECOND_POS).yb(-85).xr(-28).pic(STAT_MINISCORE_SECOND_POS).endifstat();
+
+			if (fraglimit->integer)
+				//sb.ifstat(STAT_SCORELIMIT).xr(-12).yb(-57).loc_stat_string(STAT_SCORELIMIT).endifstat();
+				sb.ifstat(STAT_HEALTH_ICON).xr(-12).yb(-57).loc_rstring(G_Fmt("{}", fraglimit->integer).data()).endifstat();
 		}
 
 		// id view state

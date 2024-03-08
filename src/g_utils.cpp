@@ -730,9 +730,9 @@ static int SortRanks(const void *a, const void *b) {
 		return -1;
 
 	// then sort by score
-	if (ca->ps.stats[STAT_SCORE] > cb->ps.stats[STAT_SCORE])
+	if (ca->resp.score > cb->resp.score)
 		return -1;
-	if (ca->ps.stats[STAT_SCORE] < cb->ps.stats[STAT_SCORE])
+	if (ca->resp.score < cb->resp.score)
 		return 1;
 	return 0;
 }
@@ -789,11 +789,11 @@ void CalculateRanks() {
 		for (i = 0; i < level.num_connected_clients; i++) {
 			cl = &game.clients[level.sorted_clients[i]];
 			if (level.team_scores[TEAM_RED] == level.team_scores[TEAM_BLUE]) {
-				cl->ps.stats[STAT_RANK] = 2;
+				cl->resp.rank = 2;
 			} else if (level.team_scores[TEAM_RED] > level.team_scores[TEAM_BLUE]) {
-				cl->ps.stats[STAT_RANK] = 0;
+				cl->resp.rank = 0;
 			} else {
-				cl->ps.stats[STAT_RANK] = 1;
+				cl->resp.rank = 1;
 			}
 		}
 	} else {
@@ -802,21 +802,23 @@ void CalculateRanks() {
 		for (i = 0; i < level.num_playing_clients; i++) {
 			if (game.clients[i].pers.connected) {
 				cl = &game.clients[level.sorted_clients[i]];
-				new_score = cl->ps.stats[STAT_SCORE];
+				new_score = cl->resp.score;
 				if (i == 0 || new_score != score) {
 					rank = i;
 					// assume we aren't tied until the next client is checked
-					game.clients[level.sorted_clients[i]].ps.stats[STAT_RANK] = rank;
+					game.clients[level.sorted_clients[i]].resp.rank = rank;
 				} else {
 					// we are tied with the previous client
-					game.clients[level.sorted_clients[i - 1]].ps.stats[STAT_RANK] = rank | RANK_TIED_FLAG;
-					game.clients[level.sorted_clients[i]].ps.stats[STAT_RANK] = rank | RANK_TIED_FLAG;
+					game.clients[level.sorted_clients[i - 1]].resp.rank = rank | RANK_TIED_FLAG;
+					game.clients[level.sorted_clients[i]].resp.rank = rank | RANK_TIED_FLAG;
 				}
 				score = new_score;
 			}
 		}
 	}
 
+	//gi.Com_PrintFmt("{}: 0={} 1={} 2={} 3={} 4={}\n", __FUNCTION__, level.sorted_clients[0], level.sorted_clients[1], level.sorted_clients[2], level.sorted_clients[3], level.sorted_clients[4]);
+	
 	// see if it is time to end the level
 	//CheckExitRules();
 }
@@ -831,7 +833,6 @@ void G_AdjustPlayerScore(gclient_t *cl, int32_t offset, bool adjust_team, int32_
 
 	if (offset || team_offset) {
 		cl->resp.score += offset;
-		cl->ps.stats[STAT_SCORE] += offset;
 		CalculateRanks();
 	}
 
@@ -861,7 +862,7 @@ G_SetPlayerScore
 void G_SetPlayerScore(gclient_t *cl, int32_t value) {
 	if (!cl) return;
 
-	cl->resp.score = cl->ps.stats[STAT_SCORE] = value;
+	cl->resp.score = value;
 	CalculateRanks();
 }
 

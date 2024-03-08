@@ -621,7 +621,7 @@ void DeathmatchScoreboardMessage(edict_t * ent, edict_t * killer) {
 
 		if (vs[0]) {
 			const char *s = G_Fmt("/players/{}_i.pcx", vs).data();
-			int32_t		img_index = gi.imageindex(s);
+			int32_t		img_index = cl->pers.skin_icon_index;
 
 			if (img_index)
 				fmt::format_to(std::back_inserter(entry), FMT_STRING("xv {} yv {} picn {} "), x, y, s);
@@ -647,9 +647,9 @@ void DeathmatchScoreboardMessage(edict_t * ent, edict_t * killer) {
 	}
 
 	//fmt::format_to(std::back_inserter(string), FMT_STRING("xv 0 yv -30 cstring2 \"{}\" "), G_Fmt("{} - {}", level.gamemod_name, level.gametype_name));
-	if (ent->client && ent->client->resp.team != TEAM_SPECTATOR && ent->client->ps.stats[STAT_SCORE] && level.num_playing_clients > 1) {
+	if (ent->client && ent->client->resp.team != TEAM_SPECTATOR && ent->client->resp.score && level.num_playing_clients > 1) {
 		fmt::format_to(std::back_inserter(string), FMT_STRING("xv 0 yv -20 cstring2 \"{}\" "), G_Fmt("{}{} place with a score of {}",
-			level.intermission_time ? "You finished " : "", G_PlaceString(ent->client->ps.stats[STAT_RANK] + 1), ent->client->ps.stats[STAT_SCORE]));
+			level.intermission_time ? "You finished " : "", G_PlaceString(ent->client->resp.rank + 1), ent->client->resp.score));
 	}
 	if (fraglimit->integer) {
 		fmt::format_to(std::back_inserter(string), FMT_STRING("xv -20 yv -10 loc_string2 1 $g_score_frags \"{}\" "), fraglimit->integer);
@@ -916,20 +916,117 @@ static void SetCrosshairIDView(edict_t * ent) {
 }
 
 
-static void SetCTFStats(edict_t * ent) {
+static void SetCTFStats(edict_t *ent, bool blink) {
 	uint32_t i;
 	int		 p1, p2;
 	edict_t *e;
 
-	if (level.match > MATCH_NONE)
-		ent->client->ps.stats[STAT_CTF_MATCH] = CONFIG_CTF_MATCH;
-	else
-		ent->client->ps.stats[STAT_CTF_MATCH] = 0;
+	if (!ctf->integer) return;
 
-	if (level.warnactive)
-		ent->client->ps.stats[STAT_CTF_TEAMINFO] = CONFIG_CTF_TEAMINFO;
-	else
-		ent->client->ps.stats[STAT_CTF_TEAMINFO] = 0;
+	// figure out what icon to display for team logos
+	// three states:
+	//   flag at base
+	//   flag taken
+	//   flag dropped
+	p1 = imageindex_i_ctf1;
+	e = G_FindByString<&edict_t::classname>(nullptr, ITEM_CTF_FLAG_RED);
+	if (e != nullptr) {
+		if (e->solid == SOLID_NOT) {
+			// not at base
+			// check if on player
+			p1 = imageindex_i_ctf1d; // default to dropped
+			for (i = 1; i <= game.maxclients; i++)
+				if (g_edicts[i].inuse &&
+					g_edicts[i].client->pers.inventory[IT_FLAG_RED]) {
+					// enemy has it
+					p1 = imageindex_i_ctf1t;
+					break;
+				}
+
+			// [Paril-KEX] make sure there is a dropped version on the map somewhere
+			if (p1 == imageindex_i_ctf1d) {
+				e = G_FindByString<&edict_t::classname>(e, ITEM_CTF_FLAG_RED);
+
+				if (e == nullptr) {
+					GT_CTF_ResetFlag(TEAM_RED);
+					gi.LocBroadcast_Print(PRINT_HIGH, "$g_flag_returned",
+						Teams_TeamName(TEAM_RED));
+					gi.sound(ent, CHAN_RELIABLE | CHAN_NO_PHS_ADD | CHAN_AUX, gi.soundindex("ctf/flagret.wav"), 1, ATTN_NONE, 0);
+				}
+			}
+		} else if (e->spawnflags.has(SPAWNFLAG_ITEM_DROPPED))
+			p1 = imageindex_i_ctf1d; // must be dropped
+	}
+	p2 = imageindex_i_ctf2;
+	e = G_FindByString<&edict_t::classname>(nullptr, ITEM_CTF_FLAG_BLUE);
+	if (e != nullptr) {
+		if (e->solid == SOLID_NOT) {
+			// not at base
+			// check if on player
+			p2 = imageindex_i_ctf2d; // default to dropped
+			for (i = 1; i <= game.maxclients; i++)
+				if (g_edicts[i].inuse &&
+					g_edicts[i].client->pers.inventory[IT_FLAG_BLUE]) {
+					// enemy has it
+					p2 = imageindex_i_ctf2t;
+					break;
+				}
+
+			// [Paril-KEX] make sure there is a dropped version on the map somewhere
+			if (p2 == imageindex_i_ctf2d) {
+				e = G_FindByString<&edict_t::classname>(e, ITEM_CTF_FLAG_BLUE);
+
+				if (e == nullptr) {
+					GT_CTF_ResetFlag(TEAM_BLUE);
+					gi.LocBroadcast_Print(PRINT_HIGH, "$g_flag_returned",
+						Teams_TeamName(TEAM_BLUE));
+					gi.sound(ent, CHAN_RELIABLE | CHAN_NO_PHS_ADD | CHAN_AUX, gi.soundindex("ctf/flagret.wav"), 1, ATTN_NONE, 0);
+				}
+			}
+		} else if (e->spawnflags.has(SPAWNFLAG_ITEM_DROPPED))
+			p2 = imageindex_i_ctf2d; // must be dropped
+	}
+
+	ent->client->ps.stats[STAT_MINISCORE_FIRST_PIC] = p1;
+	ent->client->ps.stats[STAT_MINISCORE_SECOND_PIC] = p2;
+
+	if (level.last_flag_capture && level.time - level.last_flag_capture < 5_sec) {
+		if (level.last_capture_team == TEAM_RED)
+			if (blink)
+				ent->client->ps.stats[STAT_MINISCORE_FIRST_PIC] = p1;
+			else
+				ent->client->ps.stats[STAT_MINISCORE_FIRST_PIC] = 0;
+		else if (blink)
+			ent->client->ps.stats[STAT_MINISCORE_SECOND_PIC] = p2;
+		else
+			ent->client->ps.stats[STAT_MINISCORE_SECOND_PIC] = 0;
+	}
+
+	ent->client->ps.stats[STAT_MINISCORE_FIRST_SCORE] = level.team_scores[TEAM_RED];
+	ent->client->ps.stats[STAT_MINISCORE_SECOND_SCORE] = level.team_scores[TEAM_BLUE];
+
+	ent->client->ps.stats[STAT_CTF_FLAG_PIC] = 0;
+	if (ent->client->resp.team == TEAM_RED &&
+		ent->client->pers.inventory[IT_FLAG_BLUE] &&
+		(blink))
+		ent->client->ps.stats[STAT_CTF_FLAG_PIC] = imageindex_i_ctf2;
+
+	else if (ent->client->resp.team == TEAM_BLUE &&
+		ent->client->pers.inventory[IT_FLAG_RED] &&
+		(blink))
+		ent->client->ps.stats[STAT_CTF_FLAG_PIC] = imageindex_i_ctf1;
+}
+
+
+static void SetExtendedStats(edict_t * ent) {
+	bool teams = IsTeamplay();
+	int16_t	pos1_num = -1, pos2_num = -1;
+	int16_t own_num = -1;
+
+	bool blink = (level.time.milliseconds() % 1000) < 500;
+
+	ent->client->ps.stats[STAT_MATCH_STATE] = level.match > MATCH_NONE ? CONFIG_CTF_MATCH : 0;
+	ent->client->ps.stats[STAT_TEAMPLAY_INFO] = level.warnactive ? CONFIG_CTF_TEAMINFO : 0;
 
 	// ghosting
 	if (ent->client->resp.ghost) {
@@ -938,134 +1035,138 @@ static void SetCTFStats(edict_t * ent) {
 		ent->client->resp.ghost->number = ent->s.number;
 	}
 
-	// logo headers for the frag display
-	ent->client->ps.stats[STAT_TEAM_RED_HEADER] = imageindex_ctfsb1;
-	ent->client->ps.stats[STAT_TEAM_BLUE_HEADER] = imageindex_ctfsb2;
+	// mini score player indexes
+	if (!teams) {
+		int16_t	own_rank = -1, other_rank = -1;
+		int16_t	other_num = -1;
+		int16_t	other_other_num = -1;
 
-	bool blink = (level.time.milliseconds() % 1000) < 500;
-
-	// if during intermission, we must blink the team header of the winning team
-	if (level.intermission_time && blink) {
-		// blink half second
-		// note that level.total[12] is set when we go to intermission
-		if (level.team_scores[TEAM_RED] > level.team_scores[TEAM_BLUE])
-			ent->client->ps.stats[STAT_TEAM_RED_HEADER] = 0;
-		else if (level.team_scores[TEAM_BLUE] > level.team_scores[TEAM_RED])
-			ent->client->ps.stats[STAT_TEAM_BLUE_HEADER] = 0;
-		else { // tie game!
-			ent->client->ps.stats[STAT_TEAM_RED_HEADER] = 0;
-			ent->client->ps.stats[STAT_TEAM_BLUE_HEADER] = 0;
-		}
-	}
-
-	if (ctf->integer) {
-		// figure out what icon to display for team logos
-		// three states:
-		//   flag at base
-		//   flag taken
-		//   flag dropped
-		p1 = imageindex_i_ctf1;
-		e = G_FindByString<&edict_t::classname>(nullptr, ITEM_CTF_FLAG_RED);
-		if (e != nullptr) {
-			if (e->solid == SOLID_NOT) {
-				// not at base
-				// check if on player
-				p1 = imageindex_i_ctf1d; // default to dropped
-				for (i = 1; i <= game.maxclients; i++)
-					if (g_edicts[i].inuse &&
-						g_edicts[i].client->pers.inventory[IT_FLAG_RED]) {
-						// enemy has it
-						p1 = imageindex_i_ctf1t;
-						break;
-					}
-
-				// [Paril-KEX] make sure there is a dropped version on the map somewhere
-				if (p1 == imageindex_i_ctf1d) {
-					e = G_FindByString<&edict_t::classname>(e, ITEM_CTF_FLAG_RED);
-
-					if (e == nullptr) {
-						GT_CTF_ResetFlag(TEAM_RED);
-						gi.LocBroadcast_Print(PRINT_HIGH, "$g_flag_returned",
-							Teams_TeamName(TEAM_RED));
-						gi.sound(ent, CHAN_RELIABLE | CHAN_NO_PHS_ADD | CHAN_AUX, gi.soundindex("ctf/flagret.wav"), 1, ATTN_NONE, 0);
-					}
-				}
-			} else if (e->spawnflags.has(SPAWNFLAG_ITEM_DROPPED))
-				p1 = imageindex_i_ctf1d; // must be dropped
-		}
-		p2 = imageindex_i_ctf2;
-		e = G_FindByString<&edict_t::classname>(nullptr, ITEM_CTF_FLAG_BLUE);
-		if (e != nullptr) {
-			if (e->solid == SOLID_NOT) {
-				// not at base
-				// check if on player
-				p2 = imageindex_i_ctf2d; // default to dropped
-				for (i = 1; i <= game.maxclients; i++)
-					if (g_edicts[i].inuse &&
-						g_edicts[i].client->pers.inventory[IT_FLAG_BLUE]) {
-						// enemy has it
-						p2 = imageindex_i_ctf2t;
-						break;
-					}
-
-				// [Paril-KEX] make sure there is a dropped version on the map somewhere
-				if (p2 == imageindex_i_ctf2d) {
-					e = G_FindByString<&edict_t::classname>(e, ITEM_CTF_FLAG_BLUE);
-
-					if (e == nullptr) {
-						GT_CTF_ResetFlag(TEAM_BLUE);
-						gi.LocBroadcast_Print(PRINT_HIGH, "$g_flag_returned",
-							Teams_TeamName(TEAM_BLUE));
-						gi.sound(ent, CHAN_RELIABLE | CHAN_NO_PHS_ADD | CHAN_AUX, gi.soundindex("ctf/flagret.wav"), 1, ATTN_NONE, 0);
-					}
-				}
-			} else if (e->spawnflags.has(SPAWNFLAG_ITEM_DROPPED))
-				p2 = imageindex_i_ctf2d; // must be dropped
+		if (ent->client->resp.team == TEAM_FREE || ent->client->chase_target) {
+			own_num = ent->client->chase_target ? ent->client->chase_target->client - game.clients : ent->client - game.clients;
+			own_rank = game.clients[own_num].resp.rank;
+			own_rank &= ~RANK_TIED_FLAG;
 		}
 
-		ent->client->ps.stats[STAT_TEAM_RED_PIC] = p1;
-		ent->client->ps.stats[STAT_TEAM_BLUE_PIC] = p2;
+		// find opponent positions
+		for (size_t i = 0; i < MAX_CLIENTS; i++) {
 
-		if (level.last_flag_capture && level.time - level.last_flag_capture < 5_sec) {
-			if (level.last_capture_team == TEAM_RED)
-				if (blink)
-					ent->client->ps.stats[STAT_TEAM_RED_PIC] = p1;
-				else
-					ent->client->ps.stats[STAT_TEAM_RED_PIC] = 0;
-			else if (blink)
-				ent->client->ps.stats[STAT_TEAM_BLUE_PIC] = p2;
-			else
-				ent->client->ps.stats[STAT_TEAM_BLUE_PIC] = 0;
+			if (level.sorted_clients[i] < 0)
+				continue;
+
+			if (level.sorted_clients[i] >= MAX_CLIENTS)
+				continue;
+
+			if (level.sorted_clients[i] == own_num)
+				continue;
+
+			if (!game.clients[level.sorted_clients[i]].pers.connected)
+				continue;
+
+			if (game.clients[level.sorted_clients[i]].resp.team == TEAM_SPECTATOR)
+				continue;
+
+			if (i && !level.sorted_clients[i - 1] && !level.sorted_clients[i])
+				break;
+
+			if (other_num < 0 && other_other_num < 0) {
+				other_rank = i;
+				other_num = level.sorted_clients[i];
+
+				if (own_rank >= 0)
+					break;
+				continue;
+			}
+
+			if (other_rank >= 0) {
+				other_other_num = level.sorted_clients[i];
+				break;
+			}
 		}
 
-		ent->client->ps.stats[STAT_TEAM_RED_CAPS] = level.team_scores[TEAM_RED];
-		ent->client->ps.stats[STAT_TEAM_BLUE_CAPS] = level.team_scores[TEAM_BLUE];
+		// set miniscore indexes
+		if (own_rank >= 0) {
+			// client is playing
+			if (own_rank == 0) {
+				pos1_num = own_num;
+				pos2_num = other_num >= 0 ? other_num : other_other_num;
+			} else {
+				pos1_num = other_num >= 0 ? other_num : other_other_num;
+				pos2_num = own_num;
+			}
+		} else {
+			// client is spectating
+			pos1_num = other_num;
+			pos2_num = other_other_num;
+		}
 
-		ent->client->ps.stats[STAT_CTF_FLAG_PIC] = 0;
-		if (ent->client->resp.team == TEAM_RED &&
-			ent->client->pers.inventory[IT_FLAG_BLUE] &&
-			(blink))
-			ent->client->ps.stats[STAT_CTF_FLAG_PIC] = imageindex_i_ctf2;
-
-		else if (ent->client->resp.team == TEAM_BLUE &&
-			ent->client->pers.inventory[IT_FLAG_RED] &&
-			(blink))
-			ent->client->ps.stats[STAT_CTF_FLAG_PIC] = imageindex_i_ctf1;
+		//if (own_num == 0)
+		//	gi.Com_PrintFmt("own_num={} own_rank={} pos1_num={} pos2_num={}\n", own_num, own_rank, pos1_num, pos2_num);
 	} else {
-		ent->client->ps.stats[STAT_TEAM_RED_PIC] = imageindex_i_ctf1;
-		ent->client->ps.stats[STAT_TEAM_BLUE_PIC] = imageindex_i_ctf2;
+		// logo headers for the frag display
+		ent->client->ps.stats[STAT_TEAM_RED_HEADER] = imageindex_ctfsb1;
+		ent->client->ps.stats[STAT_TEAM_BLUE_HEADER] = imageindex_ctfsb2;
 
-		ent->client->ps.stats[STAT_TEAM_RED_CAPS] = level.team_scores[TEAM_RED];
-		ent->client->ps.stats[STAT_TEAM_BLUE_CAPS] = level.team_scores[TEAM_BLUE];
+		// if during intermission, we must blink the team header of the winning team
+		if (level.intermission_time && blink) {
+			// blink half second
+			// note that level.total[12] is set when we go to intermission
+			if (level.team_scores[TEAM_RED] > level.team_scores[TEAM_BLUE])
+				ent->client->ps.stats[STAT_TEAM_RED_HEADER] = 0;
+			else if (level.team_scores[TEAM_BLUE] > level.team_scores[TEAM_RED])
+				ent->client->ps.stats[STAT_TEAM_BLUE_HEADER] = 0;
+			else { // tie game!
+				ent->client->ps.stats[STAT_TEAM_RED_HEADER] = 0;
+				ent->client->ps.stats[STAT_TEAM_BLUE_HEADER] = 0;
+			}
+		}
 	}
 
-	ent->client->ps.stats[STAT_TEAM_RED_JOINED_PIC] = 0;
-	ent->client->ps.stats[STAT_TEAM_BLUE_JOINED_PIC] = 0;
-	if (ent->client->resp.team == TEAM_RED)
-		ent->client->ps.stats[STAT_TEAM_RED_JOINED_PIC] = imageindex_i_ctfj;
-	else if (ent->client->resp.team == TEAM_BLUE)
-		ent->client->ps.stats[STAT_TEAM_BLUE_JOINED_PIC] = imageindex_i_ctfj;
+	// set miniscores scores and images
+	if (ctf->integer) {
+		SetCTFStats(ent, blink);
+	} else {
+		if (teams) {
+			ent->client->ps.stats[STAT_MINISCORE_FIRST_SCORE] = level.team_scores[TEAM_RED];
+			ent->client->ps.stats[STAT_MINISCORE_SECOND_SCORE] = level.team_scores[TEAM_BLUE];
+		} else {
+			int16_t pic1 = 0, pic2 = 0;
 
+			ent->client->ps.stats[STAT_MINISCORE_FIRST_SCORE] = -999;
+			if (pos1_num >= 0) {
+				pic1 = game.clients[pos1_num].pers.skin_icon_index;
+				ent->client->ps.stats[STAT_MINISCORE_FIRST_SCORE] = game.clients[pos1_num].resp.score;
+			}
+			ent->client->ps.stats[STAT_MINISCORE_FIRST_PIC] = pic1;
+
+			ent->client->ps.stats[STAT_MINISCORE_SECOND_SCORE] = -999;
+			if (pos2_num >= 0) {
+				pic2 = game.clients[pos2_num].pers.skin_icon_index;
+				ent->client->ps.stats[STAT_MINISCORE_SECOND_SCORE] = game.clients[pos2_num].resp.score;
+			}
+			ent->client->ps.stats[STAT_MINISCORE_SECOND_PIC] = pic2;
+
+			ent->client->ps.stats[STAT_SCORELIMIT] = fraglimit->integer;
+		}
+	}
+
+	// highlight minescores position/team
+	ent->client->ps.stats[STAT_MINISCORE_FIRST_POS] = 0;
+	ent->client->ps.stats[STAT_MINISCORE_SECOND_POS] = 0;
+	if (teams) {
+		if (ent->client->resp.team == TEAM_RED)
+			ent->client->ps.stats[STAT_MINISCORE_FIRST_POS] = imageindex_i_ctfj;
+		else if (ent->client->resp.team == TEAM_BLUE)
+			ent->client->ps.stats[STAT_MINISCORE_SECOND_POS] = imageindex_i_ctfj;
+	} else {
+		if (own_num >= 0) {
+			if (own_num == pos1_num)
+				ent->client->ps.stats[STAT_MINISCORE_FIRST_POS] = imageindex_i_ctfj;
+			else if (own_num == pos2_num)
+				ent->client->ps.stats[STAT_MINISCORE_SECOND_POS] = imageindex_i_ctfj;
+		}
+	}
+
+	// set crosshair ID
 	if (ent->client->resp.id_state)
 		SetCrosshairIDView(ent);
 	else {
@@ -1088,13 +1189,14 @@ void G_SetStats(edict_t * ent) {
 	bool			minhud = g_instagib->integer || g_nadefest->integer;
 	int				i;	//for techs
 
+	int32_t		img_index;
+#if 0
 	char vm[MAX_INFO_VALUE] = { 0 };
 	char vs[MAX_INFO_VALUE] = { 0 };
-	int32_t		img_index;
 	gi.Info_ValueForKey(ent->client->pers.userinfo, "model", vm, sizeof(vm));
 	gi.Info_ValueForKey(ent->client->pers.userinfo, "skin", vs, sizeof(vs));
-
-	img_index = gi.imageindex(G_Fmt("players{}/{}_i", vm, vs).data());
+#endif
+	img_index = ent->client->pers.skin_icon_index;	// gi.imageindex(G_Fmt("players{}/{}_i", vm, vs).data());
 
 	//
 	// health
@@ -1350,11 +1452,6 @@ void G_SetStats(edict_t * ent) {
 	}
 
 	//
-	// frags
-	//
-	ent->client->ps.stats[STAT_SCORE] = ent->client->resp.score;
-
-	//
 	// help icon / current weapon if not shown
 	//
 	if (ent->client->pers.helpchanged >= 1 && ent->client->pers.helpchanged <= 2 && (level.time.milliseconds() % 1000) < 500) // haleyjd: time-limited
@@ -1419,9 +1516,7 @@ void G_SetStats(edict_t * ent) {
 		}
 	}
 
-	// ZOID
-	SetCTFStats(ent);
-	// ZOID
+	SetExtendedStats(ent);
 
 	//
 	// match timer

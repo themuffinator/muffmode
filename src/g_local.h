@@ -2932,6 +2932,8 @@ struct client_persistant_t {
 
 	int32_t dmg_scorer;		// for clan arena scoring from damage dealt
 	int32_t	dmg_team;		// for team damage checks and warnings
+
+	int		skin_icon_index;
 };
 
 // client data that stays across deathmatch respawns
@@ -2979,6 +2981,8 @@ struct client_respawn_t {
 	int32_t				kill_count;	// for rampage award, reset on respawn
 
 	bool				showed_help;
+
+	int					rank;
 };
 
 // [Paril-KEX] seconds until we are fully invisible after

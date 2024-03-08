@@ -857,16 +857,28 @@ static void CG_ExecuteLayoutString (const char *s, vrect_t hud_vrect, vrect_t hu
             token = COM_Parse (&s);
             if (!skip_depth)
             {
-                value = ps->stats[atoi(token)];
+                int16_t stat = atoi(token);
+                bool skip = false;
+
+                value = ps->stats[stat];
                 if (value >= MAX_IMAGES)
                     cgi.Com_Error("Pic >= MAX_IMAGES");
 
+                //muff: client-side hacky hacks - don't show vitals if spectating
+                if ((ps->stats[STAT_SPECTATOR] && !ps->stats[STAT_CHASE]) && (stat == STAT_HEALTH_ICON || stat == STAT_AMMO_ICON || stat == STAT_ARMOR_ICON))
+                    skip = true;
+
                 const char *const pic = cgi.get_configstring(CS_IMAGES + value);
 
-                if (pic && *pic)
-                {
-                    cgi.Draw_GetPicSize (&w, &h, pic);
-                    cgi.SCR_DrawPic (x, y, w * scale, h * scale, pic);
+                if (pic && *pic && !skip) {
+                    //muff: little hacky hack! resize the player pics on miniscores for clients rockin' muffmode
+                    if (stat == STAT_MINISCORE_FIRST_PIC || stat == STAT_MINISCORE_SECOND_PIC) {
+                        w = 24;
+                        h = 24;
+                    } else {
+                        cgi.Draw_GetPicSize(&w, &h, pic);
+                    }
+                    cgi.SCR_DrawPic(x, y, w * scale, h * scale, pic);
                 }
             }
 
@@ -999,7 +1011,9 @@ static void CG_ExecuteLayoutString (const char *s, vrect_t hud_vrect, vrect_t hu
             if (!skip_depth)
             {
                 value = ps->stats[atoi(token)];
-                CG_DrawField (x, y, 0, width, value, scale);
+                //muff: little hacky hack to conditionally hide text for muffmode connoisseurs
+                if (value != -999)
+                    CG_DrawField (x, y, 0, width, value, scale);
             }
             continue;
         }
@@ -1014,88 +1028,81 @@ static void CG_ExecuteLayoutString (const char *s, vrect_t hud_vrect, vrect_t hu
             }
         }
 
-        if (!strcmp(token, "hnum"))
-        {
-            // health number
-            if (!skip_depth)
-            {
-                int     color;
+        //muff: client-side hacky hacks - don't show vitals if spectating
+        if (!ps->stats[STAT_SPECTATOR] || ps->stats[STAT_CHASE]) {
+            if (!strcmp(token, "hnum")) {
+                // health number
+                if (!skip_depth) {
+                    int     color;
 
-                width = 3;
-                value = ps->stats[STAT_HEALTH];
-                if (value > 25)
+                    width = 3;
+                    value = ps->stats[STAT_HEALTH];
+                    if (value > 25)
+                        color = 0;  // green
+                    else if (value > 0)
+                        color = flash_frame;      // flash
+                    else
+                        color = 1;
+                    if (ps->stats[STAT_FLASHES] & 1) {
+                        cgi.Draw_GetPicSize(&w, &h, "field_3");
+                        cgi.SCR_DrawPic(x, y, w * scale, h * scale, "field_3");
+                    }
+
+                    CG_DrawField(x, y, color, width, value, scale);
+                }
+                continue;
+            }
+
+            if (!strcmp(token, "anum")) {
+                // ammo number
+                if (!skip_depth) {
+                    int     color;
+
+                    width = 3;
+                    value = ps->stats[STAT_AMMO];
+
+                    int32_t min_ammo = cgi.CL_GetWarnAmmoCount(ps->stats[STAT_ACTIVE_WEAPON]);
+
+                    if (!min_ammo)
+                        min_ammo = 5; // back compat
+
+                    if (value > min_ammo)
+                        color = 0;  // green
+                    else if (value >= 0)
+                        color = flash_frame;      // flash
+                    else
+                        continue;   // negative number = don't show
+                    if (ps->stats[STAT_FLASHES] & 4) {
+                        cgi.Draw_GetPicSize(&w, &h, "field_3");
+                        cgi.SCR_DrawPic(x, y, w * scale, h * scale, "field_3");
+                    }
+
+                    CG_DrawField(x, y, color, width, value, scale);
+                }
+                continue;
+            }
+
+            if (!strcmp(token, "rnum")) {
+                // armor number
+                if (!skip_depth) {
+                    int     color;
+
+                    width = 3;
+                    value = ps->stats[STAT_ARMOR];
+                    if (value < 0)
+                        continue;
+
                     color = 0;  // green
-                else if (value > 0)
-                    color = flash_frame;      // flash
-                else
-                    color = 1;
-                if (ps->stats[STAT_FLASHES] & 1)
-                {
-                    cgi.Draw_GetPicSize(&w, &h, "field_3");
-                    cgi.SCR_DrawPic(x, y, w * scale, h * scale, "field_3");
+                    if (ps->stats[STAT_FLASHES] & 2) {
+                        cgi.Draw_GetPicSize(&w, &h, "field_3");
+                        cgi.SCR_DrawPic(x, y, w * scale, h * scale, "field_3");
+                    }
+
+                    CG_DrawField(x, y, color, width, value, scale);
                 }
-
-                CG_DrawField (x, y, color, width, value, scale);
+                continue;
             }
-            continue;
         }
-
-        if (!strcmp(token, "anum"))
-        {
-            // ammo number
-            if (!skip_depth)
-            {
-                int     color;
-
-                width = 3;
-                value = ps->stats[STAT_AMMO];
-
-                int32_t min_ammo = cgi.CL_GetWarnAmmoCount(ps->stats[STAT_ACTIVE_WEAPON]);
-
-                if (!min_ammo)
-                    min_ammo = 5; // back compat
-
-                if (value > min_ammo)
-                    color = 0;  // green
-                else if (value >= 0)
-                    color = flash_frame;      // flash
-                else
-                    continue;   // negative number = don't show
-                if (ps->stats[STAT_FLASHES] & 4)
-                {
-                    cgi.Draw_GetPicSize(&w, &h, "field_3");
-                    cgi.SCR_DrawPic(x, y, w * scale, h * scale, "field_3");
-                }
-
-                CG_DrawField (x, y, color, width, value, scale);
-            }
-            continue;
-        }
-
-        if (!strcmp(token, "rnum"))
-        {
-            // armor number
-            if (!skip_depth)
-            {
-                int     color;
-
-                width = 3;
-                value = ps->stats[STAT_ARMOR];
-                if (value < 0)
-                    continue;
-
-                color = 0;  // green
-                if (ps->stats[STAT_FLASHES] & 2)
-                {
-                    cgi.Draw_GetPicSize(&w, &h, "field_3");
-                    cgi.SCR_DrawPic(x, y, w * scale, h * scale, "field_3");
-                }
-
-                CG_DrawField (x, y, color, width, value, scale);
-            }
-            continue;
-        }
-
         if (!strcmp(token, "stat_string"))
         {
             token = COM_Parse (&s);
@@ -1581,15 +1588,24 @@ static void CG_ExecuteLayoutString (const char *s, vrect_t hud_vrect, vrect_t hu
 
             if (!skip_depth)
             {
+                text_align_t align = text_align_t::LEFT;
+
                 index = atoi(token);
                 if (index < 0 || index >= MAX_STATS)
                     cgi.Com_Error("Bad stat_string index");
+
+                //muff: hacky hacks - move crosshair id text to 160, align centrally
+                if (index == STAT_CROSSHAIR_ID_VIEW) {
+                    x = (hud_vrect.x + hud_vrect.width / 2 + 160 - hx) * scale;
+                    align = text_align_t::CENTER;
+                }
+
                 index = ps->stats[index] - 1;
 
                 if (!scr_usekfont->integer)
                     CG_DrawString(x, y, scale, cgi.CL_GetClientName(index));
                 else
-                    cgi.SCR_DrawFontString(cgi.CL_GetClientName(index), x, y - (font_y_offset * scale), scale, rgba_white, true, text_align_t::LEFT);
+                    cgi.SCR_DrawFontString(cgi.CL_GetClientName(index), x, y - (font_y_offset * scale), scale, rgba_white, true, align);
             }
             continue;
         }
