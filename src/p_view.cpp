@@ -914,12 +914,6 @@ void G_SetClientEffects(edict_t *ent)
 	if (ent->flags & FL_DISGUISED)
 		ent->s.renderfx |= RF_USE_DISGUISE;
 
-	if (gamerules->integer)
-	{
-		if (DMGame.PlayerEffects)
-			DMGame.PlayerEffects(ent);
-	}
-
 	if (ent->powerarmor_time > level.time)
 	{
 		pa_type = PowerArmorType(ent);

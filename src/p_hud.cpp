@@ -556,6 +556,88 @@ void TeamsScoreboardMessage(edict_t * ent, edict_t * killer) {
 
 /*
 ==================
+DuelScoreboardMessage
+==================
+*/
+static void DuelScoreboardMessage(edict_t * ent, edict_t * killer) {
+	uint32_t	i, j, k, n;
+	gclient_t	*cl;
+	edict_t		*cl_ent;
+
+	static std::string string;
+	string.clear();
+
+	char value[MAX_INFO_VALUE] = { 0 };
+	gi.Info_ValueForKey(g_edicts[1].client->pers.userinfo, "name", value, sizeof(value));
+
+	if (fraglimit->integer) {
+		fmt::format_to(std::back_inserter(string), FMT_STRING("xv -20 yv -10 loc_string2 1 $g_score_frags \"{}\" "), fraglimit->integer);
+	}
+	if (timelimit->value) {
+		fmt::format_to(std::back_inserter(string), FMT_STRING("xv 340 yv -10 time_limit {} "), gi.ServerFrame() + ((gtime_t::from_min(timelimit->value) - level.time)).milliseconds() / gi.frame_time_ms);
+		//fmt::format_to(std::back_inserter(string), FMT_STRING("xv 340 yv -10 loc_string2 1 {} "), gi.ServerFrame() + level.time.milliseconds() / gi.frame_time_ms);
+	}
+	/*
+	fmt::format_to(std::back_inserter(string),
+		FMT_STRING(
+			"if {} xv -32 yv 8 pic {} endif "
+			"xv -123 yv 28 cstring \"{}\" "
+			"xv 41 yv 12 num 3 19 "
+			"if {} xv 208 yv 8 pic {} endif "
+			"xv 117 yv 28 cstring \"{}\" "
+			"xv 280 yv 12 num 3 21 "
+		),
+		STAT_DUEL_HEADER, STAT_DUEL_HEADER,
+		value,
+		STAT_DUEL_HEADER, STAT_DUEL_HEADER,
+		value
+	);
+	*/
+	j = 58;
+
+	k = n = 0;
+	if (string.size() < MAX_STRING_CHARS - 50) {
+		for (i = 0; i < game.maxclients; i++) {
+			cl_ent = g_edicts + 1 + i;
+			cl = &game.clients[i];
+			if (!cl_ent->inuse ||
+				cl_ent->solid != SOLID_NOT ||
+				!ClientIsSpectating(cl_ent->client))
+				continue;
+
+			if (!k) {
+				k = 1;
+				fmt::format_to(std::back_inserter(string), FMT_STRING("xv 0 yv {} loc_string2 0 \"$g_pc_spectators\" "), j);
+				j += 8;
+			}
+
+			std::string_view entry = G_Fmt("ctf {} {} {} {} {} \"\" ",
+				(n & 1) ? 200 : -40,	// x
+				j,						// y
+				i,						// playernum
+				cl->resp.score,
+				cl->ping > 999 ? 999 : cl->ping);
+
+			if (string.size() + entry.size() < MAX_STRING_CHARS)
+				string += entry;
+
+			if (n & 1)
+				j += 8;
+			n++;
+		}
+	}
+
+	if (level.intermission_time) {
+		fmt::format_to(std::back_inserter(string), FMT_STRING("ifgef {} yb -48 xv 0 loc_cstring2 0 \"$m_eou_press_button\" endif "), (level.intermission_server_frame + (5_sec).frames()));
+	} else
+		fmt::format_to(std::back_inserter(string), FMT_STRING("xv 0 yb -48 cstring2 \"{}\" "), "Show inventory to toggle menu.");
+
+	gi.WriteByte(svc_layout);
+	gi.WriteString(string.c_str());
+}
+
+/*
+==================
 DeathmatchScoreboardMessage
 
 ==================
@@ -570,12 +652,14 @@ void DeathmatchScoreboardMessage(edict_t * ent, edict_t * killer) {
 	gclient_t *cl;
 	edict_t *cl_ent;
 
-	// ZOID
 	if (IsTeamplay()) {
-		TeamsScoreboardMessage(ent, killer);
+		TeamsScoreboardMessage(ent, ent->enemy);
 		return;
 	}
-	// ZOID
+	if (duel->integer) {
+		DuelScoreboardMessage(ent, ent->enemy);
+		return;
+	}
 
 	entry.clear();
 	string.clear();
@@ -620,7 +704,7 @@ void DeathmatchScoreboardMessage(edict_t * ent, edict_t * killer) {
 		gi.Info_ValueForKey(cl->pers.userinfo, "skin", vs, sizeof(vs));
 
 		if (vs[0]) {
-			const char *s = G_Fmt("/players/{}_i.pcx", vs).data();
+			const char *s = G_Fmt("/players/{}_i", vs).data();
 			int32_t		img_index = cl->pers.skin_icon_index;
 
 			if (img_index)
@@ -686,6 +770,7 @@ Note that it isn't that hard to overflow the 1400 byte message limit!
 ==================
 */
 void DeathmatchScoreboard(edict_t * ent) {
+
 	DeathmatchScoreboardMessage(ent, ent->enemy);
 	gi.unicast(ent, true);
 	ent->client->menutime = level.time + 3_sec;
@@ -881,9 +966,9 @@ static void SetCrosshairIDView(edict_t * ent) {
 	if (tr.fraction < 1 && tr.ent && tr.ent->client && tr.ent->health > 0) {
 		ent->client->ps.stats[STAT_CROSSHAIR_ID_VIEW] = (tr.ent - g_edicts);
 		if (tr.ent->client->resp.team == TEAM_RED)
-			ent->client->ps.stats[STAT_CROSSHAIR_ID_VIEW_COLOR] = imageindex_sbfctf1;
+			ent->client->ps.stats[STAT_CROSSHAIR_ID_VIEW_COLOR] = ii_teams_logo_red;
 		else if (tr.ent->client->resp.team == TEAM_BLUE)
-			ent->client->ps.stats[STAT_CROSSHAIR_ID_VIEW_COLOR] = imageindex_sbfctf2;
+			ent->client->ps.stats[STAT_CROSSHAIR_ID_VIEW_COLOR] = ii_teams_logo_blue;
 		return;
 	}
 
@@ -909,9 +994,9 @@ static void SetCrosshairIDView(edict_t * ent) {
 	if (bd > 0.90f) {
 		ent->client->ps.stats[STAT_CROSSHAIR_ID_VIEW] = (best - g_edicts);
 		if (best->client->resp.team == TEAM_RED)
-			ent->client->ps.stats[STAT_CROSSHAIR_ID_VIEW_COLOR] = imageindex_sbfctf1;
+			ent->client->ps.stats[STAT_CROSSHAIR_ID_VIEW_COLOR] = ii_teams_logo_red;
 		else if (best->client->resp.team == TEAM_BLUE)
-			ent->client->ps.stats[STAT_CROSSHAIR_ID_VIEW_COLOR] = imageindex_sbfctf2;
+			ent->client->ps.stats[STAT_CROSSHAIR_ID_VIEW_COLOR] = ii_teams_logo_blue;
 	}
 }
 
@@ -928,23 +1013,23 @@ static void SetCTFStats(edict_t *ent, bool blink) {
 	//   flag at base
 	//   flag taken
 	//   flag dropped
-	p1 = imageindex_i_ctf1;
+	p1 = ii_ctf_red_default;
 	e = G_FindByString<&edict_t::classname>(nullptr, ITEM_CTF_FLAG_RED);
 	if (e != nullptr) {
 		if (e->solid == SOLID_NOT) {
 			// not at base
 			// check if on player
-			p1 = imageindex_i_ctf1d; // default to dropped
+			p1 = ii_ctf_red_dropped; // default to dropped
 			for (i = 1; i <= game.maxclients; i++)
 				if (g_edicts[i].inuse &&
 					g_edicts[i].client->pers.inventory[IT_FLAG_RED]) {
 					// enemy has it
-					p1 = imageindex_i_ctf1t;
+					p1 = ii_ctf_red_taken;
 					break;
 				}
 
 			// [Paril-KEX] make sure there is a dropped version on the map somewhere
-			if (p1 == imageindex_i_ctf1d) {
+			if (p1 == ii_ctf_red_dropped) {
 				e = G_FindByString<&edict_t::classname>(e, ITEM_CTF_FLAG_RED);
 
 				if (e == nullptr) {
@@ -955,25 +1040,25 @@ static void SetCTFStats(edict_t *ent, bool blink) {
 				}
 			}
 		} else if (e->spawnflags.has(SPAWNFLAG_ITEM_DROPPED))
-			p1 = imageindex_i_ctf1d; // must be dropped
+			p1 = ii_ctf_red_dropped; // must be dropped
 	}
-	p2 = imageindex_i_ctf2;
+	p2 = ii_ctf_blue_default;
 	e = G_FindByString<&edict_t::classname>(nullptr, ITEM_CTF_FLAG_BLUE);
 	if (e != nullptr) {
 		if (e->solid == SOLID_NOT) {
 			// not at base
 			// check if on player
-			p2 = imageindex_i_ctf2d; // default to dropped
+			p2 = ii_ctf_blue_dropped; // default to dropped
 			for (i = 1; i <= game.maxclients; i++)
 				if (g_edicts[i].inuse &&
 					g_edicts[i].client->pers.inventory[IT_FLAG_BLUE]) {
 					// enemy has it
-					p2 = imageindex_i_ctf2t;
+					p2 = ii_ctf_blue_taken;
 					break;
 				}
 
 			// [Paril-KEX] make sure there is a dropped version on the map somewhere
-			if (p2 == imageindex_i_ctf2d) {
+			if (p2 == ii_ctf_blue_dropped) {
 				e = G_FindByString<&edict_t::classname>(e, ITEM_CTF_FLAG_BLUE);
 
 				if (e == nullptr) {
@@ -984,7 +1069,7 @@ static void SetCTFStats(edict_t *ent, bool blink) {
 				}
 			}
 		} else if (e->spawnflags.has(SPAWNFLAG_ITEM_DROPPED))
-			p2 = imageindex_i_ctf2d; // must be dropped
+			p2 = ii_ctf_blue_dropped; // must be dropped
 	}
 
 	ent->client->ps.stats[STAT_MINISCORE_FIRST_PIC] = p1;
@@ -1009,12 +1094,12 @@ static void SetCTFStats(edict_t *ent, bool blink) {
 	if (ent->client->resp.team == TEAM_RED &&
 		ent->client->pers.inventory[IT_FLAG_BLUE] &&
 		(blink))
-		ent->client->ps.stats[STAT_CTF_FLAG_PIC] = imageindex_i_ctf2;
+		ent->client->ps.stats[STAT_CTF_FLAG_PIC] = ii_ctf_blue_default;
 
 	else if (ent->client->resp.team == TEAM_BLUE &&
 		ent->client->pers.inventory[IT_FLAG_RED] &&
 		(blink))
-		ent->client->ps.stats[STAT_CTF_FLAG_PIC] = imageindex_i_ctf1;
+		ent->client->ps.stats[STAT_CTF_FLAG_PIC] = ii_ctf_red_default;
 }
 
 
@@ -1099,12 +1184,16 @@ static void SetExtendedStats(edict_t * ent) {
 			pos2_num = other_other_num;
 		}
 
+		if (duel->integer) {
+			ent->client->ps.stats[STAT_DUEL_HEADER] = ii_duel_header;
+		}
+
 		//if (own_num == 0)
 		//	gi.Com_PrintFmt("own_num={} own_rank={} pos1_num={} pos2_num={}\n", own_num, own_rank, pos1_num, pos2_num);
 	} else {
 		// logo headers for the frag display
-		ent->client->ps.stats[STAT_TEAM_RED_HEADER] = imageindex_ctfsb1;
-		ent->client->ps.stats[STAT_TEAM_BLUE_HEADER] = imageindex_ctfsb2;
+		ent->client->ps.stats[STAT_TEAM_RED_HEADER] = ii_teams_header_red;
+		ent->client->ps.stats[STAT_TEAM_BLUE_HEADER] = ii_teams_header_blue;
 
 		// if during intermission, we must blink the team header of the winning team
 		if (level.intermission_time && blink) {
@@ -1154,15 +1243,15 @@ static void SetExtendedStats(edict_t * ent) {
 	ent->client->ps.stats[STAT_MINISCORE_SECOND_POS] = 0;
 	if (teams) {
 		if (ent->client->resp.team == TEAM_RED)
-			ent->client->ps.stats[STAT_MINISCORE_FIRST_POS] = imageindex_i_ctfj;
+			ent->client->ps.stats[STAT_MINISCORE_FIRST_POS] = ii_highlight;
 		else if (ent->client->resp.team == TEAM_BLUE)
-			ent->client->ps.stats[STAT_MINISCORE_SECOND_POS] = imageindex_i_ctfj;
+			ent->client->ps.stats[STAT_MINISCORE_SECOND_POS] = ii_highlight;
 	} else {
 		if (own_num >= 0) {
 			if (own_num == pos1_num)
-				ent->client->ps.stats[STAT_MINISCORE_FIRST_POS] = imageindex_i_ctfj;
+				ent->client->ps.stats[STAT_MINISCORE_FIRST_POS] = ii_highlight;
 			else if (own_num == pos2_num)
-				ent->client->ps.stats[STAT_MINISCORE_SECOND_POS] = imageindex_i_ctfj;
+				ent->client->ps.stats[STAT_MINISCORE_SECOND_POS] = ii_highlight;
 		}
 	}
 

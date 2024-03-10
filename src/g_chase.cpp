@@ -2,30 +2,25 @@
 // Licensed under the GNU General Public License 2.0.
 #include "g_local.h"
 
-void UpdateChaseCam(edict_t *ent)
-{
-	vec3_t	 o, ownerv, goal;
-	edict_t *targ;
-	vec3_t	 forward, right;
-	trace_t	 trace;
-	vec3_t	 oldgoal;
-	vec3_t	 angles;
+void UpdateChaseCam(edict_t *ent) {
+	vec3_t	o, ownerv, goal;
+	edict_t	*targ;
+	vec3_t	forward, right;
+	trace_t	trace;
+	vec3_t	oldgoal;
+	vec3_t	angles;
 
 	// is our chase target gone?
-	if (!ent->client->chase_target->inuse || ClientIsSpectating(ent->client->chase_target->client))
-	{
-#if 0
+	if (!ent->client->chase_target->inuse || ClientIsSpectating(ent->client->chase_target->client)) {
 		edict_t *old = ent->client->chase_target;
+
 		ChaseNext(ent);
-		if (ent->client->chase_target == old)
-		{
-			ent->client->chase_target = nullptr;
-			ent->client->ps.pmove.pm_flags &= ~(PMF_NO_POSITIONAL_PREDICTION | PMF_NO_ANGULAR_PREDICTION);
-			return;
-		}
-#endif
+
 		ent->client->chase_target = nullptr;
 		ent->client->ps.pmove.pm_flags &= ~(PMF_NO_POSITIONAL_PREDICTION | PMF_NO_ANGULAR_PREDICTION);
+
+		if (ent->client->chase_target == old)
+			return;
 
 		ent->client->ps.kick_angles = {};
 		ent->client->ps.gunangles = {};
@@ -37,6 +32,9 @@ void UpdateChaseCam(edict_t *ent)
 		ent->client->ps.screen_blend = {};
 		ent->client->ps.damage_blend = {};
 		ent->client->ps.rdflags = RDF_NONE;
+
+		ent->client->pers.hand = RIGHT_HANDED;
+		ent->client->pers.weapon = nullptr;
 	}
 
 	targ = ent->client->chase_target;
@@ -70,7 +68,10 @@ void UpdateChaseCam(edict_t *ent)
 		ent->client->ps.pmove.gravity = ent->client->chase_target->client->ps.pmove.gravity;
 		ent->client->ps.pmove.delta_angles = ent->client->chase_target->client->ps.pmove.delta_angles;
 		ent->client->ps.pmove.viewheight = ent->client->chase_target->client->ps.pmove.viewheight;
-
+		/*
+		ent->client->pers.hand = ent->client->chase_target->client->pers.hand;
+		ent->client->pers.weapon = ent->client->chase_target->client->pers.weapon;
+		*/
 		//FIXME: color shells and damage blends not working
 
 		// unadjusted view and origin handling
@@ -131,14 +132,11 @@ void UpdateChaseCam(edict_t *ent)
 	ent->s.origin = goal;
 	ent->client->ps.pmove.delta_angles = targ->client->v_angle - ent->client->resp.cmd_angles;
 
-	if (targ->deadflag)
-	{
+	if (targ->deadflag) {
 		ent->client->ps.viewangles[ROLL] = 40;
 		ent->client->ps.viewangles[PITCH] = -15;
 		ent->client->ps.viewangles[YAW] = targ->client->killer_yaw;
-	}
-	else
-	{
+	} else {
 		ent->client->ps.viewangles = targ->client->v_angle;
 		ent->client->v_angle = targ->client->v_angle;
 		AngleVectors(ent->client->v_angle, ent->client->v_forward, nullptr, nullptr);
@@ -150,17 +148,15 @@ void UpdateChaseCam(edict_t *ent)
 	gi.linkentity(ent);
 }
 
-void ChaseNext(edict_t *ent)
-{
+void ChaseNext(edict_t *ent) {
 	ptrdiff_t i;
-	edict_t	*e;
+	edict_t *e;
 
 	if (!ent->client->chase_target)
 		return;
 
 	i = ent->client->chase_target - g_edicts;
-	do
-	{
+	do {
 		i++;
 		if (i > game.maxclients)
 			i = 1;
@@ -175,8 +171,7 @@ void ChaseNext(edict_t *ent)
 	ent->client->update_chase = true;
 }
 
-void ChasePrev(edict_t *ent)
-{
+void ChasePrev(edict_t *ent) {
 	int		 i;
 	edict_t *e;
 
@@ -184,8 +179,7 @@ void ChasePrev(edict_t *ent)
 		return;
 
 	i = ent->client->chase_target - g_edicts;
-	do
-	{
+	do {
 		i--;
 		if (i < 1)
 			i = game.maxclients;
@@ -200,16 +194,13 @@ void ChasePrev(edict_t *ent)
 	ent->client->update_chase = true;
 }
 
-void GetChaseTarget(edict_t *ent)
-{
+void GetChaseTarget(edict_t *ent) {
 	uint32_t i;
 	edict_t *other;
 
-	for (i = 1; i <= game.maxclients; i++)
-	{
+	for (i = 1; i <= game.maxclients; i++) {
 		other = g_edicts + i;
-		if (other->inuse && !ClientIsSpectating(other->client))
-		{
+		if (other->inuse && !ClientIsSpectating(other->client)) {
 			ent->client->chase_target = other;
 			ent->client->update_chase = true;
 			UpdateChaseCam(ent);
@@ -217,8 +208,7 @@ void GetChaseTarget(edict_t *ent)
 		}
 	}
 
-	if (ent->client->chase_msg_time <= level.time)
-	{
+	if (ent->client->chase_msg_time <= level.time) {
 		gi.LocCenter_Print(ent, "$g_no_players_chase");
 		ent->client->chase_msg_time = level.time + 5_sec;
 	}

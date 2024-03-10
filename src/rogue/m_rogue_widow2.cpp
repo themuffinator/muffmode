@@ -409,9 +409,9 @@ static bool widow2_tongue_attack_ok(const vec3_t &start, const vec3_t &end, floa
 
 	// check for min/max pitch
 	angles = vectoangles(dir);
-	if (angles[0] < -180)
-		angles[0] += 360;
-	if (fabsf(angles[0]) > 30)
+	if (angles[PITCH] < -180)
+		angles[PITCH] += 360;
+	if (fabsf(angles[PITCH]) > 30)
 		return false;
 
 	return true;

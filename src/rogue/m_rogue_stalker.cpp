@@ -358,7 +358,7 @@ MMOVE_T(stalker_move_false_death_start) = { FRAME_death01, FRAME_death09, stalke
 
 void stalker_false_death_start(edict_t *self)
 {
-	self->s.angles[2] = 0;
+	self->s.angles[ROLL] = 0;
 	self->gravityVector = { 0, 0, -1 };
 
 	self->monsterinfo.aiflags |= AI_STAND_GROUND;
@@ -673,9 +673,9 @@ void stalker_jump_straightup(edict_t *self)
 		if (stalker_ok_to_transition(self))
 		{
 			self->gravityVector[2] = -1;
-			self->s.angles[2] += 180.0f;
-			if (self->s.angles[2] > 360.0f)
-				self->s.angles[2] -= 360.0f;
+			self->s.angles[ROLL] += 180.0f;
+			if (self->s.angles[ROLL] > 360.0f)
+				self->s.angles[ROLL] -= 360.0f;
 			self->groundentity = nullptr;
 		}
 	}
@@ -687,7 +687,7 @@ void stalker_jump_straightup(edict_t *self)
 		if (stalker_ok_to_transition(self))
 		{
 			self->gravityVector[2] = 1;
-			self->s.angles[2] = 180.0;
+			self->s.angles[ROLL] = 180.0;
 			self->groundentity = nullptr;
 		}
 	}
@@ -872,9 +872,9 @@ MONSTERINFO_BLOCKED(stalker_blocked) (edict_t *self, float dist) -> bool
 		if (stalker_ok_to_transition(self))
 		{
 			self->gravityVector[2] = -1;
-			self->s.angles[2] += 180.0f;
-			if (self->s.angles[2] > 360.0f)
-				self->s.angles[2] -= 360.0f;
+			self->s.angles[ROLL] += 180.0f;
+			if (self->s.angles[ROLL] > 360.0f)
+				self->s.angles[ROLL] -= 360.0f;
 			self->groundentity = nullptr;
 			return true;
 		}
@@ -889,9 +889,9 @@ MONSTERINFO_PHYSCHANGED(stalker_physics_change) (edict_t *self) -> void
 	if (STALKER_ON_CEILING(self) && !self->groundentity)
 	{
 		self->gravityVector[2] = -1;
-		self->s.angles[2] += 180.0f;
-		if (self->s.angles[2] > 360.0f)
-			self->s.angles[2] -= 360.0f;
+		self->s.angles[ROLL] += 180.0f;
+		if (self->s.angles[ROLL] > 360.0f)
+			self->s.angles[ROLL] -= 360.0f;
 	}
 }
 
@@ -925,7 +925,7 @@ DIE(stalker_die) (edict_t *self, edict_t *inflictor, edict_t *attacker, int dama
 {
 	// dude bit it, make him fall!
 	self->movetype = MOVETYPE_TOSS;
-	self->s.angles[2] = 0;
+	self->s.angles[ROLL] = 0;
 	self->gravityVector = { 0, 0, -1 };
 
 	// check for gib
@@ -1029,7 +1029,7 @@ void SP_monster_stalker(edict_t *self)
 
 	if (self->spawnflags.has(SPAWNFLAG_STALKER_ONROOF))
 	{
-		self->s.angles[2] = 180;
+		self->s.angles[ROLL] = 180;
 		self->gravityVector[2] = 1;
 	}
 

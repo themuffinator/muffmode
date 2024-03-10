@@ -205,13 +205,6 @@ void SP_hint_path(edict_t *self);
 void SP_monster_carrier(edict_t *self);
 void SP_monster_widow(edict_t *self);
 void SP_monster_widow2(edict_t *self);
-void SP_dm_tag_token(edict_t *self);
-void SP_dm_dball_goal(edict_t *self);
-void SP_dm_dball_ball(edict_t *self);
-void SP_dm_dball_team_red_start(edict_t *self);
-void SP_dm_dball_team_blue_start(edict_t *self);
-void SP_dm_dball_ball_start(edict_t *self);
-void SP_dm_dball_speed_change(edict_t *self);
 void SP_monster_kamikaze(edict_t *self);
 void SP_turret_invisible_brain(edict_t *self);
 // ROGUE
@@ -421,13 +414,6 @@ static const std::initializer_list<spawn_t> spawns = {
 	{ "monster_widow", SP_monster_widow },
 	{ "monster_widow2", SP_monster_widow2 },
 	{ "monster_medic_commander", SP_monster_medic },
-	{ "dm_tag_token", SP_dm_tag_token },
-	{ "dm_dball_goal", SP_dm_dball_goal },
-	{ "dm_dball_ball", SP_dm_dball_ball },
-	{ "dm_dball_team1_start", SP_dm_dball_team_red_start },
-	{ "dm_dball_team2_start", SP_dm_dball_team_blue_start },
-	{ "dm_dball_ball_start", SP_dm_dball_ball_start },
-	{ "dm_dball_speed_change", SP_dm_dball_speed_change },
 	{ "monster_kamikaze", SP_monster_kamikaze },
 	{ "turret_invisible_brain", SP_turret_invisible_brain },
 	// ROGUE
@@ -1170,19 +1156,7 @@ static inline bool G_InhibitEntity(edict_t *ent)
 			return true;
 		}
 	}
-#if 0
-	else if (deathmatch->integer) {
-		if (IsTeamplay()) {
-			if (atoi(ent->notteam)) {
-				return true;
-			}
-		} else {
-			if (atoi(ent->notfree)) {
-				return true;
-			}
-		}
-	}
-#endif
+
 	// dm-only
 	if (deathmatch->integer)
 		return ent->spawnflags.has(SPAWNFLAG_NOT_DEATHMATCH);
@@ -1205,7 +1179,7 @@ static inline bool G_InhibitEntity(edict_t *ent)
 void setup_shadow_lights();
 
 // [Paril-KEX]
-void G_PrecacheInventoryItems()
+void PrecacheInventoryItems()
 {
 	if (deathmatch->integer)
 		return;
@@ -1223,8 +1197,7 @@ void G_PrecacheInventoryItems()
 	}
 }
 
-
-static void G_PrecacheStartItems()
+static void PrecacheStartItems()
 {
 	if (!*g_start_items->string)
 		return;
@@ -1250,14 +1223,30 @@ static void G_PrecacheStartItems()
 		PrecacheItem(item);
 	}
 }
-static void G_PrecacheSounds() {
+
+static void PrecachePlayerSounds() {
+
 	gi.soundindex("player/lava1.wav");
 	gi.soundindex("player/lava2.wav");
 
-	if (!deathmatch->integer) {
-		gi.soundindex("misc/pc_up.wav");
-	}
+	gi.soundindex("player/gasp1.wav"); // gasping for air
+	gi.soundindex("player/gasp2.wav"); // head breaking surface, not gasping
+
+	gi.soundindex("player/watr_in.wav");  // feet hitting water
+	gi.soundindex("player/watr_out.wav"); // feet leaving water
+
+	gi.soundindex("player/watr_un.wav"); // head going underwater
+
+	gi.soundindex("player/u_breath1.wav");
+	gi.soundindex("player/u_breath2.wav");
+
+	gi.soundindex("player/wade1.wav");
+	gi.soundindex("player/wade2.wav");
+	gi.soundindex("player/wade3.wav");
 	gi.soundindex("misc/talk1.wav");
+
+	gi.soundindex("world/land.wav");   // landing thud
+	gi.soundindex("misc/h2ohit1.wav"); // landing splash
 
 	// gibs
 	gi.soundindex("misc/udeath.wav");
@@ -1287,43 +1276,29 @@ static void G_PrecacheSounds() {
 }
 
 // [Paril-KEX]
-static void G_PrecacheAssets() {
+static void PrecacheAssets() {
 	if (!deathmatch->integer) {
+		gi.soundindex("infantry/inflies1.wav");
+
 		// help icon for statusbar
 		gi.imageindex("i_help");
 		gi.imageindex("help");
+		gi.soundindex("misc/pc_up.wav");
 	}
+
 	level.pic_health = gi.imageindex("i_health");
 	gi.imageindex("field_3");
 
-	gi.soundindex("player/gasp1.wav"); // gasping for air
-	gi.soundindex("player/gasp2.wav"); // head breaking surface, not gasping
-
-	gi.soundindex("player/watr_in.wav");  // feet hitting water
-	gi.soundindex("player/watr_out.wav"); // feet leaving water
-
-	gi.soundindex("player/watr_un.wav"); // head going underwater
-
-	gi.soundindex("player/u_breath1.wav");
-	gi.soundindex("player/u_breath2.wav");
-
-	gi.soundindex("player/wade1.wav");
-	gi.soundindex("player/wade2.wav");
-	gi.soundindex("player/wade3.wav");
-
 	gi.soundindex("items/pkup.wav");   // bonus item pickup
-	gi.soundindex("world/land.wav");   // landing thud
-	gi.soundindex("misc/h2ohit1.wav"); // landing splash
 
-	gi.soundindex("items/damage.wav");
-	gi.soundindex("items/protect.wav");
-	gi.soundindex("items/protect4.wav");
+	//gi.soundindex("items/damage.wav");
+	//gi.soundindex("items/protect.wav");
+	//gi.soundindex("items/protect4.wav");
 	gi.soundindex("weapons/noammo.wav");
 	gi.soundindex("weapons/lowammo.wav");
 	gi.soundindex("weapons/change.wav");
 
-	gi.soundindex("infantry/inflies1.wav");
-
+	// gibs
 	sm_meat_index.assign("models/objects/gibs/sm_meat/tris.md2");
 	gi.modelindex("models/objects/gibs/arm/tris.md2");
 	gi.modelindex("models/objects/gibs/bone/tris.md2");
@@ -1333,35 +1308,30 @@ static void G_PrecacheAssets() {
 	gi.modelindex("models/objects/gibs/head2/tris.md2");
 	gi.modelindex("models/objects/gibs/sm_metal/tris.md2");
 
-	level.pic_ping = gi.imageindex("loc_ping");
-}
+	ii_highlight = gi.imageindex("i_ctfj");
 
-/*
- * Precache CTF items
- */
- // Index for various CTF pics, this saves us from calling gi.imageindex
- // all the time and saves a few CPU cycles since we don't have to do
- // a bunch of string compares all the time.
- // These are set in G_Teams_PrecacheAssets() called from worldspawn
+	if (IsTeamplay()) {
+		ii_teams_logo_red = gi.imageindex("sbfctf1");
+		ii_teams_logo_blue = gi.imageindex("sbfctf2");
+		ii_teams_header_red = gi.imageindex("tag4");
+		ii_teams_header_blue = gi.imageindex("tag5");
+	} else if (duel->integer) {
+		ii_duel_header = gi.imageindex("/tags/default");
+	} else {
+		level.pic_ping = gi.imageindex("loc_ping");
+	}
 
-static void G_Teams_PrecacheAssets() {
-	imageindex_i_ctf1 = gi.imageindex("i_ctf1");
-	imageindex_i_ctf2 = gi.imageindex("i_ctf2");
-	imageindex_i_ctf1d = gi.imageindex("i_ctf1d");
-	imageindex_i_ctf2d = gi.imageindex("i_ctf2d");
-	imageindex_i_ctf1t = gi.imageindex("i_ctf1t");
-	imageindex_i_ctf2t = gi.imageindex("i_ctf2t");
-	imageindex_i_ctfj = gi.imageindex("i_ctfj");
-	imageindex_sbfctf1 = gi.imageindex("sbfctf1");
-	imageindex_sbfctf2 = gi.imageindex("sbfctf2");
-	imageindex_ctfsb1 = gi.imageindex("tag4");
-	imageindex_ctfsb2 = gi.imageindex("tag5");
 	if (ctf->integer) {
-		modelindex_flag1 = gi.modelindex("players/male/flag1.md2");
-		modelindex_flag2 = gi.modelindex("players/male/flag2.md2");
+		ii_ctf_red_default = gi.imageindex("i_ctf1");
+		ii_ctf_blue_default = gi.imageindex("i_ctf2");
+		ii_ctf_red_dropped = gi.imageindex("i_ctf1d");
+		ii_ctf_blue_dropped = gi.imageindex("i_ctf2d");
+		ii_ctf_red_taken = gi.imageindex("i_ctf1t");
+		ii_ctf_blue_taken = gi.imageindex("i_ctf2t");
+		mi_ctf_red_flag = gi.modelindex("players/male/flag1.md2");
+		mi_ctf_blue_flag = gi.modelindex("players/male/flag2.md2");
 	}
 }
-
 
 #define	MAX_READ	0x10000		// read in blocks of 64k
 void FS_Read(void *buffer, int len, FILE *f) {
@@ -1691,10 +1661,10 @@ void SpawnEntities(const char *mapname, const char *entities, const char *spawnp
 	gi.Com_PrintFmt("{} entities inhibited\n", inhibit);
 
 	// precache start_items
-	G_PrecacheStartItems();
+	PrecacheStartItems();
 
 	// precache player inventory items
-	G_PrecacheInventoryItems();
+	PrecacheInventoryItems();
 
 	G_FindTeams();
 
@@ -1715,14 +1685,6 @@ void SpawnEntities(const char *mapname, const char *entities, const char *spawnp
 	else
 	{
 		InitHintPaths(); // if there aren't hintpaths on this map, enable quick aborts
-	}
-	// ROGUE
-
-	// ROGUE	-- allow dm games to do init stuff right before game starts.
-	if (deathmatch->integer && gamerules->integer)
-	{
-		if (DMGame.PostInitSetup)
-			DMGame.PostInitSetup();
 	}
 	// ROGUE
 
@@ -1805,8 +1767,6 @@ static void G_InitStatusbar()
 	}
 	else {
 		if (IsTeamplay()) {
-			G_Teams_PrecacheAssets();
-
 			// ctf/tdm
 			// red team
 			sb.yb(-110).ifstat(STAT_MINISCORE_FIRST_PIC).xr(-26).pic(STAT_MINISCORE_FIRST_PIC).endifstat().xr(-78).num(3, STAT_MINISCORE_FIRST_SCORE);
@@ -1836,11 +1796,8 @@ static void G_InitStatusbar()
 			sb.ifstat(STAT_CHASE).xv(0).yb(-68).string("FOLLOWING").xv(80).stat_string(STAT_CHASE).endifstat();
 
 			// mini scores
-			imageindex_i_ctfj = gi.imageindex("i_ctfj");
-
 			sb.yb(-110).ifstat(STAT_MINISCORE_FIRST_PIC).xr(-26).pic(STAT_MINISCORE_FIRST_PIC).endifstat().xr(-78).num(3, STAT_MINISCORE_FIRST_SCORE);
 			sb.ifstat(STAT_MINISCORE_FIRST_POS).yb(-112).xr(-28).pic(STAT_MINISCORE_FIRST_POS).endifstat();
-
 			sb.yb(-83).ifstat(STAT_MINISCORE_SECOND_PIC).xr(-26).pic(STAT_MINISCORE_SECOND_PIC).endifstat().xr(-78).num(3, STAT_MINISCORE_SECOND_SCORE);
 			sb.ifstat(STAT_MINISCORE_SECOND_POS).yb(-85).xr(-28).pic(STAT_MINISCORE_SECOND_POS).endifstat();
 
@@ -2147,7 +2104,7 @@ void SP_worldspawn(edict_t *ent)
 		for (item_id_t i = static_cast<item_id_t>(IT_NULL + 1); i < IT_TOTAL; i = static_cast<item_id_t>(i + 1))
 			PrecacheItem(GetItemByIndex(i));
 
-	G_PrecacheSounds();
+	PrecachePlayerSounds();
 
 	// sexed models
 	for (auto &item : itemlist)
@@ -2176,7 +2133,7 @@ void SP_worldspawn(edict_t *ent)
 			level.vwep_offset = item.vwep_index;
 	}
 
-	G_PrecacheAssets();
+	PrecacheAssets();
 
 	G_SetGametypeName();
 

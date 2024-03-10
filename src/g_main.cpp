@@ -17,7 +17,7 @@ local_game_import_t  gi;
 /*static*/ char local_game_import_t::print_buffer[0x10000];
 
 /*static*/ std::array<char[MAX_INFO_STRING], MAX_LOCALIZATION_ARGS> local_game_import_t::buffers;
-/*static*/ std::array<const char*, MAX_LOCALIZATION_ARGS> local_game_import_t::buffer_ptrs;
+/*static*/ std::array<const char *, MAX_LOCALIZATION_ARGS> local_game_import_t::buffer_ptrs;
 
 game_export_t  globals;
 spawn_temp_t   st;
@@ -46,14 +46,14 @@ cvar_t *timelimit;
 cvar_t *g_quick_weapon_switch;
 cvar_t *g_instant_weapon_switch;
 // ZOID
-cvar_t		*password;
-cvar_t		*spectator_password;
-cvar_t		*needpass;
+cvar_t *password;
+cvar_t *spectator_password;
+cvar_t *needpass;
 static cvar_t *maxclients;
-cvar_t		*maxspectators;
+cvar_t *maxspectators;
 static cvar_t *maxentities;
-cvar_t		*g_select_empty;
-cvar_t		*sv_dedicated;
+cvar_t *g_select_empty;
+cvar_t *sv_dedicated;
 
 cvar_t *filterban;
 
@@ -95,66 +95,62 @@ cvar_t *sv_stopspeed; // PGM	 (this was a define in g_phys.c)
 
 cvar_t *g_strict_saves;
 
-// ROGUE cvars
-cvar_t *gamerules;
 cvar_t *huntercam;
 cvar_t *g_dm_strong_mines;
 cvar_t *g_dm_random_items;
-// ROGUE
 
-// [Kex]
-cvar_t* g_instagib;
-cvar_t* g_instagib_splash;
-cvar_t* g_quadhog;
-cvar_t* g_nadefest;
-cvar_t* g_frenzy;
-cvar_t* g_coop_player_collision;
-cvar_t* g_coop_squad_respawn;
-cvar_t* g_coop_enable_lives;
-cvar_t* g_coop_num_lives;
-cvar_t* g_coop_instanced_items;
-cvar_t* g_allow_grapple;
-cvar_t* g_grapple_offhand;
-cvar_t* g_grapple_fly_speed;
-cvar_t* g_grapple_pull_speed;
-cvar_t* g_grapple_damage;
-cvar_t* g_coop_health_scaling;
-cvar_t* g_weapon_respawn_time;
+cvar_t *g_instagib;
+cvar_t *g_instagib_splash;
+cvar_t *g_quadhog;
+cvar_t *g_nadefest;
+cvar_t *g_frenzy;
+cvar_t *g_coop_player_collision;
+cvar_t *g_coop_squad_respawn;
+cvar_t *g_coop_enable_lives;
+cvar_t *g_coop_num_lives;
+cvar_t *g_coop_instanced_items;
+cvar_t *g_allow_grapple;
+cvar_t *g_grapple_offhand;
+cvar_t *g_grapple_fly_speed;
+cvar_t *g_grapple_pull_speed;
+cvar_t *g_grapple_damage;
+cvar_t *g_coop_health_scaling;
+cvar_t *g_weapon_respawn_time;
 
-cvar_t* g_frag_messages;
+cvar_t *g_frag_messages;
 
 // dm"flags"
-cvar_t* g_no_health;
-cvar_t* g_no_items;
-cvar_t* g_no_powerups;
-cvar_t* g_dm_weapons_stay;
-cvar_t* g_dm_no_fall_damage;
-cvar_t* g_dm_no_self_damage;
-cvar_t* g_dm_instant_items;
-cvar_t* g_dm_same_level;
-cvar_t* g_friendly_fire;
-cvar_t* g_dm_force_respawn;
-cvar_t* g_dm_force_respawn_time;
-cvar_t* g_dm_respawn_delay_min;
-cvar_t* g_dm_spawn_farthest;
-cvar_t* g_no_armor;
-cvar_t* g_dm_allow_exit;
-cvar_t* g_infinite_ammo;
-cvar_t* g_dm_no_quad_drop;
-cvar_t* g_dm_no_quadfire_drop;
-cvar_t* g_dm_powerup_drop;
-cvar_t* g_no_mines;
-cvar_t* g_dm_no_stack_double;
-cvar_t* g_no_nukes;
-cvar_t* g_no_spheres;
-cvar_t* g_teamplay_armor_protect;
-cvar_t* g_allow_techs;
-cvar_t* g_dm_powerups_style;
-cvar_t* g_corpse_sink_time;
-cvar_t* g_match_timer;
-cvar_t* g_start_items;
-cvar_t* g_map_list;
-cvar_t* g_map_list_shuffle;
+cvar_t *g_no_health;
+cvar_t *g_no_items;
+cvar_t *g_no_powerups;
+cvar_t *g_dm_weapons_stay;
+cvar_t *g_dm_no_fall_damage;
+cvar_t *g_dm_no_self_damage;
+cvar_t *g_dm_instant_items;
+cvar_t *g_dm_same_level;
+cvar_t *g_friendly_fire;
+cvar_t *g_dm_force_respawn;
+cvar_t *g_dm_force_respawn_time;
+cvar_t *g_dm_respawn_delay_min;
+cvar_t *g_dm_spawn_farthest;
+cvar_t *g_no_armor;
+cvar_t *g_dm_allow_exit;
+cvar_t *g_infinite_ammo;
+cvar_t *g_dm_no_quad_drop;
+cvar_t *g_dm_no_quadfire_drop;
+cvar_t *g_dm_powerup_drop;
+cvar_t *g_no_mines;
+cvar_t *g_dm_no_stack_double;
+cvar_t *g_no_nukes;
+cvar_t *g_no_spheres;
+cvar_t *g_teamplay_armor_protect;
+cvar_t *g_allow_techs;
+cvar_t *g_dm_powerups_style;
+cvar_t *g_corpse_sink_time;
+cvar_t *g_match_timer;
+cvar_t *g_start_items;
+cvar_t *g_map_list;
+cvar_t *g_map_list_shuffle;
 cvar_t *g_lag_compensation;
 cvar_t *g_dm_respawn_point_min_dist;
 cvar_t *g_dm_respawn_point_min_dist_debug;
@@ -204,28 +200,29 @@ cvar_t *g_matchstats;
 
 static cvar_t *g_frames_per_frame;
 
-int imageindex_i_ctf1;
-int imageindex_i_ctf2;
-int imageindex_i_ctf1d;
-int imageindex_i_ctf2d;
-int imageindex_i_ctf1t;
-int imageindex_i_ctf2t;
-int imageindex_i_ctfj;
-int imageindex_sbfctf1;
-int imageindex_sbfctf2;
-int imageindex_ctfsb1;
-int imageindex_ctfsb2;
-int modelindex_flag1, modelindex_flag2; // [Paril-KEX]
+int ii_duel_header;
+int ii_highlight;
+int ii_ctf_red_default;
+int ii_ctf_blue_default;
+int ii_ctf_red_dropped;
+int ii_ctf_blue_dropped;
+int ii_ctf_red_taken;
+int ii_ctf_blue_taken;
+int ii_teams_logo_red;
+int ii_teams_logo_blue;
+int ii_teams_header_red;
+int ii_teams_header_blue;
+int mi_ctf_red_flag, mi_ctf_blue_flag; // [Paril-KEX]
 
 void SpawnEntities(const char *mapname, const char *entities, const char *spawnpoint);
 void ClientThink(edict_t *ent, usercmd_t *cmd);
-edict_t *ClientChooseSlot(const char *userinfo, const char *social_id, bool isBot, edict_t **ignore, size_t num_ignore, bool cinematic);
-bool  ClientConnect(edict_t *ent, char *userinfo, const char *social_id, bool isBot);
+edict_t *ClientChooseSlot(const char *userinfo, const char *social_id, bool is_bot, edict_t **ignore, size_t num_ignore, bool cinematic);
+bool ClientConnect(edict_t *ent, char *userinfo, const char *social_id, bool is_bot);
 char *WriteGameJson(bool autosave, size_t *out_size);
-void  ReadGameJson(const char *jsonString);
+void ReadGameJson(const char *jsonString);
 char *WriteLevelJson(bool transition, size_t *out_size);
-void  ReadLevelJson(const char *jsonString);
-bool  G_CanSave();
+void ReadLevelJson(const char *jsonString);
+bool G_CanSave();
 void ClientDisconnect(edict_t *ent);
 void ClientBegin(edict_t *ent);
 void ClientCommand(edict_t *ent);
@@ -234,6 +231,79 @@ void G_PrepFrame();
 void InitSave();
 
 #include <chrono>
+
+static void Horde_MonsterSpawn(const char *classname) {
+	edict_t *spawn;
+	edict_t *point;
+
+	point = SelectDeathmatchSpawnPoint(vec3_origin, true, true, true, false).spot;
+
+	spawn = G_Spawn();
+	spawn->classname = "monster_berserk";
+
+	spawn->s.origin = point->s.origin;
+	//spawn->s.origin[2] += 32;
+	spawn->s.angles[YAW] = point->s.angles[YAW];
+
+	st = {};
+
+	ED_CallSpawn(spawn);
+	gi.linkentity(spawn);
+
+	KillBox(spawn, false);
+
+	spawn->s.renderfx |= RF_IR_VISIBLE;
+}
+
+void Horde_CreateWave() {
+	/*
+	const char *list[8] = {
+		"monster_berserk",
+		"monster_gladiator",
+		"monster_gunner",
+		"monster_infantry",
+		"monster_soldier_light",
+		"monster_soldier",
+		"monster_soldier_ss",
+		"monster_tank",
+	};
+	for (size_t i = 0; i < 8; i++) {
+		Horde_MonsterSpawn(list[i]);
+	}
+	*/
+	edict_t *ent;
+	select_spawn_result_t result = SelectDeathmatchSpawnPoint(vec3_origin, true, true, true, false);
+
+	gi.Com_Print("CREATEWAVE\n");
+	if (!result.any_valid) {
+		gi.Com_Print("NO VALID SPAWN POINT FOUND\n");
+		return;
+	}
+
+	ent = G_Spawn();
+	ent->classname = "monster_soldier";
+
+	ent->s.origin = result.spot->s.origin + vec3_t{ 0, 0, 9 };
+	ent->s.angles[YAW] = result.spot->s.angles[YAW];
+
+	st = {};
+
+	ED_CallSpawn(ent);
+	gi.linkentity(ent);
+
+	KillBox(ent, false);
+
+	ent->s.renderfx |= RF_IR_VISIBLE;
+}
+
+static void Horde_InitFirstWave() {
+	gi.Com_Print("Horde_InitFirstWave 0\n");
+	if (!horde->integer)
+		return;
+	gi.Com_Print("Horde_InitFirstWave 1\n");
+
+	Horde_CreateWave();
+}
 
 static void G_InitGametype() {
 	constexpr const char *COOP = "coop";
@@ -355,8 +425,7 @@ only happens when a new game is started or a save game
 is loaded.
 ============
 */
-void PreInitGame()
-{
+static void PreInitGame() {
 	maxclients = gi.cvar("maxclients", G_Fmt("{}", MAX_SPLIT_PLAYERS).data(), CVAR_SERVERINFO | CVAR_LATCH);
 	minplayers = gi.cvar("minplayers", "1", CVAR_NOFLAGS);
 	maxplayers = gi.cvar("maxplayers", "16", CVAR_NOFLAGS);
@@ -382,14 +451,13 @@ InitGame
 Called after PreInitGame when the game has set up cvars.
 ============
 */
-void InitGame()
-{
+static void InitGame() {
 	gi.Com_Print("==== InitGame ====\n");
 
 	InitSave();
 
 	// seed RNG
-	mt_rand.seed((uint32_t) std::chrono::system_clock::now().time_since_epoch().count());
+	mt_rand.seed((uint32_t)std::chrono::system_clock::now().time_since_epoch().count());
 
 	hostname = gi.cvar("hostname", "Welcome to Muff Mode!", CVAR_NOFLAGS);
 
@@ -434,7 +502,7 @@ void InitGame()
 
 	// freeze tag
 	g_frozen_time = gi.cvar("g_frozen_time", "180", CVAR_NOFLAGS);
-	
+
 	// [Paril-KEX]
 	g_coop_player_collision = gi.cvar("g_coop_player_collision", "0", CVAR_LATCH);
 	g_coop_squad_respawn = gi.cvar("g_coop_squad_respawn", "1", CVAR_LATCH);
@@ -461,9 +529,9 @@ void InitGame()
 	// latched vars
 	sv_cheats = gi.cvar("cheats",
 #if defined(_DEBUG)
-        "1"
+		"1"
 #else
-        "0"
+		"0"
 #endif
 		, CVAR_SERVERINFO | CVAR_LATCH);
 	gi.cvar("gamename", GAMEVERSION, CVAR_SERVERINFO | CVAR_LATCH);
@@ -471,7 +539,6 @@ void InitGame()
 	maxspectators = gi.cvar("maxspectators", "4", CVAR_SERVERINFO);
 	skill = gi.cvar("skill", "1", CVAR_LATCH);
 	maxentities = gi.cvar("maxentities", G_Fmt("{}", MAX_EDICTS).data(), CVAR_LATCH);
-	gamerules = gi.cvar("gamerules", "0", CVAR_LATCH); // PGM
 
 	// change anytime vars
 	fraglimit = gi.cvar("fraglimit", "0", CVAR_SERVERINFO);
@@ -551,7 +618,7 @@ void InitGame()
 	g_teamplay_force_balance = gi.cvar("g_teamplay_force_balance", "0", CVAR_NOFLAGS);
 	g_teamplay_armor_protect = gi.cvar("g_teamplay_armor_protect", "0", CVAR_NOFLAGS);
 	g_allow_techs = gi.cvar("g_allow_techs", "auto", CVAR_NOFLAGS);
-	g_dm_powerups_style = gi.cvar("g_dm_powerups_style", "1", CVAR_NOFLAGS); // 0 = vanilla, 1 = q3 style delays and global sounds
+	g_dm_powerups_style = gi.cvar("g_dm_powerups_style", "1", CVAR_NOFLAGS);
 
 	g_corpse_sink_time = gi.cvar("g_corpse_sink_time", "15", CVAR_NOFLAGS);
 	g_match_timer = gi.cvar("g_match_timer", "1", CVAR_NOFLAGS);
@@ -570,7 +637,7 @@ void InitGame()
 	g_entity_override_load = gi.cvar("g_entity_override_load", "1", CVAR_NOFLAGS);
 	g_entity_override_save = gi.cvar("g_entity_override_save", "0", CVAR_NOFLAGS);
 
-//ctf
+	//ctf
 	competition = gi.cvar("competition", "0", CVAR_SERVERINFO);
 	matchlock = gi.cvar("matchlock", "1", CVAR_SERVERINFO);
 	matchsetuptime = gi.cvar("matchsetuptime", "10", CVAR_NOFLAGS);
@@ -578,7 +645,7 @@ void InitGame()
 	admin_password = gi.cvar("admin_password", "", CVAR_NOFLAGS);
 	allow_admin = gi.cvar("allow_admin", "1", CVAR_NOFLAGS);
 	warn_unbalanced = gi.cvar("warn_unbalanced", "0", CVAR_NOFLAGS);
-//-ctf
+	//-ctf
 	g_eyecam = gi.cvar("g_eyecam", "1", CVAR_NOFLAGS);
 	g_teleporter_nofreeze = gi.cvar("g_teleporter_nofreeze", "0", CVAR_NOFLAGS);
 
@@ -593,27 +660,23 @@ void InitGame()
 
 	// initialize all entities for this game
 	game.maxentities = maxentities->integer;
-	g_edicts = (edict_t *) gi.TagMalloc(game.maxentities * sizeof(g_edicts[0]), TAG_GAME);
+	g_edicts = (edict_t *)gi.TagMalloc(game.maxentities * sizeof(g_edicts[0]), TAG_GAME);
 	globals.edicts = g_edicts;
 	globals.max_edicts = game.maxentities;
 
 	// initialize all clients for this game
 	game.maxclients = maxclients->integer;
-	game.clients = (gclient_t *) gi.TagMalloc(game.maxclients * sizeof(game.clients[0]), TAG_GAME);
+	game.clients = (gclient_t *)gi.TagMalloc(game.maxclients * sizeof(game.clients[0]), TAG_GAME);
 	globals.num_edicts = game.maxclients + 1;
 
-	//======
-	// ROGUE
-	if (gamerules->integer)
-		InitGameRules(); // if there are game rules to set up, do so now.
-	// ROGUE
-	//======
-	
 	// how far back we should support lag origins for
 	game.max_lag_origins = 20 * (0.1f / gi.frame_time_s);
-	game.lag_origins = (vec3_t *) gi.TagMalloc(game.maxclients * sizeof(vec3_t) * game.max_lag_origins, TAG_GAME);
+	game.lag_origins = (vec3_t *)gi.TagMalloc(game.maxclients * sizeof(vec3_t) * game.max_lag_origins, TAG_GAME);
 
 	level.start_time = level.time;
+
+	//Horde_InitFirstWave();
+	Horde_CreateWave();
 }
 
 //===================================================================
@@ -778,7 +841,7 @@ static void CheckTournament(void) {
 		} else if (level.num_playing_clients < minplayers->integer) {
 			not_enough = true;
 		}
-		
+
 		if (not_enough) {
 			if (level.warmup_time != -1_sec) {
 				level.warmup_time = -1_sec;
@@ -795,7 +858,7 @@ static void CheckTournament(void) {
 			level.warmup_modification_count = g_warmup_countdown->modified_count;
 			level.warmup_time = -1_sec;
 		}
-		
+
 		// if all players have arrived, start the countdown
 		if (level.warmup_time < 0_sec) {
 			if (g_warmup_countdown->integer > 0) {
@@ -827,7 +890,7 @@ next queued player in the game and restart
 */
 void GT_Duel_AddPlayer(void) {
 	int			i;
-	gclient_t	*client, *nextInLine;
+	gclient_t *client, *nextInLine;
 
 	if (level.num_playing_clients >= 2)
 		return;
@@ -916,7 +979,7 @@ This is also used for spectator spawns
 ==================
 */
 void FindIntermissionPoint(void) {
-	edict_t	*ent, *target;
+	edict_t *ent, *target;
 	vec3_t	dir;
 	bool	is_landmark = false;
 
@@ -950,9 +1013,9 @@ void FindIntermissionPoint(void) {
 BeginIntermission
 ==================
 */
-void BeginIntermission(void) {
+static void BeginIntermission(void) {
 	size_t		i;
-	edict_t		*ent;
+	edict_t *ent;
 
 	if (level.intermission_time)
 		return;	// already active
@@ -997,11 +1060,11 @@ wait 10 seconds before going on.
 Adapted from Quake III
 =================
 */
-void CheckIntermissionExit(void) {
+static void CheckIntermissionExit(void) {
 	int			ready, not_ready;
 	int			count;
 	size_t		i;
-	gclient_t	*cl;
+	gclient_t *cl;
 	int			ready_mask;
 
 	// see which players are ready
@@ -1081,7 +1144,7 @@ static bool ScoreIsTied(void) {
 	if (level.num_playing_clients < 2) {
 		return false;
 	}
-	
+
 	if (IsTeamplay()) {
 		return level.team_scores[TEAM_RED] == level.team_scores[TEAM_BLUE];
 	}
@@ -1101,7 +1164,7 @@ Adapted from Quake III
 */
 static void CheckExitRules(void) {
 	size_t		i;
-	gclient_t	*cl;
+	gclient_t *cl;
 	int			scorelimit = 0;
 
 	// if at the intermission, wait for all non-bots to
@@ -1110,7 +1173,7 @@ static void CheckExitRules(void) {
 		CheckIntermissionExit();
 		return;
 	}
-	
+
 	if (level.intermission_queued) {
 		gtime_t time = gtime_t::from_sec(1);
 		if (level.time - level.intermission_queued >= time) {
@@ -1209,16 +1272,14 @@ static void CheckExitRules(void) {
 
 //===================================================================
 
-void ShutdownGame()
-{
+static void ShutdownGame() {
 	gi.Com_Print("==== ShutdownGame ====\n");
 
 	gi.FreeTags(TAG_LEVEL);
 	gi.FreeTags(TAG_GAME);
 }
 
-static void *G_GetExtension(const char *name)
-{
+static void *G_GetExtension(const char *name) {
 	return nullptr;
 }
 
@@ -1235,8 +1296,7 @@ Returns a pointer to the structure with all entry points
 and global variables
 =================
 */
-Q2GAME_API game_export_t *GetGameAPI(game_import_t *import)
-{
+Q2GAME_API game_export_t * GetGameAPI(game_import_t * import) {
 	gi = *import;
 
 	FRAME_TIME_S = FRAME_TIME_MS = gtime_t::from_ms(gi.frame_time_ms);
@@ -1291,14 +1351,12 @@ Q2GAME_API game_export_t *GetGameAPI(game_import_t *import)
 ClientEndServerFrames
 =================
 */
-void ClientEndServerFrames()
-{
+static void ClientEndServerFrames() {
 	edict_t *ent;
 
 	// calc the player views now that all pushing
 	// and damage has been added
-	for (uint32_t i = 0; i < game.maxclients; i++)
-	{
+	for (uint32_t i = 0; i < game.maxclients; i++) {
 		ent = g_edicts + 1 + i;
 		if (!ent->inuse || !ent->client)
 			continue;
@@ -1313,8 +1371,7 @@ CreateTargetChangeLevel
 Returns the created target changelevel
 =================
 */
-edict_t *CreateTargetChangeLevel(const char *map)
-{
+static edict_t *CreateTargetChangeLevel(const char *map) {
 	edict_t *ent;
 
 	ent = G_Spawn();
@@ -1324,16 +1381,14 @@ edict_t *CreateTargetChangeLevel(const char *map)
 	return ent;
 }
 
-inline std::vector<std::string> str_split(const std::string_view &str, char by)
-{
+inline std::vector<std::string> str_split(const std::string_view &str, char by) {
 	std::vector<std::string> out;
-    size_t start, end = 0;
- 
-    while ((start = str.find_first_not_of(by, end)) != std::string_view::npos)
-    {
-        end = str.find(by, start);
-		out.push_back(std::string{str.substr(start, end - start)});
-    }
+	size_t start, end = 0;
+
+	while ((start = str.find_first_not_of(by, end)) != std::string_view::npos) {
+		end = str.find(by, start);
+		out.push_back(std::string{ str.substr(start, end - start) });
+	}
 
 	return out;
 }
@@ -1345,58 +1400,47 @@ EndDMLevel
 The timelimit or fraglimit has been exceeded
 =================
 */
-void EndDMLevel()
-{
+void EndDMLevel() {
 	edict_t *ent;
 
 	// stay on same level flag
-	if (g_dm_same_level->integer)
-	{
+	if (g_dm_same_level->integer) {
 		BeginIntermission(CreateTargetChangeLevel(level.mapname));
 		return;
 	}
 
-	if (*level.forcemap)
-	{
+	if (*level.forcemap) {
 		BeginIntermission(CreateTargetChangeLevel(level.forcemap));
 		return;
 	}
 
 	// see if it's in the map list
-	if (*g_map_list->string)
-	{
+	if (*g_map_list->string) {
 		const char *str = g_map_list->string;
-		char first_map[MAX_QPATH] { 0 };
+		char first_map[MAX_QPATH]{ 0 };
 		char *map;
 
-		while (1)
-		{
+		while (1) {
 			map = COM_ParseEx(&str, " ");
 
 			if (!*map)
 				break;
 
-			if (Q_strcasecmp(map, level.mapname) == 0)
-			{
+			if (Q_strcasecmp(map, level.mapname) == 0) {
 				// it's in the list, go to the next one
 				map = COM_ParseEx(&str, " ");
-				if (!*map)
-				{
+				if (!*map) {
 					// end of list, go to first one
 					if (!first_map[0]) // there isn't a first one, same level
 					{
 						BeginIntermission(CreateTargetChangeLevel(level.mapname));
 						return;
-					}
-					else
-					{
+					} else {
 						// [Paril-KEX] re-shuffle if necessary
-						if (g_map_list_shuffle->integer)
-						{
+						if (g_map_list_shuffle->integer) {
 							auto values = str_split(g_map_list->string, ' ');
 
-							if (values.size() == 1)
-							{
+							if (values.size() == 1) {
 								// meh
 								BeginIntermission(CreateTargetChangeLevel(level.mapname));
 								return;
@@ -1417,9 +1461,7 @@ void EndDMLevel()
 						BeginIntermission(CreateTargetChangeLevel(first_map));
 						return;
 					}
-				}
-				else
-				{
+				} else {
 					BeginIntermission(CreateTargetChangeLevel(map));
 					return;
 				}
@@ -1438,8 +1480,7 @@ void EndDMLevel()
 	// search for a changelevel
 	ent = G_FindByString<&edict_t::classname>(nullptr, "target_changelevel");
 
-	if (!ent)
-	{ // the map designer didn't include a changelevel,
+	if (!ent) { // the map designer didn't include a changelevel,
 		// so create a fake ent that goes back to the same level
 		BeginIntermission(CreateTargetChangeLevel(level.mapname));
 		return;
@@ -1453,15 +1494,13 @@ void EndDMLevel()
 CheckNeedPass
 =================
 */
-void CheckNeedPass()
-{
+static void CheckNeedPass() {
 	int need;
 	static int32_t password_modified, spectator_password_modified;
 
 	// if password or spectator_password has changed, update needpass
 	// as needed
-	if (Cvar_WasModified(password, password_modified) || Cvar_WasModified(spectator_password, spectator_password_modified))
-	{
+	if (Cvar_WasModified(password, password_modified) || Cvar_WasModified(spectator_password, spectator_password_modified)) {
 		need = 0;
 
 		if (*password->string && Q_strcasecmp(password->string, "none"))
@@ -1478,8 +1517,7 @@ void CheckNeedPass()
 CheckDMRules
 =================
 */
-void CheckDMRules()
-{
+static void CheckDMRules() {
 	gclient_t *cl;
 
 	if (level.intermission_time)
@@ -1488,53 +1526,35 @@ void CheckDMRules()
 	if (!deathmatch->integer)
 		return;
 
-	// ZOID
-	if (ctf->integer && Match_CheckRules())
-	{
+	if (ctf->integer && Match_CheckRules()) {
 		EndDMLevel();
 		return;
 	}
+
 	if (IsMatch())
 		return; // no checking in match mode
-				// ZOID
 
-	//=======
-	// ROGUE
-	if (gamerules->integer && DMGame.CheckDMRules)
-	{
-		if (DMGame.CheckDMRules())
-			return;
-	}
-	// ROGUE
-	//=======
-
-	if (timelimit->value)
-	{
-		if (level.time >= gtime_t::from_min(timelimit->value))
-		{
+	if (timelimit->value) {
+		if (level.time >= gtime_t::from_min(timelimit->value)) {
 			gi.LocBroadcast_Print(PRINT_HIGH, "$g_timelimit_hit");
 			EndDMLevel();
 			return;
 		}
 	}
 
-	if (fraglimit->integer)
-	{
+	if (fraglimit->integer) {
 		// [Paril-KEX]
-		if (teamplay->integer)
-		{
+		if (teamplay->integer) {
 			CheckEndTDMLevel();
 			return;
 		}
 
-		for (uint32_t i = 0; i < game.maxclients; i++)
-		{
+		for (uint32_t i = 0; i < game.maxclients; i++) {
 			cl = game.clients + i;
 			if (!g_edicts[i + 1].inuse)
 				continue;
 
-			if (cl->resp.score >= fraglimit->integer)
-			{
+			if (cl->resp.score >= fraglimit->integer) {
 				gi.LocBroadcast_Print(PRINT_HIGH, "$g_fraglimit_hit");
 				EndDMLevel();
 				return;
@@ -1543,7 +1563,7 @@ void CheckDMRules()
 	}
 }
 
-bool Match_NextMap() {
+static bool Match_NextMap() {
 	if (level.match == MATCH_POST) {
 		level.match = MATCH_SETUP;
 		Match_ResetAllPlayers();
@@ -1557,11 +1577,9 @@ bool Match_NextMap() {
 ExitLevel
 =============
 */
-void ExitLevel()
-{
+static void ExitLevel() {
 	// [Paril-KEX] N64 fade
-	if (level.intermission_fade)
-	{
+	if (level.intermission_fade) {
 		level.intermission_fade_time = level.time + 1.3_sec;
 		level.intermission_fading = true;
 		return;
@@ -1574,12 +1592,10 @@ void ExitLevel()
 
 	// [Paril-KEX] support for intermission completely wiping players
 	// back to default stuff
-	if (level.intermission_clear)
-	{
+	if (level.intermission_clear) {
 		level.intermission_clear = false;
 
-		for (uint32_t i = 0; i < game.maxclients; i++)
-		{
+		for (uint32_t i = 0; i < game.maxclients; i++) {
 			// [Kex] Maintain user info to keep the player skin. 
 			char userinfo[MAX_INFO_STRING];
 			memcpy(userinfo, game.clients[i].pers.userinfo, sizeof(userinfo));
@@ -1593,8 +1609,7 @@ void ExitLevel()
 	}
 
 	// [Paril-KEX] end of unit, so clear level trackers
-	if (level.intermission_eou)
-	{
+	if (level.intermission_eou) {
 		game.level_entries = {};
 
 		// give all players their lives back
@@ -1606,8 +1621,7 @@ void ExitLevel()
 	if (Match_NextMap())
 		return;
 
-	if (level.changemap == nullptr)
-	{
+	if (level.changemap == nullptr) {
 		gi.Com_Error("Got null changemap when trying to exit level. Was a trigger_changelevel configured correctly?");
 		return;
 	}
@@ -1616,7 +1630,7 @@ void ExitLevel()
 	// end game
 	size_t start_offset = (level.changemap[0] == '*' ? 1 : 0);
 
-    if (strlen(level.changemap) > (6 + start_offset) &&
+	if (strlen(level.changemap) > (6 + start_offset) &&
 		!Q_strncasecmp(level.changemap + start_offset, "victor", 6) &&
 		!Q_strncasecmp(level.changemap + strlen(level.changemap) - 4, ".pcx", 4))
 		gi.AddCommandString(G_Fmt("endgame \"{}\"\n", level.changemap + start_offset).data());
@@ -1648,10 +1662,8 @@ static void CheckMinMaxPlayers() {
 	maxplayers_mod_count = maxplayers->modified_count;
 }
 
-static void G_CheckCvars()
-{
-	if (Cvar_WasModified(sv_airaccelerate, game.airacceleration_modified))
-	{
+static void G_CheckCvars() {
+	if (Cvar_WasModified(sv_airaccelerate, game.airacceleration_modified)) {
 		// [Paril-KEX] air accel handled by game DLL now, and allow
 		// it to be changed in sp/coop
 		gi.configstring(CS_AIRACCEL, G_Fmt("{}", sv_airaccelerate->integer).data());
@@ -1664,8 +1676,7 @@ static void G_CheckCvars()
 	CheckMinMaxPlayers();
 }
 
-static bool G_AnyDeadPlayersWithoutLives()
-{
+static bool G_AnyDeadPlayersWithoutLives() {
 	for (auto player : active_players())
 		if (player->health <= 0 && !player->client->pers.lives)
 			return true;
@@ -1680,8 +1691,7 @@ G_RunFrame
 Advances the world by 0.1 seconds
 ================
 */
-inline void G_RunFrame_(bool main_loop)
-{
+static inline void G_RunFrame_(bool main_loop) {
 	level.in_frame = true;
 
 	G_CheckCvars();
@@ -1690,17 +1700,13 @@ inline void G_RunFrame_(bool main_loop)
 
 	level.time += FRAME_TIME_MS;
 
-	if (level.intermission_fading)
-	{
-		if (level.intermission_fade_time > level.time)
-		{
+	if (level.intermission_fading) {
+		if (level.intermission_fade_time > level.time) {
 			float alpha = clamp(1.0f - (level.intermission_fade_time - level.time - 300_ms).seconds(), 0.f, 1.f);
 
 			for (auto player : active_players())
 				player->client->ps.screen_blend = { 0, 0, 0, alpha };
-		}
-		else
-		{
+		} else {
 			level.intermission_fade = level.intermission_fading = false;
 			ExitLevel();
 		}
@@ -1714,16 +1720,14 @@ inline void G_RunFrame_(bool main_loop)
 
 	// exit intermissions
 
-	if (level.intermission_exit)
-	{
+	if (level.intermission_exit) {
 		ExitLevel();
 		level.in_frame = false;
 		return;
 	}
 
 	// reload the map start save if restart time is set (all players are dead)
-	if (level.coop_level_restart_time > 0_ms && level.time > level.coop_level_restart_time)
-	{
+	if (level.coop_level_restart_time > 0_ms && level.time > level.coop_level_restart_time) {
 		ClientEndServerFrames();
 		gi.AddCommandString("restart_level\n");
 	}
@@ -1731,10 +1735,8 @@ inline void G_RunFrame_(bool main_loop)
 	// clear client coop respawn states; this is done
 	// early since it may be set multiple times for different
 	// players
-	if (coop->integer && (g_coop_enable_lives->integer || g_coop_squad_respawn->integer))
-	{
-		for (auto player : active_players())
-		{
+	if (coop->integer && (g_coop_enable_lives->integer || g_coop_squad_respawn->integer)) {
+		for (auto player : active_players()) {
 			if (player->client->respawn_time >= level.time)
 				player->client->coop_respawn_state = COOP_RESPAWN_WAITING;
 			else if (g_coop_enable_lives->integer && player->health <= 0 && player->client->pers.lives == 0)
@@ -1751,15 +1753,11 @@ inline void G_RunFrame_(bool main_loop)
 	// even the world gets a chance to think
 	//
 	ent = &g_edicts[0];
-	for (uint32_t i = 0; i < globals.num_edicts; i++, ent++)
-	{
-		if (!ent->inuse)
-		{
+	for (uint32_t i = 0; i < globals.num_edicts; i++, ent++) {
+		if (!ent->inuse) {
 			// defer removing client info so that disconnected, etc works
-			if (i > 0 && i <= game.maxclients)
-			{
-				if (ent->timestamp && level.time < ent->timestamp)
-				{
+			if (i > 0 && i <= game.maxclients) {
+				if (ent->timestamp && level.time < ent->timestamp) {
 					int32_t playernum = ent - g_edicts - 1;
 					gi.configstring(CS_PLAYERSKINS + playernum, "");
 					ent->timestamp = 0_ms;
@@ -1775,20 +1773,16 @@ inline void G_RunFrame_(bool main_loop)
 			ent->s.old_origin = ent->s.origin;
 
 		// if the ground entity moved, make sure we are still on it
-		if ((ent->groundentity) && (ent->groundentity->linkcount != ent->groundentity_linkcount))
-		{
+		if ((ent->groundentity) && (ent->groundentity->linkcount != ent->groundentity_linkcount)) {
 			contents_t mask = G_GetClipMask(ent);
 
-			if (!(ent->flags & (FL_SWIM | FL_FLY)) && (ent->svflags & SVF_MONSTER))
-			{
+			if (!(ent->flags & (FL_SWIM | FL_FLY)) && (ent->svflags & SVF_MONSTER)) {
 				ent->groundentity = nullptr;
 				M_CheckGround(ent, mask);
-			}
-			else
-			{
+			} else {
 				// if it's still 1 point below us, we're good
 				trace_t tr = gi.trace(ent->s.origin, ent->mins, ent->maxs, ent->s.origin + ent->gravityVector, ent,
-									  mask);
+					mask);
 
 				if (tr.startsolid || tr.allsolid || tr.ent != ent->groundentity)
 					ent->groundentity = nullptr;
@@ -1797,10 +1791,9 @@ inline void G_RunFrame_(bool main_loop)
 			}
 		}
 
-		Entity_UpdateState( ent );
+		Entity_UpdateState(ent);
 
-		if (i > 0 && i <= game.maxclients)
-		{
+		if (i > 0 && i <= game.maxclients) {
 			ClientBeginServerFrame(ent);
 			continue;
 		}
@@ -1814,24 +1807,20 @@ inline void G_RunFrame_(bool main_loop)
 	// see if needpass needs updated
 	CheckNeedPass();
 
-	if (coop->integer && (g_coop_enable_lives->integer || g_coop_squad_respawn->integer))
-	{
+	if (coop->integer && (g_coop_enable_lives->integer || g_coop_squad_respawn->integer)) {
 		// rarely, we can see a flash of text if all players respawned
 		// on some other player, so if everybody is now alive we'll reset
 		// back to empty
 		bool reset_coop_respawn = true;
 
-		for (auto player : active_players())
-		{
-			if (player->health >= 0)
-			{
+		for (auto player : active_players()) {
+			if (player->health >= 0) {
 				reset_coop_respawn = false;
 				break;
 			}
 		}
 
-		if (reset_coop_respawn)
-		{
+		if (reset_coop_respawn) {
 			for (auto player : active_players())
 				player->client->coop_respawn_state = COOP_RESPAWN_NONE;
 		}
@@ -1846,8 +1835,7 @@ inline void G_RunFrame_(bool main_loop)
 		level.entry->time += FRAME_TIME_S;
 
 	// [Paril-KEX] run monster pains now
-	for (uint32_t i = 0; i < globals.num_edicts + 1 + game.maxclients + BODY_QUEUE_SIZE; i++)
-	{
+	for (uint32_t i = 0; i < globals.num_edicts + 1 + game.maxclients + BODY_QUEUE_SIZE; i++) {
 		edict_t *e = &g_edicts[i];
 
 		if (!e->inuse || !(e->svflags & SVF_MONSTER))
@@ -1859,8 +1847,7 @@ inline void G_RunFrame_(bool main_loop)
 	level.in_frame = false;
 }
 
-inline bool G_AnyPlayerSpawned()
-{
+static inline bool G_AnyPlayerSpawned() {
 	for (auto player : active_players())
 		if (player->client && player->client->pers.spawned)
 			return true;
@@ -1868,8 +1855,7 @@ inline bool G_AnyPlayerSpawned()
 	return false;
 }
 
-void G_RunFrame(bool main_loop)
-{
+void G_RunFrame(bool main_loop) {
 	if (main_loop && !G_AnyPlayerSpawned())
 		return;
 
@@ -1878,12 +1864,10 @@ void G_RunFrame(bool main_loop)
 
 	// match details.. only bother if there's at least 1 player in-game
 	// and not already end of game
-	if (G_AnyPlayerSpawned() && !level.intermission_time)
-	{
+	if (G_AnyPlayerSpawned() && !level.intermission_time) {
 		constexpr gtime_t MATCH_REPORT_TIME = 45_sec;
 
-		if (level.time - level.next_match_report > MATCH_REPORT_TIME)
-		{
+		if (level.time - level.next_match_report > MATCH_REPORT_TIME) {
 			level.next_match_report = level.time + MATCH_REPORT_TIME;
 			G_ReportMatchDetails(false);
 		}
@@ -1898,8 +1882,7 @@ This has to be done before the world logic, because
 player processing happens outside RunFrame
 ================
 */
-void G_PrepFrame()
-{
+void G_PrepFrame() {
 	for (uint32_t i = 0; i < globals.num_edicts; i++)
 		g_edicts[i].s.event = EV_NONE;
 
@@ -1908,7 +1891,7 @@ void G_PrepFrame()
 
 	globals.server_flags &= ~SERVER_FLAG_INTERMISSION;
 
-	if ( level.intermission_time ) {
+	if (level.intermission_time) {
 		globals.server_flags |= SERVER_FLAG_INTERMISSION;
 	}
 }

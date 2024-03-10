@@ -447,13 +447,13 @@ static USE(use_target_changelevel) (edict_t *self, edict_t *other, edict_t *acti
 			// rotated by the next map
 			activator->client->landmark_rel_pos = activator->s.origin - self->target_ent->s.origin;
 
-			activator->client->landmark_rel_pos = RotatePointAroundVector({ 1, 0, 0 }, activator->client->landmark_rel_pos, -self->target_ent->s.angles[0]);
-			activator->client->landmark_rel_pos = RotatePointAroundVector({ 0, 1, 0 }, activator->client->landmark_rel_pos, -self->target_ent->s.angles[2]);
-			activator->client->landmark_rel_pos = RotatePointAroundVector({ 0, 0, 1 }, activator->client->landmark_rel_pos, -self->target_ent->s.angles[1]);
+			activator->client->landmark_rel_pos = RotatePointAroundVector({ 1, 0, 0 }, activator->client->landmark_rel_pos, -self->target_ent->s.angles[PITCH]);
+			activator->client->landmark_rel_pos = RotatePointAroundVector({ 0, 1, 0 }, activator->client->landmark_rel_pos, -self->target_ent->s.angles[ROLL]);
+			activator->client->landmark_rel_pos = RotatePointAroundVector({ 0, 0, 1 }, activator->client->landmark_rel_pos, -self->target_ent->s.angles[YAW]);
 
-			activator->client->oldvelocity = RotatePointAroundVector({ 1, 0, 0 }, activator->client->oldvelocity, -self->target_ent->s.angles[0]);
-			activator->client->oldvelocity = RotatePointAroundVector({ 0, 1, 0 }, activator->client->oldvelocity, -self->target_ent->s.angles[2]);
-			activator->client->oldvelocity = RotatePointAroundVector({ 0, 0, 1 }, activator->client->oldvelocity, -self->target_ent->s.angles[1]);
+			activator->client->oldvelocity = RotatePointAroundVector({ 1, 0, 0 }, activator->client->oldvelocity, -self->target_ent->s.angles[PITCH]);
+			activator->client->oldvelocity = RotatePointAroundVector({ 0, 1, 0 }, activator->client->oldvelocity, -self->target_ent->s.angles[ROLL]);
+			activator->client->oldvelocity = RotatePointAroundVector({ 0, 0, 1 }, activator->client->oldvelocity, -self->target_ent->s.angles[YAW]);
 
 			// unrotate our view angles for the next map too
 			activator->client->oldviewangles = activator->client->ps.viewangles - self->target_ent->s.angles;
@@ -2403,9 +2403,9 @@ void SP_target_killplayers(edict_t *self) {
 Pulsing black light with sphere in the center
 */
 THINK(blacklight_think) (edict_t *self) -> void {
-	self->s.angles[0] += frandom(10);
-	self->s.angles[1] += frandom(10);
-	self->s.angles[2] += frandom(10);
+	self->s.angles[PITCH] += frandom(10);
+	self->s.angles[YAW] += frandom(10);
+	self->s.angles[ROLL] += frandom(10);
 	self->nextthink = level.time + FRAME_TIME_MS;
 }
 

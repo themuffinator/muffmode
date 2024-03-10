@@ -808,10 +808,10 @@ void QuadHog_Spawn(gitem_t *item, edict_t *spot, bool reset) {
 	ent->movetype = MOVETYPE_TOSS;
 	ent->touch = Touch_Item;
 	ent->owner = ent;
-
-	angles[0] = 0;
-	angles[1] = (float)irandom(360);
-	angles[2] = 0;
+	
+	angles[PITCH] = 0;
+	angles[YAW] = (float)irandom(360);
+	angles[ROLL] = 0;
 
 	AngleVectors(angles, forward, right, nullptr);
 	ent->s.origin = spot->s.origin;
@@ -970,9 +970,9 @@ static void Tech_Spawn(gitem_t *item, edict_t *spot) {
 	ent->touch = Touch_Item;
 	ent->owner = ent;
 
-	angles[0] = 0;
-	angles[1] = (float)irandom(360);
-	angles[2] = 0;
+	angles[PITCH] = 0;
+	angles[YAW] = (float)irandom(360);
+	angles[ROLL] = 0;
 
 	AngleVectors(angles, forward, right, nullptr);
 	ent->s.origin = spot->s.origin;
@@ -4653,7 +4653,7 @@ gives +1 to maximum health
 	{
 		/* id */ IT_ITEM_TAG_TOKEN,
 		/* classname */ nullptr,
-		/* pickup */ Tag_PickupToken,
+		/* pickup */ nullptr,
 		/* use */ nullptr,
 		/* drop */ nullptr,
 		/* weaponthink */ nullptr,

@@ -3048,7 +3048,7 @@ static THINK(Trap_Gib_Think) (edict_t *ent) -> void {
 	float degrees = (150.f * gi.frame_time_s) + ent->owner->delay;
 	vec3_t diff = ent->owner->s.origin - ent->s.origin;
 	vec = RotatePointAroundVector(up, diff, degrees);
-	ent->s.angles[1] += degrees;
+	ent->s.angles[YAW] += degrees;
 	vec3_t new_origin = ent->owner->s.origin - vec;
 
 	trace_t tr = gi.traceline(ent->s.origin, new_origin, ent, MASK_SOLID);

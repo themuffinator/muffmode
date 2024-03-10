@@ -252,8 +252,8 @@ THINK(makron_torso_think) (edict_t *self) -> void
 	
 	self->nextthink = level.time + 10_hz;
 
-	if (self->s.angles[0] > 0)
-		self->s.angles[0] = max(0.f, self->s.angles[0] - 15);
+	if (self->s.angles[PITCH] > 0)
+		self->s.angles[PITCH] = max(0.f, self->s.angles[PITCH] - 15);
 }
 
 void makron_torso(edict_t *ent)
@@ -271,7 +271,7 @@ void makron_torso(edict_t *ent)
 	ent->velocity += (up * 120);
 	ent->velocity += (forward * -120);
 	ent->s.origin += (forward * -10);
-	ent->s.angles[0] = 90;
+	ent->s.angles[PITCH] = 90;
 	ent->avelocity = {};
 	gi.linkentity(ent);
 }
@@ -555,9 +555,9 @@ void MakronHyperblaster(edict_t *self)
 		dir[0] = 0;
 	}
 	if (self->s.frame <= FRAME_attak413)
-		dir[1] = self->s.angles[1] - 10 * (self->s.frame - FRAME_attak413);
+		dir[1] = self->s.angles[YAW] - 10 * (self->s.frame - FRAME_attak413);
 	else
-		dir[1] = self->s.angles[1] + 10 * (self->s.frame - FRAME_attak421);
+		dir[1] = self->s.angles[YAW] + 10 * (self->s.frame - FRAME_attak421);
 	dir[2] = 0;
 
 	AngleVectors(dir, forward, nullptr, nullptr);

@@ -204,9 +204,9 @@ void SpawnGrow_Spawn(const vec3_t &startpos, float start_size, float end_size)
 	ent = G_Spawn();
 	ent->s.origin = startpos;
 
-	ent->s.angles[0] = (float) irandom(360);
-	ent->s.angles[1] = (float) irandom(360);
-	ent->s.angles[2] = (float) irandom(360);
+	ent->s.angles[PITCH] = (float) irandom(360);
+	ent->s.angles[YAW] = (float) irandom(360);
+	ent->s.angles[ROLL] = (float) irandom(360);
 
 	ent->avelocity[0] = frandom(280.f, 360.f) * 2.f;
 	ent->avelocity[1] = frandom(280.f, 360.f) * 2.f;

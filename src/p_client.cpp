@@ -192,7 +192,7 @@ static void PCfg_ClientInitPConfig(edict_t *ent) {
 
 //=======================================================================
 
-void ClientObituary(edict_t *self, edict_t *inflictor, edict_t *attacker, mod_t mod) {
+static void ClientObituary(edict_t *self, edict_t *inflictor, edict_t *attacker, mod_t mod) {
 	const char *base = nullptr;
 
 	if (coop->integer && attacker->client)
@@ -430,19 +430,6 @@ void ClientObituary(edict_t *self, edict_t *inflictor, edict_t *attacker, mod_t 
 			}
 		}
 
-		// ROGUE
-		if (gamerules->integer) {
-			if (DMGame.Score) {
-				if (mod.friendly_fire) {
-					if (!mod.no_point_loss)
-						DMGame.Score(attacker, self, -1, mod);
-				} else
-					DMGame.Score(attacker, self, 1, mod);
-			}
-			return;
-		}
-		// ROGUE
-
 		// frag messages
 		if (deathmatch->integer && g_frag_messages->integer && self != attacker && self->client && attacker->client) {
 			if (!(self->svflags & SVF_BOT)) {
@@ -469,14 +456,6 @@ void ClientObituary(edict_t *self, edict_t *inflictor, edict_t *attacker, mod_t 
 			return;
 
 		gi.LocBroadcast_Print(PRINT_MEDIUM, "$g_mod_generic_died", self->client->pers.netname);
-		if (deathmatch->integer && !mod.no_point_loss) {
-			if (gamerules->integer) {
-				if (DMGame.Score) {
-					DMGame.Score(self, self, -1, mod);
-				}
-				return;
-			}
-		}
 	}
 }
 
@@ -496,16 +475,16 @@ static void TossClientItems(edict_t *self) {
 		return;
 
 	wp = self->client->pers.weapon;
-	if (wp && g_instagib->integer)
-		wp = nullptr;
-	if (wp && g_nadefest->integer)
-		wp = nullptr;
-	if (wp && !self->client->pers.inventory[self->client->pers.weapon->ammo])
-		wp = nullptr;
-	if (wp && !wp->drop)
-		wp = nullptr;
-
 	if (wp) {
+		if (g_instagib->integer)
+			wp = nullptr;
+		else if (g_nadefest->integer)
+			wp = nullptr;
+		else if (!self->client->pers.inventory[self->client->pers.weapon->ammo])
+			wp = nullptr;
+		else if (!wp->drop)
+			wp = nullptr;
+
 		self->client->v_angle[YAW] = 0.0;
 		drop = Drop_Item(self, wp);
 		drop->spawnflags |= SPAWNFLAG_ITEM_DROPPED_PLAYER;
@@ -617,6 +596,7 @@ static void TossClientItems(edict_t *self) {
 			drop->count = 1;
 		}
 	}
+
 	self->client->v_angle[YAW] = 0.0;
 }
 
@@ -636,6 +616,7 @@ void LookAtKiller(edict_t *self, edict_t *inflictor, edict_t *attacker) {
 		self->client->killer_yaw = self->s.angles[YAW];
 		return;
 	}
+
 	// PMM - fixed to correct for pitch of 0
 	if (dir[0])
 		self->client->killer_yaw = 180 / PIf * atan2f(dir[1], dir[0]);
@@ -667,22 +648,17 @@ DIE(player_die) (edict_t *self, edict_t *inflictor, edict_t *attacker, int damag
 	self->movetype = MOVETYPE_TOSS;
 
 	self->s.modelindex2 = 0; // remove linked weapon model
-	// ZOID
 	self->s.modelindex3 = 0; // remove linked ctf flag
-	// ZOID
 
-	self->s.angles[0] = 0;
-	self->s.angles[2] = 0;
+	self->s.angles[PITCH] = 0;
+	self->s.angles[ROLL] = 0;
 
 	self->s.sound = 0;
 	self->client->weapon_sound = 0;
 
 	self->maxs[2] = -8;
 
-	//scoring
 	if (attacker && attacker->client) {
-		//attacker->client->lastkilled_client = self->s.number;
-
 		if (attacker == self || mod.friendly_fire) {
 			if (!mod.no_point_loss)
 				G_AdjustPlayerScore(attacker->client, -1, !!teamplay->integer, -1);
@@ -700,9 +676,7 @@ DIE(player_die) (edict_t *self, edict_t *inflictor, edict_t *attacker, int damag
 			G_AdjustPlayerScore(self->client, -1, !!teamplay->integer, -1);
 	}
 	self->client->resp.kill_count = 0;
-	//-scoring
 
-		//	self->solid = SOLID_NOT;
 	self->svflags |= SVF_DEADMONSTER;
 
 	if (!self->deadflag) {
@@ -735,12 +709,6 @@ DIE(player_die) (edict_t *self, edict_t *inflictor, edict_t *attacker, int damag
 				self->client->pers.inventory[n] = 0;
 			}
 		}
-	}
-
-	if (gamerules->integer) // if we're in a dm game, alert the game
-	{
-		if (DMGame.PlayerDeath)
-			DMGame.PlayerDeath(self, inflictor, attacker);
 	}
 
 	// remove powerups
@@ -1600,9 +1568,9 @@ bool TryLandmarkSpawn(edict_t *ent, vec3_t &origin, vec3_t &angles) {
 	origin = ent->client->landmark_rel_pos;
 
 	// rotate our relative landmark into our new landmark's frame of reference
-	origin = RotatePointAroundVector({ 1, 0, 0 }, origin, landmark->s.angles[0]);
-	origin = RotatePointAroundVector({ 0, 1, 0 }, origin, landmark->s.angles[2]);
-	origin = RotatePointAroundVector({ 0, 0, 1 }, origin, landmark->s.angles[1]);
+	origin = RotatePointAroundVector({ 1, 0, 0 }, origin, landmark->s.angles[PITCH]);
+	origin = RotatePointAroundVector({ 0, 1, 0 }, origin, landmark->s.angles[ROLL]);
+	origin = RotatePointAroundVector({ 0, 0, 1 }, origin, landmark->s.angles[YAW]);
 
 	origin += landmark->s.origin;
 
@@ -1624,9 +1592,9 @@ bool TryLandmarkSpawn(edict_t *ent, vec3_t &origin, vec3_t &angles) {
 
 	// rotate the velocity that we grabbed from the map
 	if (ent->velocity) {
-		ent->velocity = RotatePointAroundVector({ 1, 0, 0 }, ent->velocity, landmark->s.angles[0]);
-		ent->velocity = RotatePointAroundVector({ 0, 1, 0 }, ent->velocity, landmark->s.angles[2]);
-		ent->velocity = RotatePointAroundVector({ 0, 0, 1 }, ent->velocity, landmark->s.angles[1]);
+		ent->velocity = RotatePointAroundVector({ 1, 0, 0 }, ent->velocity, landmark->s.angles[PITCH]);
+		ent->velocity = RotatePointAroundVector({ 0, 1, 0 }, ent->velocity, landmark->s.angles[ROLL]);
+		ent->velocity = RotatePointAroundVector({ 0, 0, 1 }, ent->velocity, landmark->s.angles[YAW]);
 	}
 
 	return true;
@@ -2175,9 +2143,7 @@ void ClientSpawn(edict_t *ent) {
 		spawn_origin = squad_respawn_position;
 		spawn_angles = squad_respawn_angles;
 		valid_spawn = true;
-	} else if (gamerules->integer && DMGame.SelectSpawnPoint) // PGM
-		valid_spawn = DMGame.SelectSpawnPoint(ent, spawn_origin, spawn_angles, force_spawn); // PGM
-	else										  // PGM
+	} else										  // PGM
 		valid_spawn = SelectSpawnPoint(ent, spawn_origin, spawn_angles, force_spawn, is_landmark);
 
 	// [Paril-KEX] if we didn't get a valid spawn, hold us in
@@ -2321,11 +2287,9 @@ void ClientSpawn(edict_t *ent) {
 	ent->die = player_die;
 	ent->waterlevel = WATER_NONE;
 	ent->watertype = CONTENTS_NONE;
-	ent->flags &= ~(FL_NO_KNOCKBACK | FL_ALIVE_KNOCKBACK_ONLY | FL_NO_DAMAGE_EFFECTS);
+	ent->flags &= ~(FL_NO_KNOCKBACK | FL_ALIVE_KNOCKBACK_ONLY | FL_NO_DAMAGE_EFFECTS | FL_SAM_RAIMI);
 	ent->svflags &= ~SVF_DEADMONSTER;
 	ent->svflags |= SVF_PLAYER;
-
-	ent->flags &= ~FL_SAM_RAIMI; // PGM - turn off sam raimi flag
 
 	ent->mins = PLAYER_MINS;
 	ent->maxs = PLAYER_MAXS;
@@ -2342,13 +2306,11 @@ void ClientSpawn(edict_t *ent) {
 	if (!G_ShouldPlayersCollide(false))
 		ent->clipmask &= ~CONTENTS_PLAYER;
 
-	// PGM
 	if (client->pers.weapon)
 		client->ps.gunindex = gi.modelindex(client->pers.weapon->view_model);
 	else
 		client->ps.gunindex = 0;
 	client->ps.gunskin = 0;
-	// PGM
 
 	// clear entity state values
 	ent->s.effects = EF_NONE;
@@ -2379,10 +2341,6 @@ void ClientSpawn(edict_t *ent) {
 		world->heightfog.density
 	};
 	P_ForceFogTransition(ent, true);
-#if 0
-	if (InitPlayerTeam(ent))
-		return;
-#endif
 
 	// spawn a spectator
 	if (client->resp.team == TEAM_SPECTATOR) {
@@ -2467,12 +2425,6 @@ static void ClientBeginDeathmatch(edict_t *ent) {
 
 	if (ent->client->resp.team == TEAM_NONE)
 		PickTeam(-1);
-
-	// PGM
-	if (gamerules->integer && DMGame.ClientBegin) {
-		DMGame.ClientBegin(ent);
-	}
-	// PGM
 
 	// locate ent at a spawn point
 	ClientSpawn(ent);
@@ -2596,7 +2548,7 @@ ClientIsSpectating
 bool ClientIsSpectating(gclient_t *cl) {
 	if (!cl) return false;
 
-	return cl->resp.team == TEAM_NONE || cl->resp.team == TEAM_SPECTATOR;	// || cl->resp.spectator || cl->pers.spectator;
+	return cl->resp.team == TEAM_NONE || cl->resp.team == TEAM_SPECTATOR;
 }
 
 /*
@@ -2711,11 +2663,10 @@ G_EncodedPlayerName
 Gets a token version of the players "name" to be decoded on the client.
 ================
 */
-std::string G_EncodedPlayerName(edict_t *player) {
+static std::string G_EncodedPlayerName(edict_t *player) {
 	unsigned int playernum = P_GetLobbyUserNum(player);
 	return std::string("##P") + std::to_string(playernum);
 }
-
 
 /*
 ================
@@ -2748,7 +2699,6 @@ void P_Match_AssignGhost(edict_t *ent) {
 		level.ghosts[ghost].code);
 }
 
-
 /*
 ===========
 ClientUserInfoChanged
@@ -2777,7 +2727,6 @@ void ClientUserinfoChanged(edict_t *ent, const char *userinfo) {
 	int playernum = ent - g_edicts - 1;
 
 	// combine name and skin into a configstring
-	// ZOID
 	if (IsTeamplay())
 		G_AssignPlayerSkin(ent, val);
 
@@ -2787,7 +2736,6 @@ void ClientUserinfoChanged(edict_t *ent, const char *userinfo) {
 		char dogtag[MAX_INFO_VALUE] = { 0 };
 		gi.Info_ValueForKey(userinfo, "dogtag", dogtag, sizeof(dogtag));
 #endif
-		// ZOID
 		gi.configstring(CS_PLAYERSKINS + playernum, G_Fmt("{}\\{}", ent->client->pers.netname, val).data());
 	}
 
@@ -2840,7 +2788,7 @@ void ClientUserinfoChanged(edict_t *ent, const char *userinfo) {
 	Q_strlcpy(ent->client->pers.userinfo, userinfo, sizeof(ent->client->pers.userinfo));
 }
 
-inline bool IsSlotIgnored(edict_t *slot, edict_t **ignore, size_t num_ignore) {
+static inline bool IsSlotIgnored(edict_t *slot, edict_t **ignore, size_t num_ignore) {
 	for (size_t i = 0; i < num_ignore; i++)
 		if (slot == ignore[i])
 			return true;
@@ -2848,7 +2796,7 @@ inline bool IsSlotIgnored(edict_t *slot, edict_t **ignore, size_t num_ignore) {
 	return false;
 }
 
-inline edict_t *ClientChooseSlot_Any(edict_t **ignore, size_t num_ignore) {
+static inline edict_t *ClientChooseSlot_Any(edict_t **ignore, size_t num_ignore) {
 	for (size_t i = 0; i < game.maxclients; i++)
 		if (!IsSlotIgnored(globals.edicts + i + 1, ignore, num_ignore) && !game.clients[i].pers.connected)
 			return globals.edicts + i + 1;
@@ -2856,7 +2804,7 @@ inline edict_t *ClientChooseSlot_Any(edict_t **ignore, size_t num_ignore) {
 	return nullptr;
 }
 
-inline edict_t *ClientChooseSlot_Coop(const char *userinfo, const char *social_id, bool isBot, edict_t **ignore, size_t num_ignore) {
+static inline edict_t *ClientChooseSlot_Coop(const char *userinfo, const char *social_id, bool is_bot, edict_t **ignore, size_t num_ignore) {
 	char name[MAX_INFO_VALUE] = { 0 };
 	gi.Info_ValueForKey(userinfo, "name", name, sizeof(name));
 
@@ -2969,10 +2917,10 @@ inline edict_t *ClientChooseSlot_Coop(const char *userinfo, const char *social_i
 
 // [Paril-KEX] for coop, we want to try to ensure that players will always get their
 // proper slot back when they connect.
-edict_t *ClientChooseSlot(const char *userinfo, const char *social_id, bool isBot, edict_t **ignore, size_t num_ignore, bool cinematic) {
+edict_t *ClientChooseSlot(const char *userinfo, const char *social_id, bool is_bot, edict_t **ignore, size_t num_ignore, bool cinematic) {
 	// coop and non-bots is the only thing that we need to do special behavior on
-	if (!cinematic && coop->integer && !isBot)
-		return ClientChooseSlot_Coop(userinfo, social_id, isBot, ignore, num_ignore);
+	if (!cinematic && coop->integer && !is_bot)
+		return ClientChooseSlot_Coop(userinfo, social_id, is_bot, ignore, num_ignore);
 
 	// just find any free slot
 	return ClientChooseSlot_Any(ignore, num_ignore);
@@ -2990,48 +2938,16 @@ Changing levels will NOT cause this to be called again, but
 loadgames will.
 ============
 */
-bool ClientConnect(edict_t *ent, char *userinfo, const char *social_id, bool isBot) {
-	// check to see if they are on the banned IP list
+bool ClientConnect(edict_t *ent, char *userinfo, const char *social_id, bool is_bot) {
 #if 0
-	value = Info_ValueForKey(userinfo, "ip");
+	// check to see if they are on the banned IP list
+	char value[MAX_INFO_VALUE] = { 0 };
+	gi.Info_ValueForKey(userinfo, "ip", value, sizeof(value));
 	if (SV_FilterPacket(value)) {
-		Info_SetValueForKey(userinfo, "rejmsg", "Banned.");
+		gi.Info_SetValueForKey(userinfo, "rejmsg", "Banned.");
 		return false;
 	}
 #endif
-
-	// check for a spectator
-	char value[MAX_INFO_VALUE] = { 0 };
-	gi.Info_ValueForKey(userinfo, "spectator", value, sizeof(value));
-
-	if (deathmatch->integer && *value && strcmp(value, "0")) {
-		uint32_t i, numspec;
-
-		if (*spectator_password->string &&
-			strcmp(spectator_password->string, "none") &&
-			strcmp(spectator_password->string, value)) {
-			gi.Info_SetValueForKey(userinfo, "rejmsg", "Spectator password required or incorrect.");
-			return false;
-		}
-
-		// count spectators
-		for (i = numspec = 0; i < game.maxclients; i++)
-			if (g_edicts[i + 1].inuse && g_edicts[i + 1].client->pers.spectator)
-				numspec++;
-
-		if (numspec >= (uint32_t)maxspectators->integer) {
-			gi.Info_SetValueForKey(userinfo, "rejmsg", "Server spectator limit is full.");
-			return false;
-		}
-	} else {
-		// check for a password ( if not a bot! )
-		gi.Info_ValueForKey(userinfo, "password", value, sizeof(value));
-		if (!isBot && *password->string && strcmp(password->string, "none") &&
-			strcmp(password->string, value)) {
-			gi.Info_SetValueForKey(userinfo, "rejmsg", "Password required or incorrect.");
-			return false;
-		}
-	}
 
 	if (!deathmatch->integer)
 		ent->client->resp.team = TEAM_FREE;
@@ -3058,9 +2974,9 @@ bool ClientConnect(edict_t *ent, char *userinfo, const char *social_id, bool isB
 
 	// make sure we start with known default(s)
 	ent->svflags = SVF_PLAYER;
-	if (isBot) {
+	if (is_bot) {
+		char value[MAX_INFO_VALUE] = { 0 };
 		ent->svflags |= SVF_BOT;
-
 		gi.Info_ValueForKey(userinfo, "name", value, sizeof(value));
 		char newname[MAX_NETNAME] = "[BOT] ";
 		Q_strlcat(newname, value, sizeof(value));
@@ -3070,6 +2986,7 @@ bool ClientConnect(edict_t *ent, char *userinfo, const char *social_id, bool isB
 	Q_strlcpy(ent->client->pers.social_id, social_id, sizeof(ent->client->pers.social_id));
 
 	if (game.maxclients > 1) {
+		char value[MAX_INFO_VALUE] = { 0 };
 		// [Paril-KEX] fetch name because now netname is kinda unsuitable
 		gi.Info_ValueForKey(userinfo, "name", value, sizeof(value));
 		gi.LocClient_Print(nullptr, PRINT_HIGH, "$g_player_connected", value);
@@ -3109,10 +3026,9 @@ void ClientDisconnect(edict_t *ent) {
 
 	GT_CTF_DeadDropFlag(ent);
 	Tech_DeadDrop(ent);
+	TossClientItems(ent);
 	PlayerTrail_Destroy(ent);
 
-	//============
-	// ROGUE
 	// make sure no trackers are still hurting us.
 	if (ent->client->tracker_pain_time)
 		RemoveAttackingPainDaemons(ent);
@@ -3122,13 +3038,6 @@ void ClientDisconnect(edict_t *ent) {
 			G_FreeEdict(ent->client->owned_sphere);
 		ent->client->owned_sphere = nullptr;
 	}
-
-	if (gamerules->integer) {
-		if (DMGame.PlayerDisconnect)
-			DMGame.PlayerDisconnect(ent);
-	}
-	// ROGUE
-	//============
 
 	// send effect
 	if (!(ent->svflags & SVF_NOCLIENT)) {
@@ -3163,7 +3072,7 @@ void ClientDisconnect(edict_t *ent) {
 
 //==============================================================
 
-trace_t SV_PM_Clip(const vec3_t &start, const vec3_t *mins, const vec3_t *maxs, const vec3_t &end, contents_t mask) {
+static trace_t SV_PM_Clip(const vec3_t &start, const vec3_t *mins, const vec3_t *maxs, const vec3_t &end, contents_t mask) {
 	return gi.game_import_t::clip(world, start, mins, maxs, end, mask);
 }
 
@@ -3191,7 +3100,7 @@ Paril-KEX: this is moved here and now reacts directly
 to ClientThink rather than being delayed.
 =================
 */
-void P_FallingDamage(edict_t *ent, const pmove_t &pm) {
+static void P_FallingDamage(edict_t *ent, const pmove_t &pm) {
 	int	   damage;
 	vec3_t dir;
 
@@ -3669,7 +3578,7 @@ inline entity_iterable_t<active_monsters_filter_t> active_monsters() {
 	return entity_iterable_t<active_monsters_filter_t> { game.maxclients + (uint32_t)BODY_QUEUE_SIZE + 1U };
 }
 
-inline bool G_MonstersSearchingFor(edict_t *player) {
+static inline bool G_MonstersSearchingFor(edict_t *player) {
 	for (auto ent : active_monsters()) {
 		// check for *any* player target
 		if (player == nullptr && ent->enemy && !ent->enemy->client)
@@ -3692,7 +3601,7 @@ inline bool G_MonstersSearchingFor(edict_t *player) {
 
 // [Paril-KEX] from the given player, find a good spot to
 // spawn a player
-inline bool G_FindRespawnSpot(edict_t *player, vec3_t &spot) {
+static inline bool G_FindRespawnSpot(edict_t *player, vec3_t &spot) {
 	// sanity check; make sure there's enough room for ourselves.
 	// (crouching in a small area, etc)
 	trace_t tr = gi.trace(player->s.origin, PLAYER_MINS, PLAYER_MAXS, player->s.origin, player, MASK_PLAYERSOLID);
@@ -4056,4 +3965,3 @@ int TeamConnectedCount(int ignore_client_num, team_t team) {
 
 	return count;
 }
-

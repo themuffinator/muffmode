@@ -99,7 +99,7 @@ bool M_CheckClearShot(edict_t *self, const vec3_t &offset, vec3_t &start)
 
 	vec3_t f, r;
 
-	vec3_t real_angles = { self->s.angles[0], self->ideal_yaw, 0.f };
+	vec3_t real_angles = { self->s.angles[PITCH], self->ideal_yaw, 0.f };
 
 	AngleVectors(real_angles, f, r, nullptr);
 	start = M_ProjectFlashSource(self, offset, f, r);
@@ -722,7 +722,7 @@ void M_ProcessPain(edict_t *e)
 			e->s.frame -= irandom(1, 3);
 
 			if (e->groundentity && e->movetype == MOVETYPE_TOSS && !(e->flags & FL_STATIONARY))
-				e->s.angles[1] += brandom() ? 4.5f : -4.5f;
+				e->s.angles[YAW] += brandom() ? 4.5f : -4.5f;
 		}
 	}
 	else

@@ -264,7 +264,7 @@ void flyer_kamikaze_check(edict_t *self)
 		return;
 	}
 
-	self->s.angles[0] = vectoangles(self->enemy->s.origin - self->s.origin).x;
+	self->s.angles[PITCH] = vectoangles(self->enemy->s.origin - self->s.origin).x;
 
 	self->goalentity = self->enemy;
 

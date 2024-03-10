@@ -499,7 +499,7 @@ void supertankMachineGun(edict_t *self)
 	flash_number = static_cast<monster_muzzleflash_id_t>(MZ2_SUPERTANK_MACHINEGUN_1 + (self->s.frame - FRAME_attak1_1));
 
 	dir[0] = 0;
-	dir[1] = self->s.angles[1];
+	dir[1] = self->s.angles[YAW];
 	dir[2] = 0;
 
 	AngleVectors(dir, forward, right, nullptr);

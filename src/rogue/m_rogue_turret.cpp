@@ -654,10 +654,10 @@ void turret_wall_spawn(edict_t *turret)
 	ent->s.origin = turret->s.origin;
 	ent->s.angles = turret->s.angles;
 
-	angle = (int) ent->s.angles[1];
-	if (ent->s.angles[0] == 90)
+	angle = (int) ent->s.angles[YAW];
+	if (ent->s.angles[PITCH] == 90)
 		angle = -1;
-	else if (ent->s.angles[0] == 270)
+	else if (ent->s.angles[PITCH] == 270)
 		angle = -2;
 	switch (angle)
 	{
@@ -757,27 +757,27 @@ USE(turret_activate) (edict_t *self, edict_t *other, edict_t *activator) -> void
 	self->moveinfo.accel = self->speed;
 	self->moveinfo.decel = self->speed;
 
-	if (self->s.angles[0] == 270)
+	if (self->s.angles[PITCH] == 270)
 	{
 		forward = { 0, 0, 1 };
 	}
-	else if (self->s.angles[0] == 90)
+	else if (self->s.angles[PITCH] == 90)
 	{
 		forward = { 0, 0, -1 };
 	}
-	else if (self->s.angles[1] == 0)
+	else if (self->s.angles[YAW] == 0)
 	{
 		forward = { 1, 0, 0 };
 	}
-	else if (self->s.angles[1] == 90)
+	else if (self->s.angles[YAW] == 90)
 	{
 		forward = { 0, 1, 0 };
 	}
-	else if (self->s.angles[1] == 180)
+	else if (self->s.angles[YAW] == 180)
 	{
 		forward = { -1, 0, 0 };
 	}
-	else if (self->s.angles[1] == 270)
+	else if (self->s.angles[YAW] == 270)
 	{
 		forward = { 0, -1, 0 };
 	}
@@ -979,17 +979,17 @@ void SP_monster_turret(edict_t *self)
 	self->gravity = 0;
 
 	self->offset = self->s.angles;
-	angle = (int) self->s.angles[1];
+	angle = (int) self->s.angles[YAW];
 	switch (angle)
 	{
 	case -1: // up
-		self->s.angles[0] = 270;
-		self->s.angles[1] = 0;
+		self->s.angles[PITCH] = 270;
+		self->s.angles[YAW] = 0;
 		self->s.origin[2] += 2;
 		break;
 	case -2: // down
-		self->s.angles[0] = 90;
-		self->s.angles[1] = 0;
+		self->s.angles[PITCH] = 90;
+		self->s.angles[YAW] = 0;
 		self->s.origin[2] -= 2;
 		break;
 	case 0:

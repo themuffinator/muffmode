@@ -313,7 +313,7 @@ void berserk_jump_takeoff(edict_t *self)
 	float fwd_speed = length * 1.95f;
 	vec3_t dir;
 	PredictAim(self, self->enemy, self->s.origin, fwd_speed, false, 0.f, &dir, nullptr);
-	self->s.angles[1] = vectoyaw(dir);
+	self->s.angles[YAW] = vectoyaw(dir);
 	AngleVectors(self->s.angles, forward, nullptr, nullptr);
 	self->s.origin[2] += 1;
 	self->velocity = forward * fwd_speed;

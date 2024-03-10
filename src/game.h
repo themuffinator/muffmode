@@ -1445,6 +1445,8 @@ struct player_state_t
     refdef_flags_t rdflags; // refdef flags
 
     std::array<int16_t, MAX_STATS> stats; // fast status bar updates
+
+    uint8_t team_id; // team identifier
 };
 
 // protocol bytes that can be directly added to messages
@@ -2095,8 +2097,8 @@ struct game_export_t
     // coop slot re-use. Return nullptr if none is available. You can not
     // return a slot that is currently in use by another client; that must
     // throw a fatal error.
-    edict_t *(*ClientChooseSlot) (const char *userinfo, const char *social_id, bool isBot, edict_t **ignore, size_t num_ignore, bool cinematic);
-    bool (*ClientConnect)(edict_t *ent, char *userinfo, const char *social_id, bool isBot);
+    edict_t *(*ClientChooseSlot) (const char *userinfo, const char *social_id, bool is_bot, edict_t **ignore, size_t num_ignore, bool cinematic);
+    bool (*ClientConnect)(edict_t *ent, char *userinfo, const char *social_id, bool is_bot);
     void (*ClientBegin)(edict_t *ent);
     void (*ClientUserinfoChanged)(edict_t *ent, const char *userinfo);
     void (*ClientDisconnect)(edict_t *ent);

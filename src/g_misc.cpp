@@ -78,8 +78,8 @@ static TOUCH(gib_touch) (edict_t *self, edict_t *other, const trace_t &tr, bool 
 {
 	if (tr.plane.normal[2] > 0.7f)
 	{
-		self->s.angles[0] = clamp(self->s.angles[0], -5.0f, 5.0f);
-		self->s.angles[2] = clamp(self->s.angles[2], -5.0f, 5.0f);
+		self->s.angles[PITCH] = clamp(self->s.angles[PITCH], -5.0f, 5.0f);
+		self->s.angles[ROLL] = clamp(self->s.angles[ROLL], -5.0f, 5.0f);
 	}
 }
 
@@ -213,9 +213,9 @@ edict_t *ThrowGib(edict_t *self, const char *gibname, int damage, gib_type_t typ
 	gib->avelocity[1] = frandom(600);
 	gib->avelocity[2] = frandom(600);
 
-	gib->s.angles[0] = frandom(359);
-	gib->s.angles[1] = frandom(359);
-	gib->s.angles[2] = frandom(359);
+	gib->s.angles[PITCH] = frandom(359);
+	gib->s.angles[YAW] = frandom(359);
+	gib->s.angles[ROLL] = frandom(359);
 
 	gib->think = GibSink;
 
@@ -1284,8 +1284,8 @@ THINK(misc_blackhole_think) (edict_t *self) -> void
 	
 	if (self->spawnflags.has(SPAWNFLAG_BLACKHOLE_AUTO_NOISE))
 	{
-		self->s.angles[0] += 50.0f * gi.frame_time_s;
-		self->s.angles[1] += 50.0f * gi.frame_time_s;
+		self->s.angles[PITCH] += 50.0f * gi.frame_time_s;
+		self->s.angles[YAW] += 50.0f * gi.frame_time_s;
 	}
 
 	self->nextthink = level.time + FRAME_TIME_MS;
@@ -1650,9 +1650,9 @@ PRETHINK(misc_viper_bomb_prethink) (edict_t *self) -> void
 	vec3_t v = self->moveinfo.dir * (1.0f + diff);
 	v[2] = diff;
 
-	diff = self->s.angles[2];
+	diff = self->s.angles[ROLL];
 	self->s.angles = vectoangles(v);
-	self->s.angles[2] = diff + 10;
+	self->s.angles[ROLL] = diff + 10;
 }
 
 USE(misc_viper_bomb_use) (edict_t *self, edict_t *other, edict_t *activator) -> void
@@ -2247,7 +2247,7 @@ void SP_misc_flare(edict_t* ent)
 
 static THINK(misc_hologram_think) (edict_t *ent) -> void
 {
-	ent->s.angles[1] += 100 * gi.frame_time_s;
+	ent->s.angles[YAW] += 100 * gi.frame_time_s;
 	ent->nextthink = level.time + FRAME_TIME_MS;
 	ent->s.alpha = frandom(0.2f, 0.6f);
 }

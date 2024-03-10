@@ -374,7 +374,6 @@ static void Cmd_God_f(edict_t *ent) {
 	ent->flags ^= FL_GODMODE;
 	Cmd_Print_State(ent, ent->flags & FL_GODMODE);
 }
-void ED_ParseField(const char *key, const char *value, edict_t *ent);
 
 /*
 ==================
@@ -390,6 +389,7 @@ static void Cmd_Immortal_f(edict_t *ent) {
 	Cmd_Print_State(ent, ent->flags & FL_IMMORTAL);
 }
 
+void ED_ParseField(const char *key, const char *value, edict_t *ent);
 /*
 =================
 Cmd_Spawn_f
@@ -411,7 +411,7 @@ static void Cmd_Spawn_f(edict_t *ent) {
 	other->classname = gi.argv(1);
 
 	other->s.origin = ent->s.origin + (AngleVectors(ent->s.angles).forward * 24.f);
-	other->s.angles[1] = ent->s.angles[1];
+	other->s.angles[YAW] = ent->s.angles[YAW];
 
 	st = {};
 

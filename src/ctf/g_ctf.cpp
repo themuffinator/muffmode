@@ -505,9 +505,9 @@ void GT_CTF_Effects(edict_t *player) {
 	}
 
 	if (player->client->pers.inventory[IT_FLAG_RED])
-		player->s.modelindex3 = modelindex_flag1;
+		player->s.modelindex3 = mi_ctf_red_flag;
 	else if (player->client->pers.inventory[IT_FLAG_BLUE])
-		player->s.modelindex3 = modelindex_flag2;
+		player->s.modelindex3 = mi_ctf_blue_flag;
 	else
 		player->s.modelindex3 = 0;
 }

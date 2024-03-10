@@ -579,20 +579,6 @@ void T_Damage(edict_t *targ, edict_t *inflictor, edict_t *attacker, const vec3_t
 		}
 	}
 
-	// ROGUE
-	//  allow the deathmatch game to change values
-	if (deathmatch->integer && gamerules->integer)
-	{
-		if (DMGame.ChangeDamage)
-			damage = DMGame.ChangeDamage(targ, attacker, damage, mod);
-		if (DMGame.ChangeKnockback)
-			knockback = DMGame.ChangeKnockback(targ, attacker, knockback, mod);
-
-		if (!damage)
-			return;
-	}
-	// ROGUE
-
 	// easy mode takes half damage
 	if (skill->integer == 0 && !deathmatch->integer && targ->client && damage)
 	{

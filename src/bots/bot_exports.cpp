@@ -53,7 +53,7 @@ void Bot_SetWeapon( edict_t * bot, const int weaponIndex, const bool instantSwit
 
 	if ( instantSwitch ) {
 		// FIXME: ugly, maybe store in client later
-		const int temp_instant_weapon = g_instant_weapon_switch->integer || g_frenzy->integer ? 1 : 0;
+		const int temp_instant_weapon = g_instant_weapon_switch->integer || !!g_frenzy->integer;
 		g_instant_weapon_switch->integer = 1;
 		ChangeWeapon( bot );
 		g_instant_weapon_switch->integer = temp_instant_weapon;

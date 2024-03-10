@@ -3,8 +3,7 @@
 
 #include "g_local.h"
 
-void Svcmd_Test_f()
-{
+static void Svcmd_Test_f() {
 	gi.LocClient_Print(nullptr, PRINT_HIGH, "Svcmd_Test_f()\n");
 }
 
@@ -44,8 +43,7 @@ only allows players from your local network.
 ==============================================================================
 */
 
-struct ipfilter_t
-{
+struct ipfilter_t {
 	unsigned mask;
 	unsigned compare;
 };
@@ -60,30 +58,25 @@ int		   numipfilters;
 StringToFilter
 =================
 */
-static bool StringToFilter(const char *s, ipfilter_t *f)
-{
+static bool StringToFilter(const char *s, ipfilter_t *f) {
 	char num[128];
 	int	 i, j;
 	byte b[4];
 	byte m[4];
 
-	for (i = 0; i < 4; i++)
-	{
+	for (i = 0; i < 4; i++) {
 		b[i] = 0;
 		m[i] = 0;
 	}
 
-	for (i = 0; i < 4; i++)
-	{
-		if (*s < '0' || *s > '9')
-		{
+	for (i = 0; i < 4; i++) {
+		if (*s < '0' || *s > '9') {
 			gi.LocClient_Print(nullptr, PRINT_HIGH, "Bad filter address: {}\n", s);
 			return false;
 		}
 
 		j = 0;
-		while (*s >= '0' && *s <= '9')
-		{
+		while (*s >= '0' && *s <= '9') {
 			num[j++] = *s++;
 		}
 		num[j] = 0;
@@ -96,8 +89,8 @@ static bool StringToFilter(const char *s, ipfilter_t *f)
 		s++;
 	}
 
-	f->mask = *(unsigned *) m;
-	f->compare = *(unsigned *) b;
+	f->mask = *(unsigned *)m;
+	f->compare = *(unsigned *)b;
 
 	return true;
 }
@@ -107,20 +100,17 @@ static bool StringToFilter(const char *s, ipfilter_t *f)
 SV_FilterPacket
 =================
 */
-bool SV_FilterPacket(const char *from)
-{
+bool SV_FilterPacket(const char *from) {
 	int		 i;
 	unsigned in;
 	byte	 m[4];
-	const char	 *p;
+	const char *p;
 
 	i = 0;
 	p = from;
-	while (*p && i < 4)
-	{
+	while (*p && i < 4) {
 		m[i] = 0;
-		while (*p >= '0' && *p <= '9')
-		{
+		while (*p >= '0' && *p <= '9') {
 			m[i] = m[i] * 10 + (*p - '0');
 			p++;
 		}
@@ -130,7 +120,7 @@ bool SV_FilterPacket(const char *from)
 		p++;
 	}
 
-	in = *(unsigned *) m;
+	in = *(unsigned *)m;
 
 	for (i = 0; i < numipfilters; i++)
 		if ((in & ipfilters[i].mask) == ipfilters[i].compare)
@@ -144,12 +134,10 @@ bool SV_FilterPacket(const char *from)
 SVCmd_AddIP_f
 =================
 */
-void SVCmd_AddIP_f()
-{
+static void SVCmd_AddIP_f() {
 	int i;
 
-	if (gi.argc() < 3)
-	{
+	if (gi.argc() < 3) {
 		gi.LocClient_Print(nullptr, PRINT_HIGH, "Usage: sv {} <ip-mask>\n", gi.argv(1));
 		return;
 	}
@@ -157,10 +145,8 @@ void SVCmd_AddIP_f()
 	for (i = 0; i < numipfilters; i++)
 		if (ipfilters[i].compare == 0xffffffff)
 			break; // free spot
-	if (i == numipfilters)
-	{
-		if (numipfilters == MAX_IPFILTERS)
-		{
+	if (i == numipfilters) {
+		if (numipfilters == MAX_IPFILTERS) {
 			gi.LocClient_Print(nullptr, PRINT_HIGH, "IP filter list is full\n");
 			return;
 		}
@@ -176,13 +162,11 @@ void SVCmd_AddIP_f()
 SV_RemoveIP_f
 =================
 */
-void SVCmd_RemoveIP_f()
-{
+static void SVCmd_RemoveIP_f() {
 	ipfilter_t f;
 	int		   i, j;
 
-	if (gi.argc() < 3)
-	{
+	if (gi.argc() < 3) {
 		gi.LocClient_Print(nullptr, PRINT_HIGH, "Usage: sv {} <ip-mask>\n", gi.argv(1));
 		return;
 	}
@@ -191,8 +175,7 @@ void SVCmd_RemoveIP_f()
 		return;
 
 	for (i = 0; i < numipfilters; i++)
-		if (ipfilters[i].mask == f.mask && ipfilters[i].compare == f.compare)
-		{
+		if (ipfilters[i].mask == f.mask && ipfilters[i].compare == f.compare) {
 			for (j = i + 1; j < numipfilters; j++)
 				ipfilters[j - 1] = ipfilters[j];
 			numipfilters--;
@@ -207,22 +190,19 @@ void SVCmd_RemoveIP_f()
 SV_ListIP_f
 =================
 */
-void SVCmd_ListIP_f()
-{
+static void SVCmd_ListIP_f() {
 	int	 i;
 	byte b[4];
 
 	gi.LocClient_Print(nullptr, PRINT_HIGH, "Filter list:\n");
-	for (i = 0; i < numipfilters; i++)
-	{
-		*(unsigned *) b = ipfilters[i].compare;
+	for (i = 0; i < numipfilters; i++) {
+		*(unsigned *)b = ipfilters[i].compare;
 		gi.LocClient_Print(nullptr, PRINT_HIGH, "{}.{}.{}.{}\n", b[0], b[1], b[2], b[3]);
 	}
 }
 
 // [Paril-KEX]
-void SVCmd_NextMap_f()
-{
+static void SVCmd_NextMap_f() {
 	gi.LocBroadcast_Print(PRINT_HIGH, "$g_map_ended_by_server");
 	EndDMLevel();
 }
@@ -232,8 +212,7 @@ void SVCmd_NextMap_f()
 SV_WriteIP_f
 =================
 */
-void SVCmd_WriteIP_f(void)
-{
+static void SVCmd_WriteIP_f(void) {
 	// KEX_FIXME: Sys_FOpen isn't available atm, just commenting this out since i don't think we even need this functionality - sponge
 	/*
 	FILE* f;
@@ -280,8 +259,7 @@ The game can issue gi.argc() / gi.argv() commands to get the rest
 of the parameters
 =================
 */
-void ServerCommand()
-{
+void ServerCommand() {
 	const char *cmd = gi.argv(1);
 
 	if (Q_strcasecmp(cmd, "test") == 0)

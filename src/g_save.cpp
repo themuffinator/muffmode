@@ -2418,7 +2418,7 @@ char *WriteGameJson(bool autosave, size_t *out_size)
 	return saveJson(json, out_size);
 }
 
-void G_PrecacheInventoryItems();
+void PrecacheInventoryItems();
 
 // new entry point for ReadGame.
 // takes in pointer to JSON data. does
@@ -2459,7 +2459,7 @@ void ReadGameJson(const char *jsonString)
 		json_pop_stack();
 	}
 
-	G_PrecacheInventoryItems();
+	PrecacheInventoryItems();
 }
 
 // new entry point for WriteLevel.
@@ -2576,7 +2576,7 @@ void ReadLevelJson(const char *jsonString)
 				ent->nextthink = level.time + gtime_t::from_sec(ent->delay);
 	}
 
-	G_PrecacheInventoryItems();
+	PrecacheInventoryItems();
 
 	// clear cached indices
 	cached_soundindex::reset_all();

@@ -165,7 +165,7 @@ THINK(turret_breach_think) (edict_t *self) -> void
 		self->owner->avelocity[1] = self->avelocity[1];
 
 		// x & y
-		angle = self->s.angles[1] + self->owner->move_origin[1];
+		angle = self->s.angles[YAW] + self->owner->move_origin[1];
 		angle *= (float) (PI * 2 / 360);
 		target[0] = self->s.origin[0] + cosf(angle) * self->owner->move_origin[0];
 		target[1] = self->s.origin[1] + sinf(angle) * self->owner->move_origin[0];
@@ -306,7 +306,7 @@ DIE(turret_driver_die) (edict_t *self, edict_t *inflictor, edict_t *attacker, in
 		self->target_ent->moveinfo.blocked = nullptr;
 
 		// clear pitch
-		self->s.angles[0] = 0;
+		self->s.angles[PITCH] = 0;
 		self->movetype = MOVETYPE_STEP;
 
 		self->think = monster_think;

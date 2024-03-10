@@ -12,6 +12,8 @@ constexpr const char *GAMEVERSION = "baseq2";
 constexpr const char *GAMEMOD_TITLE = "Muff Mode BETA";
 constexpr const char *GAMEMOD_VERSION = "0.12.25";
 
+//==================================================================
+
 constexpr const int32_t GIB_HEALTH = -40;
 
 enum gametype_t {
@@ -66,18 +68,19 @@ enum match_t {
 	MATCH_POST
 };
 
-extern int imageindex_i_ctf1;
-extern int imageindex_i_ctf2;
-extern int imageindex_i_ctf1d;
-extern int imageindex_i_ctf2d;
-extern int imageindex_i_ctf1t;
-extern int imageindex_i_ctf2t;
-extern int imageindex_i_ctfj;
-extern int imageindex_sbfctf1;
-extern int imageindex_sbfctf2;
-extern int imageindex_ctfsb1;
-extern int imageindex_ctfsb2;
-extern int modelindex_flag1, modelindex_flag2; // [Paril-KEX]
+extern int ii_highlight;
+extern int ii_duel_header;
+extern int ii_ctf_red_default;
+extern int ii_ctf_blue_default;
+extern int ii_ctf_red_dropped;
+extern int ii_ctf_blue_dropped;
+extern int ii_ctf_red_taken;
+extern int ii_ctf_blue_taken;
+extern int ii_teams_logo_red;
+extern int ii_teams_logo_blue;
+extern int ii_teams_header_red;
+extern int ii_teams_header_blue;
+extern int mi_ctf_red_flag, mi_ctf_blue_flag; // [Paril-KEX]
 
 //==================================================================
 
@@ -1009,7 +1012,6 @@ enum mod_id_t : uint8_t {
 	MOD_R_SPLASH,
 	MOD_HYPERBLASTER,
 	MOD_RAILGUN,
-	MOD_RAILGUN_SPLASH,	// for g_instagib_splash 1
 	MOD_BFG_LASER,
 	MOD_BFG_BLAST,
 	MOD_BFG_EFFECT,
@@ -1023,7 +1025,6 @@ enum mod_id_t : uint8_t {
 	MOD_TELEFRAG_SPAWN,
 	MOD_FALLING,
 	MOD_SUICIDE,
-	MOD_CHANGE_TEAM,
 	MOD_HELD_GRENADE,
 	MOD_EXPLOSIVE,
 	MOD_BARREL,
@@ -1034,16 +1035,12 @@ enum mod_id_t : uint8_t {
 	MOD_TRIGGER_HURT,
 	MOD_HIT,
 	MOD_TARGET_BLASTER,
-	// RAFAEL 14-APR-98
 	MOD_RIPPER,
 	MOD_PHALANX,
 	MOD_BRAINTENTACLE,
 	MOD_BLASTOFF,
 	MOD_GEKK,
 	MOD_TRAP,
-	// END 14-APR-98
-	//========
-	// ROGUE
 	MOD_CHAINFIST,
 	MOD_DISINTEGRATOR,
 	MOD_ETF_RIFLE,
@@ -1056,18 +1053,15 @@ enum mod_id_t : uint8_t {
 	MOD_HUNTER_SPHERE,
 	MOD_DEFENDER_SPHERE,
 	MOD_TRACKER,
-	MOD_DBALL_CRUSH,
+	MOD_THAW,
 	MOD_DOPPLE_EXPLODE,
 	MOD_DOPPLE_VENGEANCE,
 	MOD_DOPPLE_HUNTER,
-	// ROGUE
-	//========
 	MOD_GRAPPLE,
 	MOD_BLUEBLASTER,
-	// vampire
+	MOD_RAILGUN_SPLASH,
 	MOD_EXPIRE,
-	// freeze tag
-	MOD_THAW
+	MOD_CHANGE_TEAM
 };
 
 struct mod_t {
@@ -1949,10 +1943,9 @@ extern cvar_t *skill;
 extern cvar_t *fraglimit;
 extern cvar_t *capturelimit;
 extern cvar_t *timelimit;
-// ZOID
+
 extern cvar_t *g_quick_weapon_switch;
 extern cvar_t *g_instant_weapon_switch;
-// ZOID
 extern cvar_t *g_dm_force_join;
 extern cvar_t *g_teamplay_allow_team_pick;
 extern cvar_t *g_teamplay_force_balance;
@@ -2043,14 +2036,10 @@ extern cvar_t *g_entity_override_save;
 
 extern cvar_t *g_motd;
 
-// ROGUE
-extern cvar_t *gamerules;
 extern cvar_t *huntercam;
 extern cvar_t *g_dm_strong_mines;
 extern cvar_t *g_dm_random_items;
-// ROGUE
 
-// [Kex]
 extern cvar_t *g_instagib;
 extern cvar_t *g_instagib_splash;
 extern cvar_t *g_quadhog;
@@ -2185,6 +2174,7 @@ bool		Entity_IsVisibleToPlayer(edict_t *ent, edict_t *player);
 void		Compass_Update(edict_t *ent, bool first);
 item_id_t	DoRandomRespawn(edict_t *ent);
 void		DoRespawn(edict_t *ent);
+void		fire_doppleganger(edict_t *ent, const vec3_t &start, const vec3_t &aimdir);
 
 //
 // g_utils.c
@@ -2767,14 +2757,6 @@ void	 Widowlegs_Spawn(const vec3_t &startpos, const vec3_t &angles);
 void Defender_Launch(edict_t *self);
 void Vengeance_Launch(edict_t *self);
 void Hunter_Launch(edict_t *self);
-
-//
-// g_newdm.c
-//
-void	 InitGameRules();
-bool	 Tag_PickupToken(edict_t *ent, edict_t *other);
-void	 Tag_DropToken(edict_t *ent, gitem_t *item);
-void	 fire_doppleganger(edict_t *ent, const vec3_t &start, const vec3_t &aimdir);
 
 //
 // p_client.c
@@ -3485,8 +3467,6 @@ struct dm_game_rt {
 	int (*ChangeKnockback)(edict_t *targ, edict_t *attacker, int knockback, mod_t mod);
 	int (*CheckDMRules)();
 };
-
-extern dm_game_rt DMGame;
 
 // ROGUE
 //============

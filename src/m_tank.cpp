@@ -531,9 +531,9 @@ void TankMachineGun(edict_t *self)
 		dir[0] = 0;
 	}
 	if (self->s.frame <= FRAME_attak415)
-		dir[1] = self->s.angles[1] - 8 * (self->s.frame - FRAME_attak411);
+		dir[1] = self->s.angles[YAW] - 8 * (self->s.frame - FRAME_attak411);
 	else
-		dir[1] = self->s.angles[1] + 8 * (self->s.frame - FRAME_attak419);
+		dir[1] = self->s.angles[YAW] + 8 * (self->s.frame - FRAME_attak419);
 	dir[2] = 0;
 
 	AngleVectors(dir, forward, nullptr, nullptr);
@@ -990,7 +990,7 @@ DIE(tank_die) (edict_t *self, edict_t *inflictor, edict_t *attacker, int damage,
 		arm_gib->avelocity = { crandom() * 15.f, crandom() * 15.f, 180.f };
 		arm_gib->velocity = (up * 100.f) + (rgt * -120.f);
 		arm_gib->s.angles = self->s.angles;
-		arm_gib->s.angles[2] = -90.f;
+		arm_gib->s.angles[ROLL] = -90.f;
 		arm_gib->s.skinnum /= 2;
 		gi.linkentity(arm_gib);
 	}
