@@ -1287,7 +1287,7 @@ USE(use_target_camera) (edict_t *self, edict_t *other, edict_t *activator) -> vo
 
     level.intermission_time = level.time;
 	level.intermission_server_frame = gi.ServerFrame();
-    level.intermission_exit = 0;
+    level.intermission_exit = false;
     
 	// spawn fake player dummy where we were
 	if (activator->client)

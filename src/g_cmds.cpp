@@ -30,7 +30,7 @@ static inline bool CheatsOk(edict_t *ent) {
 
 static inline bool AliveOk(edict_t *ent) {
 	if (ent->health <= 0) {
-		gi.LocClient_Print(ent, PRINT_HIGH, "You must be alive to use this command.\n");
+		//gi.LocClient_Print(ent, PRINT_HIGH, "You must be alive to use this command.\n");
 		return false;
 	}
 
@@ -39,7 +39,7 @@ static inline bool AliveOk(edict_t *ent) {
 
 static inline bool SpectatorOk(edict_t *ent) {
 	if (ClientIsSpectating(ent->client)) {
-		gi.LocClient_Print(ent, PRINT_HIGH, "Spectators cannot use this command.\n");
+		//gi.LocClient_Print(ent, PRINT_HIGH, "Spectators cannot use this command.\n");
 		return false;
 	}
 

@@ -247,124 +247,6 @@ void G_ReportMatchDetails(bool is_end) {
 	gi.ReportMatchDetails_Multicast(is_end);
 }
 
-void BeginIntermission(edict_t *targ) {
-	edict_t *ent, *client;
-
-	if (level.intermission_time)
-		return; // already activated
-
-	// ZOID
-	if (ctf->integer)
-		Teams_CalcScores();
-	// ZOID
-#if 0
-	// if in a duel, change the wins / losses
-	if (duel->integer) {
-		GT_Duel_MatchEnd_AdjustScores();
-#endif
-	game.autosaved = false;
-
-	level.intermission_time = level.time;
-
-	// respawn any dead clients
-	for (uint32_t i = 0; i < game.maxclients; i++) {
-		client = g_edicts + 1 + i;
-		if (!client->inuse)
-			continue;
-		if (client->health <= 0) {
-			// give us our max health back since it will reset
-			// to pers.health; in instanced items we'd lose the items
-			// we touched so we always want to respawn with our max.
-			if (P_UseCoopInstancedItems())
-				client->client->pers.health = client->client->pers.max_health = client->max_health;
-
-			respawn(client);
-		}
-	}
-
-	level.intermission_server_frame = gi.ServerFrame();
-	level.changemap = targ->map;
-	level.intermission_clear = targ->spawnflags.has(SPAWNFLAG_CHANGELEVEL_CLEAR_INVENTORY);
-	level.intermission_eou = false;
-	level.intermission_fade = targ->spawnflags.has(SPAWNFLAG_CHANGELEVEL_FADE_OUT);
-
-	// destroy all player trails
-	PlayerTrail_Destroy(nullptr);
-
-	// [Paril-KEX] update game level entry
-	G_UpdateLevelEntry();
-
-	if (strstr(level.changemap, "*")) {
-		if (coop->integer) {
-			for (uint32_t i = 0; i < game.maxclients; i++) {
-				client = g_edicts + 1 + i;
-				if (!client->inuse)
-					continue;
-				// strip players of all keys between units
-				for (uint32_t n = 0; n < IT_TOTAL; n++)
-					if (itemlist[n].flags & IF_KEY)
-						client->client->pers.inventory[n] = 0;
-			}
-		}
-
-		if (level.achievement && level.achievement[0]) {
-			gi.WriteByte(svc_achievement);
-			gi.WriteString(level.achievement);
-			gi.multicast(vec3_origin, MULTICAST_ALL, true);
-		}
-
-		level.intermission_eou = true;
-
-		// "no end of unit" maps handle intermission differently
-		if (!targ->spawnflags.has(SPAWNFLAG_CHANGELEVEL_NO_END_OF_UNIT))
-			G_EndOfUnitMessage();
-		else if (targ->spawnflags.has(SPAWNFLAG_CHANGELEVEL_IMMEDIATE_LEAVE) && !deathmatch->integer) {
-			// Need to call this now
-			G_ReportMatchDetails(true);
-			level.intermission_exit = 1; // go immediately to the next level
-			return;
-		}
-	} else {
-		if (!deathmatch->integer) {
-			level.intermission_exit = 1; // go immediately to the next level
-			return;
-		}
-	}
-
-	// Call while intermission is running
-	G_ReportMatchDetails(true);
-
-	level.intermission_exit = 0;
-
-	if (!level.level_intermission_set) {
-		// find an intermission spot
-		ent = G_FindByString<&edict_t::classname>(nullptr, "info_player_intermission");
-		if (!ent) { // the map creator forgot to put in an intermission point...
-			ent = G_FindByString<&edict_t::classname>(nullptr, "info_player_start");
-			if (!ent)
-				ent = G_FindByString<&edict_t::classname>(nullptr, "info_player_deathmatch");
-		} else { // choose one of four spots
-			int32_t i = irandom(4);
-			while (i--) {
-				ent = G_FindByString<&edict_t::classname>(ent, "info_player_intermission");
-				if (!ent) // wrap around the list
-					ent = G_FindByString<&edict_t::classname>(ent, "info_player_intermission");
-			}
-		}
-
-		level.intermission_origin = ent->s.origin;
-		level.intermission_angle = ent->s.angles;
-	}
-
-	// move all clients to the intermission point
-	for (uint32_t i = 0; i < game.maxclients; i++) {
-		client = g_edicts + 1 + i;
-		if (!client->inuse)
-			continue;
-		MoveClientToIntermission(client);
-	}
-}
-
 /*
 ==================
 TeamsScoreboardMessage
@@ -421,13 +303,13 @@ void TeamsScoreboardMessage(edict_t * ent, edict_t * killer) {
 	//fmt::format_to(std::back_inserter(string), FMT_STRING("xv 0 yv -20 cstring2 \"{}\" "), G_Fmt("[{}] {}", level.mapname, level.level_name));
 
 	// [Paril-KEX] time & frags
-	if (teamplay->integer) {
-		if (fraglimit->integer) {
-			fmt::format_to(std::back_inserter(string), FMT_STRING("xv -20 yv -10 loc_string2 1 $g_score_frags \"{}\" "), fraglimit->integer);
-		}
-	} else {
+	if (ctf->integer) {
 		if (capturelimit->integer) {
 			fmt::format_to(std::back_inserter(string), FMT_STRING("xv -20 yv -10 loc_string2 1 $g_score_captures \"{}\" "), capturelimit->integer);
+		}
+	} else {
+		if (fraglimit->integer) {
+			fmt::format_to(std::back_inserter(string), FMT_STRING("xv -20 yv -10 loc_string2 1 $g_score_frags \"{}\" "), fraglimit->integer);
 		}
 	}
 	if (timelimit->value) {

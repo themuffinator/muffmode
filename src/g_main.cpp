@@ -42,10 +42,10 @@ cvar_t *skill;
 cvar_t *fraglimit;
 cvar_t *capturelimit;
 cvar_t *timelimit;
-// ZOID
+cvar_t *roundlimit;
+cvar_t *roundtimelimit;
 cvar_t *g_quick_weapon_switch;
 cvar_t *g_instant_weapon_switch;
-// ZOID
 cvar_t *password;
 cvar_t *spectator_password;
 cvar_t *needpass;
@@ -271,6 +271,9 @@ void Horde_CreateWave() {
 		Horde_MonsterSpawn(list[i]);
 	}
 	*/
+	if (!horde->integer)
+		return;
+
 	edict_t *ent;
 	select_spawn_result_t result = SelectDeathmatchSpawnPoint(vec3_origin, true, true, true, false);
 
@@ -543,11 +546,11 @@ static void InitGame() {
 	// change anytime vars
 	fraglimit = gi.cvar("fraglimit", "0", CVAR_SERVERINFO);
 	timelimit = gi.cvar("timelimit", "0", CVAR_SERVERINFO);
-	// ZOID
+	roundlimit = gi.cvar("roundlimit", "8", CVAR_SERVERINFO);
+	roundtimelimit = gi.cvar("roundtimelimit", "2", CVAR_SERVERINFO);
 	capturelimit = gi.cvar("capturelimit", "0", CVAR_SERVERINFO);
 	g_quick_weapon_switch = gi.cvar("g_quick_weapon_switch", "1", CVAR_LATCH);
 	g_instant_weapon_switch = gi.cvar("g_instant_weapon_switch", "0", CVAR_LATCH);
-	// ZOID
 	password = gi.cvar("password", "", CVAR_USERINFO);
 	spectator_password = gi.cvar("spectator_password", "", CVAR_USERINFO);
 	needpass = gi.cvar("needpass", "0", CVAR_SERVERINFO);
@@ -1007,47 +1010,6 @@ void FindIntermissionPoint(void) {
 	level.intermission_spot = true;
 }
 
-
-/*
-==================
-BeginIntermission
-==================
-*/
-static void BeginIntermission(void) {
-	size_t		i;
-	edict_t *ent;
-
-	if (level.intermission_time)
-		return;	// already active
-
-	// if in a duel, change the wins / losses
-	if (duel->integer) {
-		//GT_Duel_MatchEnd_AdjustScores();
-	}
-
-	level.intermission_time = level.time;
-
-	FindIntermissionPoint();
-
-	// move all clients to the intermission point
-	for (i = 0; i < game.maxclients; i++) {
-		ent = g_edicts + i;
-		if (!ent->inuse)
-			continue;
-
-		// respawn if dead
-		if (ent->health <= 0) {
-			ClientSpawn(ent);
-		}
-
-		MoveClientToIntermission(ent);
-	}
-
-	// send the current scoring to all clients
-	//SendScoreboardMessageToAllClients();
-}
-
-
 /*
 =================
 CheckIntermissionExit
@@ -1077,10 +1039,11 @@ static void CheckIntermissionExit(void) {
 		if (!cl->pers.connected)
 			continue;
 
-		if (g_edicts[i].svflags & SVF_BOT) {
+		if (g_edicts[i+1].svflags & SVF_BOT) {
 			cl->ready_to_exit = true;
 		} else {
-			count++;
+			if (cl->resp.team != TEAM_SPECTATOR)
+				count++;
 		}
 
 		if (cl->ready_to_exit) {
@@ -1104,17 +1067,26 @@ static void CheckIntermissionExit(void) {
 		return;
 	}
 
-	// if nobody wants to go, clear timer
-	// skip this if no players present
-	if (count && !ready && not_ready) {
-		level.ready_to_exit = false;
-		return;
-	}
+	if (count) {
+		// if nobody wants to go, clear timer
+		// skip this if no players present
+		if (!ready && not_ready) {
+			level.ready_to_exit = false;
+			return;
+		}
 
-	// if everyone wants to go, go now
-	if (!not_ready) {
-		EndDMLevel();
-		return;
+		// if everyone wants to go, go now
+		if (!not_ready) {
+			EndDMLevel();
+			return;
+		}
+	} else {
+		// if no players or only bots then just go
+		if (count == 0) {
+			level.ready_to_exit = true;
+			level.exit_time = level.time + 10_sec;
+			return;
+		}
 	}
 
 	// the first person to ready starts the ten second timeout
@@ -1139,135 +1111,151 @@ Adapted from Quake III
 =============
 */
 static bool ScoreIsTied(void) {
-	int		a, b;
-
 	if (level.num_playing_clients < 2) {
 		return false;
 	}
 
-	if (IsTeamplay()) {
+	if (IsTeamplay())
 		return level.team_scores[TEAM_RED] == level.team_scores[TEAM_BLUE];
-	}
 
-	a = game.clients[level.sorted_clients[0]].resp.score;
-	b = game.clients[level.sorted_clients[1]].resp.score;
-
-	return a == b;
+	return game.clients[level.sorted_clients[0]].resp.score == game.clients[level.sorted_clients[1]].resp.score;
 }
 
 /*
-=================
-CheckExitRules
+=============
+SortRanks
 
 Adapted from Quake III
-=================
+=============
 */
-static void CheckExitRules(void) {
-	size_t		i;
+static int SortRanks(const void *a, const void *b) {
+	gclient_t *ca, *cb;
+
+	ca = &game.clients[*(int *)a];
+	cb = &game.clients[*(int *)b];
+
+	// sort special clients last
+	if (ca->resp.spectator_client < 0)
+		return 1;
+	if (cb->resp.spectator_client < 0)
+		return -1;
+
+	// then connecting clients
+	if (!ca->pers.connected)
+		return 1;
+	if (!cb->pers.connected)
+		return -1;
+
+	// then spectators
+	if (ca->resp.team == TEAM_SPECTATOR && cb->resp.team == TEAM_SPECTATOR) {
+		if (ca->resp.spectator_time > cb->resp.spectator_time)
+			return -1;
+		if (ca->resp.spectator_time < cb->resp.spectator_time)
+			return 1;
+		return 0;
+	}
+	if (ca->resp.team == TEAM_SPECTATOR)
+		return 1;
+	if (cb->resp.team == TEAM_SPECTATOR)
+		return -1;
+
+	// then sort by score
+	if (ca->resp.score > cb->resp.score)
+		return -1;
+	if (ca->resp.score < cb->resp.score)
+		return 1;
+
+	// then sort by time
+	if (ca->resp.entertime < cb->resp.entertime)
+		return -1;
+	if (ca->resp.entertime > cb->resp.entertime)
+		return 1;
+
+	return 0;
+}
+
+/*
+============
+CalculateRanks
+
+Recalculates the score ranks of all players
+This will be called on every client connect, begin, disconnect, death,
+and team change.
+
+Adapted from Quake III
+============
+*/
+void CalculateRanks() {
 	gclient_t *cl;
-	int			scorelimit = 0;
+	size_t		i;
 
-	// if at the intermission, wait for all non-bots to
-	// signal ready, then go to next level
-	if (level.intermission_time) {
-		CheckIntermissionExit();
-		return;
-	}
-
-	if (level.intermission_queued) {
-		gtime_t time = gtime_t::from_sec(1);
-		if (level.time - level.intermission_queued >= time) {
-			level.intermission_queued = gtime_t::from_sec(0);
-			//BeginIntermission();
-			EndDMLevel();	//are we sure???
-		}
-		return;
-	}
-
-	// no scoring in campaigns
-	if (!deathmatch->integer) return;
-
-	// check for sudden death
-	if (ScoreIsTied()) {
-		// always wait for sudden death
-		return;
-	}
-
-	if (level.warmup_time)
-		return;
-
-	if (timelimit->integer) {
-		if (level.time - level.start_time >= gtime_t::from_min(timelimit->integer)) {
-			gi.LocBroadcast_Print(PRINT_HIGH, "$g_timelimit_hit");
-			EndDMLevel();
-			//LogExit("Time limit hit.");
-			EndDMLevel();
-			return;
-		}
-	}
-
-	if (level.num_playing_clients < minplayers->integer) {
-		gi.LocBroadcast_Print(PRINT_HIGH, "MATCH END: Not enough players remaining.\n");
-		//LogExit("Not enough players remaining.");
-		EndDMLevel();
-		return;
-	}
-
-	if (ctf->integer) {
-		scorelimit = capturelimit->integer;
-	} else {
-		scorelimit = fraglimit->integer;
-	}
-	if (!scorelimit) return;
-#if 0
-	// check for level exit
+	level.num_connected_clients = 0;
+	level.num_nonspectator_clients = 0;
+	level.num_playing_clients = 0;
+	level.num_human_clients = 0;
 	for (i = 0; i < game.maxclients; i++) {
-		cl = game.clients + i;
-		if (!cl->pers.connected)
-			continue;
-		if (cl->resp.team == TEAM_SPECTATOR)
-			continue;
+		cl = &game.clients[i];
+		if (cl->pers.connected) {
+			level.sorted_clients[level.num_connected_clients] = i;
+			level.num_connected_clients++;
 
-		if (cl->ps.stats[STAT_EXIT]) {
-			gi.LocBroadcast_Print(PRINT_HIGH, "%s exited the level :(\n\"", cl->pers.netname);
-			//LogExit("Level exited.");
-			EndDMLevel();
-			return;
+			if (!ClientIsSpectating(cl)) {
+				level.num_nonspectator_clients++;
+
+				// decide if this should be auto-followed
+				if (cl->pers.connected) {
+					level.num_playing_clients++;
+					if (!(g_edicts[i].svflags & SVF_BOT)) {
+						level.num_human_clients++;
+					}
+					if (level.follow1 == -1) {
+						level.follow1 = i;
+					} else if (level.follow2 == -1) {
+						level.follow2 = i;
+					}
+				}
+			}
 		}
 	}
-#endif
-	if (IsTeamplay()) {
-		if (level.team_scores[TEAM_RED] >= scorelimit) {
-			gi.LocBroadcast_Print(PRINT_HIGH, "Red Team hit the score limit.\n");
-			//LogExit("Score limit hit.");
-			EndDMLevel();
-			return;
-		}
 
-		if (level.team_scores[TEAM_BLUE] >= scorelimit) {
-			gi.LocBroadcast_Print(PRINT_HIGH, "Blue Team hit the score limit.\n");
-			//LogExit("Score limit hit.");
-			EndDMLevel();
-			return;
+	qsort(level.sorted_clients, level.num_connected_clients, sizeof(level.sorted_clients[0]), SortRanks);
+
+	// set the rank value for all clients that are connected and not spectators
+	if (IsTeamplay()) {
+		// in team games, rank is just the order of the teams, 0=red, 1=blue, 2=tied
+		for (i = 0; i < level.num_connected_clients; i++) {
+			cl = &game.clients[level.sorted_clients[i]];
+			if (level.team_scores[TEAM_RED] == level.team_scores[TEAM_BLUE]) {
+				cl->resp.rank = 2;
+			} else if (level.team_scores[TEAM_RED] > level.team_scores[TEAM_BLUE]) {
+				cl->resp.rank = 0;
+			} else {
+				cl->resp.rank = 1;
+			}
 		}
 	} else {
-		for (i = 0; i < game.maxclients; i++) {
-			cl = game.clients + i;
-			if (!cl->pers.connected) {
-				continue;
-			}
-			if (cl->resp.team != TEAM_FREE) {
-				continue;
-			}
+		int score = 0, new_score, rank;
 
-			if (cl->resp.score >= scorelimit) {
-				gi.LocBroadcast_Print(PRINT_HIGH, "{} hit the score limit.\n", cl->pers.netname);
-				//LogExit("Score limit hit.");
-				EndDMLevel();
-				return;
+		for (i = 0; i < level.num_playing_clients; i++) {
+			if (game.clients[i].pers.connected) {
+				cl = &game.clients[level.sorted_clients[i]];
+				new_score = cl->resp.score;
+				if (i == 0 || new_score != score) {
+					rank = i;
+					// assume we aren't tied until the next client is checked
+					game.clients[level.sorted_clients[i]].resp.rank = rank;
+				} else {
+					// we are tied with the previous client
+					game.clients[level.sorted_clients[i - 1]].resp.rank = rank | RANK_TIED_FLAG;
+					game.clients[level.sorted_clients[i]].resp.rank = rank | RANK_TIED_FLAG;
+				}
+				score = new_score;
 			}
 		}
 	}
+
+	// see if it is time to end the level
+	CheckExitRules();
 }
 
 //===================================================================
@@ -1397,12 +1385,12 @@ inline std::vector<std::string> str_split(const std::string_view &str, char by) 
 =================
 EndDMLevel
 
-The timelimit or fraglimit has been exceeded
+The time limit or score limit has been exceeded
 =================
 */
 void EndDMLevel() {
 	edict_t *ent;
-
+	
 	// stay on same level flag
 	if (g_dm_same_level->integer) {
 		BeginIntermission(CreateTargetChangeLevel(level.mapname));
@@ -1512,16 +1500,53 @@ static void CheckNeedPass() {
 	}
 }
 
+static void LogExit(const char *string) {
+	level.intermission_queued = level.time;
+}
+
+int GT_ScoreLimit() {
+	if (ctf->integer)
+		return capturelimit->integer;
+	if (clanarena->integer || freeze->integer)
+		return roundlimit->integer;
+	return fraglimit->integer;
+}
+
+const char *GT_ScoreLimitString() {
+	if (ctf->integer)
+		return "capture";
+	if (clanarena->integer || freeze->integer)
+		return "round";
+	return "frag";
+}
+
 /*
 =================
-CheckDMRules
+CheckExitRules
+
+There will be a delay between the time the exit is qualified for
+and the time everyone is moved to the intermission spot, so you
+can see the last frag/capture.
 =================
 */
-static void CheckDMRules() {
-	gclient_t *cl;
+void CheckExitRules() {
+	gclient_t	*cl;
+	int			scorelimit = 0;
 
-	if (level.intermission_time)
+	// if at the intermission, wait for all non-bots to
+	// signal ready, then go to next level
+	if (level.intermission_time) {
+		CheckIntermissionExit();
 		return;
+	}
+
+	if (level.intermission_queued) {
+		if (level.time - level.intermission_queued >= 1_sec) {
+			level.intermission_queued = 0_ms;
+			EndDMLevel();
+		}
+		return;
+	}
 
 	if (!deathmatch->integer)
 		return;
@@ -1531,32 +1556,60 @@ static void CheckDMRules() {
 		return;
 	}
 
+	// check for sudden death
+	if (ScoreIsTied()) {
+		// always wait for sudden death
+		return;
+	}
+
+	if (level.warmup_time)
+		return;
+
 	if (IsMatch())
 		return; // no checking in match mode
 
 	if (timelimit->value) {
 		if (level.time >= gtime_t::from_min(timelimit->value)) {
 			gi.LocBroadcast_Print(PRINT_HIGH, "$g_timelimit_hit");
-			EndDMLevel();
+			LogExit("Time limit hit.");
 			return;
 		}
 	}
+#if 0
+	if (level.num_playing_clients < minplayers->integer) {
+		gi.LocBroadcast_Print(PRINT_HIGH, "MATCH END: Not enough players remaining.\n");
+		LogExit("Not enough players remaining.");
+		return;
+	}
+#endif
+	scorelimit = GT_ScoreLimit();
+	if (!scorelimit) return;
 
-	if (fraglimit->integer) {
-		// [Paril-KEX]
-		if (teamplay->integer) {
-			CheckEndTDMLevel();
+	if (IsTeamplay()) {
+		if (level.team_scores[TEAM_RED] >= scorelimit) {
+			gi.LocBroadcast_Print(PRINT_HIGH, "Red Team hit the {} limit.\n", GT_ScoreLimitString());
+			LogExit("Score limit hit.");
 			return;
 		}
 
-		for (uint32_t i = 0; i < game.maxclients; i++) {
+		if (level.team_scores[TEAM_BLUE] >= scorelimit) {
+			gi.LocBroadcast_Print(PRINT_HIGH, "Blue Team hit the {} limit.\n", GT_ScoreLimitString());
+			LogExit("Score limit hit.");
+			return;
+		}
+	} else {
+		for (size_t i = 0; i < game.maxclients; i++) {
 			cl = game.clients + i;
-			if (!g_edicts[i + 1].inuse)
+			if (!cl->pers.connected) {
 				continue;
+			}
+			if (cl->resp.team != TEAM_FREE) {
+				continue;
+			}
 
-			if (cl->resp.score >= fraglimit->integer) {
-				gi.LocBroadcast_Print(PRINT_HIGH, "$g_fraglimit_hit");
-				EndDMLevel();
+			if (cl->resp.score >= scorelimit) {
+				gi.LocBroadcast_Print(PRINT_HIGH, "{} hit the {} limit.\n", cl->pers.netname, GT_ScoreLimitString());
+				LogExit("Score limit hit.");
 				return;
 			}
 		}
@@ -1574,6 +1627,129 @@ static bool Match_NextMap() {
 
 /*
 =============
+BeginIntermission
+=============
+*/
+void BeginIntermission(edict_t *targ) {
+	edict_t *ent, *client;
+
+	if (level.intermission_time)
+		return; // already activated
+
+	if (ctf->integer)
+		Teams_CalcScores();
+
+#if 0
+	// if in a duel, change the wins / losses
+	if (duel->integer) {
+		GT_Duel_MatchEnd_AdjustScores();
+#endif
+
+	game.autosaved = false;
+
+	level.intermission_time = level.time;
+
+	// respawn any dead clients
+	for (uint32_t i = 0; i < game.maxclients; i++) {
+		client = g_edicts + 1 + i;
+		if (!client->inuse)
+			continue;
+		if (client->health <= 0) {
+			// give us our max health back since it will reset
+			// to pers.health; in instanced items we'd lose the items
+			// we touched so we always want to respawn with our max.
+			if (P_UseCoopInstancedItems())
+				client->client->pers.health = client->client->pers.max_health = client->max_health;
+
+			respawn(client);
+		}
+	}
+
+	level.intermission_server_frame = gi.ServerFrame();
+	level.changemap = targ->map;
+	level.intermission_clear = targ->spawnflags.has(SPAWNFLAG_CHANGELEVEL_CLEAR_INVENTORY);
+	level.intermission_eou = false;
+	level.intermission_fade = targ->spawnflags.has(SPAWNFLAG_CHANGELEVEL_FADE_OUT);
+
+	// destroy all player trails
+	PlayerTrail_Destroy(nullptr);
+
+	// [Paril-KEX] update game level entry
+	G_UpdateLevelEntry();
+
+	if (strstr(level.changemap, "*")) {
+		if (coop->integer) {
+			for (uint32_t i = 0; i < game.maxclients; i++) {
+				client = g_edicts + 1 + i;
+				if (!client->inuse)
+					continue;
+				// strip players of all keys between units
+				for (uint32_t n = 0; n < IT_TOTAL; n++)
+					if (itemlist[n].flags & IF_KEY)
+						client->client->pers.inventory[n] = 0;
+			}
+		}
+
+		if (level.achievement && level.achievement[0]) {
+			gi.WriteByte(svc_achievement);
+			gi.WriteString(level.achievement);
+			gi.multicast(vec3_origin, MULTICAST_ALL, true);
+		}
+
+		level.intermission_eou = true;
+
+		// "no end of unit" maps handle intermission differently
+		if (!targ->spawnflags.has(SPAWNFLAG_CHANGELEVEL_NO_END_OF_UNIT))
+			G_EndOfUnitMessage();
+		else if (targ->spawnflags.has(SPAWNFLAG_CHANGELEVEL_IMMEDIATE_LEAVE) && !deathmatch->integer) {
+			// Need to call this now
+			G_ReportMatchDetails(true);
+			level.intermission_exit = true; // go immediately to the next level
+			return;
+		}
+	} else {
+		if (!deathmatch->integer) {
+			level.intermission_exit = true; // go immediately to the next level
+			return;
+		}
+	}
+
+	// Call while intermission is running
+	G_ReportMatchDetails(true);
+
+	level.intermission_exit = false;
+
+	if (!level.level_intermission_set) {
+		// find an intermission spot
+		ent = G_FindByString<&edict_t::classname>(nullptr, "info_player_intermission");
+		if (!ent) { // the map creator forgot to put in an intermission point...
+			ent = G_FindByString<&edict_t::classname>(nullptr, "info_player_start");
+			if (!ent)
+				ent = G_FindByString<&edict_t::classname>(nullptr, "info_player_deathmatch");
+		} else { // choose one of four spots
+			int32_t i = irandom(4);
+			while (i--) {
+				ent = G_FindByString<&edict_t::classname>(ent, "info_player_intermission");
+				if (!ent) // wrap around the list
+					ent = G_FindByString<&edict_t::classname>(ent, "info_player_intermission");
+			}
+		}
+
+		level.intermission_origin = ent->s.origin;
+		level.intermission_angle = ent->s.angles;
+	}
+
+	// move all clients to the intermission point
+	for (uint32_t i = 0; i < game.maxclients; i++) {
+		client = g_edicts + 1 + i;
+		if (!client->inuse)
+			continue;
+		MoveClientToIntermission(client);
+	}
+}
+
+/*
+=============
 ExitLevel
 =============
 */
@@ -1587,7 +1763,6 @@ static void ExitLevel() {
 
 	ClientEndServerFrames();
 
-	level.intermission_exit = 0;
 	level.intermission_time = 0_ms;
 
 	// [Paril-KEX] support for intermission completely wiping players
@@ -1640,8 +1815,14 @@ static void ExitLevel() {
 	level.changemap = nullptr;
 }
 
+/*
+=============
+CheckMinMaxPlayers
+=============
+*/
 static int minplayers_mod_count = -1;
 static int maxplayers_mod_count = -1;
+
 static void CheckMinMaxPlayers() {
 
 	if (!deathmatch->integer)
@@ -1802,7 +1983,8 @@ static inline void G_RunFrame_(bool main_loop) {
 	}
 
 	// see if it is time to end a deathmatch
-	CheckDMRules();
+	CheckExitRules();
+	//gi.Com_PrintFmt("intermission ---> {} {}\n", level.intermission_time ? "time" : "", level.intermission_queued ? "queued" : "");
 
 	// see if needpass needs updated
 	CheckNeedPass();

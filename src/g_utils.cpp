@@ -691,137 +691,6 @@ int Score_PlayerSort(const void *a, const void *b) {
 	return 0;
 }
 #endif
-/*
-=============
-SortRanks
-
-Adapted from Quake III
-=============
-*/
-static int SortRanks(const void *a, const void *b) {
-	gclient_t *ca, *cb;
-
-	ca = &game.clients[*(int *)a];
-	cb = &game.clients[*(int *)b];
-
-	// sort special clients last
-	if (ca->resp.spectator_client < 0)
-		return 1;
-	if (cb->resp.spectator_client < 0)
-		return -1;
-
-	// then connecting clients
-	if (!ca->pers.connected)
-		return 1;
-	if (!cb->pers.connected)
-		return -1;
-
-	// then spectators
-	if (ca->resp.team == TEAM_SPECTATOR && cb->resp.team == TEAM_SPECTATOR) {
-		if (ca->resp.spectator_time > cb->resp.spectator_time)
-			return -1;
-		if (ca->resp.spectator_time < cb->resp.spectator_time)
-			return 1;
-		return 0;
-	}
-	if (ca->resp.team == TEAM_SPECTATOR)
-		return 1;
-	if (cb->resp.team == TEAM_SPECTATOR)
-		return -1;
-
-	// then sort by score
-	if (ca->resp.score > cb->resp.score)
-		return -1;
-	if (ca->resp.score < cb->resp.score)
-		return 1;
-	return 0;
-}
-
-/*
-============
-CalculateRanks
-
-Recalculates the score ranks of all players
-This will be called on every client connect, begin, disconnect, death,
-and team change.
-
-Adapted from Quake III
-============
-*/
-void CalculateRanks() {
-	gclient_t	*cl;
-	size_t		i;
-
-	level.num_connected_clients = 0;
-	level.num_nonspectator_clients = 0;
-	level.num_playing_clients = 0;
-	level.num_human_clients = 0;
-	for (i = 0; i < game.maxclients; i++) {
-		cl = &game.clients[i];
-		if (cl->pers.connected) {
-			level.sorted_clients[level.num_connected_clients] = i;
-			level.num_connected_clients++;
-
-			if (!ClientIsSpectating(cl)) {
-				level.num_nonspectator_clients++;
-
-				// decide if this should be auto-followed
-				if (cl->pers.connected) {
-					level.num_playing_clients++;
-					if (!(g_edicts[i].svflags & SVF_BOT)) {
-						level.num_human_clients++;
-					}
-					if (level.follow1 == -1) {
-						level.follow1 = i;
-					} else if (level.follow2 == -1) {
-						level.follow2 = i;
-					}
-				}
-			}
-		}
-	}
-	
-	qsort(level.sorted_clients, level.num_connected_clients, sizeof(level.sorted_clients[0]), SortRanks);
-
-	// set the rank value for all clients that are connected and not spectators
-	if (IsTeamplay()) {
-		// in team games, rank is just the order of the teams, 0=red, 1=blue, 2=tied
-		for (i = 0; i < level.num_connected_clients; i++) {
-			cl = &game.clients[level.sorted_clients[i]];
-			if (level.team_scores[TEAM_RED] == level.team_scores[TEAM_BLUE]) {
-				cl->resp.rank = 2;
-			} else if (level.team_scores[TEAM_RED] > level.team_scores[TEAM_BLUE]) {
-				cl->resp.rank = 0;
-			} else {
-				cl->resp.rank = 1;
-			}
-		}
-	} else {
-		int score = 0, new_score, rank;
-
-		for (i = 0; i < level.num_playing_clients; i++) {
-			if (game.clients[i].pers.connected) {
-				cl = &game.clients[level.sorted_clients[i]];
-				new_score = cl->resp.score;
-				if (i == 0 || new_score != score) {
-					rank = i;
-					// assume we aren't tied until the next client is checked
-					game.clients[level.sorted_clients[i]].resp.rank = rank;
-				} else {
-					// we are tied with the previous client
-					game.clients[level.sorted_clients[i - 1]].resp.rank = rank | RANK_TIED_FLAG;
-					game.clients[level.sorted_clients[i]].resp.rank = rank | RANK_TIED_FLAG;
-				}
-				score = new_score;
-			}
-		}
-	}
-
-	//gi.Com_PrintFmt("{}: 0={} 1={} 2={} 3={} 4={}\n", __FUNCTION__, level.sorted_clients[0], level.sorted_clients[1], level.sorted_clients[2], level.sorted_clients[3], level.sorted_clients[4]);
-	
-	// see if it is time to end the level
-	//CheckExitRules();
-}
 
 /*
 ===================
@@ -830,6 +699,12 @@ G_AdjustPlayerScore
 */
 void G_AdjustPlayerScore(gclient_t *cl, int32_t offset, bool adjust_team, int32_t team_offset) {
 	if (!cl) return;
+
+	if (level.warmup_time)
+		return;
+
+	if (level.intermission_queued)
+		return;
 
 	if (offset || team_offset) {
 		cl->resp.score += offset;
@@ -862,6 +737,12 @@ G_SetPlayerScore
 void G_SetPlayerScore(gclient_t *cl, int32_t value) {
 	if (!cl) return;
 
+	if (level.warmup_time)
+		return;
+
+	if (level.intermission_queued)
+		return;
+
 	cl->resp.score = value;
 	CalculateRanks();
 }
@@ -873,6 +754,13 @@ G_AdjustTeamScore
 ===================
 */
 void G_AdjustTeamScore(int team, int32_t offset) {
+
+	if (level.warmup_time)
+		return;
+
+	if (level.intermission_queued)
+		return;
+
 	if (team == TEAM_RED)
 		level.team_scores[TEAM_RED] += offset;
 	else if (team == TEAM_BLUE)
@@ -886,6 +774,13 @@ G_SetTeamScore
 ===================
 */
 void G_SetTeamScore(int team, int32_t value) {
+
+	if (level.warmup_time)
+		return;
+
+	if (level.intermission_queued)
+		return;
+
 	if (team == TEAM_RED)
 		level.team_scores[TEAM_RED] = value;
 	else if (team == TEAM_BLUE)

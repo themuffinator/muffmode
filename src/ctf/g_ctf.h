@@ -41,7 +41,6 @@ void GT_CTF_DropFlag(edict_t *ent, gitem_t *item);
 void GT_CTF_Effects(edict_t *player);
 void Teams_CalcScores();
 void Teams_CalcRankings(std::array<uint32_t, MAX_CLIENTS> &player_ranks); // [Paril-KEX]
-void CheckEndTDMLevel(); // [Paril-KEX]
 void GT_CTF_DeadDropFlag(edict_t *self);
 //void CTFTeam_f(edict_t *ent);
 void GT_CTF_FlagSetup(edict_t *ent);

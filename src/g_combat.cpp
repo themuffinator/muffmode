@@ -542,6 +542,11 @@ void T_Damage(edict_t *targ, edict_t *inflictor, edict_t *attacker, const vec3_t
 	if (!targ->takedamage)
 		return;
 
+	// the intermission has already been qualified for, so don't
+	// allow any extra scoring
+	if (level.intermission_queued)
+		return;
+
 	if (g_instagib->integer && attacker->client && targ->client)
 	{
 		// [Kex] always kill no matter what on instagib

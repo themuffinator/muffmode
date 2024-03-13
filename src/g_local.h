@@ -1188,16 +1188,17 @@ struct level_locals_t {
 
 	char		level_name[MAX_QPATH]; // the descriptive name (Outer Base, etc)
 	char		mapname[MAX_QPATH];	// the server name (base1, etc)
-	char		nextmap[MAX_QPATH];	// go here when fraglimit is hit
+	char		nextmap[MAX_QPATH];	// go here when score limit is hit
 	char		forcemap[MAX_QPATH];	// go here
 
 	// intermission state
-	gtime_t		intermission_time; // time the intermission was started
+	gtime_t		intermission_time;		// time the intermission was started
 	gtime_t		intermission_queued;	// intermission was qualified, but
 										// wait INTERMISSION_DELAY_TIME before
 										// actually going there so the last
 										// frag can be watched.  Disable future
 										// kills during this delay
+
 	const char	*changemap;
 	const char	*achievement;
 	bool		intermission_exit;
@@ -1943,6 +1944,8 @@ extern cvar_t *skill;
 extern cvar_t *fraglimit;
 extern cvar_t *capturelimit;
 extern cvar_t *timelimit;
+extern cvar_t *roundlimit;
+extern cvar_t *roundtimelimit;
 
 extern cvar_t *g_quick_weapon_switch;
 extern cvar_t *g_instant_weapon_switch;
@@ -2220,7 +2223,6 @@ const char *Teams_TeamName(int team);
 const char *Teams_OtherTeamName(int team);
 int Teams_OtherTeamNum(team_t team);
 bool IsTeamplay();
-void CalculateRanks();
 void G_AdjustPlayerScore(gclient_t *cl, int32_t offset, bool adjust_team, int32_t team_offset);
 void Horde_AdjustPlayerScore(gclient_t *cl, int32_t offset);
 void G_SetPlayerScore(gclient_t *cl, int32_t value);
@@ -2684,6 +2686,10 @@ void SaveClientData();
 void FetchClientEntData(edict_t *ent);
 void EndDMLevel();
 void FindIntermissionPoint(void);
+void CalculateRanks();
+void CheckExitRules();
+int GT_ScoreLimit();
+const char *GT_ScoreLimitString();
 
 //
 // g_chase.c
@@ -3465,7 +3471,7 @@ struct dm_game_rt {
 	void (*PlayerDisconnect)(edict_t *ent);
 	int (*ChangeDamage)(edict_t *targ, edict_t *attacker, int damage, mod_t mod);
 	int (*ChangeKnockback)(edict_t *targ, edict_t *attacker, int knockback, mod_t mod);
-	int (*CheckDMRules)();
+	int (*CheckExitRules)();
 };
 
 // ROGUE

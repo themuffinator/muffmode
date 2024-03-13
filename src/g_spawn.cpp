@@ -1789,6 +1789,8 @@ static void G_InitStatusbar()
 			// team info
 			sb.ifstat(STAT_TEAMPLAY_INFO).xl(0).yb(-88).stat_string(STAT_TEAMPLAY_INFO).endifstat();
 		} else {
+			int scorelimit = GT_ScoreLimit();
+
 			// spectator
 			sb.ifstat(STAT_SPECTATOR).xv(0).yb(-58).string2("SPECTATOR MODE").endifstat();	//104
 
@@ -1801,9 +1803,8 @@ static void G_InitStatusbar()
 			sb.yb(-83).ifstat(STAT_MINISCORE_SECOND_PIC).xr(-26).pic(STAT_MINISCORE_SECOND_PIC).endifstat().xr(-78).num(3, STAT_MINISCORE_SECOND_SCORE);
 			sb.ifstat(STAT_MINISCORE_SECOND_POS).yb(-85).xr(-28).pic(STAT_MINISCORE_SECOND_POS).endifstat();
 
-			if (fraglimit->integer)
-				//sb.ifstat(STAT_SCORELIMIT).xr(-12).yb(-57).loc_stat_string(STAT_SCORELIMIT).endifstat();
-				sb.ifstat(STAT_HEALTH_ICON).xr(-12).yb(-57).loc_rstring(G_Fmt("{}", fraglimit->integer).data()).endifstat();
+			if (scorelimit)
+				sb.ifstat(STAT_HEALTH_ICON).xr(-12).yb(-57).loc_rstring(G_Fmt("{}", scorelimit).data()).endifstat();
 		}
 
 		// id view state

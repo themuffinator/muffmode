@@ -546,14 +546,6 @@ void Teams_CalcRankings(std::array<uint32_t, MAX_CLIENTS> &player_ranks) {
 			player_ranks[player->s.number - 1] = player->client->resp.team == winning_team ? 1 : 2;
 }
 
-void CheckEndTDMLevel() {
-	if (level.team_scores[TEAM_RED] >= fraglimit->integer || level.team_scores[TEAM_BLUE] >= fraglimit->integer) {
-		gi.LocBroadcast_Print(PRINT_HIGH, "$g_fraglimit_hit");
-		EndDMLevel();
-	}
-}
-
-
 void Menu_Dirty() {
 	for (auto player : active_players())
 		if (player->client->menu) {
@@ -1466,6 +1458,7 @@ static void Menu_ServerInfo_Update(edict_t *ent) {
 	bool noitems = clanarena->integer || g_instagib->integer || g_nadefest->integer;
 	bool infiniteammo = g_instagib->integer || g_nadefest->integer;
 	bool items = ItemSpawnsEnabled();
+	int scorelimit = GT_ScoreLimit();
 
 	Q_strlcpy(entries[i].text, "Match Info", sizeof(entries[i].text));
 	i++;
@@ -1481,12 +1474,8 @@ static void Menu_ServerInfo_Update(edict_t *ent) {
 		i++;
 	}
 
-	if (!ctf->integer && fraglimit->integer > 0) {
-		Q_strlcpy(entries[i].text, G_Fmt("frag limit: {}", fraglimit->integer).data(), sizeof(entries[i].text));
-		i++;
-		limits = true;
-	} else if (ctf->integer && capturelimit->integer > 0) {
-		Q_strlcpy(entries[i].text, G_Fmt("capture limit: {}", capturelimit->integer).data(), sizeof(entries[i].text));
+	if (scorelimit) {
+		Q_strlcpy(entries[i].text, G_Fmt("{} limit: {}", GT_ScoreLimitString(), scorelimit).data(), sizeof(entries[i].text));
 		i++;
 		limits = true;
 	}
