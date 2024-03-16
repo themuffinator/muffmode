@@ -35,12 +35,12 @@ void parasite_end_fidget(edict_t *self);
 void parasite_do_fidget(edict_t *self);
 void parasite_refidget(edict_t *self);
 
-void parasite_launch(edict_t *self)
+static void parasite_launch(edict_t *self)
 {
 	gi.sound(self, CHAN_WEAPON, sound_launch, 1, ATTN_NORM, 0);
 }
 
-void parasite_reel_in(edict_t *self)
+static void parasite_reel_in(edict_t *self)
 {
 	gi.sound(self, CHAN_WEAPON, sound_reelin, 1, ATTN_NORM, 0);
 }
@@ -50,22 +50,15 @@ MONSTERINFO_SIGHT(parasite_sight) (edict_t *self, edict_t *other) -> void
 	gi.sound(self, CHAN_WEAPON, sound_sight, 1, ATTN_NORM, 0);
 }
 
-void parasite_tap(edict_t *self)
+static void parasite_tap(edict_t *self)
 {
 	gi.sound(self, CHAN_WEAPON, sound_tap, 0.75f, 2.75f, 0);
 }
 
-void parasite_scratch(edict_t *self)
+static void parasite_scratch(edict_t *self)
 {
 	gi.sound(self, CHAN_WEAPON, sound_scratch, 0.75f, 2.75f, 0);
 }
-
-#if 0
-void parasite_search(edict_t *self)
-{
-	gi.sound(self, CHAN_WEAPON, sound_search, 1, ATTN_IDLE, 0);
-}
-#endif
 
 mframe_t parasite_frames_start_fidget[] = {
 	{ ai_stand },
@@ -166,18 +159,6 @@ mframe_t parasite_frames_start_run[] = {
 };
 MMOVE_T(parasite_move_start_run) = { FRAME_run01, FRAME_run02, parasite_frames_start_run, parasite_run };
 
-#if 0
-mframe_t parasite_frames_stop_run[] = {
-	{ ai_run, 20 },
-	{ ai_run, 20 },
-	{ ai_run, 12 },
-	{ ai_run, 10 },
-	{ ai_run },
-	{ ai_run }
-};
-MMOVE_T(parasite_move_stop_run) = { FRAME_run10, FRAME_run15, parasite_frames_stop_run, nullptr };
-#endif
-
 MONSTERINFO_RUN(parasite_start_run) (edict_t *self) -> void
 {
 	if (self->monsterinfo.aiflags & AI_STAND_GROUND)
@@ -216,18 +197,6 @@ mframe_t parasite_frames_start_walk[] = {
 };
 MMOVE_T(parasite_move_start_walk) = { FRAME_run01, FRAME_run02, parasite_frames_start_walk, nullptr };
 
-#if 0
-mframe_t parasite_frames_stop_walk[] = {
-	{ ai_walk, 20 },
-	{ ai_walk, 20 },
-	{ ai_walk, 12 },
-	{ ai_walk, 10 },
-	{ ai_walk },
-	{ ai_walk }
-};
-MMOVE_T(parasite_move_stop_walk) = { FRAME_run10, FRAME_run15, parasite_frames_stop_walk, nullptr };
-#endif
-
 MONSTERINFO_WALK(parasite_start_walk) (edict_t *self) -> void
 {
 	M_SetAnimation(self, &parasite_move_start_walk);
@@ -239,14 +208,14 @@ void parasite_walk(edict_t *self)
 }
 
 // hard reset on proboscis; like we never existed
-THINK(proboscis_reset) (edict_t *self) -> void
+static THINK(proboscis_reset) (edict_t *self) -> void
 {
 	self->owner->proboscus = nullptr;
 	G_FreeEdict(self->proboscus);
 	G_FreeEdict(self);
 }
 
-DIE(proboscis_die) (edict_t *self, edict_t *inflictor, edict_t *attacker, int damage, const vec3_t &point, const mod_t &mod) -> void
+static DIE(proboscis_die) (edict_t *self, edict_t *inflictor, edict_t *attacker, int damage, const vec3_t &point, const mod_t &mod) -> void
 {
 	if (mod.id == MOD_CRUSH)
 		proboscis_reset(self);
@@ -353,7 +322,7 @@ constexpr mframe_t parasite_frames_break[] = {
 };
 MMOVE_T(parasite_move_break) = { FRAME_break01, FRAME_break32, parasite_frames_break, parasite_start_run };
 
-TOUCH(proboscis_touch) (edict_t *self, edict_t *other, const trace_t &tr, bool other_touching_self) -> void
+static TOUCH(proboscis_touch) (edict_t *self, edict_t *other, const trace_t &tr, bool other_touching_self) -> void
 {
 	// owner isn't trying to probe any more, don't touch anything
 	if (self->owner->monsterinfo.active_move != &parasite_move_fire_proboscis)
@@ -448,7 +417,7 @@ constexpr vec3_t parasite_drain_offsets[] = {
 	{ 2.1f, 0, 7.6f },
 };
 
-vec3_t parasite_get_proboscis_start(edict_t *self)
+static vec3_t parasite_get_proboscis_start(edict_t *self)
 {
 	vec3_t f, r, start;
 	AngleVectors(self->s.angles, f, r, nullptr);
@@ -463,7 +432,7 @@ vec3_t parasite_get_proboscis_start(edict_t *self)
 	return start;
 }
 
-THINK(proboscis_think) (edict_t *self) -> void
+static THINK(proboscis_think) (edict_t *self) -> void
 {
 	self->nextthink = level.time + FRAME_TIME_S; // start doing stuff on next frame
 
@@ -692,9 +661,7 @@ MONSTERINFO_ATTACK(parasite_attack) (edict_t *self) -> void
 	M_SetAnimation(self, &parasite_move_fire_proboscis);
 }
 
-//================
-// ROGUE
-void parasite_jump_down(edict_t *self)
+static void parasite_jump_down(edict_t *self)
 {
 	vec3_t forward, up;
 
@@ -703,7 +670,7 @@ void parasite_jump_down(edict_t *self)
 	self->velocity += (up * 300);
 }
 
-void parasite_jump_up(edict_t *self)
+static void parasite_jump_up(edict_t *self)
 {
 	vec3_t forward, up;
 
@@ -712,7 +679,7 @@ void parasite_jump_up(edict_t *self)
 	self->velocity += (up * 450);
 }
 
-void parasite_jump_wait_land(edict_t *self)
+static void parasite_jump_wait_land(edict_t *self)
 {
 	if (self->groundentity == nullptr)
 	{
@@ -749,7 +716,7 @@ mframe_t parasite_frames_jump_down[] = {
 };
 MMOVE_T(parasite_move_jump_down) = { FRAME_jump01, FRAME_jump08, parasite_frames_jump_down, parasite_run };
 
-void parasite_jump(edict_t *self, blocked_jump_result_t result)
+static void parasite_jump(edict_t *self, blocked_jump_result_t result)
 {
 	if (!self->enemy)
 		return;
@@ -779,8 +746,6 @@ MONSTERINFO_BLOCKED(parasite_blocked) (edict_t *self, float dist) -> bool
 
 	return false;
 }
-// ROGUE
-//================
 
 /*
 ===
@@ -788,7 +753,7 @@ Death Stuff Starts
 ===
 */
 
-void parasite_dead(edict_t *self)
+static void parasite_dead(edict_t *self)
 {
 	self->mins = { -16, -16, -24 };
 	self->maxs = { 16, 16, -8 };
@@ -813,7 +778,7 @@ mframe_t parasite_frames_death[] = {
 };
 MMOVE_T(parasite_move_death) = { FRAME_death101, FRAME_death107, parasite_frames_death, parasite_dead };
 
-DIE(parasite_die) (edict_t *self, edict_t *inflictor, edict_t *attacker, int damage, const vec3_t &point, const mod_t &mod) -> void
+static DIE(parasite_die) (edict_t *self, edict_t *inflictor, edict_t *attacker, int damage, const vec3_t &point, const mod_t &mod) -> void
 {
 	if (self->proboscus && self->proboscus->style != 2)
 		proboscis_reset(self->proboscus);
@@ -869,7 +834,7 @@ mframe_t parasite_frames_pain1[] = {
 };
 MMOVE_T(parasite_move_pain1) = { FRAME_pain101, FRAME_pain111, parasite_frames_pain1, parasite_start_run };
 
-PAIN(parasite_pain) (edict_t *self, edict_t *other, float kick, int damage, const mod_t &mod) -> void
+static PAIN(parasite_pain) (edict_t *self, edict_t *other, float kick, int damage, const mod_t &mod) -> void
 {
 	if (level.time < self->pain_debounce_time)
 		return;
@@ -949,7 +914,7 @@ void SP_monster_parasite(edict_t *self)
 	self->monsterinfo.attack = parasite_attack;
 	self->monsterinfo.sight = parasite_sight;
 	self->monsterinfo.idle = parasite_idle;
-	self->monsterinfo.blocked = parasite_blocked; // PGM
+	self->monsterinfo.blocked = parasite_blocked;
 	self->monsterinfo.setskin = parasite_setskin;
 
 	gi.linkentity(self);

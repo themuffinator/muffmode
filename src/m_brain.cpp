@@ -155,21 +155,6 @@ MONSTERINFO_WALK(brain_walk) (edict_t *self) -> void
 	M_SetAnimation(self, &brain_move_walk1);
 }
 
-#if 0
-mframe_t brain_frames_defense[] = {
-	{ ai_move },
-	{ ai_move },
-	{ ai_move },
-	{ ai_move },
-	{ ai_move },
-	{ ai_move },
-	{ ai_move },
-	{ ai_move },
-	{ ai_move }
-};
-MMOVE_T(brain_move_defense) = { FRAME_defens01, FRAME_defens08, brain_frames_defense, nullptr };
-#endif
-
 mframe_t brain_frames_pain3[] = {
 	{ ai_move, -2 },
 	{ ai_move, 2 },
@@ -377,7 +362,6 @@ MONSTERINFO_MELEE(brain_melee) (edict_t *self) -> void
 		M_SetAnimation(self, &brain_move_attack2);
 }
 
-// RAFAEL
 static bool brain_tounge_attack_ok(const vec3_t &start, const vec3_t &end)
 {
 	vec3_t dir, angles;
@@ -571,7 +555,6 @@ mframe_t brain_frames_attack4[] = {
 };
 MMOVE_T(brain_move_attack4) = { FRAME_walk101, FRAME_walk111, brain_frames_attack4, brain_run };
 
-// RAFAEL
 MONSTERINFO_ATTACK(brain_attack) (edict_t *self) -> void
 {
 	float r = range_to(self, self->enemy);
@@ -585,7 +568,6 @@ MONSTERINFO_ATTACK(brain_attack) (edict_t *self) -> void
 	else if (!self->spawnflags.has(SPAWNFLAG_BRAIN_NO_LASERS))
 		M_SetAnimation(self, &brain_move_attack4);
 }
-// RAFAEL
 
 //
 // RUN
@@ -768,14 +750,10 @@ void SP_monster_brain(edict_t *self)
 	self->monsterinfo.stand = brain_stand;
 	self->monsterinfo.walk = brain_walk;
 	self->monsterinfo.run = brain_run;
-	// PMM
 	self->monsterinfo.dodge = M_MonsterDodge;
 	self->monsterinfo.duck = brain_duck;
 	self->monsterinfo.unduck = monster_duck_up;
-	// pmm
-	// RAFAEL
 	self->monsterinfo.attack = brain_attack;
-	// RAFAEL
 	self->monsterinfo.melee = brain_melee;
 	self->monsterinfo.sight = brain_sight;
 	self->monsterinfo.search = brain_search;

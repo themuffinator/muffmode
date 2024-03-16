@@ -50,6 +50,7 @@ pmenuhnd_t *PMenu_Open(edict_t *ent, const pmenu_t *entries, int cur, int num, v
 	ent->client->showscores = true;
 	ent->client->inmenu = true;
 	ent->client->menu = hnd;
+	ent->client->ps.stats[STAT_SHOW_STATUSBAR] = 0;
 
 	if (UpdateFunc)
 		UpdateFunc(ent);
@@ -74,6 +75,7 @@ void PMenu_Close(edict_t *ent)
 	gi.TagFree(hnd);
 	ent->client->menu = nullptr;
 	ent->client->showscores = false;
+	ent->client->ps.stats[STAT_SHOW_STATUSBAR] = ent->client->resp.team == TEAM_SPECTATOR ? (ent->client->chase_target ? 1 : 0) : 1;
 }
 
 // only use on pmenu's that have been called with PMenu_Open

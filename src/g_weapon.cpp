@@ -271,7 +271,8 @@ static void fire_lead(edict_t *self, const vec3_t &start, const vec3_t &aimdir, 
 	};
 
 	if (self->client)
-		self->client->mstats.total_shots++;
+		if (g_matchstats->integer)
+			self->client->mstats.total_shots++;
 
 	// [Paril-KEX]
 	if (self->client && !G_ShouldPlayersCollide(true))
@@ -959,7 +960,7 @@ struct fire_rail_pierce_t : pierce_args_t
 			if (!tr.ent->inuse || (!tr.ent->solid || tr.ent->solid == SOLID_TRIGGER))
 				return true;
 
-			// ZOID--added so rail goes through SOLID_BBOX entities (gibs, etc)
+			// rail goes through SOLID_BBOX entities (gibs, etc)
 			if ((tr.ent->svflags & SVF_MONSTER) || (tr.ent->client) ||
 				// ROGUE
 				(tr.ent->flags & FL_DAMAGEABLE) ||
@@ -1147,14 +1148,12 @@ static THINK(bfg_explode) (edict_t *self) -> void
 				continue;
 			if (!CanDamage(ent, self->owner))
 				continue;
-			// ROGUE - make tesla hurt by bfg
+			// make tesla hurt by bfg
 			if (!(ent->svflags & SVF_MONSTER) && !(ent->flags & FL_DAMAGEABLE) && (!ent->client) && (strcmp(ent->classname, "misc_explobox") != 0))
 				continue;
-			// ZOID
-			// don't target players in CTF
+			// don't target team mates during teamplay if we can't damage them
 			if (CheckTeamDamage(ent, self->owner))
 				continue;
-			// ZOID
 
 			v = ent->mins + ent->maxs;
 			v = ent->s.origin + (v * 0.5f);
@@ -1290,14 +1289,12 @@ static THINK(bfg_think) (edict_t *self) -> void
 		if (!ent->takedamage)
 			continue;
 
-		// ROGUE - make tesla hurt by bfg
+		// make tesla hurt by bfg
 		if (!(ent->svflags & SVF_MONSTER) && !(ent->flags & FL_DAMAGEABLE) && (!ent->client) && (strcmp(ent->classname, "misc_explobox") != 0))
 			continue;
-		// ZOID
-		// don't target players in CTF
+		// don't target team mates during teamplay if we can't damage them
 		if (CheckTeamDamage(ent, self->owner))
 			continue;
-		// ZOID
 
 		point = (ent->absmin + ent->absmax) * 0.5f;
 
@@ -2506,7 +2503,7 @@ static void tesla_remove(edict_t *self) {
 		gi.Com_Print("tesla_mine without a field!\n");
 
 	self->owner = self->teammaster; // Going away, set the owner correctly.
-	// PGM - grenade explode does damage to self->enemy
+	// grenade explode does damage to self->enemy
 	self->enemy = nullptr;
 
 	// play quad sound if quadded and an underwater explosion
@@ -2695,7 +2692,7 @@ static THINK(tesla_think) (edict_t *ent) -> void {
 		if (ent->s.frame > 9) {
 			if (ent->s.frame == 10) {
 				if (ent->owner && ent->owner->client) {
-					PlayerNoise(ent->owner, ent->s.origin, PNOISE_WEAPON); // PGM
+					PlayerNoise(ent->owner, ent->s.origin, PNOISE_WEAPON);
 				}
 				ent->s.skinnum = 1;
 			} else if (ent->s.frame == 12)
@@ -2923,7 +2920,6 @@ static THINK(heat_think) (edict_t *self) -> void {
 	self->nextthink = level.time + FRAME_TIME_MS;
 }
 
-// RAFAEL
 void fire_heat(edict_t *self, const vec3_t &start, const vec3_t &dir, int damage, int speed, float damage_radius, int radius_damage, float turn_fraction) {
 	edict_t *heat;
 
@@ -2992,7 +2988,6 @@ static TOUCH(plasma_touch) (edict_t *ent, edict_t *other, const trace_t &tr, boo
 	G_FreeEdict(ent);
 }
 
-// RAFAEL
 void fire_plasma(edict_t *self, const vec3_t &start, const vec3_t &dir, int damage, int speed, float damage_radius, int radius_damage) {
 	edict_t *plasma;
 
@@ -3070,7 +3065,6 @@ static DIE(trap_die) (edict_t *self, edict_t *inflictor, edict_t *attacker, int 
 	BecomeExplosion1(self);
 }
 
-// RAFAEL
 static void SP_item_foodcube(edict_t *self) {
 	if (deathmatch->integer && g_no_health->integer) {
 		G_FreeEdict(self);
@@ -3277,7 +3271,6 @@ static THINK(Trap_Think) (edict_t *ent) -> void {
 	}
 }
 
-// RAFAEL
 void fire_trap(edict_t *self, const vec3_t &start, const vec3_t &aimdir, int speed) {
 	edict_t *trap;
 	vec3_t	 dir;
@@ -3309,9 +3302,7 @@ void fire_trap(edict_t *self, const vec3_t &start, const vec3_t &aimdir, int spe
 	trap->nextthink = level.time + 1_sec;
 	trap->think = Trap_Think;
 	trap->classname = "food_cube_trap";
-	// RAFAEL 16-APR-98
 	trap->s.sound = gi.soundindex("weapons/traploop.wav");
-	// END 16-APR-98
 
 	trap->flags |= (FL_DAMAGEABLE | FL_MECHANICAL | FL_TRAP);
 	trap->clipmask = MASK_PROJECTILE & ~CONTENTS_DEADMONSTER;

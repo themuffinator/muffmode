@@ -170,7 +170,7 @@ static int CheckPowerArmor(edict_t *ent, const vec3_t &point, const vec3_t &norm
 
 	client = ent->client;
 
-	if (dflags & (DAMAGE_NO_ARMOR | DAMAGE_NO_POWER_ARMOR)) // PGM
+	if (dflags & (DAMAGE_NO_ARMOR | DAMAGE_NO_POWER_ARMOR))
 		return 0;
 
 	if (client)
@@ -280,9 +280,7 @@ static int CheckArmor(edict_t *ent, const vec3_t &point, const vec3_t &normal, i
 	if (!damage)
 		return 0;
 
-	// ROGUE
 	if (dflags & (DAMAGE_NO_ARMOR | DAMAGE_NO_REG_ARMOR))
-		// ROGUE
 		return 0;
 
 	client = ent->client;
@@ -327,8 +325,6 @@ void M_ReactToDamage(edict_t *targ, edict_t *attacker, edict_t *inflictor)
 	if (!(attacker->client) && !(attacker->svflags & SVF_MONSTER))
 		return;
 
-	//=======
-	// ROGUE
 	// logic for tesla - if you are hit by a tesla, and can't see who you should be mad at (attacker)
 	// attack the tesla
 	// also, target the tesla if it's a "new" tesla
@@ -339,8 +335,6 @@ void M_ReactToDamage(edict_t *targ, edict_t *attacker, edict_t *inflictor)
 			TargetTesla(targ, inflictor);
 		return;
 	}
-	// ROGUE
-	//=======
 
 	if (attacker == targ || attacker == targ->enemy)
 		return;
@@ -353,7 +347,6 @@ void M_ReactToDamage(edict_t *targ, edict_t *attacker, edict_t *inflictor)
 			return;
 	}
 
-	// PGM
 	//  if we're currently mad at something a target_anger made us mad at, ignore
 	//  damage
 	if (targ->enemy && targ->monsterinfo.aiflags & AI_TARGET_ANGER)
@@ -371,13 +364,11 @@ void M_ReactToDamage(edict_t *targ, edict_t *attacker, edict_t *inflictor)
 		// remove the target anger flag
 		targ->monsterinfo.aiflags &= ~AI_TARGET_ANGER;
 	}
-	// PGM
 
 	// we recently switched from reacting to damage, don't do it
 	if (targ->monsterinfo.react_to_damage_time > level.time)
 		return;
 
-	// PMM
 	// if we're healing someone, do like above and try to stay with them
 	if ((targ->enemy) && (targ->monsterinfo.aiflags & AI_MEDIC))
 	{
@@ -392,7 +383,6 @@ void M_ReactToDamage(edict_t *targ, edict_t *attacker, edict_t *inflictor)
 		cleanupHealTarget(targ->enemy);
 		targ->monsterinfo.aiflags &= ~AI_MEDIC;
 	}
-	// PMM
 
 	// we now know that we are not both good guys
 	targ->monsterinfo.react_to_damage_time = level.time + random_time(3_sec, 5_sec);
@@ -495,8 +485,12 @@ bool OnSameTeam(edict_t *ent1, edict_t *ent2)
 	// monsters are never on our team atm
 	if (!ent1->client || !ent2->client)
 		return false;
+
 	// we're never on our own team
 	else if (ent1 == ent2)
+		return false;
+
+	if (!ent1->client || !ent2->client)
 		return false;
 
 	if (g_quadhog->integer) {
@@ -529,15 +523,14 @@ bool CheckTeamDamage(edict_t *targ, edict_t *attacker)
 }
 
 void T_Damage(edict_t *targ, edict_t *inflictor, edict_t *attacker, const vec3_t &dir, const vec3_t &point,
-			  const vec3_t &normal, int damage, int knockback, damageflags_t dflags, mod_t mod)
-{
+	const vec3_t &normal, int damage, int knockback, damageflags_t dflags, mod_t mod) {
 	gclient_t *client;
 	int		   take;
 	int		   save;
 	int		   asave;
 	int		   psave;
 	int		   te_sparks;
-	bool	   sphere_notified; // PGM
+	bool	   sphere_notified;
 
 	if (!targ->takedamage)
 		return;
@@ -547,52 +540,36 @@ void T_Damage(edict_t *targ, edict_t *inflictor, edict_t *attacker, const vec3_t
 	if (level.intermission_queued)
 		return;
 
-	if (g_instagib->integer && attacker->client && targ->client)
-	{
+	if (g_instagib->integer && attacker->client && targ->client) {
 		// [Kex] always kill no matter what on instagib
 		damage = 9999;
 	}
 
-	sphere_notified = false; // PGM
+	sphere_notified = false;
 
 	// friendly fire avoidance
 	// if enabled you can't hurt teammates (but you can hurt yourself)
 	// knockback still occurs
-	if ((targ != attacker) && !(dflags & DAMAGE_NO_PROTECTION))
-	{
+	if ((targ != attacker) && !(dflags & DAMAGE_NO_PROTECTION)) {
 		// mark as friendly fire
-		if (OnSameTeam(targ, attacker))
-		{
+		if (OnSameTeam(targ, attacker)) {
 			mod.friendly_fire = true;
 
 			// if we're not a nuke & friendly fire is disabled, just kill the damage
-			if (!g_friendly_fire->integer) {
-				/*
-				if (IsTeamplay() && OnSameTeam(targ, attacker)) {
-					attacker->client->pers.dmg_team += damage;
-
-					if (attacker->client->pers.dmg_team >= 100) {
-						int32_t score_add = floor(attacker->client->pers.dmg_team / 100);
-						attacker->client->pers.dmg_team -= score_add * 100;
-
-						gi.LocClient_Print(attacker, PRINT_CENTER, "You are on {} Team,\nstop attacking your team mates!\n", Teams_TeamName(attacker->client->resp.team));
-					}
-				}
-				*/
+			if (!g_friendly_fire->integer && (mod.id != MOD_NUKE)) {
 				damage = 0;
 			}
 		}
 	}
 
 	// easy mode takes half damage
-	if (skill->integer == 0 && !deathmatch->integer && targ->client && damage)
-	{
+	if (skill->integer == 0 && !deathmatch->integer && targ->client && damage) {
 		damage /= 2;
 		if (!damage)
 			damage = 1;
 	}
 
-	if ( ( targ->svflags & SVF_MONSTER ) != 0 ) {
+	if ((targ->svflags & SVF_MONSTER) != 0) {
 		damage *= ai_damage_scale->integer;
 	} else {
 		damage *= g_damage_scale->integer;
@@ -601,8 +578,7 @@ void T_Damage(edict_t *targ, edict_t *inflictor, edict_t *attacker, const vec3_t
 	client = targ->client;
 
 	// PMM - defender sphere takes half damage
-	if (damage && (client) && (client->owned_sphere) && (client->owned_sphere->spawnflags == SPHERE_DEFENDER))
-	{
+	if (damage && (client) && (client->owned_sphere) && (client->owned_sphere->spawnflags == SPHERE_DEFENDER)) {
 		damage /= 2;
 		if (!damage)
 			damage = 1;
@@ -615,8 +591,7 @@ void T_Damage(edict_t *targ, edict_t *inflictor, edict_t *attacker, const vec3_t
 
 	// bonus damage for surprising a monster
 	if (!(dflags & DAMAGE_RADIUS) && (targ->svflags & SVF_MONSTER) && (attacker->client) &&
-		(!targ->enemy || targ->monsterinfo.surprise_time == level.time) && (targ->health > 0))
-	{
+		(!targ->enemy || targ->monsterinfo.surprise_time == level.time) && (targ->health > 0)) {
 		damage *= 2;
 		targ->monsterinfo.surprise_time = level.time;
 	}
@@ -624,21 +599,19 @@ void T_Damage(edict_t *targ, edict_t *inflictor, edict_t *attacker, const vec3_t
 	// power amplifier tech
 	damage = Tech_ApplyPowerAmp(attacker, damage);
 
-/*freeze*/
+	/*freeze*/
 	if (freeze->integer && client && client->frozen)
 		knockback *= 2;
 	else
-/*freeze*/
+		/*freeze*/
 		if ((targ->flags & FL_NO_KNOCKBACK) ||
 			((targ->flags & FL_ALIVE_KNOCKBACK_ONLY) && (!targ->deadflag || targ->dead_time != level.time)))
 			knockback = 0;
 
 	// figure momentum add
-	if (!(dflags & DAMAGE_NO_KNOCKBACK))
-	{
+	if (!(dflags & DAMAGE_NO_KNOCKBACK)) {
 		if ((knockback) && (targ->movetype != MOVETYPE_NONE) && (targ->movetype != MOVETYPE_BOUNCE) &&
-			(targ->movetype != MOVETYPE_PUSH) && (targ->movetype != MOVETYPE_STOP))
-		{
+			(targ->movetype != MOVETYPE_PUSH) && (targ->movetype != MOVETYPE_STOP)) {
 			vec3_t normalized = dir.normalized();
 			vec3_t kvel;
 			float  mass;
@@ -646,16 +619,16 @@ void T_Damage(edict_t *targ, edict_t *inflictor, edict_t *attacker, const vec3_t
 			if (targ->mass < 50)
 				mass = 50;
 			else
-				mass = (float) targ->mass;
+				mass = (float)targ->mass;
 
 			if (targ->client && attacker == targ)
-				kvel = normalized * (1600.0f * (float)knockback / mass); // the rocket jump hack...
+				kvel = normalized * (1600.0f * knockback / mass); // the rocket jump hack...
 			else
-				kvel = normalized * (500.0f * (float)knockback / mass);
+				kvel = normalized * (500.0f * knockback / mass);
 
 			kvel *= g_knockback_scale->value;
 
-			// clan arena give a bit more knockback
+			// clan arena gives a bit more knockback
 			if (clanarena->integer)
 				kvel *= 1.25f;
 
@@ -672,7 +645,7 @@ void T_Damage(edict_t *targ, edict_t *inflictor, edict_t *attacker, const vec3_t
 
 	if (!(dflags & DAMAGE_NO_PROTECTION)) {
 
-/*freeze*/
+		/*freeze*/
 #if 0
 		if (freeze->integer && playerDamage(targ, attacker, damage)) {
 			take = 0;
@@ -681,7 +654,7 @@ void T_Damage(edict_t *targ, edict_t *inflictor, edict_t *attacker, const vec3_t
 			return;
 		}
 #endif
-/*freeze*/
+		/*freeze*/
 
 		// instagib railgun splash never inflicts damage
 		if (mod.id == MOD_RAILGUN_SPLASH) {
@@ -692,9 +665,9 @@ void T_Damage(edict_t *targ, edict_t *inflictor, edict_t *attacker, const vec3_t
 		// protection does not take splash damage
 		if (client && client->pu_time_protection > level.time && (dflags & DAMAGE_RADIUS)) {
 			//if (targ->pain_debounce_time < level.time) {
-				gi.sound(targ, CHAN_AUX, gi.soundindex("items/protect3.wav"), 1, ATTN_NORM, 0);
-				//targ->pain_debounce_time = level.time + gtime_t::from_ms(500);
-			//}
+			gi.sound(targ, CHAN_AUX, gi.soundindex("items/protect3.wav"), 1, ATTN_NORM, 0);
+			//targ->pain_debounce_time = level.time + gtime_t::from_ms(500);
+		//}
 			take = 0;
 			save = damage;
 		}
@@ -744,17 +717,12 @@ void T_Damage(edict_t *targ, edict_t *inflictor, edict_t *attacker, const vec3_t
 		}
 	}
 
-	// ZOID
 	// team armor protect
 	if (IsTeamplay() && targ->client && attacker->client &&
 		targ->client->resp.team == attacker->client->resp.team && targ != attacker &&
-		g_teamplay_armor_protect->integer)
-	{
+		g_teamplay_armor_protect->integer) {
 		psave = asave = 0;
-	}
-	else
-	{
-		// ZOID
+	} else {
 		psave = CheckPowerArmor(targ, point, normal, take, dflags);
 		take -= psave;
 
@@ -768,94 +736,79 @@ void T_Damage(edict_t *targ, edict_t *inflictor, edict_t *attacker, const vec3_t
 	// check for protection powerup
 	if (!(dflags & DAMAGE_NO_PROTECTION) && client && client->pu_time_protection > level.time) {
 		//if (targ->pain_debounce_time < level.time) {
-			gi.sound(targ, CHAN_AUX, gi.soundindex("items/protect3.wav"), 1, ATTN_NORM, 0);
-			//targ->pain_debounce_time = level.time + 2_sec;
-		//}
+		gi.sound(targ, CHAN_AUX, gi.soundindex("items/protect3.wav"), 1, ATTN_NORM, 0);
+		//targ->pain_debounce_time = level.time + 2_sec;
+	//}
 		take *= 0.5;
 	}
 
-	// ZOID
 	// resistance tech
 	take = Tech_ApplyDisruptorShield(targ, take);
-	// ZOID
 
-	// ZOID
 	GT_CTF_CheckHurtCarrier(targ, attacker);
-	// ZOID
 
-	// ROGUE - this option will do damage both to the armor and person. originally for DPU rounds
-	if (dflags & DAMAGE_DESTROY_ARMOR)
-	{
+	// this option will do damage both to the armor and person. originally for DPU rounds
+	if (dflags & DAMAGE_DESTROY_ARMOR) {
 		if (!(targ->flags & FL_GODMODE) && !(dflags & DAMAGE_NO_PROTECTION) &&
-			!(client && client->pu_time_protection > level.time))
-		{
+			!(client && client->pu_time_protection > level.time)) {
 			take = damage;
 		}
 	}
-	// ROGUE
-	if (targ != attacker && targ->health > 0) {
+
+	if (targ != attacker && attacker->client && targ->health > 0) {
 		int stat_take = take;
 		if (stat_take > targ->health)
 			stat_take = targ->health;
 
-		if (attacker->client) {
-			// clan arena player scoring - 1 score per 100 damage dealt to opponents
-			if (clanarena->integer && !OnSameTeam(targ, attacker)) {
-				//TODO: cap this to target's theoretical max takeable damage (to 0 health)
-				attacker->client->pers.dmg_scorer += take + psave + asave;
+		// clan arena player scoring - 1 score per 100 damage dealt to opponents
+		if (clanarena->integer && !OnSameTeam(targ, attacker)) {
+			//TODO: cap this to target's theoretical max takeable damage (to 0 health)
+			attacker->client->pers.dmg_scorer += take + psave + asave;
 
-				if (attacker->client->pers.dmg_scorer >= 100) {
-					int32_t score_add = floor(attacker->client->pers.dmg_scorer / 100);
-					attacker->client->pers.dmg_scorer -= score_add * 100;
+			if (attacker->client->pers.dmg_scorer >= 100) {
+				int32_t score_add = floor(attacker->client->pers.dmg_scorer / 100);
+				attacker->client->pers.dmg_scorer -= score_add * 100;
 
-					G_AdjustPlayerScore(attacker->client, score_add, false, 0);
-				}
+				G_AdjustPlayerScore(attacker->client, score_add, false, 0);
 			}
-			// team damage checks and warnings
-			if (OnSameTeam(targ, attacker)) {
-				attacker->client->pers.dmg_team += take + psave + asave;
-
-				if (attacker->client->pers.dmg_team >= 100) {
-					int32_t score_add = floor(attacker->client->pers.dmg_team / 100);
-					attacker->client->pers.dmg_team -= score_add * 100;
-
-					gi.LocClient_Print(attacker, PRINT_CENTER, "You are on {} Team,\nstop attacking your team mates!\n", Teams_TeamName(attacker->client->resp.team));
-				}
-			}
-
-			// [Paril-KEX] player hit markers
-			if (!((targ->svflags & SVF_DEADMONSTER) || (targ->flags & FL_NO_DAMAGE_EFFECTS)) && mod.id != MOD_TARGET_LASER) {
-				attacker->client->ps.stats[STAT_HIT_MARKER] += take + psave + asave;
-			}
-			attacker->client->mstats.total_dmg_dealt += stat_take + psave + asave;
 		}
-		if (targ->client)
-			targ->client->mstats.total_dmg_received += stat_take + psave + asave;
+		// team damage checks and warnings
+		if (OnSameTeam(targ, attacker)) {
+			attacker->client->pers.dmg_team += take + psave + asave;
+
+			if (attacker->client->pers.dmg_team >= 100) {
+				int32_t score_add = floor(attacker->client->pers.dmg_team / 100);
+				attacker->client->pers.dmg_team -= score_add * 100;
+
+				gi.LocClient_Print(attacker, PRINT_CENTER, "You are on {} Team,\nstop attacking your team mates!\n", Teams_TeamName(attacker->client->resp.team));
+			}
+		}
+
+		// [Paril-KEX] player hit markers
+		if (!((targ->svflags & SVF_DEADMONSTER) || (targ->flags & FL_NO_DAMAGE_EFFECTS)) && mod.id != MOD_TARGET_LASER) {
+			attacker->client->ps.stats[STAT_HIT_MARKER] += take + psave + asave;
+		}
+		if (g_matchstats->integer) {
+			attacker->client->mstats.total_dmg_dealt += stat_take + psave + asave;
+
+			if (targ->client)
+				targ->client->mstats.total_dmg_received += stat_take + psave + asave;
+		}
 	}
 
 	// do the damage
-	if (take)
-	{
-		if (!(targ->flags & FL_NO_DAMAGE_EFFECTS))
-		{
-			// ROGUE
+	if (take) {
+		if (!(targ->flags & FL_NO_DAMAGE_EFFECTS)) {
 			if (targ->flags & FL_MECHANICAL)
 				SpawnDamage(TE_ELECTRIC_SPARKS, point, normal, take);
-			// ROGUE
-			else if ((targ->svflags & SVF_MONSTER) || (client))
-			{
-				// XATRIX
+			else if ((targ->svflags & SVF_MONSTER) || (client)) {
 				if (strcmp(targ->classname, "monster_gekk") == 0)
 					SpawnDamage(TE_GREENBLOOD, point, normal, take);
-				// XATRIX
-				// ROGUE
 				else if (mod.id == MOD_CHAINFIST)
 					SpawnDamage(TE_MOREBLOOD, point, normal, 255);
-				// ROGUE
 				else
 					SpawnDamage(TE_BLOOD, point, normal, take);
-			}
-			else
+			} else
 				SpawnDamage(te_sparks, point, normal, take);
 		}
 
@@ -865,19 +818,15 @@ void T_Damage(edict_t *targ, edict_t *inflictor, edict_t *attacker, const vec3_t
 		if ((targ->flags & FL_IMMORTAL) && targ->health <= 0)
 			targ->health = 1;
 
-		// PGM - spheres need to know who to shoot at
-		if (client && client->owned_sphere)
-		{
+		// spheres need to know who to shoot at
+		if (client && client->owned_sphere) {
 			sphere_notified = true;
 			if (client->owned_sphere->pain)
 				client->owned_sphere->pain(client->owned_sphere, attacker, 0, 0, mod);
 		}
-		// PGM
 
-		if (targ->health <= 0)
-		{
-			if ((targ->svflags & SVF_MONSTER) || (client))
-			{
+		if (targ->health <= 0) {
+			if ((targ->svflags & SVF_MONSTER) || (client)) {
 				targ->flags |= FL_ALIVE_KNOCKBACK_ONLY;
 				targ->dead_time = level.time;
 
@@ -892,32 +841,26 @@ void T_Damage(edict_t *targ, edict_t *inflictor, edict_t *attacker, const vec3_t
 			targ->monsterinfo.damage_from = point;
 			targ->monsterinfo.damage_mod = mod;
 			targ->monsterinfo.damage_knockback += knockback;
-			
 			Killed(targ, inflictor, attacker, take, point, mod);
 			return;
 		}
 	}
 
-	// PGM - spheres need to know who to shoot at
-	if (!sphere_notified)
-	{
-		if (client && client->owned_sphere)
-		{
+	// spheres need to know who to shoot at
+	if (!sphere_notified) {
+		if (client && client->owned_sphere) {
 			sphere_notified = true;
 			if (client->owned_sphere->pain)
 				client->owned_sphere->pain(client->owned_sphere, attacker, 0, 0, mod);
 		}
 	}
-	// PGM
 
-	if ( targ->client ) {
+	if (targ->client) {
 		targ->client->last_attacker_time = level.time;
 	}
 
-	if (targ->svflags & SVF_MONSTER)
-	{
-		if (damage > 0)
-		{
+	if (targ->svflags & SVF_MONSTER) {
+		if (damage > 0) {
 			M_ReactToDamage(targ, attacker, inflictor);
 
 			targ->monsterinfo.damage_attacker = attacker;
@@ -930,15 +873,13 @@ void T_Damage(edict_t *targ, edict_t *inflictor, edict_t *attacker, const vec3_t
 
 		if (targ->monsterinfo.setskin)
 			targ->monsterinfo.setskin(targ);
-	}
-	else if (take && targ->pain)
-		targ->pain(targ, attacker, (float) knockback, take, mod);
+	} else if (take && targ->pain)
+		targ->pain(targ, attacker, (float)knockback, take, mod);
 
 	// add to the damage inflicted on a player this frame
 	// the total will be turned into screen blends and view angle kicks
 	// at the end of the frame
-	if (client)
-	{
+	if (client) {
 		client->damage_parmor += psave;
 		client->damage_armor += asave;
 		client->damage_blood += take;
@@ -946,22 +887,18 @@ void T_Damage(edict_t *targ, edict_t *inflictor, edict_t *attacker, const vec3_t
 		client->damage_from = point;
 		client->last_damage_time = level.time + COOP_DAMAGE_RESPAWN_TIME;
 
-		if (!(dflags & DAMAGE_NO_INDICATOR) && inflictor != world && attacker != world && (take || psave || asave))
-		{
+		if (!(dflags & DAMAGE_NO_INDICATOR) && inflictor != world && attacker != world && (take || psave || asave)) {
 			damage_indicator_t *indicator = nullptr;
 			size_t i;
 
-			for (i = 0; i < client->num_damage_indicators; i++)
-			{
-				if ((point - client->damage_indicators[i].from).length() < 32.f)
-				{
+			for (i = 0; i < client->num_damage_indicators; i++) {
+				if ((point - client->damage_indicators[i].from).length() < 32.f) {
 					indicator = &client->damage_indicators[i];
 					break;
 				}
 			}
 
-			if (!indicator && i != MAX_DAMAGE_INDICATORS)
-			{
+			if (!indicator && i != MAX_DAMAGE_INDICATORS) {
 				indicator = &client->damage_indicators[i];
 				// for projectile direct hits, use the attacker; otherwise
 				// use the inflictor (rocket splash should point to the rocket)
@@ -970,8 +907,7 @@ void T_Damage(edict_t *targ, edict_t *inflictor, edict_t *attacker, const vec3_t
 				client->num_damage_indicators++;
 			}
 
-			if (indicator)
-			{
+			if (indicator) {
 				indicator->health += take;
 				indicator->power += psave;
 				indicator->armor += asave;

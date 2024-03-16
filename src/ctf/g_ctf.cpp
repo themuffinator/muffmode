@@ -373,7 +373,7 @@ bool GT_CTF_PickupFlag(edict_t *ent, edict_t *other) {
 	return true;
 }
 
-TOUCH(GT_CTF_DropFlagTouch) (edict_t *ent, edict_t *other, const trace_t &tr, bool other_touching_self) -> void {
+static TOUCH(GT_CTF_DropFlagTouch) (edict_t *ent, edict_t *other, const trace_t &tr, bool other_touching_self) -> void {
 
 	if (!ctf->integer)
 		return;
@@ -386,7 +386,7 @@ TOUCH(GT_CTF_DropFlagTouch) (edict_t *ent, edict_t *other, const trace_t &tr, bo
 	Touch_Item(ent, other, tr, other_touching_self);
 }
 
-THINK(GT_CTF_DropFlagThink) (edict_t *ent) -> void {
+static THINK(GT_CTF_DropFlagThink) (edict_t *ent) -> void {
 
 	if (!ctf->integer)
 		return;
@@ -445,7 +445,7 @@ void GT_CTF_DropFlag(edict_t *ent, gitem_t *item) {
 		gi.LocClient_Print(ent, PRINT_HIGH, "$g_winners_drop_flags");
 }
 
-THINK(GT_CTF_FlagThink) (edict_t *ent) -> void {
+static THINK(GT_CTF_FlagThink) (edict_t *ent) -> void {
 
 	if (!ctf->integer)
 		return;
@@ -1747,7 +1747,6 @@ void Menu_Update_Join(edict_t *ent) {
 		entries[index].SelectFunc = Menu_PMStats;
 	}
 
-	// KEX_FIXME: what's this for?
 	if (g_dm_force_join->string && *g_dm_force_join->string) {
 		if (IsTeamplay()) {
 			if (Q_strcasecmp(g_dm_force_join->string, "red") == 0) {

@@ -171,16 +171,6 @@ MMOVE_T(jorg_move_run) = { FRAME_walk06, FRAME_walk19, jorg_frames_run, nullptr 
 //
 // walk
 //
-#if 0
-mframe_t jorg_frames_start_walk[] = {
-	{ ai_walk, 5 },
-	{ ai_walk, 6 },
-	{ ai_walk, 7 },
-	{ ai_walk, 9 },
-	{ ai_walk, 15 }
-};
-MMOVE_T(jorg_move_start_walk) = { FRAME_walk01, FRAME_walk05, jorg_frames_start_walk, nullptr };
-#endif
 
 mframe_t jorg_frames_walk[] = {
 	{ ai_walk, 17 },
@@ -199,18 +189,6 @@ mframe_t jorg_frames_walk[] = {
 	{ ai_walk, 9 }
 };
 MMOVE_T(jorg_move_walk) = { FRAME_walk06, FRAME_walk19, jorg_frames_walk, nullptr };
-
-#if 0
-mframe_t jorg_frames_end_walk[] = {
-	{ ai_walk, 11 },
-	{ ai_walk },
-	{ ai_walk },
-	{ ai_walk },
-	{ ai_walk, 8 },
-	{ ai_walk, -8 }
-};
-MMOVE_T(jorg_move_end_walk) = { FRAME_walk20, FRAME_walk25, jorg_frames_end_walk, nullptr };
-#endif
 
 MONSTERINFO_WALK(jorg_walk) (edict_t *self) -> void
 {

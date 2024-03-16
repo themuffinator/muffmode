@@ -250,7 +250,6 @@ enum
 	FRAME_deathc6,
 	FRAME_deathc7,
 	FRAME_deathc8,
-	// PGM
 	FRAME_jump1,
 	FRAME_jump2,
 	FRAME_jump3,
@@ -260,7 +259,6 @@ enum
 	FRAME_jump7,
 	FRAME_jump8,
 	FRAME_jump9
-	// PGM
 };
 
 constexpr float MODEL_SCALE = 1.000000f;

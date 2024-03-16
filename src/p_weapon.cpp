@@ -139,18 +139,6 @@ void P_ProjectSource(edict_t *ent, const vec3_t &angles, vec3_t distance, vec3_t
 	{
 		end = tr.endpos;
 		result_dir = (end - result_start).normalized();
-
-#if 0
-		// correction for blocked shots
-		trace_t eye_tr = gi.traceline(result_start, result_start + (result_dir * tr.fraction * 8192.f), ent, mask);
-
-		if ((eye_tr.endpos - tr.endpos).length() > 32.f)
-		{
-			result_start = eye_position;
-			result_dir = (end - result_start).normalized();
-			return;
-		}
-#endif
 	}
 }
 
@@ -286,12 +274,10 @@ bool Pickup_Weapon(edict_t *ent, edict_t *other)
 
 	if (!(ent->spawnflags & SPAWNFLAG_ITEM_DROPPED))
 	{
-		// give them some ammo with it
-		// PGM -- IF APPROPRIATE!
-		if (ent->item->ammo) // PGM
+		// give them some ammo with it if appropriate
+		if (ent->item->ammo)
 		{
 			ammo = GetItemByIndex(ent->item->ammo);
-			// RAFAEL: Don't get infinite ammo with trap
 			if (G_CheckInfiniteAmmo(ammo))
 				Add_Ammo(other, ammo, 1000);
 			else
@@ -329,9 +315,9 @@ static void Weapon_RunThink(edict_t *ent)
 		return;
 
 	P_DamageModifier(ent);
-	// RAFAEL
+
 	is_quadfire = (ent->client->pu_time_duelfire > level.time);
-	// RAFAEL
+
 	if (ent->client->silencer_shots)
 		is_silenced = MZ_SILENCED;
 	else
@@ -1009,7 +995,8 @@ void Weapon_Generic(edict_t *ent, int FRAME_ACTIVATE_LAST, int FRAME_FIRE_LAST, 
  					Weapon_PowerupSound(ent);
 					fire(ent);
 
-					ent->client->mstats.total_shots++;
+					if (g_matchstats->integer)
+						ent->client->mstats.total_shots++;
 					break;
 				}
 			}
@@ -1044,7 +1031,8 @@ void Weapon_Generic(edict_t *ent, int FRAME_ACTIVATE_LAST, int FRAME_FIRE_LAST, 
 					Weapon_PowerupSound(ent);
 					fire(ent);
 
-					ent->client->mstats.total_shots++;
+					if (g_matchstats->integer)
+						ent->client->mstats.total_shots++;
 					break;
 				}
 			}
@@ -1128,7 +1116,8 @@ void Throw_Generic(edict_t *ent, int FRAME_FIRE_LAST, int FRAME_IDLE_LAST, int F
 	if (ent->health <= 0)
 	{
 		fire(ent, true);
-		ent->client->mstats.total_shots++;
+		if (g_matchstats->integer)
+			ent->client->mstats.total_shots++;
 		return;
 	}
 
@@ -1239,7 +1228,8 @@ void Throw_Generic(edict_t *ent, int FRAME_FIRE_LAST, int FRAME_IDLE_LAST, int F
 					Weapon_PowerupSound(ent);
 					ent->client->weapon_sound = 0;
 					fire(ent, true);
-					ent->client->mstats.total_shots++;
+					if (g_matchstats->integer)
+						ent->client->mstats.total_shots++;
 
 					ent->client->grenade_blew_up = true;
 
@@ -1272,7 +1262,8 @@ void Throw_Generic(edict_t *ent, int FRAME_FIRE_LAST, int FRAME_IDLE_LAST, int F
 					Weapon_PowerupSound(ent);
 					ent->client->weapon_sound = 0;
 					fire(ent, false);
-					ent->client->mstats.total_shots++;
+					if (g_matchstats->integer)
+						ent->client->mstats.total_shots++;
 
 					if (!EXPLODE || !ent->client->grenade_blew_up)
 						ent->client->grenade_finished_time = level.time + grenade_wait_time;
@@ -2536,7 +2527,6 @@ static void weapon_etf_rifle_fire(edict_t *ent) {
 	else
 		ent->client->ps.gunframe = 6;
 
-	// PGM - adjusted to use the quantity entry in the weapon structure.
 	if (ent->client->pers.inventory[ent->client->pers.weapon->ammo] < ent->client->pers.weapon->quantity) {
 		ent->client->ps.gunframe = 8;
 		NoAmmoWeaponChange(ent, true);

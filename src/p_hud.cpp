@@ -17,8 +17,10 @@ void MoveClientToIntermission(edict_t *ent) {
 	// [Paril-KEX]
 	if (ent->client->ps.pmove.pm_type != PM_FREEZE)
 		ent->s.event = EV_OTHER_TELEPORT;
-	if (deathmatch->integer)
+	if (deathmatch->integer) {
 		ent->client->showscores = true;
+		ent->client->ps.stats[STAT_SHOW_STATUSBAR] = 0;
+	}
 	ent->s.origin = level.intermission_origin;
 	ent->client->ps.pmove.origin = level.intermission_origin;
 	ent->client->ps.viewangles = level.intermission_angle;
@@ -34,6 +36,9 @@ void MoveClientToIntermission(edict_t *ent) {
 	ent->client->pu_time_rebreather = 0_ms;
 	ent->client->pu_time_enviro = 0_ms;
 	ent->client->pu_time_invisibility = 0_ms;
+	ent->client->pu_time_duelfire = 0_ms;
+	ent->client->pu_time_double = 0_ms;
+
 	ent->client->grenade_blew_up = false;
 	ent->client->grenade_time = 0_ms;
 
@@ -42,15 +47,9 @@ void MoveClientToIntermission(edict_t *ent) {
 
 	globals.server_flags &= ~SERVER_FLAG_SLOW_TIME;
 
-	// RAFAEL
-	ent->client->pu_time_duelfire = 0_ms;
-	// RAFAEL
-	// ROGUE
 	ent->client->ir_time = 0_ms;
 	ent->client->nuke_time = 0_ms;
-	ent->client->pu_time_double = 0_ms;
 	ent->client->tracker_pain_time = 0_ms;
-	// ROGUE
 
 	ent->viewheight = 0;
 	ent->s.modelindex = 0;
@@ -69,6 +68,7 @@ void MoveClientToIntermission(edict_t *ent) {
 	if (deathmatch->integer) {
 		DeathmatchScoreboard(ent);
 		ent->client->showscores = true;
+		ent->client->ps.stats[STAT_SHOW_STATUSBAR] = 0;
 	}
 }
 
@@ -83,7 +83,7 @@ void G_UpdateLevelEntry() {
 	level.entry->total_monsters = level.total_monsters;
 }
 
-inline void G_EndOfUnitEntry(std::stringstream &layout, const int &y, const level_entry_t &entry) {
+static inline void G_EndOfUnitEntry(std::stringstream &layout, const int &y, const level_entry_t &entry) {
 	layout << G_Fmt("yv {} ", y);
 
 	// we didn't visit this level, so print it as an unknown entry
@@ -674,10 +674,8 @@ void Cmd_Score_f(edict_t * ent) {
 
 	globals.server_flags &= ~SERVER_FLAG_SLOW_TIME;
 
-	// ZOID
 	if (ent->client->menu)
 		PMenu_Close(ent);
-	// ZOID
 
 	if (!deathmatch->integer && !coop->integer)
 		return;
@@ -685,8 +683,11 @@ void Cmd_Score_f(edict_t * ent) {
 	if (ent->client->showscores) {
 		ent->client->showscores = false;
 		ent->client->update_chase = true;
+		ent->client->ps.stats[STAT_SHOW_STATUSBAR] = ent->client->resp.team == TEAM_SPECTATOR ? (ent->client->chase_target ? 1 : 0) : 1;
 		return;
 	}
+
+	ent->client->ps.stats[STAT_SHOW_STATUSBAR] = 0;
 
 	//globals.server_flags |= SERVER_FLAG_SLOW_TIME;
 	ent->client->showscores = true;
@@ -1115,8 +1116,6 @@ static void SetExtendedStats(edict_t * ent) {
 				ent->client->ps.stats[STAT_MINISCORE_SECOND_SCORE] = game.clients[pos2_num].resp.score;
 			}
 			ent->client->ps.stats[STAT_MINISCORE_SECOND_PIC] = pic2;
-
-			ent->client->ps.stats[STAT_SCORELIMIT] = fraglimit->integer;
 		}
 	}
 
@@ -1152,22 +1151,16 @@ G_SetStats
 ===============
 */
 void G_SetStats(edict_t * ent) {
-	gitem_t *item;
+	gitem_t			*item;
 	item_id_t		index;
 	int				cells = 0;
 	item_id_t		power_armor_type;
 	unsigned int	invIndex;
 	bool			minhud = g_instagib->integer || g_nadefest->integer;
 	int				i;	//for techs
+	int32_t			img_index = ent->client->pers.skin_icon_index;
 
-	int32_t		img_index;
-#if 0
-	char vm[MAX_INFO_VALUE] = { 0 };
-	char vs[MAX_INFO_VALUE] = { 0 };
-	gi.Info_ValueForKey(ent->client->pers.userinfo, "model", vm, sizeof(vm));
-	gi.Info_ValueForKey(ent->client->pers.userinfo, "skin", vs, sizeof(vs));
-#endif
-	img_index = ent->client->pers.skin_icon_index;	// gi.imageindex(G_Fmt("players{}/{}_i", vm, vs).data());
+	ent->client->ps.stats[STAT_SCORELIMIT] = 0;	// GT_ScoreLimit();
 
 	//
 	// health
@@ -1178,6 +1171,7 @@ void G_SetStats(edict_t * ent) {
 		ent->client->ps.stats[STAT_HEALTH_ICON] = level.pic_health;
 	ent->client->ps.stats[STAT_HEALTH] = ent->health;
 
+	//ent->client->ps.stats[STAT_SHOW_STATUSBAR] = ent->client->showscores ? 0 : ent->client->chase_target ? 1 : 0;
 	if (!minhud) {
 		//
 		// weapons
@@ -1286,7 +1280,6 @@ void G_SetStats(edict_t * ent) {
 		//
 		// timers
 		//
-		// PGM
 		if (ent->client->owned_sphere) {
 			if (ent->client->owned_sphere->spawnflags == SPHERE_DEFENDER) // defender
 				ent->client->ps.stats[STAT_TIMER_ICON] = gi.imageindex("p_defender");
@@ -1336,7 +1329,6 @@ void G_SetStats(edict_t * ent) {
 				ent->client->ps.stats[STAT_TIMER] = value;
 			}
 		}
-		// PGM
 
 		//
 		// selected item
@@ -1434,7 +1426,7 @@ void G_SetStats(edict_t * ent) {
 		ent->client->ps.stats[STAT_HELPICON] = 0;
 
 	ent->client->ps.stats[STAT_SPECTATOR] = 0;
-
+	
 	// set & run the health bar stuff
 	for (size_t i = 0; i < MAX_HEALTH_BARS; i++) {
 		byte *health_byte = reinterpret_cast<byte *>(&ent->client->ps.stats[STAT_HEALTH_BARS]) + i;
@@ -1549,9 +1541,12 @@ void G_SetSpectatorStats(edict_t * ent) {
 	if (cl->showinventory && cl->pers.health > 0)
 		cl->ps.stats[STAT_LAYOUTS] |= LAYOUTS_INVENTORY;
 
-	if (cl->chase_target && cl->chase_target->inuse)
+	if (cl->chase_target && cl->chase_target->inuse) {
 		cl->ps.stats[STAT_CHASE] = CS_PLAYERSKINS +
-		(cl->chase_target - g_edicts) - 1;
-	else
+			(cl->chase_target - g_edicts) - 1;
+		//cl->ps.stats[STAT_SHOW_STATUSBAR] = 1;
+	} else {
 		cl->ps.stats[STAT_CHASE] = 0;
+		//cl->ps.stats[STAT_SHOW_STATUSBAR] = 0;
+	}
 }

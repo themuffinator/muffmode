@@ -93,16 +93,12 @@ enum ammo_t : uint8_t
 	AMMO_GRENADES,
 	AMMO_CELLS,
 	AMMO_SLUGS,
-	// RAFAEL
 	AMMO_MAGSLUG,
 	AMMO_TRAP,
-	// RAFAEL
-	// ROGUE
 	AMMO_FLECHETTES,
 	AMMO_TESLA,
 	AMMO_DISRUPTOR,
 	AMMO_PROX,
-	// ROGUE
     AMMO_MAX
 };
 
@@ -271,6 +267,8 @@ enum player_stat_t
 	STAT_DUEL_HEADER,
 
 	STAT_MATCH_TIMER,
+
+	STAT_SHOW_STATUSBAR,
 
 	// don't use; just for verification
     STAT_LAST

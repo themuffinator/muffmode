@@ -11,9 +11,7 @@ bool    enemy_vis;
 bool    enemy_infront;
 float   enemy_yaw;
 
-// ROGUE
 constexpr float MAX_SIDESTEP = 8.0f;
-// ROGUE
 
 //============================================================================
 
@@ -83,9 +81,7 @@ Distance is for slight position adjustments needed by the animations
 void ai_stand(edict_t *self, float dist)
 {
     vec3_t v;
-    // ROGUE
     bool retval;
-    // ROGUE
 
     if (dist || (self->monsterinfo.aiflags & AI_ALTERNATE_FLY))
         M_walkmove(self, self->s.angles[YAW], dist);
@@ -115,9 +111,7 @@ void ai_stand(edict_t *self, float dist)
                 self->monsterinfo.aiflags &= ~(AI_STAND_GROUND | AI_TEMP_STAND_GROUND);
                 self->monsterinfo.run(self);
             }
-            // ROGUE
             if (!(self->monsterinfo.aiflags & AI_MANUAL_STEERING))
-                // ROGUE
                 M_ChangeYaw(self);
             // find out if we're going to be shooting
             retval = ai_checkattack(self, 0);
@@ -154,7 +148,6 @@ void ai_stand(edict_t *self, float dist)
                 FindTarget(self);
                 return;
             }
-            // ROGUE
         }
         else
             FindTarget(self);
@@ -251,7 +244,6 @@ Use this call with a distance of 0 to replace ai_face
 void ai_charge(edict_t *self, float dist)
 {
     vec3_t v;
-    // ROGUE
     float ofs;
 
     // PMM - made AI_MANUAL_STEERING affect things differently here .. they turn, but
@@ -259,26 +251,21 @@ void ai_charge(edict_t *self, float dist)
 
     // This is put in there so monsters won't move towards the origin after killing
     // a tesla. This could be problematic, so keep an eye on it.
-    if (!self->enemy || !self->enemy->inuse) // PGM
-        return;                              // PGM
+    if (!self->enemy || !self->enemy->inuse)
+        return;
 
-    // PMM - save blindfire target
+    // save blindfire target
     if (visible(self, self->enemy))
         self->monsterinfo.blind_fire_target = self->enemy->s.origin + (self->enemy->velocity * -0.1f);
-    // pmm
 
     if (!(self->monsterinfo.aiflags & AI_MANUAL_STEERING))
     {
-        // ROGUE
         v = self->enemy->s.origin - self->s.origin;
         self->ideal_yaw = vectoyaw(v);
-        // ROGUE
     }
-    // ROGUE
     M_ChangeYaw(self);
 
     if (dist || (self->monsterinfo.aiflags & AI_ALTERNATE_FLY))
-    // ROGUE
     {
         if (self->monsterinfo.aiflags & AI_CHARGING)
         {
@@ -305,11 +292,8 @@ void ai_charge(edict_t *self, float dist)
             M_walkmove(self, self->ideal_yaw - ofs, dist);
         }
         else
-            // ROGUE
             M_walkmove(self, self->s.angles[YAW], dist);
-        // ROGUE
     }
-    // ROGUE
 
     // [Paril-KEX] if our enemy is literally right next to us, give
     // us more rotational speed so we don't get circled
@@ -333,9 +317,7 @@ void ai_turn(edict_t *self, float dist)
     if (FindTarget(self))
         return;
 
-    // ROGUE
     if (!(self->monsterinfo.aiflags & AI_MANUAL_STEERING))
-        // ROGUE
         M_ChangeYaw(self);
 }
 
@@ -486,10 +468,8 @@ void FoundTarget(edict_t *self)
     // let other monsters see this monster for a while
     if (self->enemy->client)
     {
-        // ROGUE
         if (self->enemy->flags & FL_DISGUISED)
             self->enemy->flags &= ~FL_DISGUISED;
-        // ROGUE
 
         self->enemy->client->sight_entity = self;
         self->enemy->client->sight_entity_time = level.time;
@@ -507,10 +487,9 @@ void FoundTarget(edict_t *self)
 
     self->monsterinfo.last_sighting = self->monsterinfo.saved_goal = self->enemy->s.origin;
     self->monsterinfo.trail_time = level.time;
-    // ROGUE
     self->monsterinfo.blind_fire_target = self->monsterinfo.last_sighting + (self->enemy->velocity * -0.1f);
     self->monsterinfo.blind_fire_delay = 0_ms;
-    // ROGUE
+
     // [Paril-KEX] for alternate fly, pick a new position immediately
     self->monsterinfo.fly_position_time = 0_ms;
 
@@ -708,7 +687,6 @@ bool FindTarget(edict_t *self)
                 !G_MonsterSourceVisible(self, client))
                 client = nullptr;
         }
-        // ROGUE
 
         if (client == nullptr)
         {
@@ -716,7 +694,6 @@ bool FindTarget(edict_t *self)
             {
                 client = level.disguise_violator;
             }
-            // ROGUE
             else if ((client = AI_GetSoundClient(self, true)))
             {
                 heardit = true;
@@ -763,10 +740,9 @@ bool FindTarget(edict_t *self)
             return true; // JDC false;
     }
 
-    // ROGUE - hintpath coop fix
+    // hintpath coop fix
     if ((self->monsterinfo.aiflags & AI_HINT_PATH) && coop->integer)
         heardit = false;
-    // ROGUE
 
     if (client->svflags & SVF_MONSTER)
     {
@@ -856,9 +832,7 @@ bool FindTarget(edict_t *self)
                 return false;
 
         self->ideal_yaw = vectoyaw(temp);
-        // ROGUE
         if (!(self->monsterinfo.aiflags & AI_MANUAL_STEERING))
-            // ROGUE
             M_ChangeYaw(self);
 
         // hunt the sound for a bit; hopefully find the real player
@@ -869,13 +843,13 @@ bool FindTarget(edict_t *self)
     //
     // got one
     //
-    // ROGUE - if we got an enemy, we need to bail out of hint paths, so take over here
+
+    // if we got an enemy, we need to bail out of hint paths, so take over here
     if (self->monsterinfo.aiflags & AI_HINT_PATH)
         hintpath_stop(self);  // this calls foundtarget for us
     else
         FoundTarget(self);
 
-    // ROGUE
     if (!(self->monsterinfo.aiflags & AI_SOUND_TARGET) && (self->monsterinfo.sight) &&
         // Paril: adjust to prevent monsters getting stuck in sight loops
         !ignore_sight_sound)
@@ -946,10 +920,10 @@ bool M_CheckAttack_Base(edict_t *self, float stand_ground_chance, float melee_ch
         // do we have a clear shot?
         if (!(self->hackflags & HACKFLAG_ATTACK_PLAYER) && tr.ent != self->enemy && !(tr.ent->svflags & SVF_PLAYER))
         {
-            // ROGUE - we want them to go ahead and shoot at info_notnulls if they can.
-            if (self->enemy->solid != SOLID_NOT || tr.fraction < 1.0f) // PGM
+            // we want them to go ahead and shoot at info_notnulls if they can.
+            if (self->enemy->solid != SOLID_NOT || tr.fraction < 1.0f)
             {
-                // PMM - if we can't see our target, and we're not blocked by a monster, go into blind fire if available
+                // if we can't see our target, and we're not blocked by a monster, go into blind fire if available
                 // Paril - *and* we have at least seen them once
                 if (!(tr.ent->svflags & SVF_MONSTER) && !visible(self, self->enemy) && self->monsterinfo.had_visibility)
                 {
@@ -957,10 +931,8 @@ bool M_CheckAttack_Base(edict_t *self, float stand_ground_chance, float melee_ch
                     {
                         if (level.time < self->monsterinfo.attack_finished)
                         {
-                            // ROGUE
                             return false;
                         }
-                        // ROGUE
                         if (level.time < (self->monsterinfo.trail_time + self->monsterinfo.blind_fire_delay))
                         {
                             // wait for our time
@@ -979,12 +951,10 @@ bool M_CheckAttack_Base(edict_t *self, float stand_ground_chance, float melee_ch
                         }
                     }
                 }
-                // pmm
                 return false;
             }
         }
     }
-    // ROGUE
 
     float enemy_range = range_to(self, self->enemy);
 
@@ -1005,9 +975,8 @@ bool M_CheckAttack_Base(edict_t *self, float stand_ground_chance, float melee_ch
     // missile attack
     if (!self->monsterinfo.attack)
     {
-        // ROGUE - fix for melee only monsters & strafing
+        // fix for melee only monsters & strafing
         self->monsterinfo.attack_state = AS_STRAIGHT;
-        // ROGUE
         return false;
     }
 
@@ -1035,7 +1004,7 @@ bool M_CheckAttack_Base(edict_t *self, float stand_ground_chance, float melee_ch
         chance = far_chance;
     }
 
-    // PGM - go ahead and shoot every time if it's a info_notnull
+    // go ahead and shoot every time if it's a info_notnull
     if ((!self->enemy->client && self->enemy->solid == SOLID_NOT) || (frandom() < chance))
     {
         self->monsterinfo.attack_state = AS_MISSILE;
@@ -1043,7 +1012,7 @@ bool M_CheckAttack_Base(edict_t *self, float stand_ground_chance, float melee_ch
         return true;
     }
 
-    // ROGUE -daedalus should strafe more .. this can be done here or in a customized
+    // daedalus should strafe more .. this can be done here or in a customized
     // check_attack code for the hover.
     if (self->flags & FL_FLY)
     {
@@ -1085,7 +1054,6 @@ bool M_CheckAttack_Base(edict_t *self, float stand_ground_chance, float melee_ch
     // forth.
     else if (!(self->monsterinfo.aiflags & AI_PATHING))
         self->monsterinfo.attack_state = AS_STRAIGHT;
-    // ROGUE
 
     return false;
 }
@@ -1102,12 +1070,10 @@ ai_run_melee
 Turn and close until within an angle to launch a melee attack
 =============
 */
-void ai_run_melee(edict_t *self)
+static void ai_run_melee(edict_t *self)
 {
     self->ideal_yaw = enemy_yaw;
-    // ROGUE
     if (!(self->monsterinfo.aiflags & AI_MANUAL_STEERING))
-        // ROGUE
         M_ChangeYaw(self);
 
     if (FacingIdeal(self))
@@ -1124,12 +1090,10 @@ ai_run_missile
 Turn in place until within an angle to launch a missile attack
 =============
 */
-void ai_run_missile(edict_t *self)
+static void ai_run_missile(edict_t *self)
 {
     self->ideal_yaw = enemy_yaw;
-    // ROGUE
     if (!(self->monsterinfo.aiflags & AI_MANUAL_STEERING))
-        // ROGUE
         M_ChangeYaw(self);
 
     if (FacingIdeal(self))
@@ -1140,9 +1104,7 @@ void ai_run_missile(edict_t *self)
             self->monsterinfo.attack_finished = level.time + random_time(1.0_sec, 2.0_sec);
         }
 
-        // ROGUE
         if ((self->monsterinfo.attack_state == AS_MISSILE) || (self->monsterinfo.attack_state == AS_BLIND))
-            // ROGUE
             self->monsterinfo.attack_state = AS_STRAIGHT;
     }
 };
@@ -1154,8 +1116,7 @@ ai_run_slide
 Strafe sideways, but stay at aproximately the same range
 =============
 */
-// ROGUE
-void ai_run_slide(edict_t *self, float distance)
+static void ai_run_slide(edict_t *self, float distance)
 {
     float ofs;
     float angle;
@@ -1172,12 +1133,13 @@ void ai_run_slide(edict_t *self, float distance)
     if (!(self->monsterinfo.aiflags & AI_MANUAL_STEERING))
         M_ChangeYaw(self);
 
-    // PMM - clamp maximum sideways move for non flyers to make them look less jerky
+    // clamp maximum sideways move for non flyers to make them look less jerky
     if (!(self->flags & FL_FLY))
         distance = min(distance, MAX_SIDESTEP / (gi.frame_time_ms / 10));
     if (M_walkmove(self, self->ideal_yaw + ofs, distance))
         return;
-    // PMM - if we're dodging, give up on it and go straight
+
+    // if we're dodging, give up on it and go straight
     if (self->monsterinfo.aiflags & AI_DODGING)
     {
         monster_done_dodge(self);
@@ -1189,14 +1151,13 @@ void ai_run_slide(edict_t *self, float distance)
     self->monsterinfo.lefty = !self->monsterinfo.lefty;
     if (M_walkmove(self, self->ideal_yaw - ofs, distance))
         return;
-    // PMM - if we're dodging, give up on it and go straight
+    // if we're dodging, give up on it and go straight
     if (self->monsterinfo.aiflags & AI_DODGING)
         monster_done_dodge(self);
 
-    // PMM - the move failed, so signal the caller (ai_run) to try going straight
+    // the move failed, so signal the caller (ai_run) to try going straight
     self->monsterinfo.attack_state = AS_STRAIGHT;
 }
-// ROGUE
 
 /*
 =============
@@ -1210,9 +1171,7 @@ bool ai_checkattack(edict_t *self, float dist)
 {
     vec3_t temp;
     bool   hesDeadJim;
-    // ROGUE
-    bool retval;
-    // ROGUE
+    bool    retval;
 
     if (self->monsterinfo.aiflags & AI_TEMP_STAND_GROUND)
         self->monsterinfo.aiflags &= ~(AI_STAND_GROUND | AI_TEMP_STAND_GROUND);
@@ -1282,11 +1241,10 @@ bool ai_checkattack(edict_t *self, float dist)
 
     if (hesDeadJim && !(self->hackflags & HACKFLAG_ATTACK_PLAYER))
     {
-        // ROGUE
         self->monsterinfo.aiflags &= ~AI_MEDIC;
-        // ROGUE
         self->enemy = self->goalentity = nullptr;
         self->monsterinfo.close_sight_tripped = false;
+
         // FIXME: look all around for other targets
         if (self->oldenemy && self->oldenemy->health > 0)
         {
@@ -1294,7 +1252,8 @@ bool ai_checkattack(edict_t *self, float dist)
             self->oldenemy = nullptr;
             HuntTarget(self);
         }
-        // ROGUE - multiple teslas make monsters lose track of the player.
+
+        // multiple teslas make monsters lose track of the player.
         else if (self->monsterinfo.last_player_enemy && self->monsterinfo.last_player_enemy->health > 0)
         {
             self->enemy = self->monsterinfo.last_player_enemy;
@@ -1302,7 +1261,7 @@ bool ai_checkattack(edict_t *self, float dist)
             self->monsterinfo.last_player_enemy = nullptr;
             HuntTarget(self);
         }
-        // ROGUE
+
         else
         {
             if (self->movetarget && !(self->monsterinfo.aiflags & AI_STAND_GROUND))
@@ -1334,7 +1293,7 @@ bool ai_checkattack(edict_t *self, float dist)
         self->enemy->show_hostile = level.time + 1_sec; // wake up other monsters
         self->monsterinfo.search_time = level.time + 5_sec;
         self->monsterinfo.last_sighting = self->monsterinfo.saved_goal = self->enemy->s.origin;
-        // ROGUE
+
         if (self->monsterinfo.aiflags & AI_LOST_SIGHT)
         {
             self->monsterinfo.aiflags &= ~AI_LOST_SIGHT;
@@ -1345,7 +1304,6 @@ bool ai_checkattack(edict_t *self, float dist)
         self->monsterinfo.trail_time = level.time;
         self->monsterinfo.blind_fire_target = self->monsterinfo.last_sighting + (self->enemy->velocity * -0.1f);
         self->monsterinfo.blind_fire_delay = 0_ms;
-        // ROGUE
     }
 
     enemy_infront = infront(self, self->enemy);
@@ -1364,7 +1322,6 @@ bool ai_checkattack(edict_t *self, float dist)
 
     if (retval || self->monsterinfo.attack_state >= AS_MISSILE)
     {
-        // PMM
         if (self->monsterinfo.attack_state == AS_MISSILE)
         {
             ai_run_missile(self);
@@ -1375,22 +1332,19 @@ bool ai_checkattack(edict_t *self, float dist)
             ai_run_melee(self);
             return true;
         }
-        // PMM -- added so monsters can shoot blind
+        // added so monsters can shoot blind
         if (self->monsterinfo.attack_state == AS_BLIND)
         {
             ai_run_missile(self);
             return true;
         }
-        // pmm
 
         // if enemy is not currently visible, we will never attack
         if (!enemy_vis)
             return false;
-        // PMM
     }
 
     return retval;
-    // PMM
 }
 
 /*
@@ -1412,12 +1366,10 @@ void ai_run(edict_t *self, float dist)
     vec3_t   v_forward, v_right;
     float    left, center, right;
     vec3_t   left_target, right_target;
-    // ROGUE
     bool     retval;
     bool     alreadyMoved = false;
     bool     gotcha = false;
     edict_t *realEnemy;
-    // ROGUE
 
     // if we're going to a combat point, just proceed
     if (self->monsterinfo.aiflags & AI_COMBAT_POINT)
@@ -1448,12 +1400,9 @@ void ai_run(edict_t *self, float dist)
             return;
     }
 
-    // PMM
     if ((self->monsterinfo.aiflags & AI_DUCKED) && self->monsterinfo.unduck)
 		self->monsterinfo.unduck(self);
 
-    //==========
-    // PGM
     // if we're currently looking for a hint path
     if (self->monsterinfo.aiflags & AI_HINT_PATH)
     {
@@ -1512,19 +1461,15 @@ void ai_run(edict_t *self, float dist)
 
         return;
     }
-    // PGM
-    //==========
 
     if (self->monsterinfo.aiflags & AI_SOUND_TARGET)
     {
-        // PMM - paranoia checking
         if (self->enemy)
             v = self->s.origin - self->enemy->s.origin;
 
         bool touching_noise = SV_CloseEnough(self, self->enemy, dist * (gi.tick_rate / 10));
 
         if ((!self->enemy) || (touching_noise && FacingIdeal(self)))
-        // pmm
         {
             self->monsterinfo.aiflags |= (AI_STAND_GROUND | AI_TEMP_STAND_GROUND);
             self->s.angles[YAW] = self->ideal_yaw;
@@ -1539,36 +1484,32 @@ void ai_run(edict_t *self, float dist)
         else
             M_MoveToGoal(self, dist);
 
-        // ROGUE - prevent double moves for sound_targets
+        // prevent double moves for sound_targets
         alreadyMoved = true;
 
         if (!self->inuse)
             return; // PGM - g_touchtrigger free problem
-        // ROGUE
 
         if (!FindTarget(self))
             return;
     }
 
-    // PMM -- moved ai_checkattack up here so the monsters can attack while strafing or charging
-
-    // PMM -- if we're dodging, make sure to keep the attack_state AS_SLIDING
+    // if we're dodging, make sure to keep the attack_state AS_SLIDING
     retval = ai_checkattack(self, dist);
 
-    // PMM - don't strafe if we can't see our enemy
+    // don't strafe if we can't see our enemy
     if ((!enemy_vis) && (self->monsterinfo.attack_state == AS_SLIDING))
         self->monsterinfo.attack_state = AS_STRAIGHT;
     // unless we're dodging (dodging out of view looks smart)
     if (self->monsterinfo.aiflags & AI_DODGING)
         self->monsterinfo.attack_state = AS_SLIDING;
-    // pmm
 
     if (self->monsterinfo.attack_state == AS_SLIDING)
     {
-        // PMM - protect against double moves
+        // protect against double moves
         if (!alreadyMoved)
             ai_run_slide(self, dist);
-        // PMM
+
         // we're using attack_state as the return value out of ai_run_slide to indicate whether or not the
         // move succeeded.  If the move succeeded, and we're still sliding, we're done in here (since we've
         // had our chance to shoot in ai_checkattack, and have moved).
@@ -1602,19 +1543,16 @@ void ai_run(edict_t *self, float dist)
             }
             self->monsterinfo.last_sighting = self->monsterinfo.saved_goal = self->enemy->s.origin;
             self->monsterinfo.trail_time = level.time;
-            // PMM
             self->monsterinfo.blind_fire_target = self->monsterinfo.last_sighting + (self->enemy->velocity * -0.1f);
             self->monsterinfo.blind_fire_delay = 0_ms;
-            // pmm
         }
         return;
     }
-    // PMM
 
-    // PGM - added a little paranoia checking here... 9/22/98
+    // paranoia checking
     if ((self->enemy) && (self->enemy->inuse) && (enemy_vis))
     {
-        // PMM - check for alreadyMoved
+        // check for alreadyMoved
         if (!alreadyMoved)
             M_MoveToGoal(self, dist);
         if (!self->inuse)
@@ -1629,10 +1567,8 @@ void ai_run(edict_t *self, float dist)
         }
         self->monsterinfo.last_sighting = self->monsterinfo.saved_goal = self->enemy->s.origin;
         self->monsterinfo.trail_time = level.time;
-        // PMM
         self->monsterinfo.blind_fire_target = self->monsterinfo.last_sighting + (self->enemy->velocity * -0.1f);
         self->monsterinfo.blind_fire_delay = 0_ms;
-        // pmm
 
         // [Paril-KEX] if our enemy is literally right next to us, give
         // us more rotational speed so we don't get circled
@@ -1642,10 +1578,7 @@ void ai_run(edict_t *self, float dist)
         return;
     }
 
-    //=======
-    // PGM
-    // if we've been looking (unsuccessfully) for the player for 10 seconds
-    // PMM - reduced to 5, makes them much nastier
+    // if we've been looking (unsuccessfully) for the player for 5 seconds
     if ((self->monsterinfo.trail_time + 5_sec) <= level.time)
     {
         // and we haven't checked for valid hint paths in the last 10 seconds
@@ -1657,18 +1590,15 @@ void ai_run(edict_t *self, float dist)
                 return;
         }
     }
-    // PGM
-    //=======
 
-    // PMM - moved down here to allow monsters to get on hint paths
+    // moved down here to allow monsters to get on hint paths
     // coop will change to another enemy if visible
     if (coop->integer)
         FindTarget(self);
-    // pmm
 
     if ((self->monsterinfo.search_time) && (level.time > (self->monsterinfo.search_time + 20_sec)))
     {
-        // PMM - double move protection
+        // double move protection
         if (!alreadyMoved)
             M_MoveToGoal(self, dist);
         self->monsterinfo.search_time = 0_ms;

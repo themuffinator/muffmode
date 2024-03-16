@@ -453,12 +453,8 @@ enum refdef_flags_t : uint8_t
     RDF_NONE = 0,
     RDF_UNDERWATER = bit_v<0>,	  // warp the screen as appropriate
     RDF_NOWORLDMODEL = bit_v<1>, // used for player configuration screen
-
-    // ROGUE
     RDF_IRGOGGLES = bit_v<2>,
     RDF_UVGOGGLES = bit_v<3>,
-    // ROGUE
-
     RDF_NO_WEAPON_LERP = bit_v<4>
 };
 
@@ -540,29 +536,24 @@ enum effects_t : uint64_t
     EF_TELEPORTER       = bit_v<17>,  // particle fountain
     EF_FLAG_RED         = bit_v<18>,
     EF_FLAG_BLUE        = bit_v<19>,
-    // RAFAEL
     EF_IONRIPPER        = bit_v<20>,
     EF_GREENGIB         = bit_v<21>,
     EF_BLUEHYPERBLASTER = bit_v<22>,
     EF_SPINNINGLIGHTS   = bit_v<23>,
     EF_PLASMA           = bit_v<24>,
     EF_TRAP             = bit_v<25>,
-
-    // ROGUE
     EF_TRACKER          = bit_v<26>,
     EF_DOUBLE           = bit_v<27>,
     EF_SPHERETRANS      = bit_v<28>,
     EF_TAGTRAIL         = bit_v<29>,
     EF_HALF_DAMAGE      = bit_v<30>,
     EF_TRACKERTRAIL     = bit_v<31>,
-    // ROGUE
-
-    EF_DUALFIRE        = bit_v<32>, // [KEX] dualfire damage color shell
-    EF_HOLOGRAM        = bit_v<33>, // [Paril-KEX] N64 hologram
-    EF_FLASHLIGHT      = bit_v<34>, // [Paril-KEX] project flashlight, only for players
-    EF_BARREL_EXPLODING= bit_v<35>,
-    EF_TELEPORTER2     = bit_v<36>, // [Paril-KEX] n64 teleporter
-    EF_GRENADE_LIGHT   = bit_v<37>
+    EF_DUALFIRE         = bit_v<32>, // [KEX] dualfire damage color shell
+    EF_HOLOGRAM         = bit_v<33>, // [Paril-KEX] N64 hologram
+    EF_FLASHLIGHT       = bit_v<34>, // [Paril-KEX] project flashlight, only for players
+    EF_BARREL_EXPLODING = bit_v<35>,
+    EF_TELEPORTER2      = bit_v<36>, // [Paril-KEX] n64 teleporter
+    EF_GRENADE_LIGHT    = bit_v<37>
 };
 
 MAKE_ENUM_BITFLAGS(effects_t);
@@ -572,41 +563,37 @@ constexpr effects_t EF_FIREBALL = EF_ROCKET | EF_GIB;
 // entity_state_t->renderfx flags
 enum renderfx_t : uint32_t
 {
-    RF_NONE = 0,
-    RF_MINLIGHT = bit_v<0>,	// always have some light (viewmodel)
-    RF_VIEWERMODEL = bit_v<1>, // don't draw through eyes, only mirrors
-    RF_WEAPONMODEL = bit_v<2>, // only draw through eyes
-    RF_FULLBRIGHT = bit_v<3>,	// always draw full intensity
-    RF_DEPTHHACK = bit_v<4>,	// for view weapon Z crunching
-    RF_TRANSLUCENT = bit_v<5>,
-    RF_NO_ORIGIN_LERP = bit_v<6>, // no interpolation for origins
-    RF_BEAM = bit_v<7>,
-    RF_CUSTOMSKIN = bit_v<8>, // [Paril-KEX] implemented; set skinnum (or frame for RF_FLARE) to specify
-                              // an image in CS_IMAGES to use as skin.
-    RF_GLOW = bit_v<9>,		 // pulse lighting for bonus items
-    RF_SHELL_RED = bit_v<10>,
-    RF_SHELL_GREEN = bit_v<11>,
-    RF_SHELL_BLUE = bit_v<12>,
-    RF_NOSHADOW = bit_v<13>,
-    RF_CASTSHADOW = bit_v<14>, // [Sam-KEX]
-
-    // ROGUE
-    RF_IR_VISIBLE = bit_v<15>,
-    RF_SHELL_DOUBLE = bit_v<16>,
-    RF_SHELL_HALF_DAM = bit_v<17>,
-    RF_USE_DISGUISE = bit_v<18>,
-    // ROGUE
-
+    RF_NONE             = 0,
+    RF_MINLIGHT         = bit_v<0>,	// always have some light (viewmodel)
+    RF_VIEWERMODEL      = bit_v<1>, // don't draw through eyes, only mirrors
+    RF_WEAPONMODEL      = bit_v<2>, // only draw through eyes
+    RF_FULLBRIGHT       = bit_v<3>,	// always draw full intensity
+    RF_DEPTHHACK        = bit_v<4>,	// for view weapon Z crunching
+    RF_TRANSLUCENT      = bit_v<5>,
+    RF_NO_ORIGIN_LERP   = bit_v<6>, // no interpolation for origins
+    RF_BEAM             = bit_v<7>,
+    RF_CUSTOMSKIN       = bit_v<8>, // [Paril-KEX] implemented; set skinnum (or frame for RF_FLARE) to specify
+                                    // an image in CS_IMAGES to use as skin.
+    RF_GLOW             = bit_v<9>, // pulse lighting for bonus items
+    RF_SHELL_RED        = bit_v<10>,
+    RF_SHELL_GREEN      = bit_v<11>,
+    RF_SHELL_BLUE       = bit_v<12>,
+    RF_NOSHADOW         = bit_v<13>,
+    RF_CASTSHADOW       = bit_v<14>, // [Sam-KEX]
+    RF_IR_VISIBLE       = bit_v<15>,
+    RF_SHELL_DOUBLE     = bit_v<16>,
+    RF_SHELL_HALF_DAM   = bit_v<17>,
+    RF_USE_DISGUISE     = bit_v<18>,
     RF_SHELL_LITE_GREEN = bit_v<19>,
-    RF_CUSTOM_LIGHT = bit_v<20>, // [Paril-KEX] custom point dlight that is designed to strobe/be turned off; s.frame is radius, s.skinnum is color
-    RF_FLARE = bit_v<21>, // [Sam-KEX]
-    RF_OLD_FRAME_LERP = bit_v<22>, // [Paril-KEX] force model to lerp from oldframe in entity state; otherwise it uses last frame client received
-    RF_DOT_SHADOW = bit_v<23>, // [Paril-KEX] draw blobby shadow
-    RF_LOW_PRIORITY = bit_v<24>, // [Paril-KEX] low priority object; if we can't be added to the scene, don't bother replacing entities,
-                                 // and we can be replaced if anything non-low-priority needs room
-    RF_NO_LOD = bit_v<25>, // [Paril-KEX] never LOD
-    RF_NO_STEREO = RF_WEAPONMODEL, // [Paril-KEX] this is a bit dumb, but, for looping noises if this is set there's no stereo
-    RF_STAIR_STEP = bit_v<26>, // [Paril-KEX] re-tuned, now used to handle stair steps for monsters
+    RF_CUSTOM_LIGHT     = bit_v<20>, // [Paril-KEX] custom point dlight that is designed to strobe/be turned off; s.frame is radius, s.skinnum is color
+    RF_FLARE            = bit_v<21>, // [Sam-KEX]
+    RF_OLD_FRAME_LERP   = bit_v<22>, // [Paril-KEX] force model to lerp from oldframe in entity state; otherwise it uses last frame client received
+    RF_DOT_SHADOW       = bit_v<23>, // [Paril-KEX] draw blobby shadow
+    RF_LOW_PRIORITY     = bit_v<24>, // [Paril-KEX] low priority object; if we can't be added to the scene, don't bother replacing entities,
+                                     // and we can be replaced if anything non-low-priority needs room
+    RF_NO_LOD           = bit_v<25>, // [Paril-KEX] never LOD
+    RF_NO_STEREO        = RF_WEAPONMODEL, // [Paril-KEX] this is a bit dumb, but, for looping noises if this is set there's no stereo
+    RF_STAIR_STEP       = bit_v<26>, // [Paril-KEX] re-tuned, now used to handle stair steps for monsters
 
     RF_FLARE_LOCK_ANGLE = RF_MINLIGHT
 };
@@ -638,14 +625,11 @@ enum player_muzzle_t : uint8_t
     MZ_SSHOTGUN = 13,
     MZ_HYPERBLASTER = 14,
     MZ_ITEMRESPAWN = 15,
-    // RAFAEL
     MZ_IONRIPPER = 16,
     MZ_BLUEHYPERBLASTER = 17,
     MZ_PHALANX = 18,
     MZ_BFG2 = 19,
     MZ_PHALANX2 = 20,
-
-    // ROGUE
     MZ_ETF_RIFLE = 30,
     MZ_PROX = 31, // [Paril-KEX]
     MZ_ETF_RIFLE_2 = 32, // [Paril-KEX] unused, so using it for the other barrel
@@ -656,8 +640,6 @@ enum player_muzzle_t : uint8_t
     MZ_NUKE2 = 37,
     MZ_NUKE4 = 38,
     MZ_NUKE8 = 39,
-    // ROGUE
-
     MZ_SILENCED = bit_v<7>, // bit flag ORed with one of the above numbers
     MZ_NONE = 0        // "no" bitflags
 };
@@ -825,7 +807,6 @@ enum monster_muzzleflash_id_t : uint16_t
     MZ2_BOSS2_MACHINEGUN_R4,
     MZ2_BOSS2_MACHINEGUN_R5,
 
-    // ROGUE
     MZ2_CARRIER_MACHINEGUN_L1,
     MZ2_CARRIER_MACHINEGUN_R1,
     MZ2_CARRIER_GRENADE,
@@ -899,7 +880,6 @@ enum monster_muzzleflash_id_t : uint16_t
     MZ2_WIDOW2_BEAM_SWEEP_9,
     MZ2_WIDOW2_BEAM_SWEEP_10,
     MZ2_WIDOW2_BEAM_SWEEP_11,
-    // ROGUE
 
     // [Paril-KEX]
     MZ2_SOLDIER_RIPPER_1,
@@ -1039,7 +1019,7 @@ enum temp_event_t : uint8_t
     TE_BLUEHYPERBLASTER_DUMMY, // [Paril-KEX] leaving for compatibility, do not use; use TE_BLUEHYPERBLASTER
     TE_PLASMA_EXPLOSION,
     TE_TUNNEL_SPARKS,
-    // ROGUE
+
     TE_BLASTER2,
     TE_RAILTRAIL2,
     TE_FLAME,
@@ -1066,7 +1046,6 @@ enum temp_event_t : uint8_t
     TE_EXPLOSION1_BIG,
     TE_EXPLOSION1_NP,
     TE_FLECHETTE,
-    // ROGUE
 
     // [Paril-KEX]
     TE_BLUEHYPERBLASTER,

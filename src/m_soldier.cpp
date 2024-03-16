@@ -23,23 +23,23 @@ static cached_soundindex sound_death;
 static cached_soundindex sound_death_ss;
 static cached_soundindex sound_cock;
 
-void soldier_start_charge(edict_t *self)
+static void soldier_start_charge(edict_t *self)
 {
 	self->monsterinfo.aiflags |= AI_CHARGING;
 }
 
-void soldier_stop_charge(edict_t *self)
+static void soldier_stop_charge(edict_t *self)
 {
 	self->monsterinfo.aiflags &= ~AI_CHARGING;
 }
 
-void soldier_idle(edict_t *self)
+static void soldier_idle(edict_t *self)
 {
 	if (frandom() > 0.8f)
 		gi.sound(self, CHAN_VOICE, sound_idle, 1, ATTN_IDLE, 0);
 }
 
-void soldier_cock(edict_t *self)
+static void soldier_cock(edict_t *self)
 {
 	if (self->s.frame == FRAME_stand322)
 		gi.sound(self, CHAN_WEAPON, sound_cock, 1, ATTN_IDLE, 0);
@@ -50,8 +50,7 @@ void soldier_cock(edict_t *self)
 	self->dmg = 0;
 }
 
-// RAFAEL
-void soldierh_hyper_laser_sound_start(edict_t *self)
+static void soldierh_hyper_laser_sound_start(edict_t *self)
 {
 	if (self->style == 1)
 	{
@@ -60,7 +59,7 @@ void soldierh_hyper_laser_sound_start(edict_t *self)
 	}
 }
 
-void soldierh_hyper_laser_sound_end(edict_t *self)
+static void soldierh_hyper_laser_sound_end(edict_t *self)
 {
 	if (self->monsterinfo.weapon_sound)
 	{
@@ -70,7 +69,6 @@ void soldierh_hyper_laser_sound_end(edict_t *self)
 		self->monsterinfo.weapon_sound = 0;
 	}
 }
-// RAFAEL
 
 // STAND
 
@@ -479,7 +477,7 @@ constexpr monster_muzzleflash_id_t blaster_flash[] = { MZ2_SOLDIER_BLASTER_1, MZ
 constexpr monster_muzzleflash_id_t shotgun_flash[] = { MZ2_SOLDIER_SHOTGUN_1, MZ2_SOLDIER_SHOTGUN_2, MZ2_SOLDIER_SHOTGUN_3, MZ2_SOLDIER_SHOTGUN_4, MZ2_SOLDIER_SHOTGUN_5, MZ2_SOLDIER_SHOTGUN_6, MZ2_SOLDIER_SHOTGUN_7, MZ2_SOLDIER_SHOTGUN_8, MZ2_SOLDIER_SHOTGUN_9 };
 constexpr monster_muzzleflash_id_t machinegun_flash[] = { MZ2_SOLDIER_MACHINEGUN_1, MZ2_SOLDIER_MACHINEGUN_2, MZ2_SOLDIER_MACHINEGUN_3, MZ2_SOLDIER_MACHINEGUN_4, MZ2_SOLDIER_MACHINEGUN_5, MZ2_SOLDIER_MACHINEGUN_6, MZ2_SOLDIER_MACHINEGUN_7, MZ2_SOLDIER_MACHINEGUN_8, MZ2_SOLDIER_MACHINEGUN_9 };
 
-void soldier_fire_vanilla(edict_t *self, int flash_number, bool angle_limited)
+static void soldier_fire_vanilla(edict_t *self, int flash_number, bool angle_limited)
 {
 	vec3_t					 start;
 	vec3_t					 forward, right, up;
@@ -582,7 +580,7 @@ void soldier_fire_vanilla(edict_t *self, int flash_number, bool angle_limited)
 	}
 }
 
-PRETHINK(soldierh_laser_update) (edict_t *laser) -> void
+static PRETHINK(soldierh_laser_update) (edict_t *laser) -> void
 {
 	edict_t *self = laser->owner;
 
@@ -606,8 +604,7 @@ PRETHINK(soldierh_laser_update) (edict_t *laser) -> void
 	dabeam_update(laser, false);
 }
 
-// RAFAEL
-void soldierh_laserbeam(edict_t *self, int flash_index)
+static void soldierh_laserbeam(edict_t *self, int flash_index)
 {
 	self->radius_dmg = flash_index;
 	monster_fire_dabeam(self, 1, false, soldierh_laser_update);
@@ -616,7 +613,7 @@ void soldierh_laserbeam(edict_t *self, int flash_index)
 constexpr monster_muzzleflash_id_t ripper_flash[] = { MZ2_SOLDIER_RIPPER_1, MZ2_SOLDIER_RIPPER_2, MZ2_SOLDIER_RIPPER_3, MZ2_SOLDIER_RIPPER_4, MZ2_SOLDIER_RIPPER_5, MZ2_SOLDIER_RIPPER_6, MZ2_SOLDIER_RIPPER_7, MZ2_SOLDIER_RIPPER_8, MZ2_SOLDIER_RIPPER_9 };
 constexpr monster_muzzleflash_id_t hyper_flash[] = { MZ2_SOLDIER_HYPERGUN_1, MZ2_SOLDIER_HYPERGUN_2, MZ2_SOLDIER_HYPERGUN_3, MZ2_SOLDIER_HYPERGUN_4, MZ2_SOLDIER_HYPERGUN_5, MZ2_SOLDIER_HYPERGUN_6, MZ2_SOLDIER_HYPERGUN_7, MZ2_SOLDIER_HYPERGUN_8, MZ2_SOLDIER_HYPERGUN_9 };
 
-void soldier_fire_xatrix(edict_t *self, int flash_number, bool angle_limited)
+static void soldier_fire_xatrix(edict_t *self, int flash_number, bool angle_limited)
 {
 	vec3_t					 start;
 	vec3_t					 forward, right, up;
@@ -700,8 +697,6 @@ void soldier_fire_xatrix(edict_t *self, int flash_number, bool angle_limited)
 
 	if (self->count <= 1)
 	{
-		// RAFAEL 24-APR-98
-		// droped the damage from 15 to 5
 		monster_fire_ionripper(self, start, aim, 5, 600, flash_index, EF_IONRIPPER);
 	}
 	else if (self->count <= 3)
@@ -722,26 +717,23 @@ void soldier_fire_xatrix(edict_t *self, int flash_number, bool angle_limited)
 			self->monsterinfo.aiflags |= AI_HOLD_FRAME;
 	}
 }
-// RAFAEL
 
-void soldier_fire(edict_t *self, int flash_number, bool angle_limited)
+static void soldier_fire(edict_t *self, int flash_number, bool angle_limited)
 {
-	// RAFAEL
 	if (self->style == 1)
 		soldier_fire_xatrix(self, flash_number, angle_limited);
 	else
-		// RAFAEL
 		soldier_fire_vanilla(self, flash_number, angle_limited);
 }
 
 // ATTACK1 (blaster/shotgun)
 
-void soldier_fire1(edict_t *self)
+static void soldier_fire1(edict_t *self)
 {
 	soldier_fire(self, 0, false);
 }
 
-void soldier_attack1_refire1(edict_t *self)
+static void soldier_attack1_refire1(edict_t *self)
 {
 	// [Paril-KEX]
 	if (self->count <= 0)
@@ -770,7 +762,7 @@ void soldier_attack1_refire1(edict_t *self)
 		self->monsterinfo.nextframe = FRAME_attak110;
 }
 
-void soldier_attack1_refire2(edict_t *self)
+static void soldier_attack1_refire2(edict_t *self)
 {
 	if (!self->enemy)
 		return;
@@ -883,7 +875,7 @@ void soldier_attack2_refire1(edict_t *self)
 		self->monsterinfo.nextframe = FRAME_attak204;
 }
 
-void soldier_attack2_refire2(edict_t *self)
+static void soldier_attack2_refire2(edict_t *self)
 {
 	if (!self->enemy)
 		return;
@@ -894,10 +886,8 @@ void soldier_attack2_refire2(edict_t *self)
 	if (self->enemy->health <= 0)
 		return;
 
-	// RAFAEL
 	if (((self->radius_dmg || frandom() < 0.5f) && visible(self, self->enemy)) || ((self->style == 0 || self->count < 4) && (range_to(self, self->enemy) <= RANGE_MELEE)))
 	{
-		// RAFAEL
 		self->monsterinfo.nextframe = FRAME_attak204;
 		self->radius_dmg = 0;
 	}
@@ -935,8 +925,7 @@ mframe_t soldier_frames_attack2[] = {
 };
 MMOVE_T(soldier_move_attack2) = { FRAME_attak201, FRAME_attak218, soldier_frames_attack2, soldier_run };
 
-// RAFAEL
-void soldierh_hyper_refire2(edict_t *self)
+static void soldierh_hyper_refire2(edict_t *self)
 {
 	if (!self->enemy)
 		return;
@@ -950,7 +939,7 @@ void soldierh_hyper_refire2(edict_t *self)
 	}
 }
 
-void soldierh_hyperripper2(edict_t *self)
+static void soldierh_hyperripper2(edict_t *self)
 {
 	if (self->count < 4)
 		soldier_fire(self, 1, false);
@@ -977,7 +966,6 @@ mframe_t soldierh_frames_attack2[] = {
 	{ ai_charge }
 };
 MMOVE_T(soldierh_move_attack2) = { FRAME_attak201, FRAME_attak218, soldierh_frames_attack2, soldier_run };
-// RAFAEL
 
 // ATTACK3 (duck and shoot)
 void soldier_fire3(edict_t *self)
@@ -1126,7 +1114,7 @@ MONSTERINFO_ATTACK(soldier_attack) (edict_t *self) -> void
 
 	monster_done_dodge(self);
 
-	// PMM - blindfire!
+	// blindfire!
 	if (self->monsterinfo.attack_state == AS_BLIND)
 	{
 		// setup shot probabilities
@@ -1153,16 +1141,13 @@ MONSTERINFO_ATTACK(soldier_attack) (edict_t *self) -> void
 		// turn on manual steering to signal both manual steering and blindfire
 		self->monsterinfo.aiflags |= AI_MANUAL_STEERING;
 
-		// RAFAEL
 		if (self->style == 1)
 			M_SetAnimation(self, &soldierh_move_attack1);
 		else
-			// RAFAEL
 			M_SetAnimation(self, &soldier_move_attack1);
 		self->monsterinfo.attack_finished = level.time + random_time(1.5_sec, 2.5_sec);
 		return;
 	}
-	// pmm
 
 	// PMM - added this so the soldiers now run toward you and shoot instead of just stopping and shooting
 	r = frandom();
@@ -1193,20 +1178,16 @@ MONSTERINFO_ATTACK(soldier_attack) (edict_t *self) -> void
 
 			if (attack1_possible && (!attack2_possible || frandom() < 0.5f))
 			{
-				// RAFAEL
 				if (self->style == 1)
 					M_SetAnimation(self, &soldierh_move_attack1);
 				else
-					// RAFAEL
 					M_SetAnimation(self, &soldier_move_attack1);
 			}
 			else if (attack2_possible)
 			{
-				// RAFAEL
 				if (self->style == 1)
 					M_SetAnimation(self, &soldierh_move_attack2);
 				else
-					// RAFAEL
 					M_SetAnimation(self, &soldier_move_attack2);
 			}
 		}
@@ -1232,17 +1213,13 @@ MONSTERINFO_SIGHT(soldier_sight) (edict_t *self, edict_t *other) -> void
 		visible(self, self->enemy) // Paril: don't run-shoot if we can't see them
 	)
 	{
-		// RAFAEL
 		if (self->style == 1 || frandom() > 0.75f)
-		// RAFAEL
 		{
-			// RAFAEL + legacy bug fix
 			// don't use run+shoot for machinegun/laser because
 			// the animation is a bit weird
 			if (self->count < 4)
 				M_SetAnimation(self, &soldier_move_attack6);
 			else if (M_CheckClearShot(self, monster_flash_offset[MZ2_SOLDIER_MACHINEGUN_4]))
-				// RAFAEL
 				M_SetAnimation(self, &soldier_move_attack4);
 		}
 	}

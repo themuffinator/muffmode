@@ -385,32 +385,6 @@ mframe_t makron_frames_death2[] = {
 };
 MMOVE_T(makron_move_death2) = { FRAME_death201, FRAME_death295, makron_frames_death2, makron_dead };
 
-#if 0
-mframe_t makron_frames_death3[] = {
-	{ ai_move },
-	{ ai_move },
-	{ ai_move },
-	{ ai_move },
-	{ ai_move },
-	{ ai_move },
-	{ ai_move },
-	{ ai_move },
-	{ ai_move },
-	{ ai_move },
-	{ ai_move },
-	{ ai_move },
-	{ ai_move },
-	{ ai_move },
-	{ ai_move },
-	{ ai_move },
-	{ ai_move },
-	{ ai_move },
-	{ ai_move },
-	{ ai_move }
-};
-MMOVE_T(makron_move_death3) = { FRAME_death301, FRAME_death320, makron_frames_death3, nullptr };
-#endif
-
 mframe_t makron_frames_sight[] = {
 	{ ai_move },
 	{ ai_move },

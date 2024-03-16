@@ -698,47 +698,6 @@ mframe_t fixbot_frames_stand2[] = {
 };
 MMOVE_T(fixbot_move_stand2) = { FRAME_ambient_01, FRAME_ambient_19, fixbot_frames_stand2, nullptr };
 
-#if 0
-/*
-	will need the pickup offset for the front pincers
-	object will need to stop forward of the object
-	and take the object with it ( this may require a variant of liftoff and landing )
-*/
-mframe_t fixbot_frames_pickup[] = {
-	{ ai_move },
-	{ ai_move },
-	{ ai_move },
-	{ ai_move },
-	{ ai_move },
-	{ ai_move },
-	{ ai_move },
-	{ ai_move },
-	{ ai_move },
-	{ ai_move },
-
-	{ ai_move },
-	{ ai_move },
-	{ ai_move },
-	{ ai_move },
-	{ ai_move },
-	{ ai_move },
-	{ ai_move },
-	{ ai_move },
-	{ ai_move },
-	{ ai_move },
-
-	{ ai_move },
-	{ ai_move },
-	{ ai_move },
-	{ ai_move },
-	{ ai_move },
-	{ ai_move },
-	{ ai_move }
-
-};
-MMOVE_T(fixbot_move_pickup) = { FRAME_pickup_01, FRAME_pickup_27, fixbot_frames_pickup, nullptr };
-#endif
-
 /*
 	generic frame to move bot
 */
@@ -835,18 +794,6 @@ mframe_t fixbot_frames_pain3[] = {
 };
 MMOVE_T(fixbot_move_pain3) = { FRAME_freeze_01, FRAME_freeze_01, fixbot_frames_pain3, fixbot_run };
 
-#if 0
-/*
-	bot has compleated landing
-	and is now on the grownd
-	( may need second land if the bot is releasing jib into jib vat )
-*/
-mframe_t fixbot_frames_land[] = {
-	{ ai_move }
-};
-MMOVE_T(fixbot_move_land) = { FRAME_freeze_01, FRAME_freeze_01, fixbot_frames_land, nullptr };
-#endif
-
 void M_MoveToGoal(edict_t *ent, float dist);
 
 void ai_movetogoal(edict_t *self, float dist)
@@ -877,47 +824,11 @@ mframe_t fixbot_frames_run[] = {
 };
 MMOVE_T(fixbot_move_run) = { FRAME_freeze_01, FRAME_freeze_01, fixbot_frames_run, nullptr };
 
-#if 0
-/*
-	raf
-	note to self
-	they could have a timer that will cause
-	the bot to explode on countdown
-*/
-mframe_t fixbot_frames_death1[] = {
-	{ ai_move }
-};
-MMOVE_T(fixbot_move_death1) = { FRAME_freeze_01, FRAME_freeze_01, fixbot_frames_death1, fixbot_dead };
-
-//
-mframe_t fixbot_frames_backward[] = {
-	{ ai_move }
-};
-MMOVE_T(fixbot_move_backward) = { FRAME_freeze_01, FRAME_freeze_01, fixbot_frames_backward, nullptr };
-#endif
-
 //
 mframe_t fixbot_frames_start_attack[] = {
 	{ ai_charge }
 };
 MMOVE_T(fixbot_move_start_attack) = { FRAME_freeze_01, FRAME_freeze_01, fixbot_frames_start_attack, fixbot_attack };
-
-#if 0
-/*
-	TBD:
-	need to get laser attack anim
-	attack with the laser blast
-*/
-mframe_t fixbot_frames_attack1[] = {
-	{ ai_charge },
-	{ ai_charge },
-	{ ai_charge },
-	{ ai_charge },
-	{ ai_charge },
-	{ ai_charge, -10, fixbot_fire_blaster }
-};
-MMOVE_T(fixbot_move_attack1) = { FRAME_shoot_01, FRAME_shoot_06, fixbot_frames_attack1, nullptr };
-#endif
 
 void abortHeal(edict_t *self, bool change_frame, bool gib, bool mark);
 

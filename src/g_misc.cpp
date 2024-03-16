@@ -264,9 +264,7 @@ void ThrowClientHead(edict_t *self, int damage)
 	self->solid = SOLID_TRIGGER; // [Paril-KEX] make 'trigger' so we still move but don't block shots/explode
 	self->svflags |= SVF_DEADMONSTER;
 	self->s.effects = EF_GIB;
-	// PGM
 	self->s.renderfx |= RF_IR_VISIBLE;
-	// PGM
 	self->s.sound = 0;
 	self->flags |= FL_NO_KNOCKBACK | FL_NO_DAMAGE_EFFECTS;
 
@@ -936,7 +934,7 @@ constexpr spawnflags_t SPAWNFLAGS_EXPLOSIVE_ANIMATED_FAST = 4_spawnflag;
 constexpr spawnflags_t SPAWNFLAGS_EXPLOSIVE_INACTIVE = 8_spawnflag;
 constexpr spawnflags_t SPAWNFLAGS_EXPLOSIVE_ALWAYS_SHOOTABLE = 16_spawnflag;
 
-DIE(func_explosive_explode) (edict_t *self, edict_t *inflictor, edict_t *attacker, int damage, const vec3_t &point, const mod_t &mod) -> void
+static DIE(func_explosive_explode) (edict_t *self, edict_t *inflictor, edict_t *attacker, int damage, const vec3_t &point, const mod_t &mod) -> void
 {
 	size_t   count;
 	int		 mass;
@@ -1009,7 +1007,7 @@ DIE(func_explosive_explode) (edict_t *self, edict_t *inflictor, edict_t *attacke
 		G_FreeEdict(self);
 }
 
-USE(func_explosive_use) (edict_t *self, edict_t *other, edict_t *activator) -> void
+static USE(func_explosive_use) (edict_t *self, edict_t *other, edict_t *activator) -> void
 {
 	// Paril: pass activator to explode as attacker. this fixes
 	// "strike" trying to centerprint to the relay. Should be
@@ -1017,8 +1015,7 @@ USE(func_explosive_use) (edict_t *self, edict_t *other, edict_t *activator) -> v
 	func_explosive_explode(self, self, activator, self->health, vec3_origin, MOD_EXPLOSIVE);
 }
 
-// PGM
-USE(func_explosive_activate) (edict_t *self, edict_t *other, edict_t *activator) -> void
+static USE(func_explosive_activate) (edict_t *self, edict_t *other, edict_t *activator) -> void
 {
 	int approved;
 
@@ -1046,7 +1043,7 @@ USE(func_explosive_activate) (edict_t *self, edict_t *other, edict_t *activator)
 }
 // PGM
 
-USE(func_explosive_spawn) (edict_t *self, edict_t *other, edict_t *activator) -> void
+static USE(func_explosive_spawn) (edict_t *self, edict_t *other, edict_t *activator) -> void
 {
 	self->solid = SOLID_BSP;
 	self->svflags &= ~SVF_NOCLIENT;
@@ -1076,14 +1073,12 @@ void SP_func_explosive(edict_t *self)
 		self->solid = SOLID_NOT;
 		self->use = func_explosive_spawn;
 	}
-	// PGM
 	else if (self->spawnflags.has(SPAWNFLAGS_EXPLOSIVE_INACTIVE))
 	{
 		self->solid = SOLID_BSP;
 		if (self->targetname)
 			self->use = func_explosive_activate;
 	}
-	// PGM
 	else
 	{
 		self->solid = SOLID_BSP;
@@ -1096,9 +1091,7 @@ void SP_func_explosive(edict_t *self)
 	if (self->spawnflags.has(SPAWNFLAGS_EXPLOSIVE_ANIMATED_FAST))
 		self->s.effects |= EF_ANIM_ALLFAST;
 
-	// PGM
 	if (self->spawnflags.has(SPAWNFLAGS_EXPLOSIVE_ALWAYS_SHOOTABLE) || ((self->use != func_explosive_use) && (self->use != func_explosive_activate)))
-	// PGM
 	{
 		if (!self->health)
 			self->health = 100;
@@ -1186,9 +1179,7 @@ DIE(barrel_delay) (edict_t *self, edict_t *inflictor, edict_t *attacker, int dam
 
 }
 
-//=========
-// PGM  - change so barrels will think and hence, blow up
-THINK(barrel_think) (edict_t *self) -> void
+static THINK(barrel_think) (edict_t *self) -> void
 {
 	// the think needs to be first since later stuff may override.
 	self->think = barrel_think;
@@ -1200,14 +1191,12 @@ THINK(barrel_think) (edict_t *self) -> void
 	M_WorldEffects(self);
 }
 
-THINK(barrel_start) (edict_t *self) -> void
+static THINK(barrel_start) (edict_t *self) -> void
 {
 	M_droptofloor(self);
 	self->think = barrel_think;
 	self->nextthink = level.time + FRAME_TIME_S;
 }
-// PGM
-//=========
 
 void SP_misc_explobox(edict_t *self)
 {
@@ -1243,10 +1232,8 @@ void SP_misc_explobox(edict_t *self)
 
 	self->touch = barrel_touch;
 
-	// PGM - change so barrels will think and hence, blow up
 	self->think = barrel_start;
 	self->nextthink = level.time + 20_hz;
-	// PGM
 
 	gi.linkentity(self);
 }
@@ -2073,9 +2060,7 @@ static TOUCH(teleporter_touch) (edict_t *self, edict_t *other, const trace_t &tr
 		return;
 	}
 
-	// ZOID
 	Weapon_Grapple_DoReset(other->client);
-	// ZOID
 
 	// unlink to make sure it can't possibly interfere with KillBox
 	gi.unlinkentity(other);
@@ -2642,7 +2627,6 @@ void SP_misc_crashviper(edict_t *ent) {
 	gi.linkentity(ent);
 }
 
-// RAFAEL
 /*QUAKED misc_viper_missile (1 0 0) (-8 -8 -8) (8 8 8)
 "dmg"	how much boom should the bomb make? the default value is 250
 */
@@ -2685,7 +2669,6 @@ void SP_misc_viper_missile(edict_t *self) {
 	gi.linkentity(self);
 }
 
-// RAFAEL 17-APR-98
 /*QUAKED misc_transport (1 0 0) (-8 -8 -8) (8 8 8)
 Maxx's transport at end of game
 */

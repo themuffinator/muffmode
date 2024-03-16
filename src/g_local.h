@@ -631,53 +631,49 @@ MAKE_ENUM_BITFLAGS(gib_type_t);
 
 // monster ai flags
 enum monster_ai_flags_t : uint64_t {
-	AI_NONE = 0,
-	AI_STAND_GROUND = bit_v<0>,
-	AI_TEMP_STAND_GROUND = bit_v<1>,
-	AI_SOUND_TARGET = bit_v<2>,
-	AI_LOST_SIGHT = bit_v<3>,
-	AI_PURSUIT_LAST_SEEN = bit_v<4>,
-	AI_PURSUE_NEXT = bit_v<5>,
-	AI_PURSUE_TEMP = bit_v<6>,
-	AI_HOLD_FRAME = bit_v<7>,
-	AI_GOOD_GUY = bit_v<8>,
-	AI_BRUTAL = bit_v<9>,
-	AI_NOSTEP = bit_v<10>,
-	AI_DUCKED = bit_v<11>,
-	AI_COMBAT_POINT = bit_v<12>,
-	AI_MEDIC = bit_v<13>,
-	AI_RESURRECTING = bit_v<14>,
-
-	// ROGUE
-	AI_MANUAL_STEERING = bit_v<15>,
-	AI_TARGET_ANGER = bit_v<16>,
-	AI_DODGING = bit_v<17>,
-	AI_CHARGING = bit_v<18>,
-	AI_HINT_PATH = bit_v<19>,
-	AI_IGNORE_SHOTS = bit_v<20>,
+	AI_NONE					= 0,
+	AI_STAND_GROUND			= bit_v<0>,
+	AI_TEMP_STAND_GROUND	= bit_v<1>,
+	AI_SOUND_TARGET			= bit_v<2>,
+	AI_LOST_SIGHT			= bit_v<3>,
+	AI_PURSUIT_LAST_SEEN	= bit_v<4>,
+	AI_PURSUE_NEXT			= bit_v<5>,
+	AI_PURSUE_TEMP			= bit_v<6>,
+	AI_HOLD_FRAME			= bit_v<7>,
+	AI_GOOD_GUY				= bit_v<8>,
+	AI_BRUTAL				= bit_v<9>,
+	AI_NOSTEP				= bit_v<10>,
+	AI_DUCKED				= bit_v<11>,
+	AI_COMBAT_POINT			= bit_v<12>,
+	AI_MEDIC				= bit_v<13>,
+	AI_RESURRECTING			= bit_v<14>,
+	AI_MANUAL_STEERING		= bit_v<15>,
+	AI_TARGET_ANGER			= bit_v<16>,
+	AI_DODGING				= bit_v<17>,
+	AI_CHARGING				= bit_v<18>,
+	AI_HINT_PATH			= bit_v<19>,
+	AI_IGNORE_SHOTS			= bit_v<20>,
 	// PMM - FIXME - last second added for E3 .. there's probably a better way to do this, but
 	// this works
-	AI_DO_NOT_COUNT = bit_v<21>,	 // set for healed monsters
-	AI_SPAWNED_CARRIER = bit_v<22>, // both do_not_count and spawned are set for spawned monsters
-	AI_SPAWNED_MEDIC_C = bit_v<23>, // both do_not_count and spawned are set for spawned monsters
-	AI_SPAWNED_WIDOW = bit_v<24>,	 // both do_not_count and spawned are set for spawned monsters
-	AI_BLOCKED = bit_v<25>, // used by blocked_checkattack: set to say I'm attacking while blocked
-	// (prevents run-attacks)
-	// ROGUE
-	AI_SPAWNED_ALIVE = bit_v<26>, // [Paril-KEX] for spawning dead
-	AI_SPAWNED_DEAD = bit_v<27>,
-	AI_HIGH_TICK_RATE = bit_v<28>, // not limited by 10hz actions
-	AI_NO_PATH_FINDING = bit_v<29>, // don't try nav nodes for path finding
-	AI_PATHING = bit_v<30>, // using nav nodes currently
-	AI_STINKY = bit_v<31>, // spawn flies
-	AI_STUNK = bit_v<32>, // already spawned files
+	AI_DO_NOT_COUNT			= bit_v<21>,	 // set for healed monsters
+	AI_SPAWNED_CARRIER		= bit_v<22>, // both do_not_count and spawned are set for spawned monsters
+	AI_SPAWNED_MEDIC_C		= bit_v<23>, // both do_not_count and spawned are set for spawned monsters
+	AI_SPAWNED_WIDOW		= bit_v<24>,	 // both do_not_count and spawned are set for spawned monsters
+	AI_BLOCKED				= bit_v<25>, // used by blocked_checkattack: set to say I'm attacking while blocked (prevents run-attacks)
+	AI_SPAWNED_ALIVE		= bit_v<26>, // [Paril-KEX] for spawning dead
+	AI_SPAWNED_DEAD			= bit_v<27>,
+	AI_HIGH_TICK_RATE		= bit_v<28>, // not limited by 10hz actions
+	AI_NO_PATH_FINDING		= bit_v<29>, // don't try nav nodes for path finding
+	AI_PATHING				= bit_v<30>, // using nav nodes currently
+	AI_STINKY				= bit_v<31>, // spawn flies
+	AI_STUNK				= bit_v<32>, // already spawned files
 
-	AI_ALTERNATE_FLY = bit_v<33>, // use alternate flying mechanics; see monsterinfo.fly_xxx
-	AI_TEMP_MELEE_COMBAT = bit_v<34>, // temporarily switch to the melee combat style
-	AI_FORGET_ENEMY = bit_v<35>,			// forget the current enemy
-	AI_DOUBLE_TROUBLE = bit_v<36>, // JORG only
-	AI_REACHED_HOLD_COMBAT = bit_v<37>,
-	AI_THIRD_EYE = bit_v<38>
+	AI_ALTERNATE_FLY		= bit_v<33>, // use alternate flying mechanics; see monsterinfo.fly_xxx
+	AI_TEMP_MELEE_COMBAT	= bit_v<34>, // temporarily switch to the melee combat style
+	AI_FORGET_ENEMY			= bit_v<35>,			// forget the current enemy
+	AI_DOUBLE_TROUBLE		= bit_v<36>, // JORG only
+	AI_REACHED_HOLD_COMBAT	= bit_v<37>,
+	AI_THIRD_EYE			= bit_v<38>
 };
 MAKE_ENUM_BITFLAGS(monster_ai_flags_t);
 
@@ -741,89 +737,77 @@ enum movetype_t {
 	MOVETYPE_TOSS,		 // gravity
 	MOVETYPE_FLYMISSILE, // extra size to monsters
 	MOVETYPE_BOUNCE,
-	// RAFAEL
 	MOVETYPE_WALLBOUNCE,
-	// RAFAEL
-	// ROGUE
 	MOVETYPE_NEWTOSS // PGM - for deathball
-					 // ROGUE
 };
 
 // edict->flags
 enum ent_flags_t : uint64_t {
-	FL_NONE = 0, // no flags
-	FL_FLY = bit_v<0>,
-	FL_SWIM = bit_v<1>, // implied immunity to drowning
-	FL_IMMUNE_LASER = bit_v<2>,
-	FL_INWATER = bit_v<3>,
-	FL_GODMODE = bit_v<4>,
-	FL_NOTARGET = bit_v<5>,
-	FL_IMMUNE_SLIME = bit_v<6>,
-	FL_IMMUNE_LAVA = bit_v<7>,
-	FL_PARTIALGROUND = bit_v<8>, // not all corners are valid
-	FL_WATERJUMP = bit_v<9>, // player jumping out of water
-	FL_TEAMSLAVE = bit_v<10>, // not the first on the team
-	FL_NO_KNOCKBACK = bit_v<11>,
-	FL_POWER_ARMOR = bit_v<12>, // power armor (if any) is active
+	FL_NONE					= 0, // no flags
+	FL_FLY					= bit_v<0>,
+	FL_SWIM					= bit_v<1>, // implied immunity to drowning
+	FL_IMMUNE_LASER			= bit_v<2>,
+	FL_INWATER				= bit_v<3>,
+	FL_GODMODE				= bit_v<4>,
+	FL_NOTARGET				= bit_v<5>,
+	FL_IMMUNE_SLIME			= bit_v<6>,
+	FL_IMMUNE_LAVA			= bit_v<7>,
+	FL_PARTIALGROUND		= bit_v<8>, // not all corners are valid
+	FL_WATERJUMP			= bit_v<9>, // player jumping out of water
+	FL_TEAMSLAVE			= bit_v<10>, // not the first on the team
+	FL_NO_KNOCKBACK			= bit_v<11>,
+	FL_POWER_ARMOR			= bit_v<12>, // power armor (if any) is active
 
-	// ROGUE
-	FL_MECHANICAL = bit_v<13>, // entity is mechanical, use sparks not blood
-	FL_SAM_RAIMI = bit_v<14>, // entity is in sam raimi cam mode
-	FL_DISGUISED = bit_v<15>, // entity is in disguise, monsters will not recognize.
-	FL_NOGIB = bit_v<16>, // player has been vaporized by a nuke, drop no gibs
-	FL_DAMAGEABLE = bit_v<17>,
-	FL_STATIONARY = bit_v<18>,
-	// ROGUE
+	FL_MECHANICAL			= bit_v<13>, // entity is mechanical, use sparks not blood
+	FL_SAM_RAIMI			= bit_v<14>, // entity is in sam raimi cam mode
+	FL_DISGUISED			= bit_v<15>, // entity is in disguise, monsters will not recognize.
+	FL_NOGIB				= bit_v<16>, // player has been vaporized by a nuke, drop no gibs
+	FL_DAMAGEABLE			= bit_v<17>,
+	FL_STATIONARY			= bit_v<18>,
 
-	FL_ALIVE_KNOCKBACK_ONLY = bit_v<19>, // only apply knockback if alive or on same frame as death
-	FL_NO_DAMAGE_EFFECTS = bit_v<20>,
+	FL_ALIVE_KNOCKBACK_ONLY	= bit_v<19>, // only apply knockback if alive or on same frame as death
+	FL_NO_DAMAGE_EFFECTS	= bit_v<20>,
 
 	// [Paril-KEX] gets scaled by coop health scaling
-	FL_COOP_HEALTH_SCALE = bit_v<21>,
-	FL_FLASHLIGHT = bit_v<22>, // enable flashlight
-	FL_KILL_VELOCITY = bit_v<23>, // for berserker slam
-	FL_NOVISIBLE = bit_v<24>, // super invisibility
-	FL_DODGE = bit_v<25>, // monster should try to dodge this
-	FL_TEAMMASTER = bit_v<26>, // is a team master (only here so that entities abusing teammaster/teamchain for stuff don't break)
-	FL_LOCKED = bit_v<27>, // entity is locked for the purposes of navigation
-	FL_ALWAYS_TOUCH = bit_v<28>, // always touch, even if we normally wouldn't
-	FL_NO_STANDING = bit_v<29>, // don't allow "standing" on non-brush entities
-	FL_WANTS_POWER_ARMOR = bit_v<30>, // for players, auto-shield
+	FL_COOP_HEALTH_SCALE	= bit_v<21>,
+	FL_FLASHLIGHT			= bit_v<22>, // enable flashlight
+	FL_KILL_VELOCITY		= bit_v<23>, // for berserker slam
+	FL_NOVISIBLE			= bit_v<24>, // super invisibility
+	FL_DODGE				= bit_v<25>, // monster should try to dodge this
+	FL_TEAMMASTER			= bit_v<26>, // is a team master (only here so that entities abusing teammaster/teamchain for stuff don't break)
+	FL_LOCKED				= bit_v<27>, // entity is locked for the purposes of navigation
+	FL_ALWAYS_TOUCH			= bit_v<28>, // always touch, even if we normally wouldn't
+	FL_NO_STANDING			= bit_v<29>, // don't allow "standing" on non-brush entities
+	FL_WANTS_POWER_ARMOR	= bit_v<30>, // for players, auto-shield
 
-	FL_RESPAWN = bit_v<31>, // used for item respawning
-	FL_TRAP = bit_v<32>, // entity is a trap of some kind
-	FL_TRAP_LASER_FIELD = bit_v<33>, // enough of a special case to get it's own flag...
-	FL_IMMORTAL = bit_v<34>  // never go below 1hp
+	FL_RESPAWN				= bit_v<31>, // used for item respawning
+	FL_TRAP					= bit_v<32>, // entity is a trap of some kind
+	FL_TRAP_LASER_FIELD		= bit_v<33>, // enough of a special case to get it's own flag...
+	FL_IMMORTAL				= bit_v<34>  // never go below 1hp
 };
 MAKE_ENUM_BITFLAGS(ent_flags_t);
 
 // gitem_t->flags
 enum item_flags_t : uint32_t {
-	IF_NONE = 0,
-	IF_WEAPON = bit_v<0>, // use makes active weapon
-	IF_AMMO = bit_v<1>,
-	IF_ARMOR = bit_v<2>,
-	IF_STAY_COOP = bit_v<3>,
-	IF_KEY = bit_v<4>,
-	IF_POWERUP = bit_v<5>,
-	// ROGUE
-	IF_NOT_GIVEABLE = bit_v<6>, // item can not be given
-	// ROGUE
-	IF_HEALTH = bit_v<7>,
-	// ZOID
-	IF_TECH = bit_v<8>,
-	IF_NO_HASTE = bit_v<9>,
-	// ZOID
+	IF_NONE				= 0,
 
-	IF_NO_INFINITE_AMMO = bit_v<10>, // [Paril-KEX] don't allow infinite ammo to affect
-	IF_POWERUP_WHEEL = bit_v<11>, // [Paril-KEX] item should be in powerup wheel
-	IF_POWERUP_ONOFF = bit_v<12>, // [Paril-KEX] for wheel; can't store more than one, show on/off state
-
-	IF_NOT_RANDOM = bit_v<13>, // [Paril-KEX] item never shows up in randomizations
-
-	IF_POWER_ARMOR = bit_v<14>,
-	IF_SUPER_POWERUP = bit_v<15>,
-	IF_SPHERE = bit_v<16>,
+	IF_WEAPON			= bit_v<0>, // use makes active weapon
+	IF_AMMO				= bit_v<1>,
+	IF_ARMOR			= bit_v<2>,
+	IF_STAY_COOP		= bit_v<3>,
+	IF_KEY				= bit_v<4>,
+	IF_POWERUP			= bit_v<5>,
+	IF_NOT_GIVEABLE		= bit_v<6>, // item can not be given
+	IF_HEALTH			= bit_v<7>,
+	IF_TECH				= bit_v<8>,
+	IF_NO_HASTE			= bit_v<9>,
+	IF_NO_INFINITE_AMMO	= bit_v<10>, // [Paril-KEX] don't allow infinite ammo to affect
+	IF_POWERUP_WHEEL	= bit_v<11>, // [Paril-KEX] item should be in powerup wheel
+	IF_POWERUP_ONOFF	= bit_v<12>, // [Paril-KEX] for wheel; can't store more than one, show on/off state
+	IF_NOT_RANDOM		= bit_v<13>, // [Paril-KEX] item never shows up in randomizations
+	IF_POWER_ARMOR		= bit_v<14>,
+	IF_SUPER_POWERUP	= bit_v<15>,
+	IF_SPHERE			= bit_v<16>,
 
 	IF_ANY = 0xFFFFFFFF
 };
@@ -1236,11 +1220,9 @@ struct level_locals_t {
 
 	int32_t		power_cubes; // ugly necessity for coop
 
-	// ROGUE
 	edict_t		*disguise_violator;
 	gtime_t		disguise_violation_time;
 	int32_t		disguise_icon; // [Paril-KEX]
-	// ROGUE
 
 	int32_t		shadow_light_count; // [Sam-KEX]
 	bool		is_n64;
@@ -1709,7 +1691,6 @@ struct monsterinfo_t {
 	int32_t	  max_power_armor_power;
 	int32_t	  weapon_sound, engine_sound;
 
-	// ROGUE
 	save_monsterinfo_blocked_t blocked;
 	gtime_t	 last_hint_time; // last time the monster checked for hintpaths.
 	edict_t *goal_hint;		 // which hint_path we're trying to get to
@@ -1739,7 +1720,6 @@ struct monsterinfo_t {
 	gtime_t quad_time;
 	gtime_t invincibility_time;
 	gtime_t double_time;
-	// ROGUE
 
 	// Paril
 	gtime_t	  surprise_time;
@@ -1831,11 +1811,9 @@ using save_die_t = save_data_t<void(*)(edict_t *self, edict_t *inflictor, edict_
 	static const save_data_list_t save__##n(#n, SAVE_FUNC_DIE, reinterpret_cast<const void *>(n)); \
 	auto n
 
-// ROGUE
 // this determines how long to wait after a duck to duck again.
 // if we finish a duck-up, this gets cut in half.
 constexpr gtime_t DUCK_INTERVAL = 5000_ms;
-// ROGUE
 
 extern game_locals_t  game;
 extern level_locals_t level;
@@ -2265,19 +2243,17 @@ constexpr spawnflags_t SPAWNFLAG_HEALTHBAR_PVS_ONLY = 1_spawnflag;
 
 // damage flags
 enum damageflags_t {
-	DAMAGE_NONE = 0,				   // no damage flags
-	DAMAGE_RADIUS = 0x00000001,		   // damage was indirect
-	DAMAGE_NO_ARMOR = 0x00000002,	   // armour does not protect from this damage
-	DAMAGE_ENERGY = 0x00000004,		   // damage is from an energy based weapon
-	DAMAGE_NO_KNOCKBACK = 0x00000008,  // do not affect velocity, just view angles
-	DAMAGE_BULLET = 0x00000010,		   // damage is from a bullet (used for ricochets)
-	DAMAGE_NO_PROTECTION = 0x00000020, // armor, shields, protection, godmode etc. have no effect
-	// ROGUE
-	DAMAGE_DESTROY_ARMOR = 0x00000040, // damage is done to armor and health.
-	DAMAGE_NO_REG_ARMOR = 0x00000080,  // damage skips regular armor
-	DAMAGE_NO_POWER_ARMOR = 0x00000100,// damage skips power armor
-	// ROGUE
-	DAMAGE_NO_INDICATOR = 0x00000200   // for clients: no damage indicators
+	DAMAGE_NONE				= 0,			// no damage flags
+	DAMAGE_RADIUS			= 0x00000001,	// damage was indirect
+	DAMAGE_NO_ARMOR			= 0x00000002,	// armour does not protect from this damage
+	DAMAGE_ENERGY			= 0x00000004,	// damage is from an energy based weapon
+	DAMAGE_NO_KNOCKBACK		= 0x00000008,	// do not affect velocity, just view angles
+	DAMAGE_BULLET			= 0x00000010,	// damage is from a bullet (used for ricochets)
+	DAMAGE_NO_PROTECTION	= 0x00000020,	// armor, shields, protection, godmode etc. have no effect
+	DAMAGE_DESTROY_ARMOR	= 0x00000040,	// damage is done to armor and health.
+	DAMAGE_NO_REG_ARMOR		= 0x00000080,	// damage skips regular armor
+	DAMAGE_NO_POWER_ARMOR	= 0x00000100,	// damage skips power armor
+	DAMAGE_NO_INDICATOR		= 0x00000200	// for clients: no damage indicators
 };
 
 MAKE_ENUM_BITFLAGS(damageflags_t);
@@ -2293,12 +2269,9 @@ void T_Damage(edict_t *targ, edict_t *inflictor, edict_t *attacker, const vec3_t
 void T_RadiusDamage(edict_t *inflictor, edict_t *attacker, float damage, edict_t *ignore, float radius, damageflags_t dflags, mod_t mod);
 void Killed(edict_t *targ, edict_t *inflictor, edict_t *attacker, int damage, const vec3_t &point, mod_t mod);
 
-// ROGUE
 void T_RadiusNukeDamage(edict_t *inflictor, edict_t *attacker, float damage, edict_t *ignore, float radius, mod_t mod);
-void T_RadiusClassDamage(edict_t *inflictor, edict_t *attacker, float damage, char *ignoreClass, float radius,
-	mod_t mod);
+void T_RadiusClassDamage(edict_t *inflictor, edict_t *attacker, float damage, char *ignoreClass, float radius, mod_t mod);
 void cleanupHealTarget(edict_t *ent);
-// ROGUE
 
 constexpr int32_t DEFAULT_BULLET_HSPREAD = 300;
 constexpr int32_t DEFAULT_BULLET_VSPREAD = 500;
@@ -2384,7 +2357,6 @@ void monster_fire_blueblaster(edict_t *self, const vec3_t &start, const vec3_t &
 	monster_muzzleflash_id_t flashtype, effects_t effect);
 void G_Monster_CheckCoopHealthScaling();
 
-// ROGUE
 void monster_fire_blaster2(edict_t *self, const vec3_t &start, const vec3_t &dir, int damage, int speed,
 	monster_muzzleflash_id_t flashtype, effects_t effect);
 void monster_fire_disruptor(edict_t *self, const vec3_t &start, const vec3_t &dir, int damage, int speed, edict_t *enemy,
@@ -2393,7 +2365,6 @@ void monster_fire_heatbeam(edict_t *self, const vec3_t &start, const vec3_t &dir
 	int kick, monster_muzzleflash_id_t flashtype);
 void stationarymonster_start(edict_t *self);
 void monster_done_dodge(edict_t *self);
-// ROGUE
 
 stuck_result_t G_FixStuckObject(edict_t *self, vec3_t check);
 
@@ -2644,13 +2615,9 @@ constexpr float GRENADE_MINSPEED = 400.f;
 constexpr float GRENADE_MAXSPEED = 800.f;
 
 extern bool is_quad;
-// RAFAEL
 extern bool is_quadfire;
-// RAFAEL
 extern player_muzzle_t is_silenced;
-// ROGUE
 extern byte damage_multiplier;
-// ROGUE
 
 //
 // m_move.c
@@ -2787,10 +2754,8 @@ constexpr spawnflags_t SPAWNFLAG_LANDMARK_KEEP_Z = 1_spawnflag;
 
 bool ClientIsSpectating(gclient_t *cl);
 
-// ZOID
 #include "ctf/g_ctf.h"
 #include "ctf/p_ctf_menu.h"
-// ZOID
 //============================================================================
 
 // client_t->anim_priority
@@ -2933,8 +2898,7 @@ struct client_respawn_t {
 
 	bool				spectator; // client is a spectator
 
-	// ZOID
-	team_t				team; // CTF team
+	team_t				team;
 	int32_t				ctf_state;
 	gtime_t				ctf_lasthurtcarrier;
 	gtime_t				ctf_lastreturnedflag;
@@ -2942,17 +2906,16 @@ struct client_respawn_t {
 	gtime_t				ctf_lastfraggedcarrier;
 	bool				id_state;
 	gtime_t				lastidtime;
-	bool				voted; // for elections
+	bool				voted;
 	bool				ready;
 	bool				admin;
 	ghost_t				*ghost; // for ghost codes
-	// ZOID
 
 /*freeze*/
 	edict_t				*thawer;
 	int					help;
 	int					thawed;
-	/*freeze*/
+/*freeze*/
 
 	bool				inactive;
 
@@ -3102,30 +3065,26 @@ struct gclient_t {
 	bool	chase_thirdperson;
 	bool	 update_chase; // need to update chase info?
 
-	//=======
-	// ROGUE
 	gtime_t ir_time;
 	gtime_t nuke_time;
 	gtime_t tracker_pain_time;
 
 	edict_t *owned_sphere; // this points to the player's sphere
-	// ROGUE
-//=======
 
 	gtime_t empty_click_sound;
 
-	// ZOID
 	bool		inmenu;	  // in menu
 	pmenuhnd_t *menu;	  // current menu
 	gtime_t		menutime; // time to update menu
 	bool		menudirty;
+
 	edict_t		*grapple_ent;			// entity of grapple
 	int32_t		grapple_state;			// true if pulling
 	gtime_t		grapple_release_time;	// time of grapple release
+
 	gtime_t		tech_regen_time;			// regen tech
 	gtime_t		tech_sound_time;
 	gtime_t		tech_last_message_time;
-	// ZOID
 
 	gtime_t		frenzy_ammoregentime;
 
@@ -3364,18 +3323,14 @@ struct edict_t {
 	moveinfo_t	  moveinfo;
 	monsterinfo_t monsterinfo;
 
-	//=========
-	// ROGUE
 	plat2flags_t plat2flags;
 	vec3_t		 offset;
 	vec3_t		 gravityVector;
-	edict_t *bad_area;
-	edict_t *hint_chain;
-	edict_t *monster_hint_chain;
-	edict_t *target_hint_chain;
+	edict_t		*bad_area;
+	edict_t		*hint_chain;
+	edict_t		*monster_hint_chain;
+	edict_t		*target_hint_chain;
 	int32_t		 hint_chain_id;
-	// ROGUE
-	//=========
 
 	char clock_message[CLOCK_MESSAGE_SIZE];
 
@@ -3441,8 +3396,6 @@ struct edict_t {
 	team_t		fteam;
 };
 
-//=============
-// ROGUE
 constexpr spawnflags_t SPHERE_DEFENDER = 0x0001_spawnflag;
 constexpr spawnflags_t SPHERE_HUNTER = 0x0002_spawnflag;
 constexpr spawnflags_t SPHERE_VENGEANCE = 0x0004_spawnflag;
@@ -3450,14 +3403,6 @@ constexpr spawnflags_t SPHERE_DOPPLEGANGER = 0x10000_spawnflag;
 
 constexpr spawnflags_t SPHERE_TYPE = SPHERE_DEFENDER | SPHERE_HUNTER | SPHERE_VENGEANCE;
 constexpr spawnflags_t SPHERE_FLAGS = SPHERE_DOPPLEGANGER;
-
-//
-// deathmatch games
-//
-enum {
-	RDM_TAG = 2,
-	RDM_DEATHBALL = 3
-};
 
 struct dm_game_rt {
 	void (*GameInit)();
@@ -3473,10 +3418,6 @@ struct dm_game_rt {
 	int (*ChangeKnockback)(edict_t *targ, edict_t *attacker, int knockback, mod_t mod);
 	int (*CheckExitRules)();
 };
-
-// ROGUE
-//============
-
 
 // [Paril-KEX]
 inline void monster_footstep(edict_t *self) {

@@ -11,30 +11,38 @@ void UpdateChaseCam(edict_t *ent) {
 	vec3_t	angles;
 
 	// is our chase target gone?
-	if (!ent->client->chase_target->inuse || ClientIsSpectating(ent->client->chase_target->client)) {
+	if (!ent->client->chase_target->inuse || !ent->client->chase_target->client || ent->client->chase_target->client->resp.spectator) {
+		Team_Join(ent, TEAM_SPECTATOR, false);
+		/*
 		edict_t *old = ent->client->chase_target;
-
-		ChaseNext(ent);
 
 		ent->client->chase_target = nullptr;
 		ent->client->ps.pmove.pm_flags &= ~(PMF_NO_POSITIONAL_PREDICTION | PMF_NO_ANGULAR_PREDICTION);
 
-		if (ent->client->chase_target == old)
+		ChaseNext(ent);
+		if (ent->client->chase_target == old || !ent->client->chase_target) {
+			ent->client->chase_target = nullptr;
+			ent->client->ps.pmove.pm_flags &= ~(PMF_NO_POSITIONAL_PREDICTION | PMF_NO_ANGULAR_PREDICTION);
+
+			ent->client->ps.kick_angles = {};
+			ent->client->ps.gunangles = {};
+			ent->client->ps.gunoffset = {};
+			ent->client->ps.gunindex = 0;
+			ent->client->ps.gunskin = 0;
+			ent->client->ps.gunframe = 0;
+			ent->client->ps.gunrate = 0;
+			ent->client->ps.screen_blend = {};
+			ent->client->ps.damage_blend = {};
+			ent->client->ps.rdflags = RDF_NONE;
+
+			ent->client->pers.hand = RIGHT_HANDED;
+			ent->client->pers.weapon = nullptr;
+
+			Team_Join(ent, TEAM_SPECTATOR, false);
 			return;
-
-		ent->client->ps.kick_angles = {};
-		ent->client->ps.gunangles = {};
-		ent->client->ps.gunoffset = {};
-		ent->client->ps.gunindex = 0;
-		ent->client->ps.gunskin = 0;
-		ent->client->ps.gunframe = 0;
-		ent->client->ps.gunrate = 0;
-		ent->client->ps.screen_blend = {};
-		ent->client->ps.damage_blend = {};
-		ent->client->ps.rdflags = RDF_NONE;
-
-		ent->client->pers.hand = RIGHT_HANDED;
-		ent->client->pers.weapon = nullptr;
+		}
+		*/
+		return;
 	}
 
 	targ = ent->client->chase_target;

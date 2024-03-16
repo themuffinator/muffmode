@@ -2,17 +2,14 @@
 // Licensed under the GNU General Public License 2.0.
 #include "g_local.h"
 
-// PGM - some of these are mine, some id's. I added the define's.
 constexpr spawnflags_t SPAWNFLAG_TRIGGER_MONSTER = 0x01_spawnflag;
 constexpr spawnflags_t SPAWNFLAG_TRIGGER_NOT_PLAYER = 0x02_spawnflag;
 constexpr spawnflags_t SPAWNFLAG_TRIGGER_TRIGGERED = 0x04_spawnflag;
 constexpr spawnflags_t SPAWNFLAG_TRIGGER_TOGGLE = 0x08_spawnflag;
 constexpr spawnflags_t SPAWNFLAG_TRIGGER_LATCHED = 0x10_spawnflag;
 constexpr spawnflags_t SPAWNFLAG_TRIGGER_CLIP = 0x20_spawnflag;
-// PGM
 
-void InitTrigger(edict_t *self)
-{
+static void InitTrigger(edict_t *self) {
 	if (st.was_key_specified("angle") || st.was_key_specified("angles") || self->s.angles)
 		G_SetMovedir(self->s.angles, self->movedir);
 
@@ -26,28 +23,23 @@ void InitTrigger(edict_t *self)
 }
 
 // the wait time has passed, so set back up for another activation
-THINK(multi_wait) (edict_t *ent) -> void
-{
+static THINK(multi_wait) (edict_t *ent) -> void {
 	ent->nextthink = 0_ms;
 }
 
 // the trigger was just activated
 // ent->activator should be set to the activator so it can be held through a delay
 // so wait for the delay time before firing
-void multi_trigger(edict_t *ent)
-{
+static void multi_trigger(edict_t *ent) {
 	if (ent->nextthink)
 		return; // already been triggered
 
 	G_UseTargets(ent, ent->activator);
 
-	if (ent->wait > 0)
-	{
+	if (ent->wait > 0) {
 		ent->think = multi_wait;
 		ent->nextthink = level.time + gtime_t::from_sec(ent->wait);
-	}
-	else
-	{ // we can't just remove (self) here, because this is a touch function
+	} else { // we can't just remove (self) here, because this is a touch function
 		// called while looping through area links...
 		ent->touch = nullptr;
 		ent->nextthink = level.time + FRAME_TIME_S;
@@ -55,50 +47,39 @@ void multi_trigger(edict_t *ent)
 	}
 }
 
-USE(Use_Multi) (edict_t *ent, edict_t *other, edict_t *activator) -> void
-{
+static USE(Use_Multi) (edict_t *ent, edict_t *other, edict_t *activator) -> void {
 	// PGM
-	if (ent->spawnflags.has(SPAWNFLAG_TRIGGER_TOGGLE))
-	{
+	if (ent->spawnflags.has(SPAWNFLAG_TRIGGER_TOGGLE)) {
 		if (ent->solid == SOLID_TRIGGER)
 			ent->solid = SOLID_NOT;
 		else
 			ent->solid = SOLID_TRIGGER;
 		gi.linkentity(ent);
-	}
-	else
-	{
+	} else {
 		ent->activator = activator;
 		multi_trigger(ent);
 	}
 	// PGM
 }
 
-TOUCH(Touch_Multi) (edict_t *self, edict_t *other, const trace_t &tr, bool other_touching_self) -> void
-{
-	if (other->client)
-	{
+static TOUCH(Touch_Multi) (edict_t *self, edict_t *other, const trace_t &tr, bool other_touching_self) -> void {
+	if (other->client) {
 		if (self->spawnflags.has(SPAWNFLAG_TRIGGER_NOT_PLAYER))
 			return;
-	}
-	else if (other->svflags & SVF_MONSTER)
-	{
+	} else if (other->svflags & SVF_MONSTER) {
 		if (!self->spawnflags.has(SPAWNFLAG_TRIGGER_MONSTER))
 			return;
-	}
-	else
+	} else
 		return;
 
-	if (self->spawnflags.has(SPAWNFLAG_TRIGGER_CLIP))
-	{
+	if (self->spawnflags.has(SPAWNFLAG_TRIGGER_CLIP)) {
 		trace_t clip = gi.clip(self, other->s.origin, other->mins, other->maxs, other->s.origin, G_GetClipMask(other));
 
 		if (clip.fraction == 1.0f)
 			return;
 	}
 
-	if (self->movedir)
-	{
+	if (self->movedir) {
 		vec3_t forward;
 
 		AngleVectors(other->s.angles, forward, nullptr, nullptr);
@@ -124,32 +105,25 @@ sounds
 4)
 set "message" to text string
 */
-USE(trigger_enable) (edict_t *self, edict_t *other, edict_t *activator) -> void
-{
+static USE(trigger_enable) (edict_t *self, edict_t *other, edict_t *activator) -> void {
 	self->solid = SOLID_TRIGGER;
 	self->use = Use_Multi;
 	gi.linkentity(self);
 }
 
-static BoxEdictsResult_t latched_trigger_filter(edict_t *other, void *data)
-{
-	edict_t *self = (edict_t *) data;
+static BoxEdictsResult_t latched_trigger_filter(edict_t *other, void *data) {
+	edict_t *self = (edict_t *)data;
 
-	if (other->client)
-	{
+	if (other->client) {
 		if (self->spawnflags.has(SPAWNFLAG_TRIGGER_NOT_PLAYER))
 			return BoxEdictsResult_t::Skip;
-	}
-	else if (other->svflags & SVF_MONSTER)
-	{
+	} else if (other->svflags & SVF_MONSTER) {
 		if (!self->spawnflags.has(SPAWNFLAG_TRIGGER_MONSTER))
 			return BoxEdictsResult_t::Skip;
-	}
-	else
+	} else
 		return BoxEdictsResult_t::Skip;
 
-	if (self->movedir)
-	{
+	if (self->movedir) {
 		vec3_t forward;
 
 		AngleVectors(other->s.angles, forward, nullptr, nullptr);
@@ -161,21 +135,18 @@ static BoxEdictsResult_t latched_trigger_filter(edict_t *other, void *data)
 	return BoxEdictsResult_t::Keep | BoxEdictsResult_t::End;
 }
 
-THINK(latched_trigger_think) (edict_t *self) -> void
-{
+static THINK(latched_trigger_think) (edict_t *self) -> void {
 	self->nextthink = level.time + 1_ms;
 
 	bool any_inside = !!gi.BoxEdicts(self->absmin, self->absmax, nullptr, 0, AREA_SOLID, latched_trigger_filter, self);
 
-	if (!!self->count != any_inside)
-	{
+	if (!!self->count != any_inside) {
 		G_UseTargets(self, self->activator);
 		self->count = any_inside ? 1 : 0;
 	}
 }
 
-void SP_trigger_multiple(edict_t *ent)
-{
+void SP_trigger_multiple(edict_t *ent) {
 	if (ent->sounds == 1)
 		ent->noise_index = gi.soundindex("misc/secret.wav");
 	else if (ent->sounds == 2)
@@ -188,8 +159,7 @@ void SP_trigger_multiple(edict_t *ent)
 
 	InitTrigger(ent);
 
-	if (ent->spawnflags.has(SPAWNFLAG_TRIGGER_LATCHED))
-	{
+	if (ent->spawnflags.has(SPAWNFLAG_TRIGGER_LATCHED)) {
 		if (ent->spawnflags.has(SPAWNFLAG_TRIGGER_TRIGGERED | SPAWNFLAG_TRIGGER_TOGGLE))
 			gi.Com_PrintFmt("{}: latched and triggered/toggle are not supported\n", *ent);
 
@@ -197,19 +167,13 @@ void SP_trigger_multiple(edict_t *ent)
 		ent->nextthink = level.time + 1_ms;
 		ent->use = Use_Multi;
 		return;
-	}
-	else
+	} else
 		ent->touch = Touch_Multi;
 
-	// PGM
-	if (ent->spawnflags.has(SPAWNFLAG_TRIGGER_TRIGGERED | SPAWNFLAG_TRIGGER_TOGGLE))
-	// PGM
-	{
+	if (ent->spawnflags.has(SPAWNFLAG_TRIGGER_TRIGGERED | SPAWNFLAG_TRIGGER_TOGGLE)) {
 		ent->solid = SOLID_NOT;
 		ent->use = trigger_enable;
-	}
-	else
-	{
+	} else {
 		ent->solid = SOLID_TRIGGER;
 		ent->use = Use_Multi;
 	}
@@ -235,12 +199,10 @@ sounds
 "message"	string to be displayed when triggered
 */
 
-void SP_trigger_once(edict_t *ent)
-{
+void SP_trigger_once(edict_t *ent) {
 	// make old maps work because I messed up on flag assignments here
 	// triggered was on bit 1 when it should have been on bit 4
-	if (ent->spawnflags.has(SPAWNFLAG_TRIGGER_MONSTER))
-	{
+	if (ent->spawnflags.has(SPAWNFLAG_TRIGGER_MONSTER)) {
 		ent->spawnflags &= ~SPAWNFLAG_TRIGGER_MONSTER;
 		ent->spawnflags |= SPAWNFLAG_TRIGGER_TRIGGERED;
 		gi.Com_PrintFmt("{}: fixed TRIGGERED flag\n", *ent);
@@ -255,16 +217,14 @@ This fixed size trigger cannot be touched, it can only be fired by other events.
 */
 constexpr spawnflags_t SPAWNFLAGS_TRIGGER_RELAY_NO_SOUND = 1_spawnflag;
 
-USE(trigger_relay_use) (edict_t *self, edict_t *other, edict_t *activator) -> void
-{
+static USE(trigger_relay_use) (edict_t *self, edict_t *other, edict_t *activator) -> void {
 	if (self->crosslevel_flags && !(self->crosslevel_flags == (game.cross_level_flags & SFL_CROSS_TRIGGER_MASK & self->crosslevel_flags)))
 		return;
 
 	G_UseTargets(self, activator);
 }
 
-void SP_trigger_relay(edict_t *self)
-{
+void SP_trigger_relay(edict_t *self) {
 	self->use = trigger_relay_use;
 
 	if (self->spawnflags.has(SPAWNFLAGS_TRIGGER_RELAY_NO_SOUND))
@@ -283,8 +243,7 @@ trigger_key
 A relay trigger that only fires it's targets if player has the proper key.
 Use "item" to specify the required key, for example "key_data_cd"
 */
-USE(trigger_key_use) (edict_t *self, edict_t *other, edict_t *activator) -> void
-{
+static USE(trigger_key_use) (edict_t *self, edict_t *other, edict_t *activator) -> void {
 	item_id_t index;
 
 	if (!self->item)
@@ -293,8 +252,7 @@ USE(trigger_key_use) (edict_t *self, edict_t *other, edict_t *activator) -> void
 		return;
 
 	index = self->item->id;
-	if (!activator->client->pers.inventory[index])
-	{
+	if (!activator->client->pers.inventory[index]) {
 		if (level.time < self->touch_debounce_time)
 			return;
 		self->touch_debounce_time = level.time + 5_sec;
@@ -304,43 +262,35 @@ USE(trigger_key_use) (edict_t *self, edict_t *other, edict_t *activator) -> void
 	}
 
 	gi.sound(activator, CHAN_AUTO, gi.soundindex("misc/keyuse.wav"), 1, ATTN_NORM, 0);
-	if (coop->integer)
-	{
+	if (coop->integer) {
 		edict_t *ent;
 
-		if (self->item->id == IT_KEY_POWER_CUBE || self->item->id == IT_KEY_EXPLOSIVE_CHARGES)
-		{
+		if (self->item->id == IT_KEY_POWER_CUBE || self->item->id == IT_KEY_EXPLOSIVE_CHARGES) {
 			int cube;
 
 			for (cube = 0; cube < 8; cube++)
 				if (activator->client->pers.power_cubes & (1 << cube))
 					break;
-			for (uint32_t player = 1; player <= game.maxclients; player++)
-			{
+			for (uint32_t player = 1; player <= game.maxclients; player++) {
 				ent = &g_edicts[player];
 				if (!ent->inuse)
 					continue;
 				if (!ent->client)
 					continue;
-				if (ent->client->pers.power_cubes & (1 << cube))
-				{
+				if (ent->client->pers.power_cubes & (1 << cube)) {
 					ent->client->pers.inventory[index]--;
 					ent->client->pers.power_cubes &= ~(1 << cube);
 
 					// [Paril-KEX] don't allow respawning players to keep
 					// used keys
-					if (!P_UseCoopInstancedItems())
-					{
+					if (!P_UseCoopInstancedItems()) {
 						ent->client->resp.coop_respawn.inventory[index] = 0;
 						ent->client->resp.coop_respawn.power_cubes &= ~(1 << cube);
 					}
 				}
 			}
-		}
-		else
-		{
-			for (uint32_t player = 1; player <= game.maxclients; player++)
-			{
+		} else {
+			for (uint32_t player = 1; player <= game.maxclients; player++) {
 				ent = &g_edicts[player];
 				if (!ent->inuse)
 					continue;
@@ -354,9 +304,7 @@ USE(trigger_key_use) (edict_t *self, edict_t *other, edict_t *activator) -> void
 					ent->client->resp.coop_respawn.inventory[index] = 0;
 			}
 		}
-	}
-	else
-	{
+	} else {
 		activator->client->pers.inventory[index]--;
 	}
 
@@ -365,23 +313,19 @@ USE(trigger_key_use) (edict_t *self, edict_t *other, edict_t *activator) -> void
 	self->use = nullptr;
 }
 
-void SP_trigger_key(edict_t *self)
-{
-	if (!st.item)
-	{
+void SP_trigger_key(edict_t *self) {
+	if (!st.item) {
 		gi.Com_PrintFmt("{}: no key item\n", *self);
 		return;
 	}
 	self->item = FindItemByClassname(st.item);
 
-	if (!self->item)
-	{
+	if (!self->item) {
 		gi.Com_PrintFmt("{}: item {} not found\n", *self, st.item);
 		return;
 	}
 
-	if (!self->target)
-	{
+	if (!self->target) {
 		gi.Com_PrintFmt("{}: no target\n", *self);
 		return;
 	}
@@ -410,25 +354,21 @@ After the counter has been triggered "count" times (default 2), it will fire all
 
 constexpr spawnflags_t SPAWNFLAG_COUNTER_NOMESSAGE = 1_spawnflag;
 
-USE(trigger_counter_use) (edict_t *self, edict_t *other, edict_t *activator) -> void
-{
+static USE(trigger_counter_use) (edict_t *self, edict_t *other, edict_t *activator) -> void {
 	if (self->count == 0)
 		return;
 
 	self->count--;
 
-	if (self->count)
-	{
-		if (!(self->spawnflags & SPAWNFLAG_COUNTER_NOMESSAGE))
-		{
+	if (self->count) {
+		if (!(self->spawnflags & SPAWNFLAG_COUNTER_NOMESSAGE)) {
 			gi.LocCenter_Print(activator, "$g_more_to_go", self->count);
 			gi.sound(activator, CHAN_AUTO, gi.soundindex("misc/talk1.wav"), 1, ATTN_NORM, 0);
 		}
 		return;
 	}
 
-	if (!(self->spawnflags & SPAWNFLAG_COUNTER_NOMESSAGE))
-	{
+	if (!(self->spawnflags & SPAWNFLAG_COUNTER_NOMESSAGE)) {
 		gi.LocCenter_Print(activator, "$g_sequence_completed");
 		gi.sound(activator, CHAN_AUTO, gi.soundindex("misc/talk1.wav"), 1, ATTN_NORM, 0);
 	}
@@ -436,8 +376,7 @@ USE(trigger_counter_use) (edict_t *self, edict_t *other, edict_t *activator) -> 
 	multi_trigger(self);
 }
 
-void SP_trigger_counter(edict_t *self)
-{
+void SP_trigger_counter(edict_t *self) {
 	self->wait = -1;
 	if (!self->count)
 		self->count = 2;
@@ -456,8 +395,7 @@ trigger_always
 /*QUAKED trigger_always (.5 .5 .5) (-8 -8 -8) (8 8 8)
 This trigger will always fire.  It is activated by the world.
 */
-void SP_trigger_always(edict_t *ent)
-{
+void SP_trigger_always(edict_t *ent) {
 	// we must have some delay to make sure our use targets are present
 	if (!ent->delay)
 		ent->delay = 0.2f;
@@ -472,43 +410,34 @@ trigger_push
 ==============================================================================
 */
 
-// PGM
 constexpr spawnflags_t SPAWNFLAG_PUSH_ONCE = 0x01_spawnflag;
 constexpr spawnflags_t SPAWNFLAG_PUSH_PLUS = 0x02_spawnflag;
 constexpr spawnflags_t SPAWNFLAG_PUSH_SILENT = 0x04_spawnflag;
 constexpr spawnflags_t SPAWNFLAG_PUSH_START_OFF = 0x08_spawnflag;
 constexpr spawnflags_t SPAWNFLAG_PUSH_CLIP = 0x10_spawnflag;
-// PGM
 
 static cached_soundindex windsound;
 
-TOUCH(trigger_push_touch) (edict_t *self, edict_t *other, const trace_t &tr, bool other_touching_self) -> void
-{
-	if (self->spawnflags.has(SPAWNFLAG_PUSH_CLIP))
-	{
+static TOUCH(trigger_push_touch) (edict_t *self, edict_t *other, const trace_t &tr, bool other_touching_self) -> void {
+	if (self->spawnflags.has(SPAWNFLAG_PUSH_CLIP)) {
 		trace_t clip = gi.clip(self, other->s.origin, other->mins, other->maxs, other->s.origin, G_GetClipMask(other));
 
 		if (clip.fraction == 1.0f)
 			return;
 	}
 
-	if (strcmp(other->classname, "grenade") == 0)
-	{
+	if (strcmp(other->classname, "grenade") == 0) {
 		other->velocity = self->movedir * (self->speed * 10);
-	}
-	else if (other->health > 0 || freeze->integer && other->client && other->client->frozen)
-	{
+	} else if (other->health > 0 || freeze->integer && other->client && other->client->frozen) {
 		other->velocity = self->movedir * (self->speed * 10);
 
-		if (other->client)
-		{
+		if (other->client) {
 			// don't take falling damage immediately from this
 			other->client->oldvelocity = other->velocity;
 			other->client->oldgroundentity = other->groundentity;
 			if (
 				!(self->spawnflags & SPAWNFLAG_PUSH_SILENT) &&
-				(other->fly_sound_debounce_time < level.time))
-			{
+				(other->fly_sound_debounce_time < level.time)) {
 				other->fly_sound_debounce_time = level.time + 1.5_sec;
 				gi.sound(other, CHAN_AUTO, windsound, 1, ATTN_NORM, 0);
 			}
@@ -519,31 +448,23 @@ TOUCH(trigger_push_touch) (edict_t *self, edict_t *other, const trace_t &tr, boo
 		G_FreeEdict(self);
 }
 
-//======
-// PGM
-USE(trigger_push_use) (edict_t *self, edict_t *other, edict_t *activator) -> void
-{
+static USE(trigger_push_use) (edict_t *self, edict_t *other, edict_t *activator) -> void {
 	if (self->solid == SOLID_NOT)
 		self->solid = SOLID_TRIGGER;
 	else
 		self->solid = SOLID_NOT;
 	gi.linkentity(self);
 }
-// PGM
-//======
 
-// RAFAEL
 void trigger_push_active(edict_t *self);
 
-void trigger_effect(edict_t *self)
-{
+static void trigger_effect(edict_t *self) {
 	vec3_t origin;
 	int	   i;
 
 	origin = (self->absmin + self->absmax) * 0.5f;
 
-	for (i = 0; i < 10; i++)
-	{
+	for (i = 0; i < 10; i++) {
 		origin[2] += (self->speed * 0.01f) * (i + frandom());
 		gi.WriteByte(svc_temp_entity);
 		gi.WriteByte(TE_TUNNEL_SPARKS);
@@ -555,14 +476,10 @@ void trigger_effect(edict_t *self)
 	}
 }
 
-THINK(trigger_push_inactive) (edict_t *self) -> void
-{
-	if (self->delay > level.time.seconds())
-	{
+static THINK(trigger_push_inactive) (edict_t *self) -> void {
+	if (self->delay > level.time.seconds()) {
 		self->nextthink = level.time + 100_ms;
-	}
-	else
-	{
+	} else {
 		self->touch = trigger_push_touch;
 		self->think = trigger_push_active;
 		self->nextthink = level.time + 100_ms;
@@ -570,22 +487,17 @@ THINK(trigger_push_inactive) (edict_t *self) -> void
 	}
 }
 
-THINK(trigger_push_active) (edict_t *self) -> void
-{
-	if (self->delay > level.time.seconds())
-	{
+THINK(trigger_push_active) (edict_t *self) -> void {
+	if (self->delay > level.time.seconds()) {
 		self->nextthink = level.time + 100_ms;
 		trigger_effect(self);
-	}
-	else
-	{
+	} else {
 		self->touch = nullptr;
 		self->think = trigger_push_inactive;
 		self->nextthink = level.time + 100_ms;
 		self->delay = (self->nextthink + gtime_t::from_sec(self->wait)).seconds();
 	}
 }
-// RAFAEL
 
 /*QUAKED trigger_push (.5 .5 .5) ? PUSH_ONCE PUSH_PLUS PUSH_SILENT START_OFF CLIP
 Pushes the player
@@ -597,16 +509,13 @@ If targeted, it will toggle on and off when used.
 START_OFF - toggled trigger_push begins in off setting
 SILENT - doesn't make wind noise
 */
-void SP_trigger_push(edict_t *self)
-{
+void SP_trigger_push(edict_t *self) {
 	InitTrigger(self);
 	if (!(self->spawnflags & SPAWNFLAG_PUSH_SILENT))
 		windsound.assign("misc/windfly.wav");
 	self->touch = trigger_push_touch;
 
-	// RAFAEL
-	if (self->spawnflags.has(SPAWNFLAG_PUSH_PLUS))
-	{
+	if (self->spawnflags.has(SPAWNFLAG_PUSH_PLUS)) {
 		if (!self->wait)
 			self->wait = 10;
 
@@ -614,27 +523,22 @@ void SP_trigger_push(edict_t *self)
 		self->nextthink = level.time + 100_ms;
 		self->delay = (self->nextthink + gtime_t::from_sec(self->wait)).seconds();
 	}
-	// RAFAEL
 
 	if (!self->speed)
 		self->speed = 1000;
 
-	// PGM
 	if (self->targetname) // toggleable
 	{
 		self->use = trigger_push_use;
 		if (self->spawnflags.has(SPAWNFLAG_PUSH_START_OFF))
 			self->solid = SOLID_NOT;
-	}
-	else if (self->spawnflags.has(SPAWNFLAG_PUSH_START_OFF))
-	{
+	} else if (self->spawnflags.has(SPAWNFLAG_PUSH_START_OFF)) {
 		gi.Com_Print("trigger_push is START_OFF but not targeted.\n");
 		self->svflags = SVF_NONE;
 		self->touch = nullptr;
 		self->solid = SOLID_BSP;
 		self->movetype = MOVETYPE_PUSH;
 	}
-	// PGM
 
 	gi.linkentity(self);
 
@@ -672,8 +576,7 @@ constexpr spawnflags_t SPAWNFLAG_HURT_NO_PLAYERS = 32_spawnflag;
 constexpr spawnflags_t SPAWNFLAG_HURT_NO_MONSTERS = 64_spawnflag;
 constexpr spawnflags_t SPAWNFLAG_HURT_CLIPPED = 128_spawnflag;
 
-USE(hurt_use) (edict_t *self, edict_t *other, edict_t *activator) -> void
-{
+static USE(hurt_use) (edict_t *self, edict_t *other, edict_t *activator) -> void {
 	if (self->solid == SOLID_NOT)
 		self->solid = SOLID_TRIGGER;
 	else
@@ -684,8 +587,7 @@ USE(hurt_use) (edict_t *self, edict_t *other, edict_t *activator) -> void
 		self->use = nullptr;
 }
 
-TOUCH(hurt_touch) (edict_t *self, edict_t *other, const trace_t &tr, bool other_touching_self) -> void
-{
+static TOUCH(hurt_touch) (edict_t *self, edict_t *other, const trace_t &tr, bool other_touching_self) -> void {
 	damageflags_t dflags;
 
 	if (!other->takedamage)
@@ -700,8 +602,7 @@ TOUCH(hurt_touch) (edict_t *self, edict_t *other, const trace_t &tr, bool other_
 	if (self->timestamp > level.time)
 		return;
 
-	if (self->spawnflags.has(SPAWNFLAG_HURT_CLIPPED))
-	{
+	if (self->spawnflags.has(SPAWNFLAG_HURT_CLIPPED)) {
 		trace_t clip = gi.clip(self, other->s.origin, other->mins, other->maxs, other->s.origin, G_GetClipMask(other));
 
 		if (clip.fraction == 1.0f)
@@ -713,10 +614,8 @@ TOUCH(hurt_touch) (edict_t *self, edict_t *other, const trace_t &tr, bool other_
 	else
 		self->timestamp = level.time + 10_hz;
 
-	if (!(self->spawnflags & SPAWNFLAG_HURT_SILENT))
-	{
-		if (self->fly_sound_debounce_time < level.time)
-		{
+	if (!(self->spawnflags & SPAWNFLAG_HURT_SILENT)) {
+		if (self->fly_sound_debounce_time < level.time) {
 			gi.sound(other, CHAN_AUTO, self->noise_index, 1, ATTN_NORM, 0);
 			self->fly_sound_debounce_time = level.time + 1_sec;
 		}
@@ -730,8 +629,7 @@ TOUCH(hurt_touch) (edict_t *self, edict_t *other, const trace_t &tr, bool other_
 	T_Damage(other, self, self, vec3_origin, other->s.origin, vec3_origin, self->dmg, self->dmg, dflags, MOD_TRIGGER_HURT);
 }
 
-void SP_trigger_hurt(edict_t *self)
-{
+void SP_trigger_hurt(edict_t *self) {
 	InitTrigger(self);
 
 	self->noise_index = gi.soundindex("world/electro.wav");
@@ -774,21 +672,16 @@ constexpr spawnflags_t SPAWNFLAG_GRAVITY_TOGGLE = 1_spawnflag;
 constexpr spawnflags_t SPAWNFLAG_GRAVITY_START_OFF = 2_spawnflag;
 constexpr spawnflags_t SPAWNFLAG_GRAVITY_CLIPPED = 4_spawnflag;
 
-// PGM
-USE(trigger_gravity_use) (edict_t *self, edict_t *other, edict_t *activator) -> void
-{
+static USE(trigger_gravity_use) (edict_t *self, edict_t *other, edict_t *activator) -> void {
 	if (self->solid == SOLID_NOT)
 		self->solid = SOLID_TRIGGER;
 	else
 		self->solid = SOLID_NOT;
 	gi.linkentity(self);
 }
-// PGM
 
-TOUCH(trigger_gravity_touch) (edict_t *self, edict_t *other, const trace_t &tr, bool other_touching_self) -> void
-{
-	if (self->spawnflags.has(SPAWNFLAG_GRAVITY_CLIPPED))
-	{
+static TOUCH(trigger_gravity_touch) (edict_t *self, edict_t *other, const trace_t &tr, bool other_touching_self) -> void {
+	if (self->spawnflags.has(SPAWNFLAG_GRAVITY_CLIPPED)) {
 		trace_t clip = gi.clip(self, other->s.origin, other->mins, other->maxs, other->s.origin, G_GetClipMask(other));
 
 		if (clip.fraction == 1.0f)
@@ -798,10 +691,8 @@ TOUCH(trigger_gravity_touch) (edict_t *self, edict_t *other, const trace_t &tr, 
 	other->gravity = self->gravity;
 }
 
-void SP_trigger_gravity(edict_t *self)
-{
-	if (!st.gravity || !*st.gravity)
-	{
+void SP_trigger_gravity(edict_t *self) {
+	if (!st.gravity || !*st.gravity) {
 		gi.Com_PrintFmt("{}: no gravity set\n", *self);
 		G_FreeEdict(self);
 		return;
@@ -809,20 +700,17 @@ void SP_trigger_gravity(edict_t *self)
 
 	InitTrigger(self);
 
-	// PGM
-	self->gravity = (float) atof(st.gravity);
+	self->gravity = (float)atof(st.gravity);
 
 	if (self->spawnflags.has(SPAWNFLAG_GRAVITY_TOGGLE))
 		self->use = trigger_gravity_use;
 
-	if (self->spawnflags.has(SPAWNFLAG_GRAVITY_START_OFF))
-	{
+	if (self->spawnflags.has(SPAWNFLAG_GRAVITY_START_OFF)) {
 		self->use = trigger_gravity_use;
 		self->solid = SOLID_NOT;
 	}
 
 	self->touch = trigger_gravity_touch;
-	// PGM
 
 	gi.linkentity(self);
 
@@ -851,8 +739,7 @@ constexpr spawnflags_t SPAWNFLAG_MONSTERJUMP_TOGGLE = 1_spawnflag;
 constexpr spawnflags_t SPAWNFLAG_MONSTERJUMP_START_OFF = 2_spawnflag;
 constexpr spawnflags_t SPAWNFLAG_MONSTERJUMP_CLIPPED = 4_spawnflag;
 
-USE(trigger_monsterjump_use) (edict_t* self, edict_t* other, edict_t* activator) -> void
-{
+static USE(trigger_monsterjump_use) (edict_t *self, edict_t *other, edict_t *activator) -> void {
 	if (self->solid == SOLID_NOT)
 		self->solid = SOLID_TRIGGER;
 	else
@@ -860,8 +747,7 @@ USE(trigger_monsterjump_use) (edict_t* self, edict_t* other, edict_t* activator)
 	gi.linkentity(self);
 }
 
-TOUCH(trigger_monsterjump_touch) (edict_t *self, edict_t *other, const trace_t &tr, bool other_touching_self) -> void
-{
+static TOUCH(trigger_monsterjump_touch) (edict_t *self, edict_t *other, const trace_t &tr, bool other_touching_self) -> void {
 	if (other->flags & (FL_FLY | FL_SWIM))
 		return;
 	if (other->svflags & SVF_DEADMONSTER)
@@ -869,8 +755,7 @@ TOUCH(trigger_monsterjump_touch) (edict_t *self, edict_t *other, const trace_t &
 	if (!(other->svflags & SVF_MONSTER))
 		return;
 
-	if (self->spawnflags.has(SPAWNFLAG_MONSTERJUMP_CLIPPED))
-	{
+	if (self->spawnflags.has(SPAWNFLAG_MONSTERJUMP_CLIPPED)) {
 		trace_t clip = gi.clip(self, other->s.origin, other->mins, other->maxs, other->s.origin, G_GetClipMask(other));
 
 		if (clip.fraction == 1.0f)
@@ -888,8 +773,7 @@ TOUCH(trigger_monsterjump_touch) (edict_t *self, edict_t *other, const trace_t &
 	other->velocity[2] = self->movedir[2];
 }
 
-void SP_trigger_monsterjump(edict_t *self)
-{
+void SP_trigger_monsterjump(edict_t *self) {
 	if (!self->speed)
 		self->speed = 200;
 	if (!st.height)
@@ -898,13 +782,12 @@ void SP_trigger_monsterjump(edict_t *self)
 		self->s.angles[YAW] = 360;
 	InitTrigger(self);
 	self->touch = trigger_monsterjump_touch;
-	self->movedir[2] = (float) st.height;
+	self->movedir[2] = (float)st.height;
 
 	if (self->spawnflags.has(SPAWNFLAG_MONSTERJUMP_TOGGLE))
 		self->use = trigger_monsterjump_use;
 
-	if (self->spawnflags.has(SPAWNFLAG_MONSTERJUMP_START_OFF))
-	{
+	if (self->spawnflags.has(SPAWNFLAG_MONSTERJUMP_START_OFF)) {
 		self->use = trigger_monsterjump_use;
 		self->solid = SOLID_NOT;
 	}
@@ -926,46 +809,38 @@ trigger_flashlight
 /*QUAKED trigger_flashlight (.5 .5 .5) ?
 Players moving against this trigger will have their flashlight turned on or off.
 "style" default to 0, set to 1 to always turn flashlight on, 2 to always turn off,
-        otherwise "angles" are used to control on/off state
+		otherwise "angles" are used to control on/off state
 */
 
 constexpr spawnflags_t SPAWNFLAG_FLASHLIGHT_CLIPPED = 1_spawnflag;
 
-TOUCH(trigger_flashlight_touch) (edict_t *self, edict_t *other, const trace_t &tr, bool other_touching_self) -> void
-{
+static TOUCH(trigger_flashlight_touch) (edict_t *self, edict_t *other, const trace_t &tr, bool other_touching_self) -> void {
 	if (!other->client)
 		return;
 
-	if (self->spawnflags.has(SPAWNFLAG_FLASHLIGHT_CLIPPED))
-	{
+	if (self->spawnflags.has(SPAWNFLAG_FLASHLIGHT_CLIPPED)) {
 		trace_t clip = gi.clip(self, other->s.origin, other->mins, other->maxs, other->s.origin, G_GetClipMask(other));
 
 		if (clip.fraction == 1.0f)
 			return;
 	}
 
-	if (self->style == 1)
-	{
+	if (self->style == 1) {
 		P_ToggleFlashlight(other, true);
-	}
-	else if (self->style == 2)
-	{
+	} else if (self->style == 2) {
 		P_ToggleFlashlight(other, false);
-	}
-	else if (other->velocity.lengthSquared() > 32.f)
-	{
+	} else if (other->velocity.lengthSquared() > 32.f) {
 		vec3_t forward = other->velocity.normalized();
 		P_ToggleFlashlight(other, forward.dot(self->movedir) > 0);
 	}
 }
 
-void SP_trigger_flashlight(edict_t *self)
-{
+void SP_trigger_flashlight(edict_t *self) {
 	if (self->s.angles[YAW] == 0)
 		self->s.angles[YAW] = 360;
 	InitTrigger(self);
 	self->touch = trigger_flashlight_touch;
-	self->movedir[2] = (float) st.height;
+	self->movedir[2] = (float)st.height;
 
 	if (self->spawnflags.has(SPAWNFLAG_FLASHLIGHT_CLIPPED))
 		self->svflags |= SVF_HULL;
@@ -1019,8 +894,7 @@ constexpr spawnflags_t SPAWNFLAG_FOG_INSTANTANEOUS = 4_spawnflag;
 constexpr spawnflags_t SPAWNFLAG_FOG_FORCE = 8_spawnflag;
 constexpr spawnflags_t SPAWNFLAG_FOG_BLEND = 16_spawnflag;
 
-TOUCH(trigger_fog_touch) (edict_t *self, edict_t *other, const trace_t &tr, bool other_touching_self) -> void
-{
+static TOUCH(trigger_fog_touch) (edict_t *self, edict_t *other, const trace_t &tr, bool other_touching_self) -> void {
 	if (!other->client)
 		return;
 
@@ -1039,20 +913,18 @@ TOUCH(trigger_fog_touch) (edict_t *self, edict_t *other, const trace_t &tr, bool
 	else
 		other->client->pers.fog_transition_time = gtime_t::from_sec(fog_value_storage->delay);
 
-	if (self->spawnflags.has(SPAWNFLAG_FOG_BLEND))
-	{
+	if (self->spawnflags.has(SPAWNFLAG_FOG_BLEND)) {
 		vec3_t center = (self->absmin + self->absmax) * 0.5f;
 		vec3_t half_size = (self->size * 0.5f) + (other->size * 0.5f);
 		vec3_t start = (-self->movedir).scaled(half_size);
 		vec3_t end = (self->movedir).scaled(half_size);
-		vec3_t player_dist = (other->s.origin - center).scaled(vec3_t{fabs(self->movedir[0]),fabs(self->movedir[1]),fabs(self->movedir[2])});
+		vec3_t player_dist = (other->s.origin - center).scaled(vec3_t{ fabs(self->movedir[0]),fabs(self->movedir[1]),fabs(self->movedir[2]) });
 
 		float dist = (player_dist - start).length();
 		dist /= (start - end).length();
 		dist = clamp(dist, 0.f, 1.f);
 
-		if (self->spawnflags.has(SPAWNFLAG_FOG_AFFECT_FOG))
-		{
+		if (self->spawnflags.has(SPAWNFLAG_FOG_AFFECT_FOG)) {
 			other->client->pers.wanted_fog = {
 				lerp(fog_value_storage->fog.density_off, fog_value_storage->fog.density, dist),
 				lerp(fog_value_storage->fog.color_off[0], fog_value_storage->fog.color[0], dist),
@@ -1062,8 +934,7 @@ TOUCH(trigger_fog_touch) (edict_t *self, edict_t *other, const trace_t &tr, bool
 			};
 		}
 
-		if (self->spawnflags.has(SPAWNFLAG_FOG_AFFECT_HEIGHTFOG))
-		{
+		if (self->spawnflags.has(SPAWNFLAG_FOG_AFFECT_HEIGHTFOG)) {
 			other->client->pers.wanted_heightfog = {
 				{
 					lerp(fog_value_storage->heightfog.start_color_off[0], fog_value_storage->heightfog.start_color[0], dist),
@@ -1087,8 +958,7 @@ TOUCH(trigger_fog_touch) (edict_t *self, edict_t *other, const trace_t &tr, bool
 
 	bool use_on = true;
 
-	if (!self->spawnflags.has(SPAWNFLAG_FOG_FORCE))
-	{
+	if (!self->spawnflags.has(SPAWNFLAG_FOG_FORCE)) {
 		float len;
 		vec3_t forward = other->velocity.normalized(len);
 
@@ -1100,10 +970,8 @@ TOUCH(trigger_fog_touch) (edict_t *self, edict_t *other, const trace_t &tr, bool
 		use_on = forward.dot(self->movedir) > 0;
 	}
 
-	if (self->spawnflags.has(SPAWNFLAG_FOG_AFFECT_FOG))
-	{
-		if (use_on)
-		{
+	if (self->spawnflags.has(SPAWNFLAG_FOG_AFFECT_FOG)) {
+		if (use_on) {
 			other->client->pers.wanted_fog = {
 				fog_value_storage->fog.density,
 				fog_value_storage->fog.color[0],
@@ -1111,9 +979,7 @@ TOUCH(trigger_fog_touch) (edict_t *self, edict_t *other, const trace_t &tr, bool
 				fog_value_storage->fog.color[2],
 				fog_value_storage->fog.sky_factor
 			};
-		}
-		else
-		{
+		} else {
 			other->client->pers.wanted_fog = {
 				fog_value_storage->fog.density_off,
 				fog_value_storage->fog.color_off[0],
@@ -1124,10 +990,8 @@ TOUCH(trigger_fog_touch) (edict_t *self, edict_t *other, const trace_t &tr, bool
 		}
 	}
 
-	if (self->spawnflags.has(SPAWNFLAG_FOG_AFFECT_HEIGHTFOG))
-	{
-		if (use_on)
-		{
+	if (self->spawnflags.has(SPAWNFLAG_FOG_AFFECT_HEIGHTFOG)) {
+		if (use_on) {
 			other->client->pers.wanted_heightfog = {
 				{
 					fog_value_storage->heightfog.start_color[0],
@@ -1144,9 +1008,7 @@ TOUCH(trigger_fog_touch) (edict_t *self, edict_t *other, const trace_t &tr, bool
 				fog_value_storage->heightfog.falloff,
 				fog_value_storage->heightfog.density
 			};
-		}
-		else
-		{
+		} else {
 			other->client->pers.wanted_heightfog = {
 				{
 					fog_value_storage->heightfog.start_color_off[0],
@@ -1167,8 +1029,7 @@ TOUCH(trigger_fog_touch) (edict_t *self, edict_t *other, const trace_t &tr, bool
 	}
 }
 
-void SP_trigger_fog(edict_t *self)
-{
+void SP_trigger_fog(edict_t *self) {
 	if (self->s.angles[YAW] == 0)
 		self->s.angles[YAW] = 360;
 
@@ -1177,12 +1038,10 @@ void SP_trigger_fog(edict_t *self)
 	if (!(self->spawnflags & (SPAWNFLAG_FOG_AFFECT_FOG | SPAWNFLAG_FOG_AFFECT_HEIGHTFOG)))
 		gi.Com_PrintFmt("WARNING: {} with no fog spawnflags set\n", *self);
 
-	if (self->target)
-	{
+	if (self->target) {
 		self->movetarget = G_PickTarget(self->target);
 
-		if (self->movetarget)
-		{
+		if (self->movetarget) {
 			if (!self->movetarget->delay)
 				self->movetarget->delay = 0.5f;
 		}
@@ -1200,48 +1059,18 @@ The same as a trigger_relay.
 
 constexpr spawnflags_t SPAWNFLAG_COOP_RELAY_AUTO_FIRE = 1_spawnflag;
 
-inline bool trigger_coop_relay_filter(edict_t *player)
-{
+static inline bool trigger_coop_relay_filter(edict_t *player) {
 	return (player->health <= 0 || player->deadflag || player->movetype == MOVETYPE_NOCLIP ||
 		ClientIsSpectating(player->client) || player->s.modelindex != MODELINDEX_PLAYER);
 }
 
-static bool trigger_coop_relay_can_use(edict_t *self, edict_t *activator)
-{
+static bool trigger_coop_relay_can_use(edict_t *self, edict_t *activator) {
 	//muff mode: this is a hinderance, remove this
-#if 0
-	// not coop, so act like a standard trigger_relay minus the message
-	if (!coop->integer)
-#endif
-		return true;
-
-#if 0
-	// coop; scan for all alive players, print appropriate message
-	// to those in/out of range
-	bool can_use = true;
-
-	for (auto player : active_players())
-	{
-		// dead or spectator, don't count them
-		if (trigger_coop_relay_filter(player))
-			continue;
-
-		if (boxes_intersect(player->absmin, player->absmax, self->absmin, self->absmax))
-			continue;
-
-		if (self->timestamp < level.time)
-			gi.LocCenter_Print(player, self->map);
-		can_use = false;
-	}
-
-	return can_use;
-#endif
+	return true;
 }
 
-USE(trigger_coop_relay_use) (edict_t *self, edict_t *other, edict_t *activator) -> void
-{
-	if (!trigger_coop_relay_can_use(self, activator))
-	{
+static USE(trigger_coop_relay_use) (edict_t *self, edict_t *other, edict_t *activator) -> void {
+	if (!trigger_coop_relay_can_use(self, activator)) {
 		if (self->timestamp < level.time)
 			gi.LocCenter_Print(activator, self->message);
 
@@ -1255,8 +1084,7 @@ USE(trigger_coop_relay_use) (edict_t *self, edict_t *other, edict_t *activator) 
 	self->message = msg;
 }
 
-static BoxEdictsResult_t trigger_coop_relay_player_filter(edict_t *ent, void *data)
-{
+static BoxEdictsResult_t trigger_coop_relay_player_filter(edict_t *ent, void *data) {
 	if (!ent->client)
 		return BoxEdictsResult_t::Skip;
 	else if (trigger_coop_relay_filter(ent))
@@ -1265,8 +1093,7 @@ static BoxEdictsResult_t trigger_coop_relay_player_filter(edict_t *ent, void *da
 	return BoxEdictsResult_t::Keep;
 }
 
-THINK(trigger_coop_relay_think) (edict_t *self) -> void
-{
+static THINK(trigger_coop_relay_think) (edict_t *self) -> void {
 	std::array<edict_t *, MAX_SPLIT_PLAYERS> players;
 	size_t num_active = 0;
 
@@ -1276,8 +1103,7 @@ THINK(trigger_coop_relay_think) (edict_t *self) -> void
 
 	size_t n = gi.BoxEdicts(self->absmin, self->absmax, players.data(), num_active, AREA_SOLID, trigger_coop_relay_player_filter, nullptr);
 
-	if (n == num_active)
-	{
+	if (n == num_active) {
 		const char *msg = self->message;
 		self->message = nullptr;
 		G_UseTargets(self, &globals.edicts[1]);
@@ -1285,9 +1111,7 @@ THINK(trigger_coop_relay_think) (edict_t *self) -> void
 
 		G_FreeEdict(self);
 		return;
-	}
-	else if (n && self->timestamp < level.time)
-	{
+	} else if (n && self->timestamp < level.time) {
 		for (size_t i = 0; i < n; i++)
 			gi.LocCenter_Print(players[i], self->message);
 
@@ -1301,13 +1125,12 @@ THINK(trigger_coop_relay_think) (edict_t *self) -> void
 	self->nextthink = level.time + gtime_t::from_sec(self->wait);
 }
 
-void SP_trigger_coop_relay(edict_t *self)
-{
+void SP_trigger_coop_relay(edict_t *self) {
 	if (self->targetname && self->spawnflags.has(SPAWNFLAG_COOP_RELAY_AUTO_FIRE))
 		gi.Com_PrintFmt("{}: targetname and auto-fire are mutually exclusive\n", *self);
 
 	InitTrigger(self);
-	
+
 	if (!self->message)
 		self->message = "$g_coop_wait_for_players";
 
@@ -1317,12 +1140,10 @@ void SP_trigger_coop_relay(edict_t *self)
 	if (!self->wait)
 		self->wait = 1;
 
-	if (self->spawnflags.has(SPAWNFLAG_COOP_RELAY_AUTO_FIRE))
-	{
+	if (self->spawnflags.has(SPAWNFLAG_COOP_RELAY_AUTO_FIRE)) {
 		self->think = trigger_coop_relay_think;
 		self->nextthink = level.time + gtime_t::from_sec(self->wait);
-	}
-	else
+	} else
 		self->use = trigger_coop_relay_use;
 	self->svflags |= SVF_NOCLIENT;
 	gi.linkentity(self);
@@ -1358,7 +1179,7 @@ start_on: when trigger has targetname, start active, deactivate when used.
 static TOUCH(trigger_teleport_touch) (edict_t *self, edict_t *other, const trace_t &tr, bool other_touching_self) -> void {
 	edict_t *dest;
 
-	if (/*(self->spawnflags & SPAWNFLAG_TELEPORT_PLAYER_ONLY) &&*/ !(other->client))
+	if (!other->client)
 		return;
 
 	if (self->delay)
@@ -1461,9 +1282,7 @@ static TOUCH(old_teleporter_touch) (edict_t *self, edict_t *other, const trace_t
 		return;
 	}
 
-	// ZOID
 	Weapon_Grapple_DoReset(other->client);
-	// ZOID
 
 	// unlink to make sure it can't possibly interfere with KillBox
 	gi.unlinkentity(other);
@@ -1550,7 +1369,7 @@ REMOVE - field removes the disguise
 constexpr spawnflags_t SPAWNFLAG_DISGUISE_START_ON = 2_spawnflag;
 constexpr spawnflags_t SPAWNFLAG_DISGUISE_REMOVE = 4_spawnflag;
 
-TOUCH(trigger_disguise_touch) (edict_t *self, edict_t *other, const trace_t &tr, bool other_touching_self) -> void {
+static TOUCH(trigger_disguise_touch) (edict_t *self, edict_t *other, const trace_t &tr, bool other_touching_self) -> void {
 	if (other->client) {
 		if (self->spawnflags.has(SPAWNFLAG_DISGUISE_REMOVE))
 			other->flags &= ~FL_DISGUISED;
@@ -1559,7 +1378,7 @@ TOUCH(trigger_disguise_touch) (edict_t *self, edict_t *other, const trace_t &tr,
 	}
 }
 
-USE(trigger_disguise_use) (edict_t *self, edict_t *other, edict_t *activator) -> void {
+static USE(trigger_disguise_use) (edict_t *self, edict_t *other, edict_t *activator) -> void {
 	if (self->solid == SOLID_NOT)
 		self->solid = SOLID_TRIGGER;
 	else

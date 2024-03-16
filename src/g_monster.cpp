@@ -145,7 +145,7 @@ void M_CheckGround(edict_t *ent, contents_t mask)
 	if (ent->flags & (FL_SWIM | FL_FLY))
 		return;
 
-	if ((ent->velocity[2] * ent->gravityVector[2]) < -100) // PGM
+	if ((ent->velocity[2] * ent->gravityVector[2]) < -100)
 	{
 		ent->groundentity = nullptr;
 		return;
@@ -154,12 +154,11 @@ void M_CheckGround(edict_t *ent, contents_t mask)
 	// if the hull point one-quarter unit down is solid the entity is on ground
 	point[0] = ent->s.origin[0];
 	point[1] = ent->s.origin[1];
-	point[2] = ent->s.origin[2] + (0.25f * ent->gravityVector[2]); // PGM
+	point[2] = ent->s.origin[2] + (0.25f * ent->gravityVector[2]);
 
 	trace = gi.trace(ent->s.origin, ent->mins, ent->maxs, point, ent, mask);
 
 	// check steepness
-	// PGM
 	if (ent->gravityVector[2] < 0) // normal gravity
 	{
 		if (trace.plane.normal[2] < 0.7f && !trace.startsolid)
@@ -176,7 +175,6 @@ void M_CheckGround(edict_t *ent, contents_t mask)
 			return;
 		}
 	}
-	// PGM
 
 	if (!trace.startsolid && !trace.allsolid)
 	{
@@ -337,7 +335,6 @@ bool M_droptofloor_generic(vec3_t &origin, const vec3_t &mins, const vec3_t &max
 	vec3_t	end;
 	trace_t trace;
 
-	// PGM
 	if (gi.trace(origin, mins, maxs, origin, ignore, mask).startsolid)
 	{
 		if (!ceiling)
@@ -356,7 +353,6 @@ bool M_droptofloor_generic(vec3_t &origin, const vec3_t &mins, const vec3_t &max
 		end = origin;
 		end[2] += 256;
 	}
-	// PGM
 
 	trace = gi.trace(origin, mins, maxs, end, ignore, mask);
 
@@ -435,7 +431,7 @@ void M_SetEffects(edict_t *ent)
 		}
 	}
 
-	// PMM - new monster powerups
+	// monster powerups
 	if (ent->monsterinfo.quad_time > level.time)
 	{
 		if (G_PowerUpExpiring(ent->monsterinfo.quad_time))
@@ -1033,8 +1029,8 @@ USE(monster_use) (edict_t *self, edict_t *other, edict_t *activator) -> void
 		return;
 	if (!(activator->client) && !(activator->monsterinfo.aiflags & AI_GOOD_GUY))
 		return;
-	if (activator->flags & FL_DISGUISED) // PGM
-		return;							 // PGM
+	if (activator->flags & FL_DISGUISED)
+		return;
 
 	// delay reaction so if the monster is teleported, its sound is still heard
 	self->enemy = activator;
@@ -1057,7 +1053,6 @@ THINK(monster_triggered_spawn) (edict_t *self) -> void
 
 	monster_start_go(self);
 
-	// RAFAEL
 	if (strcmp(self->classname, "monster_fixbot") == 0)
 	{
 		if (self->spawnflags.has(SPAWNFLAG_FIXBOT_LANDING | SPAWNFLAG_FIXBOT_TAKEOFF | SPAWNFLAG_FIXBOT_FIXIT))
@@ -1066,18 +1061,13 @@ THINK(monster_triggered_spawn) (edict_t *self) -> void
 			return;
 		}
 	}
-	// RAFAEL
 
 	if (self->enemy && !(self->spawnflags & SPAWNFLAG_MONSTER_AMBUSH) && !(self->enemy->flags & FL_NOTARGET) && !(self->monsterinfo.aiflags & AI_GOOD_GUY))
 	{
-		// ROGUE
 		if (!(self->enemy->flags & FL_DISGUISED))
-			// ROGUE
 			FoundTarget(self);
-		// ROGUE
 		else // PMM - just in case, make sure to clear the enemy so FindTarget doesn't get confused
 			self->enemy = nullptr;
-		// ROGUE
 	}
 	else
 	{
@@ -1085,7 +1075,7 @@ THINK(monster_triggered_spawn) (edict_t *self) -> void
 	}
 }
 
-USE(monster_triggered_spawn_use) (edict_t *self, edict_t *other, edict_t *activator) -> void
+static USE(monster_triggered_spawn_use) (edict_t *self, edict_t *other, edict_t *activator) -> void
 {
 	// we have a one frame delay here so we don't telefrag the guy who activated us
 	self->think = monster_triggered_spawn;
@@ -1654,25 +1644,21 @@ void SP_trigger_health_relay(edict_t *self)
 	self->use = trigger_health_relay_use;
 }
 
-// RAFAEL
 void monster_fire_blueblaster(edict_t *self, const vec3_t &start, const vec3_t &dir, int damage, int speed, monster_muzzleflash_id_t flashtype, effects_t effect) {
 	fire_blueblaster(self, start, dir, damage, speed, effect);
 	monster_muzzleflash(self, start, flashtype);
 }
 
-// RAFAEL
 void monster_fire_ionripper(edict_t *self, const vec3_t &start, const vec3_t &dir, int damage, int speed, monster_muzzleflash_id_t flashtype, effects_t effect) {
 	fire_ionripper(self, start, dir, damage, speed, effect);
 	monster_muzzleflash(self, start, flashtype);
 }
 
-// RAFAEL
 void monster_fire_heat(edict_t *self, const vec3_t &start, const vec3_t &dir, int damage, int speed, monster_muzzleflash_id_t flashtype, float turn_fraction) {
 	fire_heat(self, start, dir, damage, speed, (float)damage, damage, turn_fraction);
 	monster_muzzleflash(self, start, flashtype);
 }
 
-// RAFAEL
 struct dabeam_pierce_t : pierce_args_t {
 	edict_t *self;
 	bool damage;
@@ -1747,7 +1733,6 @@ THINK(beam_think) (edict_t *self) -> void {
 	G_FreeEdict(self);
 }
 
-// RAFAEL
 void monster_fire_dabeam(edict_t *self, int damage, bool secondary, void(*update_func)(edict_t *self)) {
 	edict_t *&beam_ptr = secondary ? self->beam2 : self->beam;
 
@@ -1778,7 +1763,6 @@ void monster_fire_dabeam(edict_t *self, int damage, bool secondary, void(*update
 	dabeam_update(beam_ptr, true);
 }
 
-// ROGUE
 void monster_fire_blaster2(edict_t *self, const vec3_t &start, const vec3_t &dir, int damage, int speed, monster_muzzleflash_id_t flashtype, effects_t effect) {
 	fire_greenblaster(self, start, dir, damage, speed, effect, false);
 	monster_muzzleflash(self, start, flashtype);
@@ -1793,9 +1777,6 @@ void monster_fire_heatbeam(edict_t *self, const vec3_t &start, const vec3_t &dir
 	fire_plasmabeam(self, start, dir, offset, damage, kick, true);
 	monster_muzzleflash(self, start, flashtype);
 }
-// ROGUE
-
-// ROGUE
 
 void stationarymonster_start_go(edict_t *self);
 

@@ -276,8 +276,8 @@ void InfantryMachineGun(edict_t *self)
 	vec3_t					 vec;
 	monster_muzzleflash_id_t flash_number;
 
-	if (!self->enemy || !self->enemy->inuse) // PGM
-		return;								 // PGM
+	if (!self->enemy || !self->enemy->inuse)
+		return;
 
 	bool is_run_attack = (self->s.frame >= FRAME_run201 && self->s.frame <= FRAME_run208);
 
@@ -621,12 +621,12 @@ void infantry_fire(edict_t *self)
 	}
 }
 
-void infantry_swing(edict_t *self)
+static void infantry_swing(edict_t *self)
 {
 	gi.sound(self, CHAN_WEAPON, sound_punch_swing, 1, ATTN_NORM, 0);
 }
 
-void infantry_smack(edict_t *self)
+static void infantry_smack(edict_t *self)
 {
 	vec3_t aim = { MELEE_DISTANCE, 0, 0 };
 
@@ -649,7 +649,7 @@ mframe_t infantry_frames_attack2[] = {
 MMOVE_T(infantry_move_attack2) = { FRAME_attak201, FRAME_attak208, infantry_frames_attack2, infantry_run };
 
 // [Paril-KEX] run-attack, inspired by q2test
-void infantry_attack4_refire(edict_t *self)
+static void infantry_attack4_refire(edict_t *self)
 {
 	// ran out of firing time
 	if (level.time >= self->monsterinfo.fire_wait)
@@ -704,9 +704,7 @@ MONSTERINFO_ATTACK(infantry_attack) (edict_t *self) -> void
 	}
 }
 
-//===========
-// PGM
-void infantry_jump_now(edict_t *self)
+static void infantry_jump_now(edict_t *self)
 {
 	vec3_t forward, up;
 
@@ -715,7 +713,7 @@ void infantry_jump_now(edict_t *self)
 	self->velocity += (up * 300);
 }
 
-void infantry_jump2_now(edict_t *self)
+static void infantry_jump2_now(edict_t *self)
 {
 	vec3_t forward, up;
 
@@ -724,7 +722,7 @@ void infantry_jump2_now(edict_t *self)
 	self->velocity += (up * 400);
 }
 
-void infantry_jump_wait_land(edict_t *self)
+static void infantry_jump_wait_land(edict_t *self)
 {
 	if (self->groundentity == nullptr)
 	{
@@ -765,7 +763,7 @@ mframe_t infantry_frames_jump2[] = {
 };
 MMOVE_T(infantry_move_jump2) = { FRAME_jump01, FRAME_jump10, infantry_frames_jump2, infantry_run };
 
-void infantry_jump(edict_t *self, blocked_jump_result_t result)
+static void infantry_jump(edict_t *self, blocked_jump_result_t result)
 {
 	if (!self->enemy)
 		return;
@@ -903,13 +901,11 @@ void SP_monster_infantry(edict_t *self)
 	self->monsterinfo.stand = infantry_stand;
 	self->monsterinfo.walk = infantry_walk;
 	self->monsterinfo.run = infantry_run;
-	// pmm
 	self->monsterinfo.dodge = M_MonsterDodge;
 	self->monsterinfo.duck = infantry_duck;
 	self->monsterinfo.unduck = monster_duck_up;
 	self->monsterinfo.sidestep = infantry_sidestep;
 	self->monsterinfo.blocked = infantry_blocked;
-	// pmm
 	self->monsterinfo.attack = infantry_attack;
 	self->monsterinfo.melee = nullptr;
 	self->monsterinfo.sight = infantry_sight;

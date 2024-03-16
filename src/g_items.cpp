@@ -439,10 +439,8 @@ static PAIN(hunter_pain) (edict_t *self, edict_t *other, float kick, int damage,
 		if (owner && (owner->health > 0))
 			return;
 
-		// PMM
 		if (other == owner)
 			return;
-		// pmm
 	} else {
 		// if fired by a doppleganger, set it to 10 second timeout
 		self->wait = (level.time + MINIMUM_FLY_TIME).seconds();
@@ -498,11 +496,9 @@ static PAIN(hunter_pain) (edict_t *self, edict_t *other, float kick, int damage,
 }
 
 static PAIN(defender_pain) (edict_t *self, edict_t *other, float kick, int damage, const mod_t &mod) -> void {
-	// PMM
 	if (other == self->owner)
 		return;
 
-	// pmm
 	self->enemy = other;
 }
 
@@ -514,10 +510,8 @@ static PAIN(vengeance_pain) (edict_t *self, edict_t *other, float kick, int dama
 		if (self->owner && self->owner->health >= 25)
 			return;
 
-		// PMM
 		if (other == self->owner)
 			return;
-		// pmm
 	} else {
 		self->wait = (level.time + MINIMUM_FLY_TIME).seconds();
 	}
@@ -664,7 +658,6 @@ edict_t *Sphere_Spawn(edict_t *owner, spawnflags_t spawnflags) {
 	sphere->yaw_speed = 40;
 	sphere->monsterinfo.attack_finished = 0_ms;
 	sphere->spawnflags = spawnflags; // need this for the HUD to recognize sphere
-	// PMM
 	sphere->takedamage = false;
 
 	switch ((spawnflags & SPHERE_TYPE).value) {
@@ -1342,14 +1335,12 @@ THINK(DoRespawn) (edict_t *ent) -> void
 
 		master = ent->teammaster;
 
-		// ZOID
 		// in ctf, when we are weapons stay, only the master of a team of weapons
 		// is spawned
 		if (ctf->integer && g_dm_weapons_stay->integer && master->item && (master->item->flags & IF_WEAPON))
 			ent = master;
 		else
 		{
-			// ZOID
 			ent->svflags |= SVF_NOCLIENT;
 			ent->solid = SOLID_NOT;
 			gi.linkentity(ent);
@@ -1842,15 +1833,9 @@ static bool Pickup_Pack(edict_t *ent, edict_t *other)
 	G_AddAmmoAndCapQuantity(other, AMMO_GRENADES);
 	G_AddAmmoAndCapQuantity(other, AMMO_ROCKETS);
 	G_AddAmmoAndCapQuantity(other, AMMO_SLUGS);
-
-	// RAFAEL
 	G_AddAmmoAndCapQuantity(other, AMMO_MAGSLUG);
-	// RAFAEL
-
-	// ROGUE
 	G_AddAmmoAndCapQuantity(other, AMMO_FLECHETTES);
 	G_AddAmmoAndCapQuantity(other, AMMO_DISRUPTOR);
-	// ROGUE
 
 	SetRespawn(ent, gtime_t::from_sec(ent->item->quantity));
 
@@ -2360,10 +2345,9 @@ TOUCH(Touch_Item) (edict_t *ent, edict_t *other, const trace_t &tr, bool other_t
 			return;
 	}
 
-	// ZOID
+	// can't pickup during match setup
 	if (IsMatchSetup())
-		return; // can't pick stuff up right now
-				// ZOID
+		return;
 
 	taken = ent->item->pickup(ent, other);
 
@@ -2487,7 +2471,7 @@ edict_t *Drop_Item(edict_t *ent, gitem_t *item)
 	dropped->classname = item->classname;
 	dropped->s.effects = item->world_model_flags;
 	gi.setmodel(dropped, dropped->item->world_model);
-	dropped->s.renderfx = RF_GLOW | RF_NO_LOD | RF_IR_VISIBLE; // PGM
+	dropped->s.renderfx = RF_GLOW | RF_NO_LOD | RF_IR_VISIBLE;
 	dropped->mins = { -15, -15, -15 };
 	dropped->maxs = { 15, 15, 15 };
 	dropped->solid = SOLID_TRIGGER;
@@ -2584,18 +2568,14 @@ THINK(droptofloor) (edict_t *ent) -> void
 	{
 		if (G_FixStuckObject(ent, ent->s.origin) == stuck_result_t::NO_GOOD_POSITION)
 		{
-			// RAFAEL
 			if (strcmp(ent->classname, "item_foodcube") == 0)
 				ent->velocity[2] = 0;
 			else
 			{
-				// RAFAEL
 				gi.Com_PrintFmt("{}: droptofloor: startsolid\n", *ent);
 				G_FreeEdict(ent);
 				return;
-				// RAFAEL
 			}
-			// RAFAEL
 		}
 	}
 	else
@@ -2889,7 +2869,7 @@ bool SpawnItem(edict_t *ent, gitem_t *item)
 			ent->s.renderfx &= ~RF_GLOW;
 		}
 	}
-	else if (ent->spawnflags.value >= SPAWNFLAG_ITEM_MAX.value) // PGM
+	else if (ent->spawnflags.value >= SPAWNFLAG_ITEM_MAX.value)
 	{
 		ent->spawnflags = SPAWNFLAG_NONE;
 		gi.Com_PrintFmt("{} has invalid spawnflags set\n", *ent);
@@ -2924,13 +2904,11 @@ bool SpawnItem(edict_t *ent, gitem_t *item)
 	if (ent->spawnflags.has(SPAWNFLAG_ITEM_TRIGGER_SPAWN))
 		SetTriggeredSpawn(ent);
 
-	// ZOID
 	// flags are server animated and have special handling
 	if (item->id == IT_FLAG_RED || item->id == IT_FLAG_BLUE)
 	{
 		ent->think = GT_CTF_FlagSetup;
 	}
-	// ZOID
 
 	return true;
 }
@@ -3123,7 +3101,6 @@ gitem_t	itemlist[] =
 	// ARMOR
 	//
 	
-
 /*QUAKED item_armor_body (.3 .3 1) (-16 -16 -16) (16 16 16)
 -------- MODEL FOR RADIANT ONLY - DO NOT SET THIS AS A KEY --------
 model="models/items/armor/body/tris.md2"
@@ -3338,8 +3315,8 @@ always owned, never in the world
 		/* precaches */ "weapons/blastf1a.wav misc/lasfly.wav"
 	},
 
-	/*QUAKED weapon_chainfist (.3 .3 1) (-16 -16 -16) (16 16 16) TRIGGER_SPAWN
-	*/
+/*QUAKED weapon_chainfist (.3 .3 1) (-16 -16 -16) (16 16 16) TRIGGER_SPAWN
+*/
 	{
 		/* id */ IT_WEAPON_CHAINFIST,
 		/* classname */ "weapon_chainfist",
@@ -3452,7 +3429,6 @@ model="models/weapons/g_shotg/tris.md2"
 		/* quantity_warn */ 30
 	},
 
-	// ROGUE
 /*QUAKED weapon_etf_rifle (.3 .3 1) (-16 -16 -16) (16 16 16) TRIGGER_SPAWN
 */
 	{
@@ -3481,7 +3457,6 @@ model="models/weapons/g_shotg/tris.md2"
 		/* sort_id */ 0,
 		/* quantity_warn */ 30
 	},
-	// ROGUE
 
 /*QUAKED weapon_chaingun (.3 .3 1) (-16 -16 -16) (16 16 16)
 */
@@ -3541,7 +3516,6 @@ model="models/weapons/g_shotg/tris.md2"
 		/* quantity_warn */ 2
 	},
 
-// RAFAEL
 /*QUAKED ammo_trap (.3 .3 1) (-16 -16 -16) (16 16 16)
 */
 	{
@@ -3570,7 +3544,6 @@ model="models/weapons/g_shotg/tris.md2"
 		/* sort_id */ 0,
 		/* quantity_warn */ 1
 	},
-// RAFAEL
 
 /*QUAKED ammo_tesla (.3 .3 1) (-16 -16 -16) (16 16 16) TRIGGER_SPAWN
 */
@@ -3630,7 +3603,6 @@ model="models/weapons/g_launch/tris.md2"
 		/* precaches */ "models/objects/grenade4/tris.md2 weapons/grenlf1a.wav weapons/grenlr1b.wav weapons/grenlb1b.wav"
 	},
 
-	// ROGUE
 /*QUAKED weapon_proxlauncher (.3 .3 1) (-16 -16 -16) (16 16 16) TRIGGER_SPAWN
 */
 	{
@@ -3657,7 +3629,6 @@ model="models/weapons/g_launch/tris.md2"
 		/* tag */ AMMO_PROX,
 		/* precaches */ "weapons/grenlf1a.wav weapons/grenlr1b.wav weapons/grenlb1b.wav weapons/proxwarn.wav weapons/proxopen.wav",
 	},
-	// ROGUE
 
 /*QUAKED weapon_rocketlauncher (.3 .3 1) (-16 -16 -16) (16 16 16)
 */
@@ -3715,7 +3686,6 @@ model="models/weapons/g_launch/tris.md2"
 		/* quantity_warn */ 30
 	},
 
-// RAFAEL
 /*QUAKED weapon_boomer (.3 .3 1) (-16 -16 -16) (16 16 16)
 */
 	{
@@ -3744,11 +3714,9 @@ model="models/weapons/g_launch/tris.md2"
 		/* sort_id */ 0,
 		/* quantity_warn */ 30
 	},
-// RAFAEL
 
-// ROGUE
-	/*QUAKED weapon_plasmabeam (.3 .3 1) (-16 -16 -16) (16 16 16) TRIGGER_SPAWN
-	*/ 
+/*QUAKED weapon_plasmabeam (.3 .3 1) (-16 -16 -16) (16 16 16) TRIGGER_SPAWN
+*/ 
 	{
 		/* id */ IT_WEAPON_PLASMABEAM,
 		/* classname */ "weapon_plasmabeam",
@@ -3775,7 +3743,6 @@ model="models/weapons/g_launch/tris.md2"
 		/* sort_id */ 0,
 		/* quantity_warn */ 50
 	},
-//rogue
 
 /*QUAKED weapon_railgun (.3 .3 1) (-16 -16 -16) (16 16 16)
 */
@@ -3804,7 +3771,6 @@ model="models/weapons/g_launch/tris.md2"
 		/* precaches */ "weapons/rg_hum.wav"
 	},
 
-// RAFAEL 14-APR-98
 /*QUAKED weapon_phalanx (.3 .3 1) (-16 -16 -16) (16 16 16)
 */
 	{
@@ -3831,7 +3797,6 @@ model="models/weapons/g_launch/tris.md2"
 		/* tag */ 0,
 		/* precaches */ "weapons/plasshot.wav sprites/s_photon.sp2 weapons/rockfly.wav"
 	},
-// RAFAEL
 
 /*QUAKED weapon_bfg (.3 .3 1) (-16 -16 -16) (16 16 16)
 */
@@ -3862,10 +3827,8 @@ model="models/weapons/g_launch/tris.md2"
 		/* quantity_warn */ 50
 	},
 
-	// =========================
-	// ROGUE WEAPONS
-	/*QUAKED weapon_disintegrator (.3 .3 1) (-16 -16 -16) (16 16 16) TRIGGER_SPAWN
-	*/
+/*QUAKED weapon_disintegrator (.3 .3 1) (-16 -16 -16) (16 16 16) TRIGGER_SPAWN
+*/
 	{
 		/* id */ IT_WEAPON_DISRUPTOR,
 		/* classname */ "weapon_disintegrator",
@@ -3890,9 +3853,6 @@ model="models/weapons/g_launch/tris.md2"
 		/* tag */ 0,
 		/* precaches */ "models/proj/disintegrator/tris.md2 weapons/disrupt.wav weapons/disint2.wav weapons/disrupthit.wav",
 	},
-
-	// ROGUE WEAPONS
-	// =========================
 
 	//
 	// AMMO ITEMS
@@ -4029,7 +3989,6 @@ model="models/items/ammo/rockets/medium/tris.md2"
 		/* tag */ AMMO_SLUGS
 	},
 
-// RAFAEL
 /*QUAKED ammo_magslug (.3 .3 1) (-16 -16 -16) (16 16 16)
 */
 	{
@@ -4055,10 +4014,6 @@ model="models/items/ammo/rockets/medium/tris.md2"
 		/* armor_info */ nullptr,
 		/* tag */ AMMO_MAGSLUG
 	},
-// RAFAEL
-
-// =======================================
-// ROGUE AMMO
 
 /*QUAKED ammo_flechettes (.3 .3 1) (-16 -16 -16) (16 16 16) TRIGGER_SPAWN
 */
@@ -4165,8 +4120,6 @@ model="models/items/ammo/rockets/medium/tris.md2"
 		/* armor_info */ nullptr,
 		/* tag */ AMMO_DISRUPTOR
 	},
-// ROGUE AMMO
-// =======================================
 
 	//
 	// POWERUP ITEMS
@@ -4384,10 +4337,10 @@ model="models/items/c_head/tris.md2"
 		/* flags */ IF_HEALTH | IF_NOT_RANDOM,
 	},
 
-	/*QUAKED item_legacy_head (.3 .3 1) (-16 -16 -16) (16 16 16)
-	Special item that gives +5 to maximum health
-	model="models/items/legacyhead/tris.md2"
-	*/
+/*QUAKED item_legacy_head (.3 .3 1) (-16 -16 -16) (16 16 16)
+Special item that gives +5 to maximum health
+model="models/items/legacyhead/tris.md2"
+*/
 	{
 		/* id */ IT_ITEM_LEGACY_HEAD,
 		/* classname */ "item_legacy_head",
@@ -4482,10 +4435,6 @@ gives +1 to maximum health, +5 in deathmatch
 		/* chain */ IT_NULL,
 		/* flags */ IF_POWERUP
 	},
-
-
-// ======================================
-// PGM
 
 /*QUAKED item_ir_goggles (.3 .3 1) (-16 -16 -16) (16 16 16) TRIGGER_SPAWN
 gives +1 to maximum health
@@ -4670,9 +4619,6 @@ gives +1 to maximum health
 		/* chain */ IT_NULL,
 		/* flags */ IF_POWERUP | IF_NOT_GIVEABLE
 	},
-
-// PGM
-// ======================================
 
 	//
 	// KEYS
@@ -4920,7 +4866,6 @@ normal door key - red
 		/* flags */ IF_STAY_COOP|IF_KEY
 	},
 
-// RAFAEL
 /*QUAKED key_green_key (0 .5 .8) (-16 -16 -16) (16 16 16)
 normal door key - blue
 */
@@ -4944,7 +4889,6 @@ normal door key - blue
 		/* chain */ IT_NULL,
 		/* flags */ IF_STAY_COOP|IF_KEY
 	},
-// RAFAEL
 
 /*QUAKED key_commander_head (0 .5 .8) (-16 -16 -16) (16 16 16)
 tank commander's head
@@ -4992,9 +4936,6 @@ tank commander's head
 		/* chain */ IT_NULL,
 		/* flags */ IF_STAY_COOP|IF_KEY
 	},
-	
-// ======================================
-// PGM
 
 /*QUAKED key_nuke_container (.3 .3 1) (-16 -16 -16) (16 16 16) TRIGGER_SPAWN
 */
@@ -5042,12 +4983,6 @@ tank commander's head
 		/* flags */ IF_STAY_COOP|IF_KEY,
 	},
 
-// PGM
-//
-
-// PGM
-// ======================================
-
 /*QUAKED item_health_small (.3 .3 1) (-16 -16 -16) (16 16 16)
 model="models/items/healing/stimpack/tris.md2"
 */
@@ -5075,6 +5010,7 @@ model="models/items/healing/stimpack/tris.md2"
 		/* armor_info */ nullptr,
 		/* tag */ HEALTH_IGNORE_MAX
 	},
+
 /*QUAKED item_health (.3 .3 1) (-16 -16 -16) (16 16 16)
 model="models/items/healing/medium/tris.md2"
 */
@@ -5098,6 +5034,7 @@ model="models/items/healing/medium/tris.md2"
 		/* chain */ IT_NULL,
 		/* flags */ IF_HEALTH
 	},
+
 /*QUAKED item_health_large (.3 .3 1) (-16 -16 -16) (16 16 16)
 model="models/items/healing/large/tris.md2"
 */
@@ -5121,6 +5058,7 @@ model="models/items/healing/large/tris.md2"
 		/* chain */ IT_NULL,
 		/* flags */ IF_HEALTH
 	},
+
 /*QUAKED item_health_mega (.3 .3 1) (-16 -16 -16) (16 16 16)
 model="models/items/mega_h/tris.md2"
 */
@@ -5148,7 +5086,6 @@ model="models/items/mega_h/tris.md2"
 		/* tag */ HEALTH_IGNORE_MAX | HEALTH_TIMED
 	},
 
-//ZOID
 /*QUAKED item_flag_team_red (1 0.2 0) (-16 -16 -24) (16 16 32)
 */
 	{

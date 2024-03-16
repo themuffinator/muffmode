@@ -35,15 +35,15 @@ void floater_run(edict_t *self);
 void floater_wham(edict_t *self);
 void floater_zap(edict_t *self);
 
-void floater_fire_blaster(edict_t *self)
+static void floater_fire_blaster(edict_t *self)
 {
 	vec3_t	  start;
 	vec3_t	  forward, right;
 	vec3_t	  end;
 	vec3_t	  dir;
 
-	if (!self->enemy || !self->enemy->inuse) // PGM
-		return;								 // PGM
+	if (!self->enemy || !self->enemy->inuse) 
+		return;
 
 	AngleVectors(self->s.angles, forward, right, nullptr);
 	start = M_ProjectFlashSource(self, monster_flash_offset[MZ2_FLOAT_BLASTER_1], forward, right);
@@ -232,7 +232,7 @@ mframe_t floater_frames_attack1[] = {
 };
 MMOVE_T(floater_move_attack1) = { FRAME_attak101, FRAME_attak114, floater_frames_attack1, floater_run };
 
-// PMM - circle strafe frames
+// circle strafe frames
 mframe_t floater_frames_attack1a[] = {
 	{ ai_charge, 10 }, // Blaster attack
 	{ ai_charge, 10 },
@@ -250,7 +250,6 @@ mframe_t floater_frames_attack1a[] = {
 	{ ai_charge, 10 } //							-- LOOP Ends
 };
 MMOVE_T(floater_move_attack1a) = { FRAME_attak101, FRAME_attak114, floater_frames_attack1a, floater_run };
-// pmm
 
 mframe_t floater_frames_attack2[] = {
 	{ ai_charge }, // Claws
@@ -319,25 +318,6 @@ mframe_t floater_frames_attack3[] = {
 };
 MMOVE_T(floater_move_attack3) = { FRAME_attak301, FRAME_attak334, floater_frames_attack3, floater_run };
 
-#if 0
-mframe_t floater_frames_death[] = {
-	{ ai_move },
-	{ ai_move },
-	{ ai_move },
-	{ ai_move },
-	{ ai_move },
-	{ ai_move },
-	{ ai_move },
-	{ ai_move },
-	{ ai_move },
-	{ ai_move },
-	{ ai_move },
-	{ ai_move },
-	{ ai_move }
-};
-MMOVE_T(floater_move_death) = { FRAME_death01, FRAME_death13, floater_frames_death, floater_dead };
-#endif
-
 mframe_t floater_frames_pain1[] = {
 	{ ai_move },
 	{ ai_move },
@@ -360,24 +340,6 @@ mframe_t floater_frames_pain2[] = {
 	{ ai_move }
 };
 MMOVE_T(floater_move_pain2) = { FRAME_pain201, FRAME_pain208, floater_frames_pain2, floater_run };
-
-#if 0
-mframe_t floater_frames_pain3[] = {
-	{ ai_move },
-	{ ai_move },
-	{ ai_move },
-	{ ai_move },
-	{ ai_move },
-	{ ai_move },
-	{ ai_move },
-	{ ai_move },
-	{ ai_move },
-	{ ai_move },
-	{ ai_move },
-	{ ai_move }
-};
-MMOVE_T(floater_move_pain3) = { FRAME_pain301, FRAME_pain312, floater_frames_pain3, floater_run };
-#endif
 
 mframe_t floater_frames_walk[] = {
 	{ ai_walk, 5 },
@@ -569,7 +531,7 @@ MONSTERINFO_MELEE(floater_melee) (edict_t *self) -> void
 		M_SetAnimation(self, &floater_move_attack2);
 }
 
-PAIN(floater_pain) (edict_t *self, edict_t *other, float kick, int damage, const mod_t &mod) -> void
+static PAIN(floater_pain) (edict_t *self, edict_t *other, float kick, int damage, const mod_t &mod) -> void
 {
 	int n;
 
@@ -616,7 +578,7 @@ void floater_dead(edict_t *self)
 	gi.linkentity(self);
 }
 
-DIE(floater_die) (edict_t *self, edict_t *inflictor, edict_t *attacker, int damage, const vec3_t &point, const mod_t &mod) -> void
+static DIE(floater_die) (edict_t *self, edict_t *inflictor, edict_t *attacker, int damage, const vec3_t &point, const mod_t &mod) -> void
 {
 	gi.sound(self, CHAN_VOICE, sound_death1, 1, ATTN_NORM, 0);
 

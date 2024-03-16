@@ -380,8 +380,8 @@ void GunnerFire(edict_t *self)
 	vec3_t					 aim;
 	monster_muzzleflash_id_t flash_number;
 
-	if (!self->enemy || !self->enemy->inuse) // PGM
-		return;								 // PGM
+	if (!self->enemy || !self->enemy->inuse)
+		return;
 
 	flash_number = static_cast<monster_muzzleflash_id_t>(MZ2_GUNNER_MACHINEGUN_1 + (self->s.frame - FRAME_attak216));
 
@@ -431,14 +431,12 @@ void GunnerGrenade(edict_t *self)
 	monster_muzzleflash_id_t flash_number;
 	float					 spread;
 	float					 pitch = 0;
-	// PMM
-	vec3_t target;
-	bool   blindfire = false;
+	vec3_t					target;
+	bool					blindfire = false;
 
-	if (!self->enemy || !self->enemy->inuse) // PGM
-		return;								 // PGM
+	if (!self->enemy || !self->enemy->inuse)
+		return;
 
-	// pmm
 	if (self->monsterinfo.aiflags & AI_MANUAL_STEERING)
 		blindfire = true;
 
@@ -467,7 +465,6 @@ void GunnerGrenade(edict_t *self)
 	if (self->s.frame >= FRAME_attak301 && self->s.frame <= FRAME_attak324)
 		flash_number = static_cast<monster_muzzleflash_id_t>(MZ2_GUNNER_GRENADE2_1 + (MZ2_GUNNER_GRENADE_4 - flash_number));
 
-	//	pmm
 	// if we're shooting blind and we still can't see our enemy
 	if ((blindfire) && (!visible(self, self->enemy)))
 	{
@@ -479,12 +476,10 @@ void GunnerGrenade(edict_t *self)
 	}
 	else
 		target = self->enemy->s.origin;
-	// pmm
 
-	AngleVectors(self->s.angles, forward, right, up); // PGM
+	AngleVectors(self->s.angles, forward, right, up);
 	start = M_ProjectFlashSource(self, monster_flash_offset[flash_number], forward, right);
 
-	// PGM
 	if (self->enemy)
 	{
 		float dist;
@@ -505,7 +500,6 @@ void GunnerGrenade(edict_t *self)
 		else if (pitch < -0.5f)
 			pitch = -0.5f;
 	}
-	// PGM
 
 	aim = forward + (right * spread);
 	aim += (up * pitch);
@@ -623,7 +617,6 @@ MONSTERINFO_ATTACK(gunner_attack) (edict_t *self) -> void
 
 	monster_done_dodge(self);
 
-	// PMM
 	if (self->monsterinfo.attack_state == AS_BLIND)
 	{
 		if (self->timestamp > level.time)
@@ -667,7 +660,6 @@ MONSTERINFO_ATTACK(gunner_attack) (edict_t *self) -> void
 
 		return;
 	}
-	// pmm
 
 	// PGM - gunner needs to use his chaingun if he's being attacked by a tesla.
 	if (self->bad_area || self->timestamp > level.time || 
@@ -704,9 +696,7 @@ void gunner_refire_chain(edict_t *self)
 	M_SetAnimation(self, &gunner_move_endfire_chain, false);
 }
 
-//===========
-// PGM
-void gunner_jump_now(edict_t *self)
+static void gunner_jump_now(edict_t *self)
 {
 	vec3_t forward, up;
 
@@ -715,7 +705,7 @@ void gunner_jump_now(edict_t *self)
 	self->velocity += (up * 300);
 }
 
-void gunner_jump2_now(edict_t *self)
+static void gunner_jump2_now(edict_t *self)
 {
 	vec3_t forward, up;
 
@@ -724,7 +714,7 @@ void gunner_jump2_now(edict_t *self)
 	self->velocity += (up * 400);
 }
 
-void gunner_jump_wait_land(edict_t *self)
+static void gunner_jump_wait_land(edict_t *self)
 {
 	if (self->groundentity == nullptr)
 	{
@@ -778,8 +768,6 @@ void gunner_jump(edict_t *self, blocked_jump_result_t result)
 		M_SetAnimation(self, &gunner_move_jump);
 }
 
-//===========
-// PGM
 MONSTERINFO_BLOCKED(gunner_blocked) (edict_t *self, float dist) -> bool
 {
 	if (blocked_checkplat(self, dist))
@@ -794,8 +782,6 @@ MONSTERINFO_BLOCKED(gunner_blocked) (edict_t *self, float dist) -> bool
 
 	return false;
 }
-// PGM
-//===========
 
 // PMM - new duck code
 MONSTERINFO_DUCK(gunner_duck) (edict_t *self, gtime_t eta) -> bool
@@ -892,13 +878,11 @@ void SP_monster_gunner(edict_t *self)
 	self->monsterinfo.stand = gunner_stand;
 	self->monsterinfo.walk = gunner_walk;
 	self->monsterinfo.run = gunner_run;
-	// pmm
 	self->monsterinfo.dodge = M_MonsterDodge;
 	self->monsterinfo.duck = gunner_duck;
 	self->monsterinfo.unduck = monster_duck_up;
 	self->monsterinfo.sidestep = gunner_sidestep;
-	self->monsterinfo.blocked = gunner_blocked; // PGM
-	// pmm
+	self->monsterinfo.blocked = gunner_blocked;
 	self->monsterinfo.attack = gunner_attack;
 	self->monsterinfo.melee = nullptr;
 	self->monsterinfo.sight = gunner_sight;
@@ -910,7 +894,6 @@ void SP_monster_gunner(edict_t *self)
 	M_SetAnimation(self, &gunner_move_stand);
 	self->monsterinfo.scale = MODEL_SCALE;
 
-	// PMM
 	self->monsterinfo.blindfire = true;
 	self->monsterinfo.can_jump = !self->spawnflags.has(SPAWNFLAG_GUNNER_NOJUMPING);
 	self->monsterinfo.drop_height = 192;

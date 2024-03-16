@@ -257,7 +257,7 @@ static void hover_gib(edict_t *self)
 		});
 }
 
-THINK(hover_deadthink) (edict_t *self) -> void
+static THINK(hover_deadthink) (edict_t *self) -> void
 {
 	if (!self->groundentity && level.time < self->timestamp)
 	{
@@ -268,7 +268,7 @@ THINK(hover_deadthink) (edict_t *self) -> void
 	hover_gib(self);
 }
 
-void hover_dying(edict_t *self)
+static void hover_dying(edict_t *self)
 {
 	if (self->groundentity)
 	{
@@ -329,32 +329,13 @@ mframe_t hover_frames_end_attack[] = {
 };
 MMOVE_T(hover_move_end_attack) = { FRAME_attak107, FRAME_attak108, hover_frames_end_attack, hover_run };
 
-/* PMM - circle strafing code */
-#if 0
-mframe_t hover_frames_start_attack2[] = {
-	{ ai_charge, 15 },
-	{ ai_charge, 15 },
-	{ ai_charge, 15 }
-};
-MMOVE_T(hover_move_start_attack2) = { FRAME_attak101, FRAME_attak103, hover_frames_start_attack2, hover_attack };
-#endif
-
+// circle strafing code
 mframe_t hover_frames_attack2[] = {
 	{ ai_charge, 10, hover_fire_blaster },
 	{ ai_charge, 10, hover_fire_blaster },
 	{ ai_charge, 10, hover_reattack },
 };
 MMOVE_T(hover_move_attack2) = { FRAME_attak104, FRAME_attak106, hover_frames_attack2, nullptr };
-
-#if 0
-mframe_t hover_frames_end_attack2[] = {
-	{ ai_charge, 15 },
-	{ ai_charge, 15 }
-};
-MMOVE_T(hover_move_end_attack2) = { FRAME_attak107, FRAME_attak108, hover_frames_end_attack2, hover_run };
-#endif
-
-// end of circle strafe
 
 void hover_reattack(edict_t *self)
 {
@@ -385,8 +366,8 @@ void hover_fire_blaster(edict_t *self)
 	vec3_t	  end;
 	vec3_t	  dir;
 
-	if (!self->enemy || !self->enemy->inuse) // PGM
-		return;								 // PGM
+	if (!self->enemy || !self->enemy->inuse)
+		return;
 
 	AngleVectors(self->s.angles, forward, right, nullptr);
 	vec3_t o = monster_flash_offset[(self->s.frame & 1) ? MZ2_HOVER_BLASTER_2 : MZ2_HOVER_BLASTER_1];
@@ -402,7 +383,6 @@ void hover_fire_blaster(edict_t *self)
 		monster_fire_blaster(self, start, dir, 1, 1000, (self->s.frame & 1) ? MZ2_HOVER_BLASTER_2 : MZ2_HOVER_BLASTER_1, (self->s.frame % 4) ? EF_NONE : EF_HYPERBLASTER);
 	else
 		monster_fire_blaster2(self, start, dir, 1, 1000, (self->s.frame & 1) ? MZ2_DAEDALUS_BLASTER_2 : MZ2_DAEDALUS_BLASTER, (self->s.frame % 4) ? EF_NONE : EF_BLASTER);
-	// PGM
 }
 
 MONSTERINFO_STAND(hover_stand) (edict_t *self) -> void
@@ -449,7 +429,7 @@ void hover_attack(edict_t *self)
 	}
 }
 
-PAIN(hover_pain) (edict_t *self, edict_t *other, float kick, int damage, const mod_t &mod) -> void
+static PAIN(hover_pain) (edict_t *self, edict_t *other, float kick, int damage, const mod_t &mod) -> void
 {
 	if (level.time < self->pain_debounce_time)
 		return;
@@ -458,7 +438,6 @@ PAIN(hover_pain) (edict_t *self, edict_t *other, float kick, int damage, const m
 
 	float r = frandom();
 
-	//====
 	if (r < 0.5f)
 	{
 		// PMM - daedalus sounds
@@ -475,8 +454,6 @@ PAIN(hover_pain) (edict_t *self, edict_t *other, float kick, int damage, const m
 		else
 			gi.sound(self, CHAN_VOICE, daed_sound_pain2, 1, ATTN_NORM, 0);
 	}
-	// PGM
-	//====
 
 	if (!M_ShouldReactToPain(self, mod))
 		return; // no pain anims in nightmare
@@ -492,14 +469,11 @@ PAIN(hover_pain) (edict_t *self, edict_t *other, float kick, int damage, const m
 	}
 	else
 	{
-		//====
 		// PGM pain sequence is WAY too long
 		if (r < 0.3f)
 			M_SetAnimation(self, &hover_move_pain1);
 		else
 			M_SetAnimation(self, &hover_move_pain2);
-		// PGM
-		//====
 	}
 }
 
@@ -522,7 +496,7 @@ void hover_dead(edict_t *self)
 	gi.linkentity(self);
 }
 
-DIE(hover_die) (edict_t *self, edict_t *inflictor, edict_t *attacker, int damage, const vec3_t &point, const mod_t &mod) -> void
+static DIE(hover_die) (edict_t *self, edict_t *inflictor, edict_t *attacker, int damage, const vec3_t &point, const mod_t &mod) -> void
 {
 	self->s.effects = EF_NONE;
 	self->monsterinfo.power_armor_type = IT_NULL;
@@ -607,7 +581,6 @@ void SP_monster_hover(edict_t *self)
 	self->monsterinfo.search = hover_search;
 	self->monsterinfo.setskin = hover_setskin;
 
-	// PGM
 	if (strcmp(self->classname, "monster_daedalus") == 0)
 	{
 		self->health = 450 * st.health_multiplier;
@@ -643,7 +616,6 @@ void SP_monster_hover(edict_t *self)
 
 		self->monsterinfo.engine_sound = gi.soundindex("hover/hovidle1.wav");
 	}
-	// PGM
 
 	gi.linkentity(self);
 
@@ -652,10 +624,8 @@ void SP_monster_hover(edict_t *self)
 
 	flymonster_start(self);
 
-	// PGM
 	if (strcmp(self->classname, "monster_daedalus") == 0)
 		self->s.skinnum = 2;
-	// PGM
 
 	self->monsterinfo.aiflags |= AI_ALTERNATE_FLY;
 	hover_set_fly_parameters(self);

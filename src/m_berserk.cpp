@@ -154,7 +154,7 @@ MONSTERINFO_RUN(berserk_run) (edict_t *self) -> void
 		M_SetAnimation(self, &berserk_move_run1);
 }
 
-void berserk_attack_spike(edict_t *self)
+static void berserk_attack_spike(edict_t *self)
 {
 	constexpr vec3_t aim = { MELEE_DISTANCE, 0, -24 };
 	
@@ -162,7 +162,7 @@ void berserk_attack_spike(edict_t *self)
 		self->monsterinfo.melee_debounce_time = level.time + 1.2_sec;
 }
 
-void berserk_swing(edict_t *self)
+static void berserk_swing(edict_t *self)
 {
 	gi.sound(self, CHAN_WEAPON, sound_punch, 1, ATTN_NORM, 0);
 }
@@ -179,7 +179,7 @@ mframe_t berserk_frames_attack_spike[] = {
 };
 MMOVE_T(berserk_move_attack_spike) = { FRAME_att_c1, FRAME_att_c8, berserk_frames_attack_spike, berserk_run };
 
-void berserk_attack_club(edict_t *self)
+static void berserk_attack_club(edict_t *self)
 {
 	vec3_t aim = { MELEE_DISTANCE, self->mins[0], -4 };
 	
@@ -274,7 +274,7 @@ static void berserk_attack_slam(edict_t *self)
 	T_SlamRadiusDamage(tr.endpos, self, self, 8, 300.f, self, 165, MOD_UNKNOWN);
 }
 
-TOUCH(berserk_jump_touch) (edict_t *self, edict_t *other, const trace_t &tr, bool other_touching_self) -> void
+static TOUCH(berserk_jump_touch) (edict_t *self, edict_t *other, const trace_t &tr, bool other_touching_self) -> void
 {
 	if (self->health <= 0)
 	{
@@ -301,7 +301,7 @@ static void berserk_high_gravity(edict_t *self)
 		self->gravity = 5.25f * (800.f / level.gravity);
 }
 
-void berserk_jump_takeoff(edict_t *self)
+static void berserk_jump_takeoff(edict_t *self)
 {
 	vec3_t forward;
 
@@ -325,7 +325,7 @@ void berserk_jump_takeoff(edict_t *self)
 	berserk_high_gravity(self);
 }
 
-void berserk_check_landing(edict_t *self)
+static void berserk_check_landing(edict_t *self)
 {
 	berserk_high_gravity(self);
 
@@ -496,7 +496,7 @@ MMOVE_T(berserk_move_pain2) = { FRAME_painb1, FRAME_painb20, berserk_frames_pain
 
 extern const mmove_t berserk_move_jump, berserk_move_jump2;
 
-PAIN(berserk_pain) (edict_t *self, edict_t *other, float kick, int damage, const mod_t &mod) -> void
+static PAIN(berserk_pain) (edict_t *self, edict_t *other, float kick, int damage, const mod_t &mod) -> void
 {
 	// if we're jumping, don't pain
 	if ((self->monsterinfo.active_move == &berserk_move_jump) ||
@@ -531,7 +531,7 @@ MONSTERINFO_SETSKIN(berserk_setskin) (edict_t *self) -> void
 		self->s.skinnum = 0;
 }
 
-void berserk_dead(edict_t *self)
+static void berserk_dead(edict_t *self)
 {
 	self->mins = { -16, -16, -24 };
 	self->maxs = { 16, 16, -8 };
@@ -574,7 +574,7 @@ mframe_t berserk_frames_death2[] = {
 };
 MMOVE_T(berserk_move_death2) = { FRAME_deathc1, FRAME_deathc8, berserk_frames_death2, berserk_dead };
 
-DIE(berserk_die) (edict_t *self, edict_t *inflictor, edict_t *attacker, int damage, const vec3_t &point, const mod_t &mod) -> void
+static DIE(berserk_die) (edict_t *self, edict_t *inflictor, edict_t *attacker, int damage, const vec3_t &point, const mod_t &mod) -> void
 {
 	if (M_CheckGib(self, mod))
 	{
@@ -608,9 +608,7 @@ DIE(berserk_die) (edict_t *self, edict_t *inflictor, edict_t *attacker, int dama
 		M_SetAnimation(self, &berserk_move_death2);
 }
 
-//===========
-// PGM
-void berserk_jump_now(edict_t *self)
+static void berserk_jump_now(edict_t *self)
 {
 	vec3_t forward, up;
 
@@ -619,7 +617,7 @@ void berserk_jump_now(edict_t *self)
 	self->velocity += (up * 300);
 }
 
-void berserk_jump2_now(edict_t *self)
+static void berserk_jump2_now(edict_t *self)
 {
 	vec3_t forward, up;
 
@@ -628,7 +626,7 @@ void berserk_jump2_now(edict_t *self)
 	self->velocity += (up * 400);
 }
 
-void berserk_jump_wait_land(edict_t *self)
+static void berserk_jump_wait_land(edict_t *self)
 {
 	if (self->groundentity == nullptr)
 	{
@@ -667,7 +665,7 @@ mframe_t berserk_frames_jump2[] = {
 };
 MMOVE_T(berserk_move_jump2) = { FRAME_jump1, FRAME_jump9, berserk_frames_jump2, berserk_run };
 
-void berserk_jump(edict_t *self, blocked_jump_result_t result)
+static void berserk_jump(edict_t *self, blocked_jump_result_t result)
 {
 	if (!self->enemy)
 		return;
@@ -693,8 +691,6 @@ MONSTERINFO_BLOCKED(berserk_blocked) (edict_t *self, float dist) -> bool
 
 	return false;
 }
-// PGM
-//===========
 
 MONSTERINFO_SIDESTEP(berserk_sidestep) (edict_t *self) -> bool
 {
@@ -809,13 +805,11 @@ void SP_monster_berserk(edict_t *self)
 	self->monsterinfo.stand = berserk_stand;
 	self->monsterinfo.walk = berserk_walk;
 	self->monsterinfo.run = berserk_run;
-	// pmm
 	self->monsterinfo.dodge = M_MonsterDodge;
 	self->monsterinfo.duck = berserk_duck;
 	self->monsterinfo.unduck = monster_duck_up;
 	self->monsterinfo.sidestep = berserk_sidestep;
-	self->monsterinfo.blocked = berserk_blocked; // PGM
-	// pmm
+	self->monsterinfo.blocked = berserk_blocked;
 	self->monsterinfo.attack = berserk_attack;
 	self->monsterinfo.melee = berserk_melee;
 	self->monsterinfo.sight = berserk_sight;

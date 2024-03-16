@@ -406,15 +406,14 @@ void ChickSlash(edict_t *self)
 	fire_hit(self, aim, irandom(10, 16), 100);
 }
 
-void ChickRocket(edict_t *self)
+static void ChickRocket(edict_t *self)
 {
 	vec3_t	forward, right;
 	vec3_t	start;
 	vec3_t	dir;
 	vec3_t	vec;
-	trace_t trace; // PMM - check target
+	trace_t trace;
 	int		rocketSpeed;
-	// pmm - blindfire
 	vec3_t target;
 	bool   blindfire = false;
 
@@ -423,8 +422,8 @@ void ChickRocket(edict_t *self)
 	else
 		blindfire = false;
 
-	if (!self->enemy || !self->enemy->inuse) // PGM
-		return;								 // PGM
+	if (!self->enemy || !self->enemy->inuse)
+		return;
 
 	AngleVectors(self->s.angles, forward, right, nullptr);
 	start = M_ProjectFlashSource(self, monster_flash_offset[MZ2_CHICK_ROCKET_1], forward, right);
@@ -435,20 +434,17 @@ void ChickRocket(edict_t *self)
 	else
 		rocketSpeed = 650;
 
-	// PMM
 	if (blindfire)
 		target = self->monsterinfo.blind_fire_target;
 	else
 		target = self->enemy->s.origin;
-	// pmm
-	// PGM
-	//  PMM - blindfire shooting
+
 	if (blindfire)
 	{
 		vec = target;
 		dir = vec - start;
 	}
-	// pmm
+
 	// don't shoot at feet if they're above where i'm shooting from.
 	else if (frandom() < 0.33f || (start[2] < self->enemy->absmin[2]))
 	{
@@ -462,15 +458,10 @@ void ChickRocket(edict_t *self)
 		vec[2] = self->enemy->absmin[2] + 1;
 		dir = vec - start;
 	}
-	// PGM
 
-	//======
-	// PMM - lead target  (not when blindfiring)
-	// 20, 35, 50, 65 chance of leading
+	// lead target  (not when blindfiring) - 20, 35, 50, 65 chance of leading
 	if ((!blindfire) && (frandom() < 0.35f))
 		PredictAim(self, self->enemy, start, rocketSpeed, false, 0.f, &dir, &vec);
-	// PMM - lead target
-	//======
 
 	dir.normalize();
 
@@ -482,11 +473,9 @@ void ChickRocket(edict_t *self)
 		// blindfire has different fail criteria for the trace
 		if (!(trace.startsolid || trace.allsolid || (trace.fraction < 0.5f)))
 		{
-			// RAFAEL
 			if (self->s.skinnum > 1)
 				monster_fire_heat(self, start, dir, 50, rocketSpeed, MZ2_CHICK_ROCKET_1, 0.075f);
 			else
-				// RAFAEL
 				monster_fire_rocket(self, start, dir, 50, rocketSpeed, MZ2_CHICK_ROCKET_1);
 		}
 		else
@@ -501,11 +490,9 @@ void ChickRocket(edict_t *self)
 			trace = gi.traceline(start, vec, self, MASK_PROJECTILE);
 			if (!(trace.startsolid || trace.allsolid || (trace.fraction < 0.5f)))
 			{
-				// RAFAEL
 				if (self->s.skinnum > 1)
 					monster_fire_heat(self, start, dir, 50, rocketSpeed, MZ2_CHICK_ROCKET_1, 0.075f);
 				else
-					// RAFAEL
 					monster_fire_rocket(self, start, dir, 50, rocketSpeed, MZ2_CHICK_ROCKET_1);
 			}
 			else
@@ -518,11 +505,9 @@ void ChickRocket(edict_t *self)
 				trace = gi.traceline(start, vec, self, MASK_PROJECTILE);
 				if (!(trace.startsolid || trace.allsolid || (trace.fraction < 0.5f)))
 				{
-					// RAFAEL
 					if (self->s.skinnum > 1)
 						monster_fire_heat(self, start, dir, 50, rocketSpeed, MZ2_CHICK_ROCKET_1, 0.075f);
 					else
-						// RAFAEL
 						monster_fire_rocket(self, start, dir, 50, rocketSpeed, MZ2_CHICK_ROCKET_1);
 				}
 			}
@@ -532,17 +517,15 @@ void ChickRocket(edict_t *self)
 	{
 		if (trace.fraction > 0.5f || trace.ent->solid != SOLID_BSP)
 		{
-			// RAFAEL
 			if (self->s.skinnum > 1)
 				monster_fire_heat(self, start, dir, 50, rocketSpeed, MZ2_CHICK_ROCKET_1, 0.15f);
 			else
-				// RAFAEL
 				monster_fire_rocket(self, start, dir, 50, rocketSpeed, MZ2_CHICK_ROCKET_1);
 		}
 	}
 }
 
-void Chick_PreAttack1(edict_t *self)
+static void Chick_PreAttack1(edict_t *self)
 {
 	gi.sound(self, CHAN_VOICE, sound_missile_prelaunch, 1, ATTN_NORM, 0);
 
@@ -553,7 +536,7 @@ void Chick_PreAttack1(edict_t *self)
 	}
 }
 
-void ChickReload(edict_t *self)
+static void ChickReload(edict_t *self)
 {
 	gi.sound(self, CHAN_VOICE, sound_missile_reload, 1, ATTN_NORM, 0);
 }
@@ -677,7 +660,7 @@ void chick_reslash(edict_t *self)
 	M_SetAnimation(self, &chick_move_end_slash);
 }
 
-void chick_slash(edict_t *self)
+static void chick_slash(edict_t *self)
 {
 	M_SetAnimation(self, &chick_move_slash);
 }
@@ -743,8 +726,6 @@ MONSTERINFO_SIGHT(chick_sight) (edict_t *self, edict_t *other) -> void
 	gi.sound(self, CHAN_VOICE, sound_sight, 1, ATTN_NORM, 0);
 }
 
-//===========
-// PGM
 MONSTERINFO_BLOCKED(chick_blocked) (edict_t *self, float dist) -> bool
 {
 	if (blocked_checkplat(self, dist))
@@ -752,8 +733,6 @@ MONSTERINFO_BLOCKED(chick_blocked) (edict_t *self, float dist) -> bool
 
 	return false;
 }
-// PGM
-//===========
 
 MONSTERINFO_DUCK(chick_duck) (edict_t *self, gtime_t eta) -> bool
 {
@@ -834,13 +813,11 @@ void SP_monster_chick(edict_t *self)
 	self->monsterinfo.stand = chick_stand;
 	self->monsterinfo.walk = chick_walk;
 	self->monsterinfo.run = chick_run;
-	// pmm
 	self->monsterinfo.dodge = M_MonsterDodge;
 	self->monsterinfo.duck = chick_duck;
 	self->monsterinfo.unduck = monster_duck_up;
 	self->monsterinfo.sidestep = chick_sidestep;
-	self->monsterinfo.blocked = chick_blocked; // PGM
-	// pmm
+	self->monsterinfo.blocked = chick_blocked;
 	self->monsterinfo.attack = chick_attack;
 	self->monsterinfo.melee = chick_melee;
 	self->monsterinfo.sight = chick_sight;
@@ -851,13 +828,10 @@ void SP_monster_chick(edict_t *self)
 	M_SetAnimation(self, &chick_move_stand);
 	self->monsterinfo.scale = MODEL_SCALE;
 
-	// PMM
 	self->monsterinfo.blindfire = true;
-	// pmm
 	walkmonster_start(self);
 }
 
-// RAFAEL
 /*QUAKED monster_chick_heat (1 .5 0) (-16 -16 -24) (16 16 32) Ambush Trigger_Spawn Sight
  */
 void SP_monster_chick_heat(edict_t *self)
@@ -866,4 +840,3 @@ void SP_monster_chick_heat(edict_t *self)
 	self->s.skinnum = 2;
 	gi.soundindex("weapons/railgr1a.wav");
 }
-// RAFAEL

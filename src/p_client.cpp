@@ -238,7 +238,6 @@ static void ClientObituary(edict_t *self, edict_t *inflictor, edict_t *attacker,
 	case MOD_TRIGGER_HURT:
 		base = "$g_mod_generic_hurt";
 		break;
-		// RAFAEL
 	case MOD_GEKK:
 	case MOD_BRAINTENTACLE:
 		base = "$g_mod_generic_gekk";
@@ -246,7 +245,6 @@ static void ClientObituary(edict_t *self, edict_t *inflictor, edict_t *attacker,
 	case MOD_EXPIRE:
 		base = "$g_mod_generic_suicide";
 		break;
-		// RAFAEL
 	default:
 		base = nullptr;
 		break;
@@ -267,16 +265,12 @@ static void ClientObituary(edict_t *self, edict_t *inflictor, edict_t *attacker,
 		case MOD_BFG_BLAST:
 			base = "$g_mod_self_bfg_blast";
 			break;
-			// RAFAEL 03-MAY-98
 		case MOD_TRAP:
 			base = "$g_mod_self_trap";
 			break;
-			// RAFAEL
-			// ROGUE
 		case MOD_DOPPLE_EXPLODE:
 			base = "$g_mod_self_dopple_explode";
 			break;
-			// ROGUE
 		default:
 			base = "$g_mod_self_default";
 			break;
@@ -349,7 +343,6 @@ static void ClientObituary(edict_t *self, edict_t *inflictor, edict_t *attacker,
 		case MOD_TELEFRAG_SPAWN:
 			base = "$g_mod_kill_telefrag";
 			break;
-			// RAFAEL 14-APR-98
 		case MOD_RIPPER:
 			base = "$g_mod_kill_ripper";
 			break;
@@ -359,9 +352,6 @@ static void ClientObituary(edict_t *self, edict_t *inflictor, edict_t *attacker,
 		case MOD_TRAP:
 			base = "$g_mod_kill_trap";
 			break;
-			// RAFAEL
-			//===============
-			// ROGUE
 		case MOD_CHAINFIST:
 			base = "$g_mod_kill_chainfist";
 			break;
@@ -404,13 +394,9 @@ static void ClientObituary(edict_t *self, edict_t *inflictor, edict_t *attacker,
 		case MOD_DOPPLE_HUNTER:
 			base = "$g_mod_kill_dopple_hunter";
 			break;
-			// ROGUE
-			//===============
-			// ZOID
 		case MOD_GRAPPLE:
 			base = "$g_mod_kill_grapple";
 			break;
-			// ZOID
 		default:
 			base = "$g_mod_kill_generic";
 			break;
@@ -419,8 +405,7 @@ static void ClientObituary(edict_t *self, edict_t *inflictor, edict_t *attacker,
 		gi.LocBroadcast_Print(PRINT_MEDIUM, base, self->client->pers.netname, attacker->client->pers.netname);
 
 		if (IsTeamplay()) {
-			// ZOID
-			//  if at start and same team, clear.
+			// if at start and same team, clear.
 			// [Paril-KEX] moved here so it's not an outlier in player_die.
 			if (mod.id == MOD_TELEFRAG_SPAWN &&
 				self->client->resp.ctf_state < 2 &&
@@ -463,7 +448,7 @@ static void ClientObituary(edict_t *self, edict_t *inflictor, edict_t *attacker,
 =================
 TossClientItems
 
-Toss the weapon and powerups for the killed player
+Toss the weapon, tech, CTF flag and powerups for the killed player
 =================
 */
 static void TossClientItems(edict_t *self) {
@@ -474,6 +459,7 @@ static void TossClientItems(edict_t *self) {
 	if (!deathmatch->integer)
 		return;
 
+	// drop weapon
 	wp = self->client->pers.weapon;
 	if (wp) {
 		if (g_instagib->integer)
@@ -485,13 +471,22 @@ static void TossClientItems(edict_t *self) {
 		else if (!wp->drop)
 			wp = nullptr;
 
-		self->client->v_angle[YAW] = 0.0;
-		drop = Drop_Item(self, wp);
-		drop->spawnflags |= SPAWNFLAG_ITEM_DROPPED_PLAYER;
-		drop->spawnflags &= ~SPAWNFLAG_ITEM_DROPPED;
-		drop->svflags &= ~SVF_INSTANCED;
+		if (wp) {
+			self->client->v_angle[YAW] = 0.0;
+			drop = Drop_Item(self, wp);
+			drop->spawnflags |= SPAWNFLAG_ITEM_DROPPED_PLAYER;
+			drop->spawnflags &= ~SPAWNFLAG_ITEM_DROPPED;
+			drop->svflags &= ~SVF_INSTANCED;
+		}
 	}
 
+	//drop tech
+	Tech_DeadDrop(self);
+
+	// drop CTF flags
+	GT_CTF_DeadDropFlag(self);
+
+	// drop powerup
 	quad = g_dm_no_quad_drop->integer ? false : (self->client->pu_time_quad > (level.time + 1_sec));
 	duelfire = g_dm_no_quadfire_drop->integer ? false : (self->client->pu_time_duelfire > (level.time + 1_sec));
 	doubled = (self->client->pu_time_double > (level.time + 1_sec));
@@ -636,7 +631,6 @@ player_die
 DIE(player_die) (edict_t *self, edict_t *inflictor, edict_t *attacker, int damage, const vec3_t &point, const mod_t &mod) -> void {
 	if (self->client->ps.pmove.pm_type == PM_DEAD)
 		return;
-
 	if (level.intermission_time)
 		return;
 
@@ -668,8 +662,10 @@ DIE(player_die) (edict_t *self, edict_t *inflictor, edict_t *attacker, int damag
 			if (attacker->health > 0)
 				attacker->client->resp.kill_count++;
 
-			attacker->client->mstats.total_kills++;
-			self->client->mstats.total_deaths++;
+			if (g_matchstats->integer) {
+				attacker->client->mstats.total_kills++;
+				self->client->mstats.total_deaths++;
+			}
 		}
 	} else {
 		if (!mod.no_point_loss)
@@ -694,8 +690,6 @@ DIE(player_die) (edict_t *self, edict_t *inflictor, edict_t *attacker, int damag
 		GT_CTF_ScoreBonuses(self, inflictor, attacker);
 		TossClientItems(self);
 		Weapon_Grapple_DoReset(self->client);
-		GT_CTF_DeadDropFlag(self);
-		Tech_DeadDrop(self);
 
 		if (deathmatch->integer && !self->client->showscores)
 			Cmd_Help_f(self); // show scores
@@ -725,9 +719,6 @@ DIE(player_die) (edict_t *self, edict_t *inflictor, edict_t *attacker, int damag
 	if (IsTeamplay())
 		self->client->pers.inventory.fill(0);
 
-	//==============
-	// ROGUE stuff
-
 	// if there's a sphere around, let it know the player died.
 	// vengeance and hunter will die if they're not attacking,
 	// defender should always die
@@ -753,14 +744,9 @@ DIE(player_die) (edict_t *self, edict_t *inflictor, edict_t *attacker, int damag
 	if ((self->health < -80) && (mod.id == MOD_NUKE))
 		self->flags |= FL_NOGIB;
 
-	// ROGUE
-	//==============
-
 	if (self->health < GIB_HEALTH) {
-		// PMM
 		// don't toss gibs if we got vaped by the nuke
 		if (!(self->flags & FL_NOGIB)) {
-			// pmm
 			// gib
 			gi.sound(self, CHAN_BODY, gi.soundindex("misc/udeath.wav"), 1, ATTN_NORM, 0);
 
@@ -769,16 +755,14 @@ DIE(player_die) (edict_t *self, edict_t *inflictor, edict_t *attacker, int damag
 				ThrowGibs(self, damage, { { 4, "models/objects/gibs/sm_meat/tris.md2" } });
 
 			ThrowGibs(self, damage, { { 4, "models/objects/gibs/sm_meat/tris.md2" } });
-			// PMM
 		}
 		self->flags &= ~FL_NOGIB;
-		// pmm
 
 		ThrowClientHead(self, damage);
-		// ZOID
+		
 		self->client->anim_priority = ANIM_DEATH;
 		self->client->anim_end = 0;
-		// ZOID
+		
 		self->takedamage = false;
 	} else { // normal death
 		if (!self->deadflag) {
@@ -994,14 +978,12 @@ void InitClientPersistant(edict_t *ent, gclient_t *client) {
 			if (!deathmatch->integer)
 				client->pers.inventory[IT_ITEM_COMPASS] = 1;
 
-			// ZOID
 			bool give_grapple = (!strcmp(g_allow_grapple->string, "auto")) ?
 				(ctf->integer ? !level.no_grapple : 0) :
 				(g_allow_grapple->integer && !g_grapple_offhand->integer);
 
 			if (give_grapple)
 				client->pers.inventory[IT_WEAPON_GRAPPLE] = 1;
-			// ZOID
 		}
 
 		NoAmmoWeaponChange(ent, false);
@@ -1010,9 +992,7 @@ void InitClientPersistant(edict_t *ent, gclient_t *client) {
 		if (client->newweapon)
 			client->pers.selected_item = client->newweapon->id;
 		client->newweapon = nullptr;
-		// ZOID
 		client->pers.lastweapon = client->pers.weapon;
-		// ZOID
 	}
 
 	if (coop->value && g_coop_enable_lives->integer)
@@ -2029,6 +2009,7 @@ void P_ForceFogTransition(edict_t *ent, bool instant) {
 static bool InitPlayerTeam(edict_t *ent) {
 	if (!deathmatch->integer) {
 		ent->client->resp.team = TEAM_FREE;
+		ent->client->ps.stats[STAT_SHOW_STATUSBAR] = 1;
 		return false;
 	}
 	if (ent->svflags & SVF_BOT || g_dm_force_join->integer) {
@@ -2052,6 +2033,7 @@ static bool InitPlayerTeam(edict_t *ent) {
 			ent->client->resp.ghost = nullptr;
 			P_Match_AssignGhost(ent);
 		}
+		ent->client->ps.stats[STAT_SHOW_STATUSBAR] = 1;
 
 		return false;
 	}
@@ -2068,6 +2050,7 @@ static bool InitPlayerTeam(edict_t *ent) {
 		ent->client->ps.gunindex = 0;
 		ent->client->ps.gunskin = 0;
 		gi.linkentity(ent);
+		ent->client->ps.stats[STAT_SHOW_STATUSBAR] = 0;
 
 		Menu_Open_Join(ent);
 		return true;
@@ -2143,7 +2126,7 @@ void ClientSpawn(edict_t *ent) {
 		spawn_origin = squad_respawn_position;
 		spawn_angles = squad_respawn_angles;
 		valid_spawn = true;
-	} else										  // PGM
+	} else
 		valid_spawn = SelectSpawnPoint(ent, spawn_origin, spawn_angles, force_spawn, is_landmark);
 
 	// [Paril-KEX] if we didn't get a valid spawn, hold us in
@@ -2353,10 +2336,12 @@ void ClientSpawn(edict_t *ent) {
 		ent->client->ps.gunindex = 0;
 		ent->client->ps.gunskin = 0;
 		Menu_Open_Join(ent);
+		ent->client->ps.stats[STAT_SHOW_STATUSBAR] = 0;
 
 		gi.linkentity(ent);
 		return;
 	}
+	ent->client->ps.stats[STAT_SHOW_STATUSBAR] = 1;
 
 	// [Paril-KEX] a bit of a hack, but landmark spawns can sometimes cause
 	// intersecting spawns, so we'll do a sanity check here...
@@ -2962,11 +2947,12 @@ bool ClientConnect(edict_t *ent, char *userinfo, const char *social_id, bool is_
 	// take it, otherwise spawn one from scratch
 	if (ent->inuse == false) {
 		// clear the respawning variables
-		// ZOID -- force team join
+
+		// force team join
 		ent->client->resp.team = deathmatch->integer ? TEAM_NONE : TEAM_FREE;
 		ent->client->resp.spectator_state = deathmatch->integer ? SPECTATOR_FREE : SPECTATOR_NOT;
 		ent->client->resp.id_state = true;
-		// ZOID
+
 		InitClientResp(ent->client);
 		if (!game.autosaved || !ent->client->pers.weapon)
 			InitClientPersistant(ent, ent->client);
@@ -3021,11 +3007,11 @@ Will not be called between levels.
 ============
 */
 void ClientDisconnect(edict_t *ent) {
+	edict_t *other;
+
 	if (!ent->client)
 		return;
 
-	GT_CTF_DeadDropFlag(ent);
-	Tech_DeadDrop(ent);
 	TossClientItems(ent);
 	PlayerTrail_Destroy(ent);
 
@@ -3045,6 +3031,13 @@ void ClientDisconnect(edict_t *ent) {
 		gi.WriteEntity(ent);
 		gi.WriteByte(MZ_LOGOUT);
 		gi.multicast(ent->s.origin, MULTICAST_PVS, false);
+	}
+
+	// update chase cam if being followed
+	for (size_t i = 1; i <= game.maxclients; i++) {
+		other = g_edicts + i;
+		if (other->inuse && other->client->chase_target == ent)
+			Team_Join(other, TEAM_SPECTATOR, false);
 	}
 
 	gi.unlinkentity(ent);
@@ -3118,13 +3111,11 @@ static void P_FallingDamage(edict_t *ent, const pmove_t &pm) {
 	if (pm.waterlevel == WATER_UNDER)
 		return;
 
-	// ZOID
 	//  never take damage if just release grapple or on grapple
 	if (ent->client->grapple_release_time >= level.time ||
 		(ent->client->grapple_ent &&
 			ent->client->grapple_state > GRAPPLE_STATE_FLY))
 		return;
-	// ZOID
 
 	float delta = pm.impact_delta;
 
@@ -3387,7 +3378,7 @@ void ClientThink(edict_t *ent, usercmd_t *ucmd) {
 		else
 			client->ps.pmove.pm_flags &= ~PMF_IGNORE_PLAYER_COLLISION;
 
-		// PGM	trigger_gravity support
+		// trigger_gravity support
 		client->ps.pmove.gravity = (short)(level.gravity * ent->gravity);
 		pm.s = client->ps.pmove;
 
@@ -3483,16 +3474,12 @@ void ClientThink(edict_t *ent, usercmd_t *ucmd) {
 			AngleVectors(client->v_angle, client->v_forward, nullptr, nullptr);
 		}
 
-		// ZOID
 		if (client->grapple_ent)
 			Weapon_Grapple_Pull(client->grapple_ent);
-		// ZOID
 
 		gi.linkentity(ent);
 
-		// PGM trigger_gravity support
 		ent->gravity = 1.0;
-		// PGM
 
 		if (ent->movetype != MOVETYPE_NOCLIP) {
 			G_TouchTriggers(ent);

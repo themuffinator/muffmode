@@ -39,7 +39,7 @@ MONSTERINFO_IDLE(flyer_idle) (edict_t *self) -> void
 	gi.sound(self, CHAN_VOICE, sound_idle, 1, ATTN_IDLE, 0);
 }
 
-void flyer_pop_blades(edict_t *self)
+static void flyer_pop_blades(edict_t *self)
 {
 	gi.sound(self, CHAN_VOICE, sound_sproing, 1, ATTN_NORM, 0);
 }
@@ -226,9 +226,8 @@ MONSTERINFO_STAND(flyer_stand) (edict_t *self) -> void
 		M_SetAnimation(self, &flyer_move_stand);
 }
 
-// ROGUE - kamikaze stuff
-
-void flyer_kamikaze_explode(edict_t *self)
+// kamikaze stuff
+static void flyer_kamikaze_explode(edict_t *self)
 {
 	vec3_t dir;
 
@@ -274,34 +273,6 @@ void flyer_kamikaze_check(edict_t *self)
 		flyer_kamikaze_explode(self);
 }
 
-#if 0
-mframe_t flyer_frames_rollright[] = {
-	{ ai_move },
-	{ ai_move },
-	{ ai_move },
-	{ ai_move },
-	{ ai_move },
-	{ ai_move },
-	{ ai_move },
-	{ ai_move },
-	{ ai_move }
-};
-MMOVE_T(flyer_move_rollright) = { FRAME_rollr01, FRAME_rollr09, flyer_frames_rollright, nullptr };
-
-mframe_t flyer_frames_rollleft[] = {
-	{ ai_move },
-	{ ai_move },
-	{ ai_move },
-	{ ai_move },
-	{ ai_move },
-	{ ai_move },
-	{ ai_move },
-	{ ai_move },
-	{ ai_move }
-};
-MMOVE_T(flyer_move_rollleft) = { FRAME_rollf01, FRAME_rollf09, flyer_frames_rollleft, nullptr };
-#endif
-
 mframe_t flyer_frames_pain3[] = {
 	{ ai_move },
 	{ ai_move },
@@ -331,49 +302,15 @@ mframe_t flyer_frames_pain1[] = {
 };
 MMOVE_T(flyer_move_pain1) = { FRAME_pain101, FRAME_pain109, flyer_frames_pain1, flyer_run };
 
-#if 0
-mframe_t flyer_frames_defense[] = {
-	{ ai_move },
-	{ ai_move },
-	{ ai_move }, // Hold this frame
-	{ ai_move },
-	{ ai_move },
-	{ ai_move }
-};
-MMOVE_T(flyer_move_defense) = { FRAME_defens01, FRAME_defens06, flyer_frames_defense, nullptr };
-
-mframe_t flyer_frames_bankright[] = {
-	{ ai_move },
-	{ ai_move },
-	{ ai_move },
-	{ ai_move },
-	{ ai_move },
-	{ ai_move },
-	{ ai_move }
-};
-MMOVE_T(flyer_move_bankright) = { FRAME_bankr01, FRAME_bankr07, flyer_frames_bankright, nullptr };
-
-mframe_t flyer_frames_bankleft[] = {
-	{ ai_move },
-	{ ai_move },
-	{ ai_move },
-	{ ai_move },
-	{ ai_move },
-	{ ai_move },
-	{ ai_move }
-};
-MMOVE_T(flyer_move_bankleft) = { FRAME_bankl01, FRAME_bankl07, flyer_frames_bankleft, nullptr };
-#endif
-
-void flyer_fire(edict_t *self, monster_muzzleflash_id_t flash_number)
+static void flyer_fire(edict_t *self, monster_muzzleflash_id_t flash_number)
 {
 	vec3_t	  start;
 	vec3_t	  forward, right;
 	vec3_t	  end;
 	vec3_t	  dir;
 
-	if (!self->enemy || !self->enemy->inuse) // PGM
-		return;								 // PGM
+	if (!self->enemy || !self->enemy->inuse)
+		return;
 
 	AngleVectors(self->s.angles, forward, right, nullptr);
 	start = M_ProjectFlashSource(self, monster_flash_offset[flash_number], forward, right);
@@ -386,12 +323,12 @@ void flyer_fire(edict_t *self, monster_muzzleflash_id_t flash_number)
 	monster_fire_blaster(self, start, dir, 1, 1000, flash_number, (self->s.frame % 4) ? EF_NONE : EF_HYPERBLASTER);
 }
 
-void flyer_fireleft(edict_t *self)
+static void flyer_fireleft(edict_t *self)
 {
 	flyer_fire(self, MZ2_FLYER_BLASTER_1);
 }
 
-void flyer_fireright(edict_t *self)
+static void flyer_fireright(edict_t *self)
 {
 	flyer_fire(self, MZ2_FLYER_BLASTER_2);
 }
@@ -417,9 +354,7 @@ mframe_t flyer_frames_attack2[] = {
 };
 MMOVE_T(flyer_move_attack2) = { FRAME_attak201, FRAME_attak217, flyer_frames_attack2, flyer_run };
 
-// PMM
 // circle strafe frames
-
 mframe_t flyer_frames_attack3[] = {
 	{ ai_charge, 10 },
 	{ ai_charge, 10 },
@@ -440,9 +375,8 @@ mframe_t flyer_frames_attack3[] = {
 	{ ai_charge, 10 }
 };
 MMOVE_T(flyer_move_attack3) = { FRAME_attak201, FRAME_attak217, flyer_frames_attack3, flyer_run };
-// pmm
 
-void flyer_slash_left(edict_t *self)
+static void flyer_slash_left(edict_t *self)
 {
 	vec3_t aim = { MELEE_DISTANCE, self->mins[0], 0 };
 	if (!fire_hit(self, aim, 5, 0))
@@ -450,7 +384,7 @@ void flyer_slash_left(edict_t *self)
 	gi.sound(self, CHAN_WEAPON, sound_slash, 1, ATTN_NORM, 0);
 }
 
-void flyer_slash_right(edict_t *self)
+static void flyer_slash_right(edict_t *self)
 {
 	vec3_t aim = { MELEE_DISTANCE, self->maxs[0], 0 };
 	if (!fire_hit(self, aim, 5, 0))
@@ -585,7 +519,7 @@ void flyer_check_melee(edict_t *self)
 	flyer_set_fly_parameters(self, false);
 }
 
-PAIN(flyer_pain) (edict_t *self, edict_t *other, float kick, int damage, const mod_t &mod) -> void
+static PAIN(flyer_pain) (edict_t *self, edict_t *other, float kick, int damage, const mod_t &mod) -> void
 {
 	int n;
 
@@ -651,7 +585,7 @@ DIE(flyer_die) (edict_t *self, edict_t *inflictor, edict_t *attacker, int damage
 	self->touch = nullptr;
 }
 
-// PMM - kamikaze code .. blow up if blocked
+// kamikaze code .. blow up if blocked
 MONSTERINFO_BLOCKED(flyer_blocked) (edict_t *self, float dist) -> bool
 {
 	// kamikaze = 100, normal = 50
@@ -669,12 +603,12 @@ MONSTERINFO_BLOCKED(flyer_blocked) (edict_t *self, float dist) -> bool
 	return false;
 }
 
-TOUCH(kamikaze_touch) (edict_t *ent, edict_t *other, const trace_t &tr, bool other_touching_self) -> void
+static TOUCH(kamikaze_touch) (edict_t *ent, edict_t *other, const trace_t &tr, bool other_touching_self) -> void
 {
 	T_Damage(ent, ent, ent, ent->velocity.normalized(), ent->s.origin, ent->velocity.normalized(), 9999, 100, DAMAGE_NONE, MOD_UNKNOWN);
 }
 
-TOUCH(flyer_touch) (edict_t *ent, edict_t *other, const trace_t &tr, bool other_touching_self) -> void
+static TOUCH(flyer_touch) (edict_t *ent, edict_t *other, const trace_t &tr, bool other_touching_self) -> void
 {
 	if ((other->monsterinfo.aiflags & AI_ALTERNATE_FLY) && (other->flags & FL_FLY) &&
 		(ent->monsterinfo.duck_wait_time < level.time))
@@ -770,7 +704,7 @@ void SP_monster_flyer(edict_t *self)
 	flymonster_start(self);
 }
 
-// PMM - suicide fliers
+// suicide fliers
 void SP_monster_kamikaze(edict_t *self)
 {
 	if ( !M_AllowSpawn( self ) ) {

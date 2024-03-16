@@ -166,7 +166,7 @@ void M_SetupReinforcements(const char *reinforcements, reinforcement_list_t &lis
 	}
 }
 
-void cleanupHeal(edict_t *self, bool change_frame)
+static void cleanupHeal(edict_t *self, bool change_frame)
 {
 	// clean up target, if we have one and it's legit
 	if (self->enemy && self->enemy->inuse)
@@ -237,7 +237,7 @@ void abortHeal(edict_t *self, bool change_frame, bool gib, bool mark)
 	self->monsterinfo.medicTries = 0;
 }
 
-bool canReach(edict_t *self, edict_t *other)
+static bool canReach(edict_t *self, edict_t *other)
 {
 	vec3_t	spot1;
 	vec3_t	spot2;
@@ -251,7 +251,7 @@ bool canReach(edict_t *self, edict_t *other)
 	return trace.fraction == 1.0f || trace.ent == other;
 }
 
-edict_t *medic_FindDeadMonster(edict_t *self)
+static edict_t *medic_FindDeadMonster(edict_t *self)
 {
 	float	 radius;
 	edict_t *ent = nullptr;
@@ -549,7 +549,7 @@ mframe_t medic_frames_pain2[] = {
 };
 MMOVE_T(medic_move_pain2) = { FRAME_painb2, FRAME_painb13, medic_frames_pain2, medic_run };
 
-PAIN(medic_pain) (edict_t *self, edict_t *other, float kick, int damage, const mod_t &mod) -> void
+static PAIN(medic_pain) (edict_t *self, edict_t *other, float kick, int damage, const mod_t &mod) -> void
 {
 	monster_done_dodge(self);
 
@@ -614,7 +614,7 @@ MONSTERINFO_SETSKIN(medic_setskin) (edict_t *self) -> void
 		self->s.skinnum &= ~1;
 }
 
-void medic_fire_blaster(edict_t *self)
+static void medic_fire_blaster(edict_t *self)
 {
 	vec3_t	  start;
 	vec3_t	  forward, right;
@@ -659,7 +659,7 @@ void medic_fire_blaster(edict_t *self)
 		monster_fire_blaster(self, start, dir, damage, 1000, mz, effect);
 }
 
-void medic_dead(edict_t *self)
+static void medic_dead(edict_t *self)
 {
 	self->mins = { -16, -16, -24 };
 	self->maxs = { 16, 16, -8 };
@@ -706,7 +706,7 @@ mframe_t medic_frames_death[] = {
 };
 MMOVE_T(medic_move_death) = { FRAME_death2, FRAME_death30, medic_frames_death, medic_dead };
 
-DIE(medic_die) (edict_t *self, edict_t *inflictor, edict_t *attacker, int damage, const vec3_t &point, const mod_t &mod) -> void
+static DIE(medic_die) (edict_t *self, edict_t *inflictor, edict_t *attacker, int damage, const vec3_t &point, const mod_t &mod) -> void
 {
 	// if we had a pending patient, he was already freed up in Killed
 
@@ -736,12 +736,10 @@ DIE(medic_die) (edict_t *self, edict_t *inflictor, edict_t *attacker, int damage
 		return;
 
 	// regular death
-	//	PMM
 	if (self->mass == 400)
 		gi.sound(self, CHAN_VOICE, sound_die, 1, ATTN_NORM, 0);
 	else
 		gi.sound(self, CHAN_VOICE, commander_sound_die, 1, ATTN_NORM, 0);
-	//
 	self->deadflag = true;
 	self->takedamage = true;
 
@@ -801,7 +799,7 @@ static void medic_quick_attack(edict_t *self)
 	}
 }
 
-void medic_continue(edict_t *self)
+static void medic_continue(edict_t *self)
 {
 	if (visible(self, self->enemy))
 		if (frandom() <= 0.95f)
@@ -824,9 +822,8 @@ mframe_t medic_frames_attackBlaster[] = {
 };
 MMOVE_T(medic_move_attackBlaster) = { FRAME_attack3, FRAME_attack14, medic_frames_attackBlaster, medic_run };
 
-void medic_hook_launch(edict_t *self)
+static void medic_hook_launch(edict_t *self)
 {
-	// PMM - commander sounds
 	if (self->mass == 400)
 		gi.sound(self, CHAN_WEAPON, sound_hook_launch, 1, ATTN_NORM, 0);
 	else
@@ -846,7 +843,7 @@ constexpr vec3_t medic_cable_offsets[] = {
 	{ 32.7f, -19.7f, 10.4f }
 };
 
-void medic_cable_attack(edict_t *self)
+static void medic_cable_attack(edict_t *self)
 {
 	vec3_t	offset, start, end, f, r;
 	trace_t tr;
@@ -1047,7 +1044,7 @@ void medic_cable_attack(edict_t *self)
 	gi.multicast(self->s.origin, MULTICAST_PVS, false);
 }
 
-void medic_hook_retract(edict_t *self)
+static void medic_hook_retract(edict_t *self)
 {
 	if (self->mass == 400)
 		gi.sound(self, CHAN_WEAPON, sound_hook_retract, 1, ATTN_NORM, 0);
@@ -1076,9 +1073,6 @@ void medic_hook_retract(edict_t *self)
 }
 
 mframe_t medic_frames_attackCable[] = {
-	// ROGUE - negated 36-40 so he scoots back from his target a little
-	// ROGUE - switched 33-36 to ai_charge
-	// ROGUE - changed frame 52 to 60 to compensate for changes in 36-40
 	// [Paril-KEX] started on 36 as they intended
 	{ ai_charge, -4.7f }, // 37
 	{ ai_charge, -5.f },
@@ -1102,13 +1096,13 @@ mframe_t medic_frames_attackCable[] = {
 };
 MMOVE_T(medic_move_attackCable) = { FRAME_attack37, FRAME_attack55, medic_frames_attackCable, medic_run };
 
-void medic_start_spawn(edict_t *self)
+static void medic_start_spawn(edict_t *self)
 {
 	gi.sound(self, CHAN_WEAPON, commander_sound_spawn, 1, ATTN_NORM, 0);
 	self->monsterinfo.nextframe = FRAME_attack48;
 }
 
-void medic_determine_spawn(edict_t *self)
+static void medic_determine_spawn(edict_t *self)
 {
 	vec3_t f, r, offset, startpoint, spawnpoint;
 	int	   count;
@@ -1186,7 +1180,7 @@ void medic_determine_spawn(edict_t *self)
 		self->monsterinfo.nextframe = FRAME_attack53;
 }
 
-void medic_spawngrows(edict_t *self)
+static void medic_spawngrows(edict_t *self)
 {
 	vec3_t f, r, offset, startpoint, spawnpoint;
 	int	   count;
@@ -1243,7 +1237,7 @@ void medic_spawngrows(edict_t *self)
 		self->monsterinfo.nextframe = FRAME_attack53;
 }
 
-void medic_finish_spawn(edict_t *self)
+static void medic_finish_spawn(edict_t *self)
 {
 	edict_t *ent;
 	vec3_t	 f, r, offset, startpoint, spawnpoint;
@@ -1326,7 +1320,6 @@ void medic_finish_spawn(edict_t *self)
 }
 
 mframe_t medic_frames_callReinforcements[] = {
-	// ROGUE - 33-36 now ai_charge
 	{ ai_charge, 2 }, // 33
 	{ ai_charge, 3 },
 	{ ai_charge, 5 },
@@ -1434,7 +1427,6 @@ MONSTERINFO_CHECKATTACK(medic_checkattack) (edict_t *self) -> bool
 		return true;
 	}
 
-	// ROGUE
 	// since his idle animation looks kinda bad in combat, always attack
 	// when he's on a combat point
 	if (self->monsterinfo.aiflags & AI_STAND_GROUND)
@@ -1446,7 +1438,7 @@ MONSTERINFO_CHECKATTACK(medic_checkattack) (edict_t *self) -> bool
 	return M_CheckAttack(self);
 }
 
-void MedicCommanderCache()
+static void MedicCommanderCache()
 {
 	gi.modelindex("models/items/spawngro3/tris.md2");
 }
@@ -1489,8 +1481,6 @@ MONSTERINFO_SIDESTEP(medic_sidestep) (edict_t *self) -> bool
 	return true;
 }
 
-//===========
-// PGM
 MONSTERINFO_BLOCKED(medic_blocked) (edict_t *self, float dist) -> bool
 {
 	if (blocked_checkplat(self, dist))
@@ -1498,8 +1488,6 @@ MONSTERINFO_BLOCKED(medic_blocked) (edict_t *self, float dist) -> bool
 
 	return false;
 }
-// PGM
-//===========
 
 /*QUAKED monster_medic_commander (1 .5 0) (-16 -16 -24) (16 16 32) Ambush Trigger_Spawn Sight
  */
@@ -1526,7 +1514,6 @@ void SP_monster_medic(edict_t *self)
 	self->mins = { -24, -24, -24 };
 	self->maxs = { 24, 24, 32 };
 
-	// PMM
 	if (strcmp(self->classname, "monster_medic_commander") == 0)
 	{
 		self->health = 600 * st.health_multiplier;
@@ -1537,7 +1524,6 @@ void SP_monster_medic(edict_t *self)
 	}
 	else
 	{
-		// PMM
 		self->health = 300 * st.health_multiplier;
 		self->gib_health = -130;
 		self->mass = 400;
@@ -1549,13 +1535,11 @@ void SP_monster_medic(edict_t *self)
 	self->monsterinfo.stand = medic_stand;
 	self->monsterinfo.walk = medic_walk;
 	self->monsterinfo.run = medic_run;
-	// pmm
 	self->monsterinfo.dodge = M_MonsterDodge;
 	self->monsterinfo.duck = medic_duck;
 	self->monsterinfo.unduck = monster_duck_up;
 	self->monsterinfo.sidestep = medic_sidestep;
 	self->monsterinfo.blocked = medic_blocked;
-	// pmm
 	self->monsterinfo.attack = medic_attack;
 	self->monsterinfo.melee = nullptr;
 	self->monsterinfo.sight = medic_sight;
@@ -1571,7 +1555,6 @@ void SP_monster_medic(edict_t *self)
 
 	walkmonster_start(self);
 
-	// PMM
 	self->monsterinfo.aiflags |= AI_IGNORE_SHOTS;
 
 	if (self->mass > 400)
@@ -1623,5 +1606,4 @@ void SP_monster_medic(edict_t *self)
 
 		self->s.skinnum = 0;
 	}
-	// pmm
 }

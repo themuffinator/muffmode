@@ -3,8 +3,7 @@
 
 #include "g_local.h"
 
-struct spawn_t
-{
+struct spawn_t {
 	const char *name;
 	void (*spawn)(edict_t *ent);
 };
@@ -85,9 +84,9 @@ void SP_target_lightramp(edict_t *self);
 void SP_target_earthquake(edict_t *ent);
 void SP_target_character(edict_t *ent);
 void SP_target_string(edict_t *ent);
-void SP_target_camera(edict_t* self); // [Sam-KEX]
-void SP_target_gravity(edict_t* self); // [Sam-KEX]
-void SP_target_soundfx(edict_t* self); // [Sam-KEX]
+void SP_target_camera(edict_t *self); // [Sam-KEX]
+void SP_target_gravity(edict_t *self); // [Sam-KEX]
+void SP_target_soundfx(edict_t *self); // [Sam-KEX]
 void SP_target_light(edict_t *self); // [Paril-KEX]
 void SP_target_poi(edict_t *ent); // [Paril-KEX]
 void SP_target_music(edict_t *ent);
@@ -107,14 +106,14 @@ void SP_target_orb(edict_t *self);
 
 void SP_worldspawn(edict_t *ent);
 
-void SP_dynamic_light(edict_t* self);
+void SP_dynamic_light(edict_t *self);
 void SP_rotating_light(edict_t *self);
 void SP_light(edict_t *self);
 void SP_light_mine1(edict_t *ent);
 void SP_light_mine2(edict_t *ent);
 void SP_info_null(edict_t *self);
 void SP_info_notnull(edict_t *self);
-void SP_misc_player_mannequin(edict_t * self);
+void SP_misc_player_mannequin(edict_t *self);
 void SP_misc_model(edict_t *self); // [Paril-KEX]
 void SP_path_corner(edict_t *self);
 void SP_point_combat(edict_t *self);
@@ -145,7 +144,7 @@ void SP_misc_viper_missile(edict_t *self);
 void SP_misc_amb4(edict_t *ent);
 void SP_misc_transport(edict_t *ent);
 void SP_misc_nuke(edict_t *ent);
-void SP_misc_flare(edict_t* ent); // [Sam-KEX]
+void SP_misc_flare(edict_t *ent); // [Sam-KEX]
 void SP_misc_hologram(edict_t *ent);
 void SP_misc_lavaball(edict_t *ent);
 void SP_misc_nuke_core(edict_t *self);
@@ -172,7 +171,7 @@ void SP_monster_boss2(edict_t *self);
 void SP_monster_jorg(edict_t *self);
 void SP_monster_boss3_stand(edict_t *self);
 void SP_monster_makron(edict_t *self);
-// Paril
+
 void SP_monster_tank_stand(edict_t *self);
 void SP_monster_guardian(edict_t *self);
 void SP_monster_arachnid(edict_t *self);
@@ -184,7 +183,6 @@ void SP_turret_breach(edict_t *self);
 void SP_turret_base(edict_t *self);
 void SP_turret_driver(edict_t *self);
 
-// RAFAEL 14-APR-98
 void SP_monster_soldier_hypergun(edict_t *self);
 void SP_monster_soldier_lasergun(edict_t *self);
 void SP_monster_soldier_ripper(edict_t *self);
@@ -193,11 +191,7 @@ void SP_monster_gekk(edict_t *self);
 void SP_monster_chick_heat(edict_t *self);
 void SP_monster_gladb(edict_t *self);
 void SP_monster_boss5(edict_t *self);
-// END 14-APR-98
 
-
-//===========
-// ROGUE
 void SP_monster_stalker(edict_t *self);
 void SP_monster_turret(edict_t *self);
 
@@ -207,10 +201,8 @@ void SP_monster_widow(edict_t *self);
 void SP_monster_widow2(edict_t *self);
 void SP_monster_kamikaze(edict_t *self);
 void SP_turret_invisible_brain(edict_t *self);
-// ROGUE
-//===========
 
-void SP_monster_shambler(edict_t* self);
+void SP_monster_shambler(edict_t *self);
 
 // clang-format off
 static const std::initializer_list<spawn_t> spawns = {
@@ -378,11 +370,8 @@ static const std::initializer_list<spawn_t> spawns = {
 	{ "monster_boss2", SP_monster_boss2 },
 	{ "monster_boss3_stand", SP_monster_boss3_stand },
 	{ "monster_jorg", SP_monster_jorg },
-	// Paril: allow spawning makron
 	{ "monster_makron", SP_monster_makron },
-	// Paril: N64
 	{ "monster_tank_stand", SP_monster_tank_stand },
-	// Paril: PSX
 	{ "monster_guardian", SP_monster_guardian },
 	{ "monster_arachnid", SP_monster_arachnid },
 	{ "monster_guncmdr", SP_monster_guncmdr },
@@ -393,7 +382,6 @@ static const std::initializer_list<spawn_t> spawns = {
 	{ "turret_base", SP_turret_base },
 	{ "turret_driver", SP_turret_driver },
 
-	// RAFAEL
 	{ "monster_soldier_hypergun", SP_monster_soldier_hypergun },
 	{ "monster_soldier_lasergun", SP_monster_soldier_lasergun },
 	{ "monster_soldier_ripper", SP_monster_soldier_ripper },
@@ -402,10 +390,7 @@ static const std::initializer_list<spawn_t> spawns = {
 	{ "monster_chick_heat", SP_monster_chick_heat },
 	{ "monster_gladb", SP_monster_gladb },
 	{ "monster_boss5", SP_monster_boss5 },
-	// RAFAEL
 
-	//==============
-	// ROGUE
 	{ "monster_stalker", SP_monster_stalker },
 	{ "monster_turret", SP_monster_turret },
 	{ "monster_daedalus", SP_monster_hover },
@@ -416,8 +401,6 @@ static const std::initializer_list<spawn_t> spawns = {
 	{ "monster_medic_commander", SP_monster_medic },
 	{ "monster_kamikaze", SP_monster_kamikaze },
 	{ "turret_invisible_brain", SP_turret_invisible_brain },
-	// ROGUE
-	//==============
 
 	{ "monster_shambler", SP_monster_shambler }
 };
@@ -462,23 +445,20 @@ ED_CallSpawn
 Finds the spawn function for the entity and calls it
 ===============
 */
-void ED_CallSpawn(edict_t *ent)
-{
+void ED_CallSpawn(edict_t *ent) {
 	gitem_t *item;
 	int		 i;
 
-	if (!ent->classname)
-	{
+	if (!ent->classname) {
 		gi.Com_Print("ED_CallSpawn: nullptr classname\n");
 		G_FreeEdict(ent);
 		return;
 	}
 
-	// PGM - do this before calling the spawn function so it can be overridden.
+	// do this before calling the spawn function so it can be overridden.
 	ent->gravityVector[0] = 0.0;
 	ent->gravityVector[1] = 0.0;
 	ent->gravityVector[2] = -1.0;
-	// PGM
 
 	ent->sv.init = false;
 #if 0
@@ -510,21 +490,17 @@ void ED_CallSpawn(edict_t *ent)
 	SpawnEnt_MapFixes(ent);
 
 	// check item spawn functions
-	for (i = 0, item = itemlist; i < IT_TOTAL; i++, item++)
-	{
+	for (i = 0, item = itemlist; i < IT_TOTAL; i++, item++) {
 		if (!item->classname)
 			continue;
-		if (!strcmp(item->classname, ent->classname))
-		{
+		if (!strcmp(item->classname, ent->classname)) {
 			// found it
 			// before spawning, pick random item replacement
-			if (g_dm_random_items->integer)
-			{
+			if (g_dm_random_items->integer) {
 				ent->item = item;
 				item_id_t new_item = DoRandomRespawn(ent);
 
-				if (new_item)
-				{
+				if (new_item) {
 					item = GetItemByIndex(new_item);
 					ent->classname = item->classname;
 				}
@@ -540,10 +516,8 @@ void ED_CallSpawn(edict_t *ent)
 	}
 
 	// check normal spawn functions
-	for (auto &s : spawns)
-	{
-		if (!strcmp(s.name, ent->classname))
-		{ // found it
+	for (auto &s : spawns) {
+		if (!strcmp(s.name, ent->classname)) { // found it
 			s.spawn(ent);
 
 			// Paril: swap classname with stored constant if we didn't change it
@@ -562,29 +536,25 @@ void ED_CallSpawn(edict_t *ent)
 ED_NewString
 =============
 */
-char *ED_NewString(const char *string)
-{
-	char	*newb, *new_p;
+char *ED_NewString(const char *string) {
+	char *newb, *new_p;
 	int		i;
 	size_t	l;
 
 	l = strlen(string) + 1;
 
-	newb = (char *) gi.TagMalloc(l, TAG_LEVEL);
+	newb = (char *)gi.TagMalloc(l, TAG_LEVEL);
 
 	new_p = newb;
 
-	for (i = 0; i < l; i++)
-	{
-		if (string[i] == '\\' && i < l - 1)
-		{
+	for (i = 0; i < l; i++) {
+		if (string[i] == '\\' && i < l - 1) {
 			i++;
 			if (string[i] == 'n')
 				*new_p++ = '\n';
 			else
 				*new_p++ = '\\';
-		}
-		else
+		} else
 			*new_p++ = string[i];
 	}
 
@@ -595,49 +565,42 @@ char *ED_NewString(const char *string)
 // fields are used for spawning from the entity string
 //
 
-struct field_t
-{
+struct field_t {
 	const char *name;
 	void (*load_func) (edict_t *e, const char *s) = nullptr;
 };
 
 // utility template for getting the type of a field
 template<typename>
-struct member_object_container_type { };
+struct member_object_container_type {};
 template<typename T1, typename T2>
-struct member_object_container_type<T1 T2::*> { using type = T2; };
+struct member_object_container_type<T1 T2:: *> { using type = T2; };
 template<typename T>
 using member_object_container_type_t = typename member_object_container_type<std::remove_cv_t<T>>::type;
 
-struct type_loaders_t
-{
+struct type_loaders_t {
 	template<typename T, std::enable_if_t<std::is_same_v<T, const char *>, int> = 0>
-	static T load(const char *s)
-	{
+	static T load(const char *s) {
 		return ED_NewString(s);
 	}
 
 	template<typename T, std::enable_if_t<std::is_integral_v<T>, int> = 0>
-	static T load(const char *s)
-	{
+	static T load(const char *s) {
 		return atoi(s);
 	}
 
 	template<typename T, std::enable_if_t<std::is_same_v<T, spawnflags_t>, int> = 0>
-	static T load(const char *s)
-	{
+	static T load(const char *s) {
 		return spawnflags_t(atoi(s));
 	}
 
 	template<typename T, std::enable_if_t<std::is_floating_point_v<T>, int> = 0>
-	static T load(const char *s)
-	{
+	static T load(const char *s) {
 		return atof(s);
 	}
 
 	template<typename T, std::enable_if_t<std::is_enum_v<T>, int> = 0>
-	static T load(const char *s)
-	{
+	static T load(const char *s) {
 		if constexpr (sizeof(T) > 4)
 			return static_cast<T>(atoll(s));
 		else
@@ -645,8 +608,7 @@ struct type_loaders_t
 	}
 
 	template<typename T, std::enable_if_t<std::is_same_v<T, vec3_t>, int> = 0>
-	static T load(const char *s)
-	{
+	static T load(const char *s) {
 		vec3_t vec;
 		static char vec_buffer[32];
 		const char *token = COM_Parse(&s, vec_buffer, sizeof(vec_buffer));
@@ -664,21 +626,17 @@ struct type_loaders_t
 		e->M = type_loaders_t::load<decltype(e->M)>(s); \
 	}
 
-static int32_t ED_LoadColor(const char *value)
-{
+static int32_t ED_LoadColor(const char *value) {
 	// space means rgba as values
-	if (strchr(value, ' '))
-	{
+	if (strchr(value, ' ')) {
 		static char color_buffer[32];
-		std::array<float, 4> raw_values { 0, 0, 0, 1.0f };
+		std::array<float, 4> raw_values{ 0, 0, 0, 1.0f };
 		bool is_float = true;
 
-		for (auto &v : raw_values)
-		{
+		for (auto &v : raw_values) {
 			const char *token = COM_Parse(&value, color_buffer, sizeof(color_buffer));
 
-			if (*token)
-			{
+			if (*token) {
 				v = atof(token);
 
 				if (v > 1.0f)
@@ -690,7 +648,7 @@ static int32_t ED_LoadColor(const char *value)
 			for (auto &v : raw_values)
 				v *= 255.f;
 
-		return ((int32_t) raw_values[3]) | (((int32_t) raw_values[2]) << 8) | (((int32_t) raw_values[1]) << 16) | (((int32_t) raw_values[0]) << 24);
+		return ((int32_t)raw_values[3]) | (((int32_t)raw_values[2]) << 8) | (((int32_t)raw_values[1]) << 16) | (((int32_t)raw_values[0]) << 24);
 	}
 
 	// integral
@@ -768,7 +726,7 @@ static const std::initializer_list<field_t> entity_fields = {
 	FIELD_AUTO_NAMED("fog_density_off", fog.density_off),
 	FIELD_AUTO_NAMED("fog_sky_factor", fog.sky_factor),
 	FIELD_AUTO_NAMED("fog_sky_factor_off", fog.sky_factor_off),
-	
+
 	FIELD_AUTO_NAMED("heightfog_falloff", heightfog.falloff),
 	FIELD_AUTO_NAMED("heightfog_density", heightfog.density),
 	FIELD_AUTO_NAMED("heightfog_start_color", heightfog.start_color),
@@ -807,8 +765,7 @@ static const std::initializer_list<field_t> entity_fields = {
 
 	// [Paril-KEX] customizable power armor stuff
 	FIELD_AUTO_NAMED("power_armor_power", monsterinfo.power_armor_power),
-	{ "power_armor_type", [](edict_t *s, const char *v)
-		{
+	{ "power_armor_type", [](edict_t *s, const char *v) {
 			int32_t type = atoi(v);
 
 			if (type == 0)
@@ -820,13 +777,13 @@ static const std::initializer_list<field_t> entity_fields = {
 		}
 	},
 
-//muff
-	FIELD_AUTO(gametype),
-	FIELD_AUTO(not_gametype),
-	FIELD_AUTO(notteam),
-	FIELD_AUTO(notfree),
-//-muff
-	FIELD_AUTO_NAMED("monster_slots", monsterinfo.monster_slots)
+	//muff
+		FIELD_AUTO(gametype),
+		FIELD_AUTO(not_gametype),
+		FIELD_AUTO(notteam),
+		FIELD_AUTO(notfree),
+	//-muff
+		FIELD_AUTO_NAMED("monster_slots", monsterinfo.monster_slots)
 };
 
 #undef AUTO_LOADER_FUNC
@@ -836,8 +793,7 @@ static const std::initializer_list<field_t> entity_fields = {
 		e->M = type_loaders_t::load<decltype(e->M)>(s); \
 	}
 
-struct temp_field_t
-{
+struct temp_field_t {
 	const char *name;
 	void (*load_func) (spawn_temp_t *e, const char *s) = nullptr;
 };
@@ -937,8 +893,7 @@ in an edict
 void ED_ParseField(const char *key, const char *value, edict_t *ent) {
 
 	// check st first
-	for (auto &f : temp_fields)
-	{
+	for (auto &f : temp_fields) {
 		if (Q_strcasecmp(f.name, key))
 			continue;
 
@@ -947,13 +902,12 @@ void ED_ParseField(const char *key, const char *value, edict_t *ent) {
 		// found it
 		if (f.load_func)
 			f.load_func(&st, value);
-		
+
 		return;
 	}
 
 	// now entity
-	for (auto &f : entity_fields)
-	{
+	for (auto &f : entity_fields) {
 		if (Q_strcasecmp(f.name, key))
 			continue;
 
@@ -981,18 +935,16 @@ Parses an edict out of the given string, returning the new position
 ed should be a properly initialized empty edict.
 ====================
 */
-const char *ED_ParseEdict(const char *data, edict_t *ent)
-{
+const char *ED_ParseEdict(const char *data, edict_t *ent) {
 	bool  init;
 	char  keyname[256];
 	const char *com_token;
 
 	init = false;
 	st = {};
-	
+
 	// go through all the dictionary pairs
-	while (1)
-	{
+	while (1) {
 		// parse key
 		com_token = COM_Parse(&data);
 		if (com_token[0] == '}')
@@ -1014,10 +966,9 @@ const char *ED_ParseEdict(const char *data, edict_t *ent)
 
 		// keynames with a leading underscore are used for utility comments,
 		// and are immediately discarded by quake
-		if (keyname[0] == '_')
-		{
+		if (keyname[0] == '_') {
 			// [Sam-KEX] Hack for setting RGBA for shadow-casting lights
-			if(!strcmp(keyname, "_color"))
+			if (!strcmp(keyname, "_color"))
 				ent->s.skinnum = ED_LoadColor(com_token);
 
 			continue;
@@ -1045,39 +996,33 @@ All but the last will have the teamchain field set to the next one
 
 // adjusts teams so that trains that move their children
 // are in the front of the team
-void G_FixTeams()
-{
+void G_FixTeams() {
 	edict_t *e, *e2, *chain;
 	uint32_t i, j;
 	uint32_t c;
 
 	c = 0;
-	for (i = 1, e = g_edicts + i; i < globals.num_edicts; i++, e++)
-	{
+	for (i = 1, e = g_edicts + i; i < globals.num_edicts; i++, e++) {
 		if (!e->inuse)
 			continue;
 		if (!e->team)
 			continue;
-		if (!strcmp(e->classname, "func_train") && e->spawnflags.has(SPAWNFLAG_TRAIN_MOVE_TEAMCHAIN))
-		{
-			if (e->flags & FL_TEAMSLAVE)
-			{
+		if (!strcmp(e->classname, "func_train") && e->spawnflags.has(SPAWNFLAG_TRAIN_MOVE_TEAMCHAIN)) {
+			if (e->flags & FL_TEAMSLAVE) {
 				chain = e;
 				e->teammaster = e;
 				e->teamchain = nullptr;
 				e->flags &= ~FL_TEAMSLAVE;
 				e->flags |= FL_TEAMMASTER;
 				c++;
-				for (j = 1, e2 = g_edicts + j; j < globals.num_edicts; j++, e2++)
-				{
+				for (j = 1, e2 = g_edicts + j; j < globals.num_edicts; j++, e2++) {
 					if (e2 == e)
 						continue;
 					if (!e2->inuse)
 						continue;
 					if (!e2->team)
 						continue;
-					if (!strcmp(e->team, e2->team))
-					{
+					if (!strcmp(e->team, e2->team)) {
 						chain->teamchain = e2;
 						e2->teammaster = e;
 						e2->teamchain = nullptr;
@@ -1095,16 +1040,14 @@ void G_FixTeams()
 	gi.Com_PrintFmt("{} teams repaired\n", c);
 }
 
-void G_FindTeams()
-{
+void G_FindTeams() {
 	edict_t *e, *e2, *chain;
 	uint32_t i, j;
 	uint32_t c, c2;
 
 	c = 0;
 	c2 = 0;
-	for (i = 1, e = g_edicts + i; i < globals.num_edicts; i++, e++)
-	{
+	for (i = 1, e = g_edicts + i; i < globals.num_edicts; i++, e++) {
 		if (!e->inuse)
 			continue;
 		if (!e->team)
@@ -1116,16 +1059,14 @@ void G_FindTeams()
 		e->flags |= FL_TEAMMASTER;
 		c++;
 		c2++;
-		for (j = i + 1, e2 = e + 1; j < globals.num_edicts; j++, e2++)
-		{
+		for (j = i + 1, e2 = e + 1; j < globals.num_edicts; j++, e2++) {
 			if (!e2->inuse)
 				continue;
 			if (!e2->team)
 				continue;
 			if (e2->flags & FL_TEAMSLAVE)
 				continue;
-			if (!strcmp(e->team, e2->team))
-			{
+			if (!strcmp(e->team, e2->team)) {
 				c2++;
 				chain->teamchain = e2;
 				e2->teammaster = e;
@@ -1143,8 +1084,7 @@ void G_FindTeams()
 }
 
 // inhibit entities from game based on cvars & spawnflags
-static inline bool G_InhibitEntity(edict_t *ent)
-{
+static inline bool G_InhibitEntity(edict_t *ent) {
 	if (ent->gametype) {
 		const char *s = strstr(ent->gametype, GT_SpawnString());
 		if (!s) {
@@ -1172,20 +1112,18 @@ static inline bool G_InhibitEntity(edict_t *ent)
 
 	// skill
 	return ((skill->integer == 0) && ent->spawnflags.has(SPAWNFLAG_NOT_EASY)) ||
-		   ((skill->integer == 1) && ent->spawnflags.has(SPAWNFLAG_NOT_MEDIUM)) ||
-		   ((skill->integer >= 2) && ent->spawnflags.has(SPAWNFLAG_NOT_HARD));
+		((skill->integer == 1) && ent->spawnflags.has(SPAWNFLAG_NOT_MEDIUM)) ||
+		((skill->integer >= 2) && ent->spawnflags.has(SPAWNFLAG_NOT_HARD));
 }
 
 void setup_shadow_lights();
 
 // [Paril-KEX]
-void PrecacheInventoryItems()
-{
+void PrecacheInventoryItems() {
 	if (deathmatch->integer)
 		return;
 
-	for (size_t i = 0; i < game.maxclients; i++)
-	{
+	for (size_t i = 0; i < game.maxclients; i++) {
 		gclient_t *cl = g_edicts[i + 1].client;
 
 		if (!cl)
@@ -1197,8 +1135,7 @@ void PrecacheInventoryItems()
 	}
 }
 
-static void PrecacheStartItems()
-{
+static void PrecacheStartItems() {
 	if (!*g_start_items->string)
 		return;
 
@@ -1206,8 +1143,7 @@ static void PrecacheStartItems()
 	const char *token;
 	const char *ptr = g_start_items->string;
 
-	while (*(token = COM_ParseEx(&ptr, ";")))
-	{
+	while (*(token = COM_ParseEx(&ptr, ";"))) {
 		Q_strlcpy(token_copy, token, sizeof(token_copy));
 		const char *ptr_copy = token_copy;
 
@@ -1337,7 +1273,7 @@ static void PrecacheAssets() {
 void FS_Read(void *buffer, int len, FILE *f) {
 	int		block, remaining;
 	int		read;
-	byte	*buf;
+	byte *buf;
 	int		tries;
 
 	buf = (byte *)buffer;
@@ -1371,9 +1307,9 @@ VerifyEntityString
 ==============
 */
 static bool VerifyEntityString(const char *entities) {
-	const char	*or_token;
-	edict_t		*or_ent = nullptr;
-	const char	*or_buf = entities;
+	const char *or_token;
+	edict_t *or_ent = nullptr;
+	const char *or_buf = entities;
 	bool		or_error = false;
 
 	while (1) {
@@ -1382,7 +1318,7 @@ static bool VerifyEntityString(const char *entities) {
 		if (!or_buf)
 			break;
 		if (or_token[0] != '{') {
-			gi.Com_PrintFmt("{}: Found \"{}\" when expecting {{ in override.\n", __FUNCTION__ , or_token);
+			gi.Com_PrintFmt("{}: Found \"{}\" when expecting {{ in override.\n", __FUNCTION__, or_token);
 			return false;
 		}
 
@@ -1428,9 +1364,9 @@ static void PrecacheForRandomRespawn() {
 }
 
 static void G_LocateSpawnSpots(void) {
-	edict_t		*ent;
+	edict_t *ent;
 	int			n;
-	const char	*s = nullptr;
+	const char *s = nullptr;
 	size_t		sl = 0;
 
 	level.spawn_spots[SPAWN_SPOT_INTERMISSION] = NULL;
@@ -1495,8 +1431,7 @@ Creates a server's entity / program execution context by
 parsing textual entity definitions out of an ent file.
 ==============
 */
-void SpawnEntities(const char *mapname, const char *entities, const char *spawnpoint)
-{
+void SpawnEntities(const char *mapname, const char *entities, const char *spawnpoint) {
 	//bool ent_file_loaded = false;
 	bool	ent_file_exists = false;
 	bool	ent_valid = true;
@@ -1562,10 +1497,10 @@ void SpawnEntities(const char *mapname, const char *entities, const char *spawnp
 	cached_soundindex::clear_all();
 	cached_modelindex::clear_all();
 	cached_imageindex::clear_all();
-	
+
 	edict_t *ent;
 	int		 inhibit;
-	const char	 *com_token;
+	const char *com_token;
 
 	int skill_level = clamp(skill->integer, 0, 3);
 	if (skill->integer != skill_level)
@@ -1594,8 +1529,7 @@ void SpawnEntities(const char *mapname, const char *entities, const char *spawnp
 	level.coop_health_scaling = clamp(g_coop_health_scaling->value, 0.f, 1.f);
 
 	// set client fields on player entities
-	for (uint32_t i = 0; i < game.maxclients; i++)
-	{
+	for (uint32_t i = 0; i < game.maxclients; i++) {
 		g_edicts[i + 1].client = game.clients + i;
 
 		// "disconnect" all players since the level is switching
@@ -1610,8 +1544,7 @@ void SpawnEntities(const char *mapname, const char *entities, const char *spawnp
 	InitBodyQue();
 
 	// parse entities
-	while (1)
-	{
+	while (1) {
 		// parse the opening brace
 		com_token = COM_Parse(&entities);
 		if (!entities)
@@ -1633,10 +1566,8 @@ void SpawnEntities(const char *mapname, const char *entities, const char *spawnp
 		}
 
 		// remove things (except the world) from different skill levels or deathmatch
-		if (ent != g_edicts)
-		{
-			if (G_InhibitEntity(ent))
-			{
+		if (ent != g_edicts) {
+			if (G_InhibitEntity(ent)) {
 				G_FreeEdict(ent);
 				inhibit++;
 				continue;
@@ -1648,14 +1579,14 @@ void SpawnEntities(const char *mapname, const char *entities, const char *spawnp
 		if (!ent)
 			gi.Com_Error("SpawnEntities: Invalid or empty entity string.");
 
-		// PGM - do this before calling the spawn function so it can be overridden.
+		// do this before calling the spawn function so it can be overridden.
 		ent->gravityVector[0] = 0.0;
 		ent->gravityVector[1] = 0.0;
 		ent->gravityVector[2] = -1.0;
-		// PGM
+		
 		ED_CallSpawn(ent);
 
-		ent->s.renderfx |= RF_IR_VISIBLE; // PGM
+		ent->s.renderfx |= RF_IR_VISIBLE;
 	}
 
 	gi.Com_PrintFmt("{} entities inhibited\n", inhibit);
@@ -1677,13 +1608,10 @@ void SpawnEntities(const char *mapname, const char *entities, const char *spawnp
 	Tech_SetupSpawn();
 
 	// ROGUE
-	if (deathmatch->integer)
-	{
+	if (deathmatch->integer) {
 		if (g_dm_random_items->integer)
 			PrecacheForRandomRespawn();
-	}
-	else
-	{
+	} else {
 		InitHintPaths(); // if there aren't hintpaths on this map, enable quick aborts
 	}
 	// ROGUE
@@ -1698,8 +1626,7 @@ void SpawnEntities(const char *mapname, const char *entities, const char *spawnp
 #include "g_statusbar.h"
 
 // create & set the statusbar string for the current gamemode
-static void G_InitStatusbar()
-{
+static void G_InitStatusbar() {
 	statusbar_t sb;
 	bool minhud = g_instagib->integer || g_nadefest->integer;
 
@@ -1707,38 +1634,37 @@ static void G_InitStatusbar()
 	sb.yb(-24);
 
 	// health
-	sb.xv(minhud ? 100 : 0).hnum().xv(minhud ? 150 : 50).pic(STAT_HEALTH_ICON);
+	sb.ifstat(STAT_SHOW_STATUSBAR).xv(minhud ? 100 : 0).hnum().xv(minhud ? 150 : 50).pic(STAT_HEALTH_ICON).endifstat();
 	if (!minhud) {
 		// ammo
-		sb.ifstat(STAT_AMMO_ICON).xv(100).anum().xv(150).pic(STAT_AMMO_ICON).endifstat();
+		sb.ifstat(STAT_SHOW_STATUSBAR).ifstat(STAT_AMMO_ICON).xv(100).anum().xv(150).pic(STAT_AMMO_ICON).endifstat().endifstat();
 
 		// armor
-		sb.ifstat(STAT_ARMOR_ICON).xv(200).rnum().xv(250).pic(STAT_ARMOR_ICON).endifstat();
+		sb.ifstat(STAT_SHOW_STATUSBAR).ifstat(STAT_ARMOR_ICON).xv(200).rnum().xv(250).pic(STAT_ARMOR_ICON).endifstat().endifstat();
 
 		// selected item
-		sb.ifstat(STAT_SELECTED_ICON).xv(296).pic(STAT_SELECTED_ICON).endifstat();
+		sb.ifstat(STAT_SHOW_STATUSBAR).ifstat(STAT_SELECTED_ICON).xv(296).pic(STAT_SELECTED_ICON).endifstat().endifstat();
 
 		sb.yb(-50);
 
 		// picked up item
-		sb.ifstat(STAT_PICKUP_ICON).xv(0).pic(STAT_PICKUP_ICON).xv(26).yb(-42).loc_stat_string(STAT_PICKUP_STRING).yb(-50).endifstat();
+		sb.ifstat(STAT_SHOW_STATUSBAR).ifstat(STAT_PICKUP_ICON).xv(0).pic(STAT_PICKUP_ICON).xv(26).yb(-42).loc_stat_string(STAT_PICKUP_STRING).yb(-50).endifstat().endifstat();
 
 		// selected item name
-		sb.ifstat(STAT_SELECTED_ITEM_NAME).yb(-34).xv(319).loc_stat_rstring(STAT_SELECTED_ITEM_NAME).yb(-58).endifstat();
+		sb.ifstat(STAT_SHOW_STATUSBAR).ifstat(STAT_SELECTED_ITEM_NAME).yb(-34).xv(319).loc_stat_rstring(STAT_SELECTED_ITEM_NAME).yb(-58).endifstat().endifstat();
 	}
 
 	// timer
 	sb.ifstat(STAT_TIMER_ICON).xv(262).num(2, STAT_TIMER).xv(296).pic(STAT_TIMER_ICON).endifstat();
-	
+
 	sb.yb(-50);
 	if (!minhud) {
 		// help / weapon icon
-		sb.ifstat(STAT_HELPICON).xv(150).pic(STAT_HELPICON).endifstat();
+		sb.ifstat(STAT_SHOW_STATUSBAR).ifstat(STAT_HELPICON).xv(150).pic(STAT_HELPICON).endifstat().endifstat();
 	}
 
 	// ---- gamemode-specific stuff ----
-	if (!deathmatch->integer)
-	{
+	if (!deathmatch->integer) {
 		// SP/coop
 		// key display
 		// move up if the timer is active
@@ -1747,15 +1673,14 @@ static void G_InitStatusbar()
 		sb.ifstat(STAT_SELECTED_ITEM_NAME)
 			.yb(-58)
 			.ifstat(STAT_TIMER_ICON)
-				.yb(-84)
+			.yb(-84)
 			.endifstat()
-		.endifstat();
+			.endifstat();
 		sb.ifstat(STAT_KEY_A).xv(296).pic(STAT_KEY_A).endifstat();
 		sb.ifstat(STAT_KEY_B).xv(272).pic(STAT_KEY_B).endifstat();
 		sb.ifstat(STAT_KEY_C).xv(248).pic(STAT_KEY_C).endifstat();
 
-		if (coop->integer)
-		{
+		if (coop->integer) {
 			// top of screen coop respawn display
 			sb.ifstat(STAT_COOP_RESPAWN).xv(0).yt(0).loc_stat_cstring2(STAT_COOP_RESPAWN).endifstat();
 
@@ -1764,8 +1689,7 @@ static void G_InitStatusbar()
 		}
 
 		sb.ifstat(STAT_HEALTH_BARS).yt(24).health_bars().endifstat();
-	}
-	else {
+	} else {
 		if (IsTeamplay()) {
 			// ctf/tdm
 			// red team
@@ -1789,8 +1713,6 @@ static void G_InitStatusbar()
 			// team info
 			sb.ifstat(STAT_TEAMPLAY_INFO).xl(0).yb(-88).stat_string(STAT_TEAMPLAY_INFO).endifstat();
 		} else {
-			int scorelimit = GT_ScoreLimit();
-
 			// spectator
 			sb.ifstat(STAT_SPECTATOR).xv(0).yb(-58).string2("SPECTATOR MODE").endifstat();	//104
 
@@ -1803,8 +1725,7 @@ static void G_InitStatusbar()
 			sb.yb(-83).ifstat(STAT_MINISCORE_SECOND_PIC).xr(-26).pic(STAT_MINISCORE_SECOND_PIC).endifstat().xr(-78).num(3, STAT_MINISCORE_SECOND_SCORE);
 			sb.ifstat(STAT_MINISCORE_SECOND_POS).yb(-85).xr(-28).pic(STAT_MINISCORE_SECOND_POS).endifstat();
 
-			if (scorelimit)
-				sb.ifstat(STAT_HEALTH_ICON).xr(-12).yb(-57).loc_rstring(G_Fmt("{}", scorelimit).data()).endifstat();
+			sb.ifstat(STAT_SCORELIMIT).xr(-21).yb(-57).stat_string(STAT_SCORELIMIT).endifstat();
 		}
 
 		// id view state
@@ -1816,16 +1737,13 @@ static void G_InitStatusbar()
 	}
 
 	// ---- more shared stuff ----
-	if (deathmatch->integer)
-	{
+	if (deathmatch->integer) {
 		// match timer
 		sb.ifstat(STAT_MATCH_TIMER).xv(0).yb(-78).stat_string2(STAT_MATCH_TIMER).endifstat();
 
 		// tech
 		sb.ifstat(STAT_TECH).yb(-137).xr(-26).pic(STAT_TECH).endifstat();
-	}
-	else
-	{
+	} else {
 		sb.story();
 	}
 
@@ -1961,24 +1879,21 @@ Only used for the world.
 "gravity"	800 is default gravity
 "message"	text to print at user logon
 */
-void SP_worldspawn(edict_t *ent)
-{
+void SP_worldspawn(edict_t *ent) {
 	ent->movetype = MOVETYPE_PUSH;
 	ent->solid = SOLID_BSP;
 	ent->inuse = true; // since the world doesn't use G_Spawn()
 	ent->s.modelindex = MODELINDEX_WORLD;
 	ent->gravity = 1.0f;
 
-	if (st.hub_map)
-	{
+	if (st.hub_map) {
 		level.hub_map = true;
 
 		// clear helps
 		game.help1changed = game.help2changed = 0;
 		*game.helpmessage1 = *game.helpmessage2 = '\0';
 
-		for (size_t i = 0; i < game.maxclients; i++)
-		{
+		for (size_t i = 0; i < game.maxclients; i++) {
 			game.clients[i].pers.game_help1changed = game.clients[i].pers.game_help2changed = 0;
 			game.clients[i].resp.coop_respawn.game_help1changed = game.clients[i].resp.coop_respawn.game_help2changed = 0;
 		}
@@ -1997,12 +1912,10 @@ void SP_worldspawn(edict_t *ent)
 
 	// make some data visible to the server
 
-	if (ent->message && ent->message[0])
-	{
+	if (ent->message && ent->message[0]) {
 		gi.configstring(CS_NAME, ent->message);
 		Q_strlcpy(level.level_name, ent->message, sizeof(level.level_name));
-	}
-	else
+	} else
 		Q_strlcpy(level.level_name, level.mapname, sizeof(level.level_name));
 
 	if (st.sky && st.sky[0])
@@ -2014,12 +1927,9 @@ void SP_worldspawn(edict_t *ent)
 
 	gi.configstring(CS_SKYAXIS, G_Fmt("{}", st.skyaxis).data());
 
-	if (st.music && st.music[0])
-	{
+	if (st.music && st.music[0]) {
 		gi.configstring(CS_CDTRACK, st.music);
-	}
-	else
-	{
+	} else {
 		gi.configstring(CS_CDTRACK, G_Fmt("{}", ent->sounds).data());
 	}
 
@@ -2030,22 +1940,20 @@ void SP_worldspawn(edict_t *ent)
 	else
 		gi.configstring(CS_CD_LOOP_COUNT, "");
 
-	if (st.instantitems > 0 || level.is_n64)
-	{
+	if (st.instantitems > 0 || level.is_n64) {
 		level.instantitems = true;
 	}
 
 	// [Paril-KEX]
 	if (!deathmatch->integer)
-		gi.configstring(CS_GAME_STYLE, G_Fmt("{}", (int32_t) game_style_t::GAME_STYLE_PVE).data());
+		gi.configstring(CS_GAME_STYLE, G_Fmt("{}", (int32_t)game_style_t::GAME_STYLE_PVE).data());
 	else if (IsTeamplay())
-		gi.configstring(CS_GAME_STYLE, G_Fmt("{}", (int32_t) game_style_t::GAME_STYLE_TDM).data());
+		gi.configstring(CS_GAME_STYLE, G_Fmt("{}", (int32_t)game_style_t::GAME_STYLE_TDM).data());
 	else
-		gi.configstring(CS_GAME_STYLE, G_Fmt("{}", (int32_t) game_style_t::GAME_STYLE_FFA).data());
+		gi.configstring(CS_GAME_STYLE, G_Fmt("{}", (int32_t)game_style_t::GAME_STYLE_FFA).data());
 
 	// [Paril-KEX]
-	if (st.goals)
-	{
+	if (st.goals) {
 		level.goals = st.goals;
 		game.help1changed++;
 	}
@@ -2058,8 +1966,7 @@ void SP_worldspawn(edict_t *ent)
 
 	gi.configstring(CS_MAXCLIENTS, G_Fmt("{}", game.maxclients).data());
 
-	if (level.is_n64 && !deathmatch->integer)
-	{
+	if (level.is_n64 && !deathmatch->integer) {
 		gi.configstring(CONFIG_N64_PHYSICS, "1");
 		pm_config.n64_physics = true;
 	}
@@ -2076,19 +1983,16 @@ void SP_worldspawn(edict_t *ent)
 
 	//---------------
 
-	if (!st.gravity)
-	{
+	if (!st.gravity) {
 		level.gravity = 800.f;
 		gi.cvar_set("sv_gravity", "800");
-	}
-	else
-	{
+	} else {
 		level.gravity = atof(st.gravity);
 		gi.cvar_set("sv_gravity", st.gravity);
 	}
 
 	snd_fry.assign("player/fry.wav"); // standing in lava / slime
-	
+
 	if (!deathmatch->integer)
 		PrecacheItem(GetItemByIndex(IT_ITEM_COMPASS));
 
@@ -2096,11 +2000,11 @@ void SP_worldspawn(edict_t *ent)
 		PrecacheItem(GetItemByIndex(IT_WEAPON_BLASTER));
 
 	if ((!strcmp(g_allow_grapple->string, "auto")) ?
-			(ctf->integer ? !level.no_grapple : 0) :
-			g_allow_grapple->integer) {
+		(ctf->integer ? !level.no_grapple : 0) :
+		g_allow_grapple->integer) {
 		PrecacheItem(GetItemByIndex(IT_WEAPON_GRAPPLE));
 	}
-	
+
 	if (g_dm_random_items->integer)
 		for (item_id_t i = static_cast<item_id_t>(IT_NULL + 1); i < IT_TOTAL; i = static_cast<item_id_t>(i + 1))
 			PrecacheItem(GetItemByIndex(i));
@@ -2111,15 +2015,12 @@ void SP_worldspawn(edict_t *ent)
 	for (auto &item : itemlist)
 		item.vwep_index = 0;
 
-	for (auto &item : itemlist)
-	{
+	for (auto &item : itemlist) {
 		if (!item.vwep_model)
 			continue;
 
-		for (auto &check : itemlist)
-		{
-			if (check.vwep_model && !Q_strcasecmp(item.vwep_model, check.vwep_model) && check.vwep_index)
-			{
+		for (auto &check : itemlist) {
+			if (check.vwep_model && !Q_strcasecmp(item.vwep_model, check.vwep_model) && check.vwep_index) {
 				item.vwep_index = check.vwep_index;
 				break;
 			}
@@ -2193,8 +2094,7 @@ void SP_worldspawn(edict_t *ent)
 	gi.configstring(CS_LIGHTS + 63, "a");
 
 	// coop respawn strings
-	if (coop->integer)
-	{
+	if (coop->integer) {
 		gi.configstring(CONFIG_COOP_RESPAWN_STRING + 0, "$g_coop_respawn_in_combat");
 		gi.configstring(CONFIG_COOP_RESPAWN_STRING + 1, "$g_coop_respawn_bad_area");
 		gi.configstring(CONFIG_COOP_RESPAWN_STRING + 2, "$g_coop_respawn_blocked");

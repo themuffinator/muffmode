@@ -182,52 +182,6 @@ MONSTERINFO_RUN(supertank_run) (edict_t *self) -> void
 		M_SetAnimation(self, &supertank_move_run);
 }
 
-#if 0
-mframe_t supertank_frames_turn_right[] = {
-	{ ai_move, 0, TreadSound },
-	{ ai_move },
-	{ ai_move },
-	{ ai_move },
-	{ ai_move },
-	{ ai_move },
-	{ ai_move },
-	{ ai_move },
-	{ ai_move },
-	{ ai_move },
-	{ ai_move },
-	{ ai_move },
-	{ ai_move },
-	{ ai_move },
-	{ ai_move },
-	{ ai_move },
-	{ ai_move },
-	{ ai_move }
-};
-MMOVE_T(supertank_move_turn_right) = { FRAME_right_1, FRAME_right_18, supertank_frames_turn_right, supertank_run };
-
-mframe_t supertank_frames_turn_left[] = {
-	{ ai_move, 0, TreadSound },
-	{ ai_move },
-	{ ai_move },
-	{ ai_move },
-	{ ai_move },
-	{ ai_move },
-	{ ai_move },
-	{ ai_move },
-	{ ai_move },
-	{ ai_move },
-	{ ai_move },
-	{ ai_move },
-	{ ai_move },
-	{ ai_move },
-	{ ai_move },
-	{ ai_move },
-	{ ai_move },
-	{ ai_move }
-};
-MMOVE_T(supertank_move_turn_left) = { FRAME_left_1, FRAME_left_18, supertank_frames_turn_left, supertank_run };
-#endif
-
 mframe_t supertank_frames_pain3[] = {
 	{ ai_move },
 	{ ai_move },
@@ -271,8 +225,8 @@ static void supertankGrenade(edict_t *self)
 	vec3_t					 start;
 	monster_muzzleflash_id_t flash_number;
 
-	if (!self->enemy || !self->enemy->inuse) // PGM
-		return;								 // PGM
+	if (!self->enemy || !self->enemy->inuse)
+		return;
 
 	if (self->s.frame == FRAME_attak4_1)
 		flash_number = MZ2_SUPERTANK_GRENADE_1;
@@ -458,8 +412,8 @@ void supertankRocket(edict_t *self)
 	vec3_t					 vec;
 	monster_muzzleflash_id_t flash_number;
 
-	if (!self->enemy || !self->enemy->inuse) // PGM
-		return;								 // PGM
+	if (!self->enemy || !self->enemy->inuse)
+		return;
 
 	if (self->s.frame == FRAME_attak2_8)
 		flash_number = MZ2_SUPERTANK_ROCKET_1;
@@ -493,8 +447,8 @@ void supertankMachineGun(edict_t *self)
 	vec3_t					 forward, right;
 	monster_muzzleflash_id_t flash_number;
 
-	if (!self->enemy || !self->enemy->inuse) // PGM
-		return;								 // PGM
+	if (!self->enemy || !self->enemy->inuse)
+		return;
 
 	flash_number = static_cast<monster_muzzleflash_id_t>(MZ2_SUPERTANK_MACHINEGUN_1 + (self->s.frame - FRAME_attak1_1));
 
@@ -588,7 +542,7 @@ void supertank_dead(edict_t *self)
 	supertank_gib(self);
 }
 
-DIE(supertank_die) (edict_t *self, edict_t *inflictor, edict_t *attacker, int damage, const vec3_t &point, const mod_t &mod) -> void
+static DIE(supertank_die) (edict_t *self, edict_t *inflictor, edict_t *attacker, int damage, const vec3_t &point, const mod_t &mod) -> void
 {
 	if (self->spawnflags.has(SPAWNFLAG_MONSTER_DEAD))
 	{
@@ -613,8 +567,6 @@ DIE(supertank_die) (edict_t *self, edict_t *inflictor, edict_t *attacker, int da
 	M_SetAnimation(self, &supertank_move_death);
 }
 
-//===========
-// PGM
 MONSTERINFO_BLOCKED(supertank_blocked) (edict_t *self, float dist) -> bool
 {
 	if (blocked_checkplat(self, dist))
@@ -622,14 +574,10 @@ MONSTERINFO_BLOCKED(supertank_blocked) (edict_t *self, float dist) -> bool
 
 	return false;
 }
-// PGM
-//===========
 
 //
 // monster_supertank
 //
-
-// RAFAEL (Powershield)
 
 /*QUAKED monster_supertank (1 .5 0) (-64 -64 0) (64 64 72) Ambush Trigger_Spawn Sight Powershield LongDeath
  */
@@ -683,7 +631,7 @@ void SP_monster_supertank(edict_t *self)
 	self->monsterinfo.search = supertank_search;
 	self->monsterinfo.melee = nullptr;
 	self->monsterinfo.sight = nullptr;
-	self->monsterinfo.blocked = supertank_blocked; // PGM
+	self->monsterinfo.blocked = supertank_blocked;
 	self->monsterinfo.setskin = supertank_setskin;
 
 	gi.linkentity(self);
@@ -691,7 +639,6 @@ void SP_monster_supertank(edict_t *self)
 	M_SetAnimation(self, &supertank_move_stand);
 	self->monsterinfo.scale = MODEL_SCALE;
 
-	// RAFAEL
 	if (self->spawnflags.has(SPAWNFLAG_SUPERTANK_POWERSHIELD))
 	{
 		if (!st.was_key_specified("power_armor_type"))
@@ -699,13 +646,10 @@ void SP_monster_supertank(edict_t *self)
 		if (!st.was_key_specified("power_armor_power"))
 			self->monsterinfo.power_armor_power = 400;
 	}
-	// RAFAEL
 
 	walkmonster_start(self);
 
-	// PMM
 	self->monsterinfo.aiflags |= AI_IGNORE_SHOTS;
-	// pmm
 
 	// TODO
 	if (level.is_n64)
@@ -717,7 +661,6 @@ void SP_monster_supertank(edict_t *self)
 
 //
 // monster_boss5
-// RAFAEL
 //
 
 /*QUAKED monster_boss5 (1 .5 0) (-64 -64 0) (64 64 72) Ambush Trigger_Spawn Sight

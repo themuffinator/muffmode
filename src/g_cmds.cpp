@@ -73,7 +73,6 @@ static void SelectNextItem(edict_t *ent, item_flags_t itflags, bool menu = true)
 
 	cl = ent->client;
 
-	// ZOID
 	if (menu && cl->menu) {
 		PMenu_Next(ent);
 		return;
@@ -81,7 +80,6 @@ static void SelectNextItem(edict_t *ent, item_flags_t itflags, bool menu = true)
 		ChaseNext(ent);
 		return;
 	}
-	// ZOID
 
 	// scan  for the next valid one
 	for (i = static_cast<item_id_t>(IT_NULL + 1); i <= IT_TOTAL; i = static_cast<item_id_t>(i + 1)) {
@@ -122,7 +120,6 @@ static void SelectPrevItem(edict_t *ent, item_flags_t itflags) {
 
 	cl = ent->client;
 
-	// ZOID
 	if (cl->menu) {
 		PMenu_Prev(ent);
 		return;
@@ -130,7 +127,6 @@ static void SelectPrevItem(edict_t *ent, item_flags_t itflags) {
 		ChasePrev(ent);
 		return;
 	}
-	// ZOID
 
 	// scan  for the next valid one
 	for (i = static_cast<item_id_t>(IT_NULL + 1); i <= IT_TOTAL; i = static_cast<item_id_t>(i + 1)) {
@@ -275,14 +271,12 @@ static void Cmd_Give_f(edict_t *ent) {
 			it = itemlist + i;
 			if (!it->pickup)
 				continue;
-			// ROGUE
 			if (it->flags & (IF_ARMOR | IF_POWER_ARMOR | IF_WEAPON | IF_AMMO | IF_NOT_GIVEABLE | IF_TECH))
 				continue;
 			else if (it->pickup == GT_CTF_PickupFlag)
 				continue;
 			else if ((it->flags & IF_HEALTH) && !it->use)
 				continue;
-			// ROGUE
 			ent->client->pers.inventory[i] = (it->flags & IF_KEY) ? 8 : 1;
 		}
 
@@ -304,12 +298,10 @@ static void Cmd_Give_f(edict_t *ent) {
 		return;
 	}
 
-	// ROGUE
 	if (it->flags & IF_NOT_GIVEABLE) {
 		gi.LocClient_Print(ent, PRINT_HIGH, "$g_not_giveable");
 		return;
 	}
-	// ROGUE
 
 	index = it->id;
 
@@ -668,13 +660,11 @@ static void Cmd_Inven_f(edict_t *ent) {
 
 	globals.server_flags &= ~SERVER_FLAG_SLOW_TIME;
 
-	// ZOID
 	if (deathmatch->integer && ent->client->menu) {
 		PMenu_Close(ent);
 		ent->client->update_chase = true;
 		return;
 	}
-	// ZOID
 
 	if (cl->showinventory) {
 		cl->showinventory = false;
@@ -705,12 +695,10 @@ Cmd_InvUse_f
 static void Cmd_InvUse_f(edict_t *ent) {
 	gitem_t *it;
 
-	// ZOID
 	if (deathmatch->integer && ent->client->menu) {
 		PMenu_Select(ent);
 		return;
 	}
-	// ZOID
 
 	if (ent->health <= 0 || ent->deadflag)
 		return;
@@ -750,6 +738,7 @@ static void Cmd_WeapPrev_f(edict_t *ent) {
 
 	if (ent->health <= 0 || ent->deadflag)
 		return;
+
 	if (!cl->pers.weapon)
 		return;
 
@@ -764,16 +753,17 @@ static void Cmd_WeapPrev_f(edict_t *ent) {
 		index = static_cast<item_id_t>((selected_weapon + IT_TOTAL - i) % IT_TOTAL);
 		if (!cl->pers.inventory[index])
 			continue;
+
 		it = &itemlist[index];
 		if (!it->use)
 			continue;
+
 		if (!(it->flags & IF_WEAPON))
 			continue;
+
 		it->use(ent, it);
-		// ROGUE
 		if (cl->newweapon == it)
 			return; // successful
-		// ROGUE
 	}
 }
 
@@ -792,6 +782,7 @@ static void Cmd_WeapNext_f(edict_t *ent) {
 
 	if (ent->health <= 0 || ent->deadflag)
 		return;
+
 	if (!cl->pers.weapon)
 		return;
 
@@ -806,18 +797,19 @@ static void Cmd_WeapNext_f(edict_t *ent) {
 		index = static_cast<item_id_t>((selected_weapon + i) % IT_TOTAL);
 		if (!cl->pers.inventory[index])
 			continue;
+
 		it = &itemlist[index];
 		if (!it->use)
 			continue;
+
 		if (!(it->flags & IF_WEAPON))
 			continue;
+
 		it->use(ent, it);
 		// PMM - prevent scrolling through ALL weapons
 
-		// ROGUE
 		if (cl->newweapon == it)
 			return;
-		// ROGUE
 	}
 }
 
@@ -827,14 +819,15 @@ Cmd_WeapLast_f
 =================
 */
 static void Cmd_WeapLast_f(edict_t *ent) {
-	gclient_t *cl;
-	int		   index;
-	gitem_t *it;
+	gclient_t	*cl;
+	int			index;
+	gitem_t		*it;
 
 	cl = ent->client;
 
 	if (ent->health <= 0 || ent->deadflag)
 		return;
+
 	if (!cl->pers.weapon || !cl->pers.lastweapon)
 		return;
 
@@ -844,11 +837,14 @@ static void Cmd_WeapLast_f(edict_t *ent) {
 	index = cl->pers.lastweapon->id;
 	if (!cl->pers.inventory[index])
 		return;
+
 	it = &itemlist[index];
 	if (!it->use)
 		return;
+
 	if (!(it->flags & IF_WEAPON))
 		return;
+
 	it->use(ent, it);
 }
 
@@ -892,7 +888,6 @@ static void Cmd_Kill_f(edict_t *ent) {
 	ent->flags &= ~FL_GODMODE;
 	ent->health = 0;
 
-	// ROGUE
 	//  make sure no trackers are still hurting us.
 	if (ent->client->tracker_pain_time)
 		RemoveAttackingPainDaemons(ent);
@@ -901,7 +896,6 @@ static void Cmd_Kill_f(edict_t *ent) {
 		G_FreeEdict(ent->client->owned_sphere);
 		ent->client->owned_sphere = nullptr;
 	}
-	// ROGUE
 
 	// [Paril-KEX] don't allow kill to take points away in TDM
 	player_die(ent, ent, ent, 100000, vec3_origin, { MOD_SUICIDE, !!teamplay->integer });
@@ -992,14 +986,12 @@ static void Cmd_PutAway_f(edict_t *ent) {
 
 	globals.server_flags &= ~SERVER_FLAG_SLOW_TIME;
 
-	// ZOID
 	if (deathmatch->integer && ent->client->menu)
 		PMenu_Close(ent);
 	ent->client->update_chase = true;
-	// ZOID
 }
 
-int PlayerSort(const void *a, const void *b) {
+static int PlayerSort(const void *a, const void *b) {
 	int anum, bnum;
 
 	anum = *(const int *)a;
@@ -1631,7 +1623,7 @@ If the client being followed leaves the game, or you just want to drop
 to free floating spectator mode
 =================
 */
-void StopFollowing(edict_t *ent, bool release) {
+static void StopFollowing(edict_t *ent, bool release) {
 	gclient_t *client;
 
 	if (ent->svflags & SVF_BOT || !ent->inuse)
@@ -1643,6 +1635,7 @@ void StopFollowing(edict_t *ent, bool release) {
 	client->resp.spectator_state = SPECTATOR_FREE;
 	if (release) {
 		client->ps.stats[STAT_HEALTH] = ent->health = 1;
+		ent->client->ps.stats[STAT_SHOW_STATUSBAR] = 0;
 	}
 	//SetClientViewAngle(ent, client->ps.viewangles);
 
@@ -1818,6 +1811,7 @@ bool SetTeam(edict_t *ent, const char *s, bool inactive) {
 		// Kill him (makes sure he loses flags, etc)
 		ent->flags &= ~FL_GODMODE;
 		ent->client->ps.stats[STAT_HEALTH] = ent->health = 0;
+		ent->client->ps.stats[STAT_SHOW_STATUSBAR] = new_team == TEAM_SPECTATOR ? 0 : 1;
 		player_die(ent, ent, ent, 100000, vec3_origin, MOD_CHANGE_TEAM);
 	}
 
@@ -1937,6 +1931,8 @@ void Team_Join(edict_t *ent, team_t desired_team, bool inactive) {
 	ent->client->resp.spectator_client = 0;
 	ent->client->resp.spectator_time = 0;
 
+	ent->client->chase_target = nullptr;
+
 	if (IsTeamplay() && desired_team != TEAM_SPECTATOR) {
 		char value[MAX_INFO_VALUE] = { 0 };
 		gi.Info_ValueForKey(ent->client->pers.userinfo, "skin", value, sizeof(value));
@@ -1956,23 +1952,11 @@ void Team_Join(edict_t *ent, team_t desired_team, bool inactive) {
 	G_PostRespawn(ent);
 
 	BroadcastTeamChange(ent, old_team, inactive);
-#if 0
-	if (desired_team != TEAM_SPECTATOR) {
-		if (desired_team == TEAM_FREE) {
-			gi.LocBroadcast_Print(PRINT_CENTER, "{} joined the battle.\n",
-				ent->client->pers.netname);
-		} else {
-			gi.LocBroadcast_Print(PRINT_CENTER, "$g_joined_team",
-				ent->client->pers.netname, Teams_TeamName(desired_team));
-		}
-	} else {
-		if (desired_team != ent->client->resp.team)
-			gi.LocBroadcast_Print(PRINT_CENTER, inactive ? "{} is inactive, moved to spectators." : "$g_observing", ent->client->pers.netname);
-	}
-#endif
+
 	if (level.match == MATCH_SETUP) {
 		gi.LocCenter_Print(ent, "Type \"ready\" in console to ready up.\n");
 	}
+	ent->client->ps.stats[STAT_SHOW_STATUSBAR] = desired_team == TEAM_SPECTATOR ? 0 : 1;
 
 	// if anybody has a menu open, update it immediately
 	Menu_Dirty();

@@ -221,12 +221,8 @@ static trace_t G_PushEntity(edict_t *ent, const vec3_t &push)
 		}
 	}
 
-	// ================
-	// PGM
 	// FIXME - is this needed?
 	ent->gravity = 1.0;
-	// PGM
-	// ================
 
 	if (ent->inuse)
 		G_TouchTriggers(ent);
@@ -557,13 +553,7 @@ static void G_Physics_Toss(edict_t *ent)
 	G_CheckVelocity(ent);
 
 	// add gravity
-	if (ent->movetype != MOVETYPE_FLY &&
-		ent->movetype != MOVETYPE_FLYMISSILE
-		// RAFAEL
-		// move type for rippergun projectile
-		&& ent->movetype != MOVETYPE_WALLBOUNCE
-		// RAFAEL
-	)
+	if (ent->movetype != MOVETYPE_FLY && ent->movetype != MOVETYPE_FLYMISSILE && ent->movetype != MOVETYPE_WALLBOUNCE)
 		G_AddGravity(ent);
 
 	// move angles
@@ -604,20 +594,17 @@ static void G_Physics_Toss(edict_t *ent)
 			ent->velocity = SlideClipVelocity(ent->velocity, trace.plane.normal, 0.5f);
 		else
 		{
-			// RAFAEL
 			if (ent->movetype == MOVETYPE_WALLBOUNCE)
 				backoff = 2.0f;
-			// RAFAEL
 			else
 				backoff = 1.6f;
 
 			ent->velocity = ClipVelocity(ent->velocity, trace.plane.normal, backoff);
 		}
 
-		// RAFAEL
 		if (ent->movetype == MOVETYPE_WALLBOUNCE)
 			ent->s.angles = vectoangles(ent->velocity);
-		// RAFAEL
+
 		// stop if on ground
 		else
 		{
@@ -820,7 +807,7 @@ void G_AddRotationalFriction(edict_t *ent)
 	float adjustment;
 
 	ent->s.angles += (ent->avelocity * gi.frame_time_s);
-	adjustment = gi.frame_time_s * sv_stopspeed->value * g_friction; // PGM now a cvar
+	adjustment = gi.frame_time_s * sv_stopspeed->value * g_friction;
 
 	for (n = 0; n < 3; n++)
 	{
@@ -1054,7 +1041,6 @@ G_RunEntity
 */
 void G_RunEntity(edict_t *ent)
 {
-	// PGM
 	trace_t trace;
 	vec3_t	previous_origin;
 	bool	has_previous_origin = false;
@@ -1064,7 +1050,6 @@ void G_RunEntity(edict_t *ent)
 		previous_origin = ent->s.origin;
 		has_previous_origin = true;
 	}
-	// PGM
 
 	if (ent->prethink)
 		ent->prethink(ent);
@@ -1093,21 +1078,16 @@ void G_RunEntity(edict_t *ent)
 	case MOVETYPE_BOUNCE:
 	case MOVETYPE_FLY:
 	case MOVETYPE_FLYMISSILE:
-	// RAFAEL
 	case MOVETYPE_WALLBOUNCE:
-		// RAFAEL
 		G_Physics_Toss(ent);
 		break;
-	// ROGUE
 	case MOVETYPE_NEWTOSS:
 		G_Physics_NewToss(ent);
 		break;
-	// ROGUE
 	default:
 		gi.Com_ErrorFmt("G_Physics: bad movetype {}", (int32_t) ent->movetype);
 	}
 
-	// PGM
 	if (has_previous_origin && ent->movetype == MOVETYPE_STEP)
 	{
 		// if we moved, check and fix origin if needed
@@ -1118,31 +1098,6 @@ void G_RunEntity(edict_t *ent)
 				ent->s.origin = previous_origin;
 		}
 	}
-	// PGM
-
-#if 0
-	// disintegrator stuff; only for non-players
-	if (ent->disintegrator_time)
-	{
-		if (ent->disintegrator_time > 100_sec)
-		{
-			gi.WriteByte(svc_temp_entity);
-			gi.WriteByte(TE_BOSSTPORT);
-			gi.WritePosition(ent->s.origin);
-			gi.multicast(ent->s.origin, MULTICAST_PHS, false);
-
-			Killed(ent, ent->disintegrator, ent->disintegrator, 999999, vec3_origin, MOD_NUKE);
-			G_FreeEdict(ent);
-		}
-		
-		ent->disintegrator_time = max(0_ms, ent->disintegrator_time - (15000_ms / gi.tick_rate));
-
-		if (ent->disintegrator_time)
-			ent->s.alpha = max(1 / 255.f, 1.f - (ent->disintegrator_time.seconds() / 100.f));
-		else
-			ent->s.alpha = 1;
-	}
-#endif
 
 	if (ent->postthink)
 		ent->postthink(ent);

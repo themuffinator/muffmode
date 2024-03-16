@@ -126,8 +126,7 @@ constexpr vec3_t monster_flash_offset[] = {
 	{ 4.6f * 1.15f, -16.8f * 1.15f, 7.3f * 1.15f },
 
 	// MZ2_CHICK_ROCKET_1				57
-	//	-24.8f, -9.0f, 39.0f,
-	{ 24.8f, -9.0f, 39.0f }, // PGM - this was incorrect in Q2
+	{ 24.8f, -9.0f, 39.0f },
 
 	// MZ2_FLYER_BLASTER_1				58
 	{ 14.1f, 13.4f, -7.0f },
@@ -227,7 +226,6 @@ constexpr vec3_t monster_flash_offset[] = {
 	// MZ2_SOLDIER_MACHINEGUN_8			100
 	{ 34.5f * 1.2f, 9.6f * 1.2f, 6.1f * 1.2f },
 
-	// --- Xian shit below ---
 	// MZ2_MAKRON_BFG					101
 	{ 17.f, -19.5f, 62.9f },
 	// MZ2_MAKRON_BLASTER_1				102
@@ -305,9 +303,6 @@ constexpr vec3_t monster_flash_offset[] = {
 	// MZ2_BOSS2_MACHINEGUN_R5			77
 	{ 32.f, 40.f, 70.f },
 
-	// --- End Xian Shit ---
-
-	// ROGUE
 	// note that the above really ends at 137
 	// carrier machineguns
 	// MZ2_CARRIER_MACHINEGUN_L1

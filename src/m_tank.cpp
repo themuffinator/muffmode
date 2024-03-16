@@ -106,16 +106,6 @@ MONSTERINFO_STAND(tank_stand) (edict_t *self) -> void
 
 void tank_walk(edict_t *self);
 
-#if 0
-mframe_t tank_frames_start_walk[] = {
-	{ ai_walk },
-	{ ai_walk, 6 },
-	{ ai_walk, 6 },
-	{ ai_walk, 11, tank_footstep }
-};
-MMOVE_T(tank_move_start_walk) = { FRAME_walk01, FRAME_walk04, tank_frames_start_walk, tank_walk };
-#endif
-
 mframe_t tank_frames_walk[] = {
 	{ ai_walk, 4 },
 	{ ai_walk, 5 },
@@ -135,17 +125,6 @@ mframe_t tank_frames_walk[] = {
 	{ ai_walk, 6, tank_footstep }
 };
 MMOVE_T(tank_move_walk) = { FRAME_walk05, FRAME_walk20, tank_frames_walk, nullptr };
-
-#if 0
-mframe_t tank_frames_stop_walk[] = {
-	{ ai_walk, 3 },
-	{ ai_walk, 3 },
-	{ ai_walk, 2 },
-	{ ai_walk, 2 },
-	{ ai_walk, 4, tank_footstep }
-};
-MMOVE_T(tank_move_stop_walk) = { FRAME_walk21, FRAME_walk25, tank_frames_stop_walk, tank_stand };
-#endif
 
 MONSTERINFO_WALK(tank_walk) (edict_t *self) -> void
 {
@@ -185,17 +164,6 @@ mframe_t tank_frames_run[] = {
 	{ ai_run, 6, tank_footstep }
 };
 MMOVE_T(tank_move_run) = { FRAME_walk05, FRAME_walk20, tank_frames_run, nullptr };
-
-#if 0
-mframe_t tank_frames_stop_run[] = {
-	{ ai_run, 3 },
-	{ ai_run, 3 },
-	{ ai_run, 2 },
-	{ ai_run, 2 },
-	{ ai_run, 4, tank_footstep }
-};
-MMOVE_T(tank_move_stop_run) = { FRAME_walk21, FRAME_walk25, tank_frames_stop_run, tank_walk };
-#endif
 
 MONSTERINFO_RUN(tank_run) (edict_t *self) -> void
 {
@@ -361,8 +329,8 @@ void TankBlaster(edict_t *self)
 	vec3_t					 dir;
 	monster_muzzleflash_id_t flash_number;
 
-	if (!self->enemy || !self->enemy->inuse) // PGM
-		return;								 // PGM
+	if (!self->enemy || !self->enemy->inuse)
+		return;
 
 	bool   blindfire = self->monsterinfo.aiflags & AI_MANUAL_STEERING;
 
@@ -399,19 +367,18 @@ void TankStrike(edict_t *self)
 	gi.sound(self, CHAN_WEAPON, sound_strike, 1, ATTN_NORM, 0);
 }
 
-void TankRocket(edict_t *self)
+static void TankRocket(edict_t *self)
 {
-	vec3_t					 forward, right;
-	vec3_t					 start;
-	vec3_t					 dir;
-	vec3_t					 vec;
+	vec3_t					forward, right;
+	vec3_t					start;
+	vec3_t					dir;
+	vec3_t					vec;
 	monster_muzzleflash_id_t flash_number;
-	int						 rocketSpeed; // PGM
-	// pmm - blindfire support
-	vec3_t target;
+	int						rocketSpeed;
+	vec3_t					target;	// pmm - blindfire support
 
-	if (!self->enemy || !self->enemy->inuse) // PGM
-		return;								 // PGM
+	if (!self->enemy || !self->enemy->inuse)
+		return;
 
 	bool   blindfire = self->monsterinfo.aiflags & AI_MANUAL_STEERING;
 
@@ -434,21 +401,18 @@ void TankRocket(edict_t *self)
 	else
 		rocketSpeed = 650;
 
-	// PMM
 	if (blindfire)
 		target = self->monsterinfo.blind_fire_target;
 	else
 		target = self->enemy->s.origin;
-	// pmm
 
-	// PGM
-	//  PMM - blindfire shooting
+	// blindfire shooting
 	if (blindfire)
 	{
 		vec = target;
 		dir = vec - start;
 	}
-	// pmm
+
 	// don't shoot at feet if they're above me.
 	else if (frandom() < 0.66f || (start[2] < self->enemy->absmin[2]))
 	{
@@ -462,15 +426,10 @@ void TankRocket(edict_t *self)
 		vec[2] = self->enemy->absmin[2] + 1;
 		dir = vec - start;
 	}
-	// PGM
 
-	//======
-	// PMM - lead target  (not when blindfiring)
-	// 20, 35, 50, 65 chance of leading
+	// lead target  (not when blindfiring) - 20, 35, 50, 65 chance of leading
 	if ((!blindfire) && ((frandom() < (0.2f + ((3 - skill->integer) * 0.15f)))))
 		PredictAim(self, self->enemy, start, rocketSpeed, false, 0, &dir, &vec);
-	// PMM - lead target
-	//======
 
 	dir.normalize();
 
@@ -501,7 +460,7 @@ void TankRocket(edict_t *self)
 	}
 }
 
-void TankMachineGun(edict_t *self)
+static void TankMachineGun(edict_t *self)
 {
 	vec3_t					 dir;
 	vec3_t					 vec;
@@ -509,8 +468,8 @@ void TankMachineGun(edict_t *self)
 	vec3_t					 forward, right;
 	monster_muzzleflash_id_t flash_number;
 
-	if (!self->enemy || !self->enemy->inuse) // PGM
-		return;								 // PGM
+	if (!self->enemy || !self->enemy->inuse)
+		return;
 
 	flash_number = static_cast<monster_muzzleflash_id_t>(MZ2_TANK_MACHINEGUN_1 + (self->s.frame - FRAME_attak406));
 
@@ -1003,8 +962,6 @@ DIE(tank_die) (edict_t *self, edict_t *inflictor, edict_t *attacker, int damage,
 	M_SetAnimation(self, &tank_move_death);
 }
 
-//===========
-// PGM
 MONSTERINFO_BLOCKED(tank_blocked) (edict_t *self, float dist) -> bool
 {
 	if (blocked_checkplat(self, dist))
@@ -1012,8 +969,6 @@ MONSTERINFO_BLOCKED(tank_blocked) (edict_t *self, float dist) -> bool
 
 	return false;
 }
-// PGM
-//===========
 
 //
 // monster_tank
@@ -1099,7 +1054,7 @@ void SP_monster_tank(edict_t *self)
 	self->monsterinfo.melee = nullptr;
 	self->monsterinfo.sight = tank_sight;
 	self->monsterinfo.idle = tank_idle;
-	self->monsterinfo.blocked = tank_blocked; // PGM
+	self->monsterinfo.blocked = tank_blocked;
 	self->monsterinfo.setskin = tank_setskin;
 
 	gi.linkentity(self);

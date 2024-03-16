@@ -576,7 +576,6 @@ void SV_CalcBlend(edict_t *ent)
 		if (G_PowerUpExpiringRelative(remaining))
 			G_AddBlend(0, 0, 1, 0.08f, ent->client->ps.screen_blend);
 	}
-	// RAFAEL
 	else if (ent->client->pu_time_duelfire > level.time)
 	{
 		remaining = ent->client->pu_time_duelfire - level.time;
@@ -585,8 +584,6 @@ void SV_CalcBlend(edict_t *ent)
 		if (G_PowerUpExpiringRelative(remaining))
 			G_AddBlend(1, 0.2f, 0.5f, 0.08f, ent->client->ps.screen_blend);
 	}
-	// RAFAEL
-	// PMM - double damage
 	else if (ent->client->pu_time_double > level.time)
 	{
 		remaining = ent->client->pu_time_double - level.time;
@@ -637,7 +634,6 @@ void SV_CalcBlend(edict_t *ent)
 	}
 /*freeze*/
 	
-	// PGM
 	if (ent->client->nuke_time > level.time)
 	{
 		float brightness = (ent->client->nuke_time - level.time).seconds() / 2.0f;
@@ -658,7 +654,6 @@ void SV_CalcBlend(edict_t *ent)
 	{
 		ent->client->ps.rdflags &= ~RDF_IRGOGGLES;
 	}
-	// PGM
 
 	// add for damage
 	if (ent->client->damage_alpha > 0)
@@ -672,11 +667,6 @@ void SV_CalcBlend(edict_t *ent)
 		float alpha = (ent->air_finished < level.time) ? 1 : (1.f - ((ent->air_finished - level.time).seconds() / 9.0f));
 		G_AddBlend(drown_color[0], drown_color[1], drown_color[2], min(alpha, max_drown_alpha), ent->client->ps.damage_blend);
 	}
-
-#if 0
-	if (ent->client->bonus_alpha > 0)
-		G_AddBlend(0.85f, 0.7f, 0.3f, ent->client->bonus_alpha, ent->client->ps.damage_blend);
-#endif
 
 	// drop the damage value
 	ent->client->damage_alpha -= gi.frame_time_s * 0.6f;
@@ -871,15 +861,9 @@ void P_WorldEffects()
 }
 
 
-void G_SetPowerupEffects(edict_t *ent, effects_t def) {
-#if 0
-	if (ent->client->resp.team == TEAM_RED && def == EF_QUAD)
-		ent->s.effects |= EF_PENT; // red
-	else if (ent->client->resp.team == TEAM_BLUE && def == EF_PENT)
-		ent->s.effects |= EF_QUAD; // blue
-	else
-#endif
-		ent->s.effects |= def;
+static void G_SetPowerupEffects(edict_t *ent, effects_t def) {
+	// muff: do not change color based on team, that makes it confusing
+	ent->s.effects |= def;
 }
 
 
@@ -888,7 +872,7 @@ void G_SetPowerupEffects(edict_t *ent, effects_t def) {
 G_SetClientEffects
 ===============
 */
-void G_SetClientEffects(edict_t *ent)
+static void G_SetClientEffects(edict_t *ent)
 {
 	int pa_type;
 
@@ -942,7 +926,6 @@ void G_SetClientEffects(edict_t *ent)
 			G_SetPowerupEffects(ent, EF_DUALFIRE);
 	}
 
-	// ROGUE
 	if (ent->client->pu_time_double > level.time)
 	{
 		if (G_PowerUpExpiring(ent->client->pu_time_double))
@@ -978,35 +961,6 @@ void G_SetClientEffects(edict_t *ent)
 		ent->s.effects |= EF_COLOR_SHELL;
 		ent->s.renderfx |= (RF_SHELL_RED | RF_SHELL_GREEN | RF_SHELL_BLUE);
 	}
-
-#if 0
-	// disintegrator stuff
-	if (ent->disintegrator_time)
-	{
-		if (ent->disintegrator_time > 100_sec)
-		{
-			gi.WriteByte(svc_temp_entity);
-			gi.WriteByte(TE_BOSSTPORT);
-			gi.WritePosition(ent->s.origin);
-			gi.multicast(ent->s.origin, MULTICAST_PHS, false);
-
-			Killed(ent, ent, ent, 999999, vec3_origin, MOD_NUKE);
-			ent->disintegrator_time = 0_ms;
-			ThrowClientHead(ent, 9999);
-			ent->s.modelindex = 0;
-			ent->solid = SOLID_NOT;
-		}
-		else
-		{
-			ent->disintegrator_time = max(0_ms, ent->disintegrator_time - 1500_ms);
-
-			if (ent->disintegrator_time)
-				ent->s.alpha = max(1 / 255.f, 1.f - (ent->disintegrator_time.seconds() / 100));
-			else
-				ent->s.alpha = 1;
-		}
-	}
-#endif
 }
 
 /*
@@ -1014,7 +968,7 @@ void G_SetClientEffects(edict_t *ent)
 G_SetClientEvent
 ===============
 */
-void G_SetClientEvent(edict_t *ent)
+static void G_SetClientEvent(edict_t *ent)
 {
 	if (ent->s.event)
 		return;
@@ -1042,7 +996,7 @@ void G_SetClientEvent(edict_t *ent)
 G_SetClientSound
 ===============
 */
-void G_SetClientSound(edict_t *ent)
+static void G_SetClientSound(edict_t *ent)
 {
 	// help beep (no more than three times)
 	if (ent->client->pers.helpchanged && ent->client->pers.helpchanged <= 3 && ent->client->pers.help_time < level.time)
@@ -1075,10 +1029,8 @@ void G_SetClientSound(edict_t *ent)
 			ent->s.sound = gi.soundindex("weapons/rg_hum.wav");
 		else if (ent->client->pers.weapon->id == IT_WEAPON_BFG)
 			ent->s.sound = gi.soundindex("weapons/bfg_hum.wav");
-		// RAFAEL
 		else if (ent->client->pers.weapon->id == IT_WEAPON_PHALANX)
 			ent->s.sound = gi.soundindex("weapons/phaloop.wav");
-		// RAFAEL
 	}
 
 	// [Paril-KEX] if no other sound is playing, play appropriate grapple sounds
@@ -1176,7 +1128,7 @@ newanim:
 
 	if (!ent->groundentity)
 	{
-		// ZOID: if on grapple, don't go into jump frame, go into standing
+		// if on grapple, don't go into jump frame, go into standing
 		// frame
 		if (client->grapple_ent)
 		{
@@ -1193,7 +1145,6 @@ newanim:
 		}
 		else
 		{
-			// ZOID
 			client->anim_priority = ANIM_JUMP;
 
 			if (duck)
@@ -1449,6 +1400,7 @@ Called for each player at the end of the server frame
 and right after spawning
 =================
 */
+static int scorelimit = -1;
 void ClientEndServerFrame(edict_t *ent)
 {
 	// no player exists yet (load game)
@@ -1459,6 +1411,12 @@ void ClientEndServerFrame(edict_t *ent)
 
 	current_player = ent;
 	current_client = ent->client;
+
+	int limit = GT_ScoreLimit();
+	if (scorelimit != limit) {
+		ent->client->ps.stats[STAT_SCORELIMIT] = limit;
+		scorelimit = limit;
+	}
 
 	// check fog changes
 	P_ForceFogTransition(ent, false);
@@ -1542,10 +1500,8 @@ void ClientEndServerFrame(edict_t *ent)
 		return;
 	}
 
-	// ZOID
-	// regen tech
+	// auto doc tech
 	Tech_ApplyAutoDoc(ent);
-	// ZOID
 
 	// muff mode: weapons frenzy ammo regen
 	Frenzy_ApplyAmmoRegen(ent);
@@ -1614,9 +1570,11 @@ void ClientEndServerFrame(edict_t *ent)
 	// accurately determined
 	SV_CalcBlend(ent);
 
-	if (ent->client->hit_target) {
-		ent->client->hit_target = false;
-		ent->client->mstats.total_hits++;
+	if (g_matchstats->integer) {
+		if (ent->client->hit_target) {
+			ent->client->hit_target = false;
+			ent->client->mstats.total_hits++;
+		}
 	}
 
 	// chase cam stuff
@@ -1641,7 +1599,6 @@ void ClientEndServerFrame(edict_t *ent)
 	ent->client->oldviewangles = ent->client->ps.viewangles;
 	ent->client->oldgroundentity = ent->groundentity;
 
-	// ZOID
 	if (ent->client->menudirty && ent->client->menutime <= level.time)
 	{
 		if (ent->client->menu)
@@ -1652,19 +1609,16 @@ void ClientEndServerFrame(edict_t *ent)
 		ent->client->menutime = level.time;
 		ent->client->menudirty = false;
 	}
-	// ZOID
 
 	// if the scoreboard is up, update it
 	if (ent->client->showscores && ent->client->menutime <= level.time)
 	{
-		// ZOID
 		if (ent->client->menu)
 		{
 			PMenu_Do_Update(ent);
 			ent->client->menudirty = false;
 		}
 		else
-			// ZOID
 			DeathmatchScoreboardMessage(ent, ent->enemy);
 		gi.unicast(ent, false);
 		ent->client->menutime = level.time + 3_sec;

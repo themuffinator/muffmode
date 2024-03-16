@@ -19,14 +19,12 @@ is not a staircase.
 */
 bool M_CheckBottom_Fast_Generic(const vec3_t &absmins, const vec3_t &absmaxs, bool ceiling)
 {
-	// PGM
 	//  FIXME - this will only handle 0,0,1 and 0,0,-1 gravity vectors
 	vec3_t start;
 
 	start[2] = absmins[2] - 1;
 	if (ceiling)
 		start[2] = absmaxs[2] + 1;
-	// PGM
 
 	for (int x = 0; x <= 1; x++)
 		for (int y = 0; y <= 1; y++)
@@ -58,7 +56,6 @@ bool M_CheckBottom_Slow_Generic(const vec3_t &origin, const vec3_t &mins, const 
 	start[0] = stop[0] = origin.x;
 	start[1] = stop[1] = origin.y;
 
-	// PGM
 	if (!ceiling)
 	{
 		start[2] = origin.z + mins.z;
@@ -69,7 +66,6 @@ bool M_CheckBottom_Slow_Generic(const vec3_t &origin, const vec3_t &mins, const 
 		start[2] = origin.z + maxs.z;
 		stop[2] = start[2] + STEPSIZE * 2;
 	}
-	// PGM
 
 	vec3_t mins_no_z = mins;
 	vec3_t maxs_no_z = maxs;
@@ -110,7 +106,6 @@ bool M_CheckBottom_Slow_Generic(const vec3_t &origin, const vec3_t &mins, const 
 
 			trace = gi.trace(quadrant_start, half_step_quadrant_mins, half_step_quadrant, quadrant_end, ignore, mask);
 
-			// PGM
 			//  FIXME - this will only handle 0,0,1 and 0,0,-1 gravity vectors
 			if (ceiling)
 			{
@@ -122,7 +117,6 @@ bool M_CheckBottom_Slow_Generic(const vec3_t &origin, const vec3_t &mins, const 
 				if (trace.fraction == 1.0f || mid - trace.endpos[2] > (STEPSIZE))
 					return false;
 			}
-			// PGM
 		}
 
 	return true;
@@ -494,7 +488,6 @@ static bool SV_flystep(edict_t *ent, vec3_t move, bool relink, edict_t *current_
 			}
 			else
 			{
-				// RAFAEL
 				if (strcmp(ent->classname, "monster_fixbot") == 0)
 				{
 					if (ent->s.frame >= 105 && ent->s.frame <= 120)
@@ -521,7 +514,6 @@ static bool SV_flystep(edict_t *ent, vec3_t move, bool relink, edict_t *current_
 				}
 				else
 				{
-					// RAFAEL
 					if (dz > 0)
 					{
 						new_move *= 0.5f;
@@ -532,9 +524,7 @@ static bool SV_flystep(edict_t *ent, vec3_t move, bool relink, edict_t *current_
 						new_move *= 0.5f;
 						new_move[2] += -max(-dist, dz);
 					}
-					// RAFAEL
 				}
-				// RAFAEL
 			}
 		}
 
@@ -566,13 +556,9 @@ static bool SV_flystep(edict_t *ent, vec3_t move, bool relink, edict_t *current_
 			}
 		}
 
-		// ROGUE
 		if ((trace.fraction == 1) && (!trace.allsolid) && (!trace.startsolid))
-		// ROGUE
 		{
 			ent->s.origin = trace.endpos;
-			//=====
-			// PGM
 			if (!current_bad && CheckForBadArea(ent))
 				ent->s.origin = oldorg;
 			else
@@ -585,8 +571,6 @@ static bool SV_flystep(edict_t *ent, vec3_t move, bool relink, edict_t *current_
 
 				return true;
 			}
-			// PGM
-			//=====
 		}
 
 		G_Impact(ent, trace);
@@ -610,10 +594,8 @@ pr_global_struct->trace_normal is set to the normal of the blocking wall
 */
 // FIXME since we need to test end position contents here, can we avoid doing
 // it again later in catagorize position?
-bool SV_movestep(edict_t *ent, vec3_t move, bool relink)
+static bool SV_movestep(edict_t *ent, vec3_t move, bool relink)
 {
-	//======
-	// PGM
 	edict_t *current_bad = nullptr;
 
 	// PMM - who cares about bad areas if you're dead?
@@ -643,8 +625,6 @@ bool SV_movestep(edict_t *ent, vec3_t move, bool relink)
 			}
 		}
 	}
-	// PGM
-	//======
 
 	// flying monsters don't step up
 	if (ent->flags & (FL_SWIM | FL_FLY))
@@ -772,8 +752,6 @@ bool SV_movestep(edict_t *ent, vec3_t move, bool relink)
 	// check point traces down for dangling corners
 	ent->s.origin = trace.endpos;
 
-	// PGM
-	//  PMM - don't bother with bad areas if we're dead
 	if (ent->health > 0)
 	{
 		// use AI_BLOCKED to tell the calling layer that we're now mad at a tesla
@@ -812,7 +790,6 @@ bool SV_movestep(edict_t *ent, vec3_t move, bool relink)
 			return false;
 		}
 	}
-	// PGM
 
 	if (!M_CheckBottom(ent))
 	{
@@ -966,7 +943,7 @@ facing it.
 
 ======================
 */
-bool SV_StepDirection(edict_t *ent, float yaw, float dist, bool allow_no_turns)
+static bool SV_StepDirection(edict_t *ent, float yaw, float dist, bool allow_no_turns)
 {
 	vec3_t move, oldorigin;
 
@@ -1020,7 +997,7 @@ SV_FixCheckBottom
 
 ======================
 */
-void SV_FixCheckBottom(edict_t *ent)
+static void SV_FixCheckBottom(edict_t *ent)
 {
 	ent->flags |= FL_PARTIALGROUND;
 }
@@ -1033,7 +1010,7 @@ SV_NewChaseDir
 */
 constexpr float DI_NODIR = -1;
 
-bool SV_NewChaseDir(edict_t *actor, vec3_t pos, float dist)
+static bool SV_NewChaseDir(edict_t *actor, vec3_t pos, float dist)
 {
 	float deltax, deltay;
 	float d[3];

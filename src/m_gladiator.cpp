@@ -40,7 +40,7 @@ MONSTERINFO_SEARCH(gladiator_search) (edict_t *self) -> void
 	gi.sound(self, CHAN_VOICE, sound_search, 1, ATTN_NORM, 0);
 }
 
-void gladiator_cleaver_swing(edict_t *self)
+static void gladiator_cleaver_swing(edict_t *self)
 {
 	gi.sound(self, CHAN_WEAPON, sound_cleaver_swing, 1, ATTN_NORM, 0);
 }
@@ -104,7 +104,7 @@ MONSTERINFO_RUN(gladiator_run) (edict_t *self) -> void
 		M_SetAnimation(self, &gladiator_move_run);
 }
 
-void GladiatorMelee(edict_t *self)
+static void GladiatorMelee(edict_t *self)
 {
 	vec3_t aim = { MELEE_DISTANCE, self->mins[0], -4 };
 	if (fire_hit(self, aim, irandom(20, 25), 300))
@@ -139,7 +139,7 @@ MONSTERINFO_MELEE(gladiator_melee) (edict_t *self) -> void
 	M_SetAnimation(self, &gladiator_move_attack_melee);
 }
 
-void GladiatorGun(edict_t *self)
+static void GladiatorGun(edict_t *self)
 {
 	vec3_t start;
 	vec3_t dir;
@@ -168,8 +168,7 @@ mframe_t gladiator_frames_attack_gun[] = {
 };
 MMOVE_T(gladiator_move_attack_gun) = { FRAME_attack1, FRAME_attack9, gladiator_frames_attack_gun, gladiator_run };
 
-// RAFAEL
-void gladbGun(edict_t *self)
+static void gladbGun(edict_t *self)
 {
 	vec3_t start;
 	vec3_t dir;
@@ -198,7 +197,7 @@ void gladbGun(edict_t *self)
 	self->pos1[2] += self->enemy->viewheight;
 }
 
-void gladbGun_check(edict_t *self)
+static void gladbGun_check(edict_t *self)
 {
 	if (skill->integer == 3)
 		gladbGun(self);
@@ -216,7 +215,6 @@ mframe_t gladb_frames_attack_gun[] = {
 	{ ai_charge, 0, gladbGun_check }
 };
 MMOVE_T(gladb_move_attack_gun) = { FRAME_attack1, FRAME_attack9, gladb_frames_attack_gun, gladiator_run };
-// RAFAEL
 
 MONSTERINFO_ATTACK(gladiator_attack) (edict_t *self) -> void
 {
@@ -234,7 +232,7 @@ MONSTERINFO_ATTACK(gladiator_attack) (edict_t *self) -> void
 	// charge up the railgun
 	self->pos1 = self->enemy->s.origin; // save for aiming the shot
 	self->pos1[2] += self->enemy->viewheight;
-	// RAFAEL
+
 	if (self->style == 1)
 	{
 		gi.sound(self, CHAN_WEAPON, sound_gunb, 1, ATTN_NORM, 0);
@@ -242,12 +240,9 @@ MONSTERINFO_ATTACK(gladiator_attack) (edict_t *self) -> void
 	}
 	else
 	{
-		// RAFAEL
 		gi.sound(self, CHAN_WEAPON, sound_gun, 1, ATTN_NORM, 0);
 		M_SetAnimation(self, &gladiator_move_attack_gun);
-		// RAFAEL
 	}
-	// RAFAEL
 }
 
 mframe_t gladiator_frames_pain[] = {
@@ -267,7 +262,7 @@ mframe_t gladiator_frames_pain_air[] = {
 };
 MMOVE_T(gladiator_move_pain_air) = { FRAME_painup2, FRAME_painup6, gladiator_frames_pain_air, gladiator_run };
 
-PAIN(gladiator_pain) (edict_t *self, edict_t *other, float kick, int damage, const mod_t &mod) -> void
+static PAIN(gladiator_pain) (edict_t *self, edict_t *other, float kick, int damage, const mod_t &mod) -> void
 {
 	if (level.time < self->pain_debounce_time)
 	{
@@ -300,7 +295,7 @@ MONSTERINFO_SETSKIN(gladiator_setskin) (edict_t *self) -> void
 		self->s.skinnum &= ~1;
 }
 
-void gladiator_dead(edict_t *self)
+static void gladiator_dead(edict_t *self)
 {
 	self->mins = { -16, -16, -24 };
 	self->maxs = { 16, 16, -8 };
@@ -339,7 +334,7 @@ mframe_t gladiator_frames_death[] = {
 };
 MMOVE_T(gladiator_move_death) = { FRAME_death2, FRAME_death22, gladiator_frames_death, gladiator_dead };
 
-DIE(gladiator_die) (edict_t *self, edict_t *inflictor, edict_t *attacker, int damage, const vec3_t &point, const mod_t &mod) -> void
+static DIE(gladiator_die) (edict_t *self, edict_t *inflictor, edict_t *attacker, int damage, const vec3_t &point, const mod_t &mod) -> void
 {
 	// check for gib
 	if (M_CheckGib(self, mod))
@@ -376,8 +371,6 @@ DIE(gladiator_die) (edict_t *self, edict_t *inflictor, edict_t *attacker, int da
 	M_SetAnimation(self, &gladiator_move_death);
 }
 
-//===========
-// PGM
 MONSTERINFO_BLOCKED(gladiator_blocked) (edict_t *self, float dist) -> bool
 {
 	if (blocked_checkplat(self, dist))
@@ -385,8 +378,6 @@ MONSTERINFO_BLOCKED(gladiator_blocked) (edict_t *self, float dist) -> bool
 
 	return false;
 }
-// PGM
-//===========
 
 /*QUAKED monster_gladiator (1 .5 0) (-32 -32 -24) (32 32 64) Ambush Trigger_Spawn Sight
  */
@@ -418,7 +409,6 @@ void SP_monster_gladiator(edict_t *self)
 	gi.modelindex("models/monsters/gladiatr/gibs/rarm.md2");
 	gi.modelindex("models/monsters/gladiatr/gibs/thigh.md2");
 
-	// RAFAEL
 	if (strcmp(self->classname, "monster_gladb") == 0)
 	{
 		sound_gunb.assign("weapons/plasshot.wav");
@@ -439,16 +429,13 @@ void SP_monster_gladiator(edict_t *self)
 	}
 	else
 	{
-		// RAFAEL
 		sound_gun.assign("gladiator/railgun.wav");
 
 		self->health = 400 * st.health_multiplier;
 		self->mass = 400;
-		// RAFAEL
 
 		self->monsterinfo.weapon_sound = gi.soundindex("weapons/rg_hum.wav");
 	}
-	// RAFAEL
 
 	self->gib_health = -175;
 
@@ -467,7 +454,7 @@ void SP_monster_gladiator(edict_t *self)
 	self->monsterinfo.sight = gladiator_sight;
 	self->monsterinfo.idle = gladiator_idle;
 	self->monsterinfo.search = gladiator_search;
-	self->monsterinfo.blocked = gladiator_blocked; // PGM
+	self->monsterinfo.blocked = gladiator_blocked;
 	self->monsterinfo.setskin = gladiator_setskin;
 
 	gi.linkentity(self);
@@ -479,7 +466,6 @@ void SP_monster_gladiator(edict_t *self)
 
 //
 // monster_gladb
-// RAFAEL
 //
 /*QUAKED monster_gladb (1 .5 0) (-32 -32 -24) (32 32 64) Ambush Trigger_Spawn Sight
  */
