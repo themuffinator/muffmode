@@ -198,6 +198,8 @@ cvar_t *g_showhelp;
 
 cvar_t *g_matchstats;
 
+cvar_t *g_dm_spawnpads;
+
 static cvar_t *g_frames_per_frame;
 
 int ii_duel_header;
@@ -655,6 +657,8 @@ static void InitGame() {
 	g_showhelp = gi.cvar("g_showhelp", "1", CVAR_NOFLAGS);
 
 	g_matchstats = gi.cvar("g_matchstats", "0", CVAR_NOFLAGS);
+
+	g_dm_spawnpads = gi.cvar("g_dm_spawnpads", "1", CVAR_NOFLAGS);
 
 	// items
 	InitItems();

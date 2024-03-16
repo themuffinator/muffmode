@@ -39,7 +39,8 @@ void SP_info_player_deathmatch(edict_t *self) {
 		G_FreeEdict(self);
 		return;
 	}
-	SP_misc_teleporter_dest(self);
+	if (g_dm_spawnpads->integer)
+		SP_misc_teleporter_dest(self);
 }
 
 /*QUAKED info_player_team_red (1 0 0) (-16 -16 -24) (16 16 32)
@@ -1604,7 +1605,7 @@ bool SelectSpawnPoint(edict_t *ent, vec3_t &origin, vec3_t &angles, bool force_s
 		}
 
 		if (spot) {
-			origin = spot->s.origin + vec3_t{ 0, 0, 9 };
+			origin = spot->s.origin + vec3_t{ 0, 0, (float)(g_dm_spawnpads->integer ? 9 : 1) };
 			angles = spot->s.angles;
 
 			//muff mode: we just want yaw really, definitely no roll!
