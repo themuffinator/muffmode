@@ -1,13 +1,20 @@
 # Welcome to the Muff Mode!
 
 ## What is Muff Mode?
-Muff Mode is a server-side mod for [QUAKE II Remastered](https://github.com/id-Software/quake2-rerelease-dll). With a focus on multiplayer, it provides an in-game menu,  bug fixes, minor gameplay tweaks and a host of new settings and features to create a more well-rounded experience.
+Muff Mode is a server-side mod for [QUAKE II Remastered](https://github.com/id-Software/quake2-rerelease-dll). With a focus on multiplayer, it provides an in-game menu,  bug fixes, minor refinements and gameplay tweaks and a host of new settings and features to create a more well-rounded experience.
+
+## Installation
+- Back up your original game_x64.dll in your rerelease dir.
+- Download the latest release zip.
+- Extract the zip to your "Quake 2" folder.
 
 ## Feature Overview
-- Refined HUD and scoreboard, more purpose-built for what information is needed. Frag messages on HUD (showing position in match) have been added.
+- Refined HUD and scoreboard, more purpose-built for what information is needed and some extra features:
+	* Frag messages (also showing position in match)
+	* Dynamic miniscores
 - A game menu for joining a match and viewing mod and server settings.
 - A selection of new game modifications: Vampiric Damage, Nade Fest, Weapons Frenzy.
-- A number of minor balance tweaks and many new server settings added.
+- A number of minor refinements, balance tweaks and many new server settings added.
 - Enhanced teamplay with team balancing, improved team handling, communicating joined team to players and friendly fire warnings.
 - Extensive controls over specific map item spawns and entity string overrides.
 - EyeCam spectating, smooth with aim prediction
@@ -32,6 +39,7 @@ Muff Mode is a server-side mod for [QUAKE II Remastered](https://github.com/id-S
  - **g_dm_respawn_delay_min**: the counterpart to g_dm_force_respawn_time, this sets a minimum respawn delay after dying (default: 1)
  - **g_dm_respawn_point_min_dist**: sets minimum distance to respawn away from previous spawn point (default: 256, max = 512, 0 = disabled)
  - **g_dm_respawn_point_min_dist_debug**: when set to 1, prints avoiding spawn points when g_dm_respawn_point_min_dist is used (default: 0)
+ - **g_dm_spawnpads**: controls spawning of deathmatch spawn pads, removes pads when set to 0. (default: 1)
  - **g_eyecam**: enables eyecam, 0 reverts to chase cam (default: 1)
  - **g_frag_messages**: draw frag messages (default 1)
  - **g_inactivity**: Values above 0 enables an inactivity timer for players, specifying number of seconds since last input to point of flagging the player as inactive. A warning is sent to the player 10 seconds before triggering and once triggered, the player is moved to spectators. Inactive clients are noted as such using the 'players' command. (default: 120)
@@ -39,26 +47,22 @@ Muff Mode is a server-side mod for [QUAKE II Remastered](https://github.com/id-S
  - **g_knockback_scale**: scales all knockback resulting from damage received (default 1.0)
  - **g_mover_speed_scale**: sets speed scaling factor for all movers in maps (doors, rotators, lifts etc.) (default: 1.0f)
  - **g_no_powerups**: disable powerup pickups (Quad, Protection, Double, DuelFire, Invisibility, etc.)
- - **g_showhelp**: when set to 1, prints a quick explanation about game modifications to players. (default: 0)
+ - **g_showhelp**: when set to 1, prints a quick explanation about game modifications to players. (default: 1)
  - **g_teamplay_allow_team_pick**: When set to 0, denies the ability to pick a specific team during teamplay. This changes the join menu accordingly. (default 0)
  - **g_teamplay_force_balance**: When set to 1, prohibits joining a team with too many players. (default: 0)
- - **g_teamplay_force_balance**: force team balancing (default 0)
  - **g_teleporter_nofreeze**: When set to 1, does not freeze player velocity when teleporting. (default: 0)
  - **g_warmup_ready_percentage**: in match mode, sets percentile of ready players out of total players required to start the match. Set to 0 to disable readying up. (default: 0.51f)
+ - **hostname**: set string for server name, this gets printed at top of game menu for all to see. Limit this to 26 chars max.
  - **maxplayers**: Set max number of players in the game (ie: non-spectators), it is capped to maxclients. In team games, team max size will be maxplayers/2 and rounded down.
 
 ### Offhand Hook
 - Added 'hook' and 'unhook' commands to use off-hand hook. Use `g_grapple_offhand 1` to enable this.
-- Players can use "alias +hook hook; alias -hook unhook; bind mouse2 +hook" to use it as a button command
+- Players can use ``alias +hook hook; alias -hook unhook; bind mouse2 +hook`` to use it as a button command
 
 ### New Gameplay Modifications
 * **Weapons Frenzy**: faster reloads, faster rockets, regenerating ammo stock
 	* **g_frenzy**: when set to 1, enables Weapons Frenzy mode (default 0)
 * **Nade Fest**: a grenades-only mode
-	* **g_nadefest**: when set to 1, enables Nade Fest (default 0)
-* **Vampiric Damage**: your health slowly drains over time, the only way to boost your health is to inflict damage on your foes!
-	* **g_vampiric_damage**: when set to 1, enables Vampiric Damage mode (default: 0)
-* **Nade Fest** - a grenades-only mode
 	* **g_nadefest**: when set to 1, enables Nade Fest (default 0)
 * **Vampiric Damage**: your health slowly drains over time, the only way to boost your health is to inflict damage on your foes!
 	* **g_vampiric_damage**: when set to 1, enables Vampiric Damage mode (default: 0)
@@ -104,7 +108,6 @@ Muff Mode is a server-side mod for [QUAKE II Remastered](https://github.com/id-S
 - tastyspleen.net's mymap system for calling maps
 - gametype: Freeze Tag (WIP)
 - gametype: Clan Arena (WIP)
-- cleanup and unify code, introduce a gametype and teams handling system similar to Q3's (WIP)
 - gametype: Duel (ala-Q3 tournament queueing system, loser goes, winner stays)
 - chat tokens
 - location tags + .loc file support
@@ -113,6 +116,7 @@ Muff Mode is a server-side mod for [QUAKE II Remastered](https://github.com/id-S
 - Server-side player configs and stats (WIP)
 - Mod-based language localisation
 - Horde mode (WIP)
+- Intermission auto-exit without players
 
 ## Credits:
 - The Stingy Hat Games YouTube channel for their excellent modding tutorial, without it I would never be able to compile the damned source!
