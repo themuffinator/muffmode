@@ -404,3 +404,4 @@ FodyWeavers.xsd
 *.dll
 game_x64.exp
 game_x64.exp
+/pack
