@@ -1484,24 +1484,23 @@ void G_SetStats(edict_t * ent) {
 	//
 	// match timer
 	//
-#if 0
+
+	// Q2Eaks game timer
 	if (g_match_timer->integer) {
 		// Don't update any more than once/second
 		static int lasttime = 0;
-		int	t;
-		if (timelimit->value)
-			t = (gtime_t::from_min(timelimit->value) - level.time).seconds<int>();
-		else
-			t = level.time.seconds<int>();
+		int	t = timelimit->value ? (gtime_t::from_min(timelimit->value) - level.time).seconds<int>() : level.time.seconds<int>();
+
 		if (t != ent->client->last_match_timer_update) {
 			ent->client->last_match_timer_update = t;
 			char game_timer[64];
 			G_FmtTo(game_timer, "{:02}:{:02}", t / 60, t % 60);
-			ent->client->ps.stats[STAT_MATCH_TIMER] = CONFIG_MATCH_TIMER;
-			gi.configstring(STAT_MATCH_TIMER, game_timer);
+
+			ent->client->ps.stats[STAT_MATCH_TIMER] = CONFIG_CTF_MATCH;
+			gi.configstring(CONFIG_CTF_MATCH, game_timer);
 		}
 	}
-#endif
+
 }
 
 /*

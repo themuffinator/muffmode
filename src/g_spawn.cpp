@@ -1739,7 +1739,8 @@ static void G_InitStatusbar() {
 	// ---- more shared stuff ----
 	if (deathmatch->integer) {
 		// match timer
-		sb.ifstat(STAT_MATCH_TIMER).xv(0).yb(-78).stat_string2(STAT_MATCH_TIMER).endifstat();
+		sb.ifstat(STAT_SPECTATOR).ifstat(STAT_MATCH_TIMER).xv(0).yb(-78).stat_string(STAT_MATCH_TIMER).endifstat().endifstat();
+		sb.ifstat(STAT_SHOW_STATUSBAR).ifstat(STAT_MATCH_TIMER).xv(180).yb(-42).stat_string(STAT_MATCH_TIMER).endifstat().endifstat();
 
 		// tech
 		sb.ifstat(STAT_TECH).yb(-137).xr(-26).pic(STAT_TECH).endifstat();

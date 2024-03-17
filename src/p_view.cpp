@@ -1427,11 +1427,6 @@ void ClientEndServerFrame(edict_t *ent)
 	// mega health
 	P_RunMegaHealth(ent);
 
-	char text[64];
-	int t = (level.start_time - level.time).seconds<int>();
-	G_FmtTo(text, "{:02}:{:02} MATCH", t / 60, t % 60);
-	gi.configstring(CONFIG_CTF_MATCH, text);
-
 	// vampiric damage expiration
 	// don't expire if only 1 player in the match
 	if (g_vampiric_damage->integer && !ClientIsSpectating(ent->client) && !ent->client->ps.stats[STAT_CHASE] && !level.intermission_time && ent->health > 0) {
