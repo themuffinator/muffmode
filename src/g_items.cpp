@@ -2910,6 +2910,10 @@ bool SpawnItem(edict_t *ent, gitem_t *item)
 		ent->think = GT_CTF_FlagSetup;
 	}
 
+	if (!g_item_bobbing->integer) {
+		ent->s.effects &= ~EF_BOB;
+	}
+
 	return true;
 }
 

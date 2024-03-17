@@ -1756,7 +1756,7 @@ static void Blaster_Fire(edict_t *ent, const vec3_t &g_offset, int damage, bool 
 static void Weapon_Blaster_Fire(edict_t *ent)
 {
 	// give the blaster 15 across the board instead of just in dm
-	int damage = 15;
+	int damage = g_expert->integer ? 25 : 15;
 	Blaster_Fire(ent, vec3_origin, damage, false, EF_BLASTER);
 }
 
@@ -2076,7 +2076,7 @@ SHOTGUN / SUPERSHOTGUN
 
 static void weapon_shotgun_fire(edict_t *ent)
 {
-	int damage = 4;
+	int damage = g_expert->integer ? 5 : 4;
 	int kick = 8;
 
 	vec3_t start, dir;
@@ -2116,7 +2116,7 @@ void Weapon_Shotgun(edict_t *ent)
 
 static void weapon_supershotgun_fire(edict_t *ent)
 {
-	int damage = 6;
+	int damage = g_expert->integer ? 5 : 6;
 	int kick = 12;
 
 	if (is_quad)

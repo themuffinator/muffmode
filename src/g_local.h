@@ -2079,6 +2079,10 @@ extern cvar_t *g_matchstats;
 
 extern cvar_t *g_dm_spawnpads;
 
+extern cvar_t *g_expert;
+
+extern cvar_t *g_item_bobbing;
+
 #define world (&g_edicts[0])
 
 uint32_t GetUnicastKey();

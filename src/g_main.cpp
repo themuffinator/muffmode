@@ -200,6 +200,10 @@ cvar_t *g_matchstats;
 
 cvar_t *g_dm_spawnpads;
 
+cvar_t *g_expert;
+
+cvar_t *g_item_bobbing;
+
 static cvar_t *g_frames_per_frame;
 
 int ii_duel_header;
@@ -659,6 +663,10 @@ static void InitGame() {
 	g_matchstats = gi.cvar("g_matchstats", "0", CVAR_NOFLAGS);
 
 	g_dm_spawnpads = gi.cvar("g_dm_spawnpads", "1", CVAR_NOFLAGS);
+
+	g_expert = gi.cvar("g_expert", "0", CVAR_NOFLAGS);
+
+	g_item_bobbing = gi.cvar("g_item_bobbing", "1", CVAR_NOFLAGS);
 
 	// items
 	InitItems();
