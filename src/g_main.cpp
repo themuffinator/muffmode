@@ -690,6 +690,8 @@ static void InitGame() {
 
 	level.start_time = level.time;
 
+	level.ready_to_exit = false;
+
 	//Horde_InitFirstWave();
 	Horde_CreateWave();
 }
@@ -1035,74 +1037,62 @@ Adapted from Quake III
 =================
 */
 static void CheckIntermissionExit(void) {
-	int			ready, not_ready;
-	int			count;
+	int16_t		ready, not_ready;
 	size_t		i;
 	gclient_t *cl;
-	int			ready_mask;
 
-	// see which players are ready
-	ready = 0;
-	not_ready = 0;
-	ready_mask = 0;
-	count = 0;
-	for (i = 0; i < game.maxclients; i++) {
-		cl = game.clients + i;
-		if (!cl->pers.connected)
-			continue;
-
-		if (g_edicts[i+1].svflags & SVF_BOT) {
-			cl->ready_to_exit = true;
-		} else {
-			if (cl->resp.team != TEAM_SPECTATOR)
-				count++;
-		}
-
-		if (cl->ready_to_exit) {
-			ready++;
-			if (i < 16) {
-				ready_mask |= 1 << i;
-			}
-		} else {
-			not_ready++;
-		}
-	}
-
-	// vote in progress
-	if (level.voting_time || level.voting_execution_time) {
-		ready = 0;
-		not_ready = 1;
-	}
+	//gi.LocBroadcast_Print(PRINT_HIGH, "{}\n", __FUNCTION__);
 
 	// never exit in less than five seconds
 	if (level.time < level.intermission_time + 5_sec && !level.exit_time) {
 		return;
 	}
 
-	if (count) {
-		// if nobody wants to go, clear timer
-		// skip this if no players present
-		if (!ready && not_ready) {
-			level.ready_to_exit = false;
-			return;
-		}
+	// vote in progress
+	if (level.voting_time || level.voting_execution_time) {
+		level.ready_to_exit = false;
+		return;
+	}
 
-		// if everyone wants to go, go now
-		if (!not_ready) {
-			EndDMLevel();
-			return;
+	// see which players are ready
+	ready = 0;
+	not_ready = 0;
+	for (i = 0; i < game.maxclients; i++) {
+		cl = game.clients + i;
+		if (!cl->pers.connected) {
+			ready++;
+			continue;
 		}
-	} else {
-		// if no players or only bots then just go
-		if (count == 0) {
-			level.ready_to_exit = true;
-			level.exit_time = level.time + 10_sec;
-			return;
+		if (g_edicts[i + 1].svflags & SVF_BOT) {
+			ready++;
+			continue;
 		}
+		if (cl->resp.team == TEAM_SPECTATOR) {
+			ready++;
+			continue;
+		}
+		if (cl->ready_to_exit) {
+			ready++;
+			continue;
+		}
+		not_ready++;
+	}
+
+	// if nobody wants to go, clear timer
+	// skip this if no players present
+	if (!ready && not_ready) {
+		level.ready_to_exit = false;
+		return;
+	}
+
+	// if everyone wants to go, go now
+	if (!not_ready) {
+		EndDMLevel();
+		return;
 	}
 
 	// the first person to ready starts the ten second timeout
-	if (!level.ready_to_exit) {
+	if (ready && !level.ready_to_exit) {
 		level.ready_to_exit = true;
 		level.exit_time = level.time + 10_sec;
 	}
@@ -1402,6 +1392,8 @@ The time limit or score limit has been exceeded
 */
 void EndDMLevel() {
 	edict_t *ent;
+
+	//gi.LocBroadcast_Print(PRINT_HIGH, "{}\n", __FUNCTION__);
 	
 	// stay on same level flag
 	if (g_dm_same_level->integer) {
@@ -1645,11 +1637,15 @@ BeginIntermission
 void BeginIntermission(edict_t *targ) {
 	edict_t *ent, *client;
 
+	//gi.LocBroadcast_Print(PRINT_HIGH, "{}\n", __FUNCTION__);
+
 	if (level.intermission_time)
 		return; // already activated
 
 	if (ctf->integer)
 		Teams_CalcScores();
+
+	gi.LocBroadcast_Print(PRINT_HIGH, "{}\n", __FUNCTION__);
 
 #if 0
 	// if in a duel, change the wins / losses
@@ -1772,6 +1768,8 @@ static void ExitLevel() {
 		level.intermission_fading = true;
 		return;
 	}
+
+	gi.LocBroadcast_Print(PRINT_HIGH, "{}\n", __FUNCTION__);
 
 	ClientEndServerFrames();
 
