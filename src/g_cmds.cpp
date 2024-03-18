@@ -1658,7 +1658,7 @@ static void StopFollowing(edict_t *ent, bool release) {
 	ent->client->ps.damage_blend = {};
 	ent->client->ps.rdflags = RDF_NONE;
 }
-
+#if 0
 /*
 =================
 SetTeam
@@ -1868,31 +1868,7 @@ bool SetTeam(edict_t *ent, const char *s, bool inactive) {
 
 	return true;
 }
-
-/*
-=================
-Cmd_Team_f
-=================
-*/
-static void Cmd_Team_f(edict_t *ent) {
-
-	if (gi.argc() != 2) {
-		switch (ent->client->resp.team) {
-		case TEAM_BLUE:
-		case TEAM_RED:
-		case TEAM_FREE:
-		case TEAM_SPECTATOR:
-			gi.LocClient_Print(ent, PRINT_HIGH, "Your team: {}.\n", Teams_TeamName(ent->client->resp.team));
-			break;
-		default:
-			break;
-		}
-		return;
-	}
-
-	SetTeam(ent, gi.argv(1), false);
-}
-
+#endif
 
 void Team_Join(edict_t *ent, team_t desired_team, bool inactive) {
 	team_t old_team = ent->client->resp.team;
@@ -1960,6 +1936,49 @@ void Team_Join(edict_t *ent, team_t desired_team, bool inactive) {
 
 	// if anybody has a menu open, update it immediately
 	Menu_Dirty();
+}
+
+/*
+=================
+Cmd_Team_f
+=================
+*/
+static void Cmd_Team_f(edict_t *ent) {
+
+	if (gi.argc() != 2) {
+		switch (ent->client->resp.team) {
+		case TEAM_BLUE:
+		case TEAM_RED:
+		case TEAM_FREE:
+		case TEAM_SPECTATOR:
+			gi.LocClient_Print(ent, PRINT_HIGH, "Your team: {}.\n", Teams_TeamName(ent->client->resp.team));
+			break;
+		default:
+			break;
+		}
+		return;
+	}
+
+	const char *s = gi.argv(1);
+	team_t team = TEAM_NONE;
+
+	if (!Q_strcasecmp(s, "spectator") || !Q_strcasecmp(s, "s")) {
+		team = TEAM_SPECTATOR;
+	} else if (!Q_strcasecmp(s, "auto") || !Q_strcasecmp(s, "a")) {
+		team = PickTeam(-1);
+	} else if (IsTeamplay()) {
+		if (!Q_strcasecmp(s, "blue") || !Q_strcasecmp(s, "b"))
+			team = TEAM_BLUE;
+		else if (!Q_strcasecmp(s, "red") || !Q_strcasecmp(s, "r"))
+			team = TEAM_BLUE;
+		else return;
+	} else {
+		if (!Q_strcasecmp(s, "free") || !Q_strcasecmp(s, "f"))
+			team = TEAM_FREE;
+		else return;
+	}
+
+	Team_Join(ent, team, false);
 }
 
 /*

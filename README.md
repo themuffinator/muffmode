@@ -52,6 +52,7 @@ Muff Mode is a server-side mod for [QUAKE II Remastered](https://github.com/id-S
  - **g_teamplay_force_balance**: When set to 1, prohibits joining a team with too many players. (default: 0)
  - **g_teleporter_nofreeze**: When set to 1, does not freeze player velocity when teleporting. (default: 0)
  - **g_warmup_ready_percentage**: in match mode, sets percentile of ready players out of total players required to start the match. Set to 0 to disable readying up. (default: 0.51f)
+ - **g_weapon_force_central_projection**: when set to 1, forces weapon projection from center of player view, looks strange with view weapons. (default: 0)
  - **hostname**: set string for server name, this gets printed at top of game menu for all to see. Limit this to 26 chars max.
  - **maxplayers**: Set max number of players in the game (ie: non-spectators), it is capped to maxclients. In team games, team max size will be maxplayers/2 and rounded down.
 
