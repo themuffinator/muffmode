@@ -110,7 +110,10 @@ P_ProjectSource
 */
 void P_ProjectSource(edict_t *ent, const vec3_t &angles, vec3_t distance, vec3_t &result_start, vec3_t &result_dir)
 {
-	if (ent->client->pers.hand == LEFT_HANDED)
+	if (g_weapon_force_central_projection->integer) {
+		distance[1] = 0;
+		distance[2] = 0;
+	} else if (ent->client->pers.hand == LEFT_HANDED)
 		distance[1] *= -1;
 	else if (ent->client->pers.hand == CENTER_HANDED)
 		distance[1] = 0;

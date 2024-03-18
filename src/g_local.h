@@ -2082,6 +2082,7 @@ extern cvar_t *g_dm_spawnpads;
 extern cvar_t *g_expert;
 
 extern cvar_t *g_item_bobbing;
+extern cvar_t *g_weapon_force_central_projection;
 
 #define world (&g_edicts[0])
 

@@ -203,6 +203,7 @@ cvar_t *g_dm_spawnpads;
 cvar_t *g_expert;
 
 cvar_t *g_item_bobbing;
+cvar_t *g_weapon_force_central_projection;
 
 static cvar_t *g_frames_per_frame;
 
@@ -667,6 +668,7 @@ static void InitGame() {
 	g_expert = gi.cvar("g_expert", "0", CVAR_NOFLAGS);
 
 	g_item_bobbing = gi.cvar("g_item_bobbing", "1", CVAR_NOFLAGS);
+	g_weapon_force_central_projection = gi.cvar("g_weapon_force_central_projection", "0", CVAR_NOFLAGS);
 
 	// items
 	InitItems();
