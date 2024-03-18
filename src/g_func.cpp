@@ -652,11 +652,11 @@ void SP_func_plat(edict_t *ent) {
 		ent->decel = 5;
 	else
 		ent->decel *= 0.1f;
-
+	
 	if (g_mover_speed_scale->value != 1.0f) {
-		ent->speed *= g_mover_speed_scale->value;
-		ent->accel *= g_mover_speed_scale->value;
-		ent->decel *= g_mover_speed_scale->value;
+		ent->speed = floor(ent->speed * g_mover_speed_scale->value);
+		ent->accel = floor(ent->accel * g_mover_speed_scale->value);
+		ent->decel = floor(ent->decel * g_mover_speed_scale->value);
 	}
 
 	if (g_mover_debug->integer)
