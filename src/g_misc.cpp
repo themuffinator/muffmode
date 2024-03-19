@@ -2130,21 +2130,35 @@ constexpr spawnflags_t SPAWNFLAG_TEMEPORTER_N64_EFFECT = 4_spawnflag;
 void SP_misc_teleporter(edict_t *ent)
 {
 	edict_t *trig;
+	vec3_t mins = { -8, -8, 8 };
+	vec3_t maxs = { 8, 8, 24 };
+	bool spot = true;
 
-	gi.setmodel(ent, "models/objects/dmspot/tris.md2");
-	ent->s.skinnum = 1;
-	if (level.is_n64 || ent->spawnflags.has(SPAWNFLAG_TEMEPORTER_N64_EFFECT))
-		ent->s.effects = EF_TELEPORTER2;
-	else
-		ent->s.effects = EF_TELEPORTER;
-	if (!(ent->spawnflags & SPAWNFLAG_TELEPORTER_NO_SOUND))
-		ent->s.sound = gi.soundindex("world/amb10.wav");
-	ent->solid = SOLID_BBOX;
+	if (st.was_key_specified("mins")) {
+		mins = ent->mins;
+		spot = false;
+	}
+	if (st.was_key_specified("maxs")) {
+		maxs = ent->maxs;
+		spot = false;
+	}
 
-	ent->mins = { -32, -32, -24 };
-	ent->maxs = { 32, 32, -16 };
-	gi.linkentity(ent);
-	
+	if (spot) {
+		gi.setmodel(ent, "models/objects/dmspot/tris.md2");
+		ent->s.skinnum = 1;
+		if (level.is_n64 || ent->spawnflags.has(SPAWNFLAG_TEMEPORTER_N64_EFFECT))
+			ent->s.effects = EF_TELEPORTER2;
+		else
+			ent->s.effects = EF_TELEPORTER;
+		if (!(ent->spawnflags & SPAWNFLAG_TELEPORTER_NO_SOUND))
+			ent->s.sound = gi.soundindex("world/amb10.wav");
+		ent->solid = SOLID_BBOX;
+
+		ent->mins = { -32, -32, -24 };
+		ent->maxs = { 32, 32, -16 };
+		gi.linkentity(ent);
+	}
+
 	// N64 has some of these for visual effects
 	if (!ent->target)
 		return;
@@ -2155,8 +2169,8 @@ void SP_misc_teleporter(edict_t *ent)
 	trig->target = ent->target;
 	trig->owner = ent;
 	trig->s.origin = ent->s.origin;
-	trig->mins = { -8, -8, 8 };
-	trig->maxs = { 8, 8, 24 };
+	trig->mins = mins;
+	trig->maxs = maxs;
 	gi.linkentity(trig);
 }
 
