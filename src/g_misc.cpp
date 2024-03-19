@@ -2143,13 +2143,14 @@ void SP_misc_teleporter(edict_t *ent)
 		spot = false;
 	}
 
+	if (level.is_n64 || ent->spawnflags.has(SPAWNFLAG_TEMEPORTER_N64_EFFECT))
+		ent->s.effects = EF_TELEPORTER2;
+	else
+		ent->s.effects = EF_TELEPORTER;
+
 	if (spot) {
 		gi.setmodel(ent, "models/objects/dmspot/tris.md2");
 		ent->s.skinnum = 1;
-		if (level.is_n64 || ent->spawnflags.has(SPAWNFLAG_TEMEPORTER_N64_EFFECT))
-			ent->s.effects = EF_TELEPORTER2;
-		else
-			ent->s.effects = EF_TELEPORTER;
 		if (!(ent->spawnflags & SPAWNFLAG_TELEPORTER_NO_SOUND))
 			ent->s.sound = gi.soundindex("world/amb10.wav");
 		ent->solid = SOLID_BBOX;
