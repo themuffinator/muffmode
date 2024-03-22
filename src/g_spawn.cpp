@@ -1247,8 +1247,10 @@ static void PrecacheAssets() {
 	ii_highlight = gi.imageindex("i_ctfj");
 
 	if (IsTeamplay()) {
-		ii_teams_logo_red = gi.imageindex("sbfctf1");
-		ii_teams_logo_blue = gi.imageindex("sbfctf2");
+		ii_teams_red_default = gi.imageindex("i_ctf1");
+		ii_teams_blue_default = gi.imageindex("i_ctf2");
+		ii_teams_red_tiny = gi.imageindex("sbfctf1");
+		ii_teams_blue_tiny = gi.imageindex("sbfctf2");
 		ii_teams_header_red = gi.imageindex("tag4");
 		ii_teams_header_blue = gi.imageindex("tag5");
 	} else if (duel->integer) {
@@ -1258,8 +1260,6 @@ static void PrecacheAssets() {
 	}
 
 	if (ctf->integer) {
-		ii_ctf_red_default = gi.imageindex("i_ctf1");
-		ii_ctf_blue_default = gi.imageindex("i_ctf2");
 		ii_ctf_red_dropped = gi.imageindex("i_ctf1d");
 		ii_ctf_blue_dropped = gi.imageindex("i_ctf2d");
 		ii_ctf_red_taken = gi.imageindex("i_ctf1t");
@@ -1689,26 +1689,22 @@ static void G_InitStatusbar() {
 		}
 
 		sb.ifstat(STAT_HEALTH_BARS).yt(24).health_bars().endifstat();
+
+		sb.story();
 	} else {
 		if (IsTeamplay()) {
-			// ctf/tdm
+			// mini scores
 			// red team
 			sb.yb(-110).ifstat(STAT_MINISCORE_FIRST_PIC).xr(-26).pic(STAT_MINISCORE_FIRST_PIC).endifstat().xr(-78).num(3, STAT_MINISCORE_FIRST_SCORE);
-			// joined overlay
-			sb.ifstat(STAT_MINISCORE_FIRST_POS).yb(-112).xr(-28).pic(STAT_MINISCORE_FIRST_POS).endifstat();
-
+			sb.ifstat(STAT_MINISCORE_FIRST_POS).yb(-112).xr(-28).pic(STAT_MINISCORE_FIRST_POS).endifstat();// joined overlay
 			// blue team
 			sb.yb(-83).ifstat(STAT_MINISCORE_SECOND_PIC).xr(-26).pic(STAT_MINISCORE_SECOND_PIC).endifstat().xr(-78).num(3, STAT_MINISCORE_SECOND_SCORE);
-			// joined overlay
-			sb.ifstat(STAT_MINISCORE_SECOND_POS).yb(-85).xr(-28).pic(STAT_MINISCORE_SECOND_POS).endifstat();
+			sb.ifstat(STAT_MINISCORE_SECOND_POS).yb(-85).xr(-28).pic(STAT_MINISCORE_SECOND_POS).endifstat();// joined overlay
 
 			if (ctf->integer) {
 				// have flag graph
 				sb.ifstat(STAT_CTF_FLAG_PIC).yt(26).xr(-24).pic(STAT_CTF_FLAG_PIC).endifstat();
 			}
-
-			// match
-			sb.ifstat(STAT_MATCH_STATE).xl(0).yb(-78).stat_string(STAT_MATCH_STATE).endifstat();
 
 			// team info
 			sb.ifstat(STAT_TEAMPLAY_INFO).xl(0).yb(-88).stat_string(STAT_TEAMPLAY_INFO).endifstat();
@@ -1720,32 +1716,25 @@ static void G_InitStatusbar() {
 			sb.ifstat(STAT_CHASE).xv(0).yb(-68).string("FOLLOWING").xv(80).stat_string(STAT_CHASE).endifstat();
 
 			// mini scores
-			sb.yb(-110).ifstat(STAT_MINISCORE_FIRST_PIC).xr(-26).pic(STAT_MINISCORE_FIRST_PIC).endifstat().xr(-78).num(3, STAT_MINISCORE_FIRST_SCORE);
-			sb.ifstat(STAT_MINISCORE_FIRST_POS).yb(-112).xr(-28).pic(STAT_MINISCORE_FIRST_POS).endifstat();
-			sb.yb(-83).ifstat(STAT_MINISCORE_SECOND_PIC).xr(-26).pic(STAT_MINISCORE_SECOND_PIC).endifstat().xr(-78).num(3, STAT_MINISCORE_SECOND_SCORE);
-			sb.ifstat(STAT_MINISCORE_SECOND_POS).yb(-85).xr(-28).pic(STAT_MINISCORE_SECOND_POS).endifstat();
-
-			sb.ifstat(STAT_SCORELIMIT).xr(-21).yb(-57).stat_string(STAT_SCORELIMIT).endifstat();
+			sb.ifstat(STAT_MINISCORE_FIRST_PIC).xr(-26).yb(-110).pic(STAT_MINISCORE_FIRST_PIC).xr(-78).num(3, STAT_MINISCORE_FIRST_SCORE).endifstat();
+			sb.ifstat(STAT_MINISCORE_FIRST_POS).xr(-28).yb(-112).pic(STAT_MINISCORE_FIRST_POS).endifstat();
+			sb.ifstat(STAT_MINISCORE_SECOND_PIC).xr(-26).yb(-83).pic(STAT_MINISCORE_SECOND_PIC).xr(-78).num(3, STAT_MINISCORE_SECOND_SCORE).endifstat();
+			sb.ifstat(STAT_MINISCORE_SECOND_POS).xr(-28).yb(-85).pic(STAT_MINISCORE_SECOND_POS).endifstat();
 		}
 
-		// id view state
+		// score limit
+		sb.ifstat(STAT_MINISCORE_FIRST_PIC).xr(-28).yb(-57).stat_string(STAT_SCORELIMIT).endifstat();
+
+		// crosshair id
 		sb.ifstat(STAT_CROSSHAIR_ID_VIEW).xv(122).yb(-160).stat_pname(STAT_CROSSHAIR_ID_VIEW).endifstat();	//112 -58
+		sb.ifstat(STAT_CROSSHAIR_ID_VIEW_COLOR).xv(156).yb(-170).pic(STAT_CROSSHAIR_ID_VIEW_COLOR).endifstat();	//106 -160 //96 -58
 
-		// id view color
-		sb.ifstat(STAT_CROSSHAIR_ID_VIEW_COLOR).xv(106).yb(-160).pic(STAT_CROSSHAIR_ID_VIEW_COLOR).endifstat();	//96 -58
-
-	}
-
-	// ---- more shared stuff ----
-	if (deathmatch->integer) {
-		// match timer
-		sb.ifstat(STAT_SPECTATOR).ifstat(STAT_MATCH_TIMER).xv(0).yb(-78).stat_string(STAT_MATCH_TIMER).endifstat().endifstat();
-		sb.ifstat(STAT_SHOW_STATUSBAR).ifstat(STAT_MATCH_TIMER).xv(180).yb(-42).stat_string(STAT_MATCH_TIMER).endifstat().endifstat();
+		// match state/timer
+		sb.ifstat(STAT_MATCH_STATE).xv(0).yb(-78).stat_string(STAT_MATCH_STATE).endifstat();
+		//sb.ifstat(STAT_SHOW_STATUSBAR).ifstat(STAT_MATCH_STATE).xv(180).yb(-42).stat_string(STAT_MATCH_STATE).endifstat().endifstat();
 
 		// tech
 		sb.ifstat(STAT_TECH).yb(-137).xr(-26).pic(STAT_TECH).endifstat();
-	} else {
-		sb.story();
 	}
 
 	gi.configstring(CS_STATUSBAR, sb.sb.str().c_str());

@@ -70,14 +70,14 @@ enum match_t {
 
 extern int ii_highlight;
 extern int ii_duel_header;
-extern int ii_ctf_red_default;
-extern int ii_ctf_blue_default;
+extern int ii_teams_red_default;
+extern int ii_teams_blue_default;
 extern int ii_ctf_red_dropped;
 extern int ii_ctf_blue_dropped;
 extern int ii_ctf_red_taken;
 extern int ii_ctf_blue_taken;
-extern int ii_teams_logo_red;
-extern int ii_teams_logo_blue;
+extern int ii_teams_red_tiny;
+extern int ii_teams_blue_tiny;
 extern int ii_teams_header_red;
 extern int ii_teams_header_blue;
 extern int mi_ctf_red_flag, mi_ctf_blue_flag; // [Paril-KEX]
@@ -2084,6 +2084,8 @@ extern cvar_t *g_expert;
 extern cvar_t *g_item_bobbing;
 extern cvar_t *g_weapon_force_central_projection;
 
+extern cvar_t *g_allow_custom_skins;
+
 #define world (&g_edicts[0])
 
 uint32_t GetUnicastKey();
@@ -2894,6 +2896,7 @@ struct client_persistant_t {
 	int32_t	dmg_team;		// for team damage checks and warnings
 
 	int		skin_icon_index;
+	char skin[MAX_INFO_VALUE];
 };
 
 // client data that stays across deathmatch respawns
@@ -2941,6 +2944,8 @@ struct client_respawn_t {
 	bool				showed_help;
 
 	int					rank;
+
+	bool				timer_state;
 };
 
 // [Paril-KEX] seconds until we are fully invisible after
@@ -3397,7 +3402,9 @@ struct edict_t {
 	const char *not_gametype;
 	const char *notteam;
 	const char *notfree;
-	//-muff
+
+	gvec3_t		origin2;
+//-muff
 
 	// team for spawn spot
 	team_t		fteam;

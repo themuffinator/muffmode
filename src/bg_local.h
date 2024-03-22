@@ -64,7 +64,7 @@ enum coop_respawn_t
 // reserved general CS ranges
 enum
 {
-	CONFIG_CTF_MATCH = CS_GENERAL,
+	CONFIG_MATCH_STATE = CS_GENERAL,
 	CONFIG_CTF_TEAMINFO,
 	CONFIG_CTF_PLAYER_NAME,
 	CONFIG_CTF_PLAYER_NAME_END = CONFIG_CTF_PLAYER_NAME + MAX_CLIENTS,
@@ -77,7 +77,7 @@ enum
 	CONFIG_N64_PHYSICS,
 	CONFIG_HEALTH_BAR_NAME, // active health bar name
 
-	CONFIG_STORY,
+	CONFIG_STORY,	// this is also used for scorelimit display in dm
 
 	CONFIG_LAST
 };
@@ -265,8 +265,6 @@ enum player_stat_t
 
 	STAT_SCORELIMIT,
 	STAT_DUEL_HEADER,
-
-	STAT_MATCH_TIMER,
 
 	STAT_SHOW_STATUSBAR,
 

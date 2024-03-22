@@ -582,16 +582,11 @@ void DeathmatchScoreboardMessage(edict_t * ent, edict_t * killer) {
 		else if (cl_ent == killer)
 			fmt::format_to(std::back_inserter(entry), FMT_STRING("xv {} yv {} picn {} "), x, y, "/tags/bloody");
 
-		char vs[MAX_INFO_VALUE] = { 0 };
-		gi.Info_ValueForKey(cl->pers.userinfo, "skin", vs, sizeof(vs));
+		const char *s = G_Fmt("/players/{}_i", cl->pers.skin).data();
+		int32_t		img_index = cl->pers.skin_icon_index;
 
-		if (vs[0]) {
-			const char *s = G_Fmt("/players/{}_i", vs).data();
-			int32_t		img_index = cl->pers.skin_icon_index;
-
-			if (img_index)
-				fmt::format_to(std::back_inserter(entry), FMT_STRING("xv {} yv {} picn {} "), x, y, s);
-		}
+		if (img_index)
+			fmt::format_to(std::back_inserter(entry), FMT_STRING("xv {} yv {} picn {} "), x, y, s);
 
 		if (string.length() + entry.length() > MAX_STRING_CHARS)
 			break;
@@ -841,20 +836,29 @@ static void SetCrosshairIDView(edict_t * ent) {
 
 	ent->client->ps.stats[STAT_CROSSHAIR_ID_VIEW] = 0;
 	ent->client->ps.stats[STAT_CROSSHAIR_ID_VIEW_COLOR] = 0;
-
+	
 	AngleVectors(ent->client->v_angle, forward, nullptr, nullptr);
 	forward *= 1024;
 	forward = ent->s.origin + forward;
-	tr = gi.traceline(ent->s.origin, forward, ent, MASK_SOLID);
+	tr = gi.traceline(ent->s.origin, forward, ent, CONTENTS_MIST|MASK_WATER|MASK_SOLID);
+	//gi.Draw_Line(ent->s.origin, tr.endpos, rgba_red, 5, false);
 	if (tr.fraction < 1 && tr.ent && tr.ent->client && tr.ent->health > 0) {
+		// don't show if traced client is spectating
+		if (tr.ent->client->resp.team == TEAM_SPECTATOR)
+			return;
+
+		// don't show if traced client is currently invisibile
+		if (tr.ent->client->pu_time_invisibility > level.time)
+			return;
+
 		ent->client->ps.stats[STAT_CROSSHAIR_ID_VIEW] = (tr.ent - g_edicts);
 		if (tr.ent->client->resp.team == TEAM_RED)
-			ent->client->ps.stats[STAT_CROSSHAIR_ID_VIEW_COLOR] = ii_teams_logo_red;
+			ent->client->ps.stats[STAT_CROSSHAIR_ID_VIEW_COLOR] = ii_teams_red_tiny;
 		else if (tr.ent->client->resp.team == TEAM_BLUE)
-			ent->client->ps.stats[STAT_CROSSHAIR_ID_VIEW_COLOR] = ii_teams_logo_blue;
+			ent->client->ps.stats[STAT_CROSSHAIR_ID_VIEW_COLOR] = ii_teams_blue_tiny;
 		return;
 	}
-
+	
 	AngleVectors(ent->client->v_angle, forward, nullptr, nullptr);
 	best = nullptr;
 	for (uint32_t i = 1; i <= game.maxclients; i++) {
@@ -877,9 +881,9 @@ static void SetCrosshairIDView(edict_t * ent) {
 	if (bd > 0.90f) {
 		ent->client->ps.stats[STAT_CROSSHAIR_ID_VIEW] = (best - g_edicts);
 		if (best->client->resp.team == TEAM_RED)
-			ent->client->ps.stats[STAT_CROSSHAIR_ID_VIEW_COLOR] = ii_teams_logo_red;
+			ent->client->ps.stats[STAT_CROSSHAIR_ID_VIEW_COLOR] = ii_teams_red_tiny;
 		else if (best->client->resp.team == TEAM_BLUE)
-			ent->client->ps.stats[STAT_CROSSHAIR_ID_VIEW_COLOR] = ii_teams_logo_blue;
+			ent->client->ps.stats[STAT_CROSSHAIR_ID_VIEW_COLOR] = ii_teams_blue_tiny;
 	}
 }
 
@@ -896,7 +900,7 @@ static void SetCTFStats(edict_t *ent, bool blink) {
 	//   flag at base
 	//   flag taken
 	//   flag dropped
-	p1 = ii_ctf_red_default;
+	p1 = ii_teams_red_default;
 	e = G_FindByString<&edict_t::classname>(nullptr, ITEM_CTF_FLAG_RED);
 	if (e != nullptr) {
 		if (e->solid == SOLID_NOT) {
@@ -925,7 +929,7 @@ static void SetCTFStats(edict_t *ent, bool blink) {
 		} else if (e->spawnflags.has(SPAWNFLAG_ITEM_DROPPED))
 			p1 = ii_ctf_red_dropped; // must be dropped
 	}
-	p2 = ii_ctf_blue_default;
+	p2 = ii_teams_blue_default;
 	e = G_FindByString<&edict_t::classname>(nullptr, ITEM_CTF_FLAG_BLUE);
 	if (e != nullptr) {
 		if (e->solid == SOLID_NOT) {
@@ -977,33 +981,23 @@ static void SetCTFStats(edict_t *ent, bool blink) {
 	if (ent->client->resp.team == TEAM_RED &&
 		ent->client->pers.inventory[IT_FLAG_BLUE] &&
 		(blink))
-		ent->client->ps.stats[STAT_CTF_FLAG_PIC] = ii_ctf_blue_default;
+		ent->client->ps.stats[STAT_CTF_FLAG_PIC] = ii_teams_blue_default;
 
 	else if (ent->client->resp.team == TEAM_BLUE &&
 		ent->client->pers.inventory[IT_FLAG_RED] &&
 		(blink))
-		ent->client->ps.stats[STAT_CTF_FLAG_PIC] = ii_ctf_red_default;
+		ent->client->ps.stats[STAT_CTF_FLAG_PIC] = ii_teams_red_default;
 }
 
 
-static void SetExtendedStats(edict_t * ent) {
+static void SetMiniScoreStats(edict_t * ent) {
 	bool teams = IsTeamplay();
 	int16_t	pos1_num = -1, pos2_num = -1;
 	int16_t own_num = -1;
 
 	bool blink = (level.time.milliseconds() % 1000) < 500;
 
-	ent->client->ps.stats[STAT_MATCH_STATE] = level.match > MATCH_NONE ? CONFIG_CTF_MATCH : 0;
-	ent->client->ps.stats[STAT_TEAMPLAY_INFO] = level.warnactive ? CONFIG_CTF_TEAMINFO : 0;
-
-	// ghosting
-	if (ent->client->resp.ghost) {
-		ent->client->resp.ghost->score = ent->client->resp.score;
-		Q_strlcpy(ent->client->resp.ghost->netname, ent->client->pers.netname, sizeof(ent->client->resp.ghost->netname));
-		ent->client->resp.ghost->number = ent->s.number;
-	}
-
-	// mini score player indexes
+	// determine indexes
 	if (!teams) {
 		int16_t	own_rank = -1, other_rank = -1;
 		int16_t	other_num = -1;
@@ -1028,6 +1022,9 @@ static void SetExtendedStats(edict_t * ent) {
 				continue;
 
 			if (!game.clients[level.sorted_clients[i]].pers.connected)
+				continue;
+
+			if (!game.clients[level.sorted_clients[i]].pers.spawned)
 				continue;
 
 			if (game.clients[level.sorted_clients[i]].resp.team == TEAM_SPECTATOR)
@@ -1071,8 +1068,6 @@ static void SetExtendedStats(edict_t * ent) {
 			ent->client->ps.stats[STAT_DUEL_HEADER] = ii_duel_header;
 		}
 
-		//if (own_num == 0)
-		//	gi.Com_PrintFmt("own_num={} own_rank={} pos1_num={} pos2_num={}\n", own_num, own_rank, pos1_num, pos2_num);
 	} else {
 		// logo headers for the frag display
 		ent->client->ps.stats[STAT_TEAM_RED_HEADER] = ii_teams_header_red;
@@ -1093,12 +1088,14 @@ static void SetExtendedStats(edict_t * ent) {
 		}
 	}
 
-	// set miniscores scores and images
+	// set scores and images
 	if (ctf->integer) {
 		SetCTFStats(ent, blink);
 	} else {
 		if (teams) {
+			ent->client->ps.stats[STAT_MINISCORE_FIRST_PIC] = ii_teams_red_default;
 			ent->client->ps.stats[STAT_MINISCORE_FIRST_SCORE] = level.team_scores[TEAM_RED];
+			ent->client->ps.stats[STAT_MINISCORE_SECOND_PIC] = ii_teams_blue_default;
 			ent->client->ps.stats[STAT_MINISCORE_SECOND_SCORE] = level.team_scores[TEAM_BLUE];
 		} else {
 			int16_t pic1 = 0, pic2 = 0;
@@ -1119,7 +1116,7 @@ static void SetExtendedStats(edict_t * ent) {
 		}
 	}
 
-	// highlight minescores position/team
+	// highlight miniscores position/team
 	ent->client->ps.stats[STAT_MINISCORE_FIRST_POS] = 0;
 	ent->client->ps.stats[STAT_MINISCORE_SECOND_POS] = 0;
 	if (teams) {
@@ -1135,14 +1132,6 @@ static void SetExtendedStats(edict_t * ent) {
 				ent->client->ps.stats[STAT_MINISCORE_SECOND_POS] = ii_highlight;
 		}
 	}
-
-	// set crosshair ID
-	if (ent->client->resp.id_state)
-		SetCrosshairIDView(ent);
-	else {
-		ent->client->ps.stats[STAT_CROSSHAIR_ID_VIEW] = 0;
-		ent->client->ps.stats[STAT_CROSSHAIR_ID_VIEW_COLOR] = 0;
-	}
 }
 
 /*
@@ -1157,10 +1146,7 @@ void G_SetStats(edict_t * ent) {
 	item_id_t		power_armor_type;
 	unsigned int	invIndex;
 	bool			minhud = g_instagib->integer || g_nadefest->integer;
-	int				i;	//for techs
 	int32_t			img_index = ent->client->pers.skin_icon_index;
-
-	ent->client->ps.stats[STAT_SCORELIMIT] = 0;	// GT_ScoreLimit();
 
 	//
 	// health
@@ -1374,7 +1360,6 @@ void G_SetStats(edict_t * ent) {
 			ent->client->ps.stats[STAT_LAYOUTS] |= LAYOUTS_INTERMISSION;
 	}
 
-
 	if (deathmatch->integer && ClientIsSpectating(ent->client) && !ent->client->ps.stats[STAT_CHASE])
 		ent->client->ps.stats[STAT_LAYOUTS] |= LAYOUTS_HIDE_CROSSHAIR;
 	else {
@@ -1470,35 +1455,53 @@ void G_SetStats(edict_t * ent) {
 	}
 
 	// tech icon
-	i = 0;
 	ent->client->ps.stats[STAT_TECH] = 0;
-	for (; i < q_countof(tech_ids); i++) {
+	for (size_t i = 0; i < q_countof(tech_ids); i++) {
 		if (ent->client->pers.inventory[tech_ids[i]]) {
 			ent->client->ps.stats[STAT_TECH] = gi.imageindex(GetItemByIndex(tech_ids[i])->icon);
 			break;
 		}
 	}
 
-	SetExtendedStats(ent);
+	SetMiniScoreStats(ent);
 
+	// ghosting
+	if (ent->client->resp.ghost) {
+		ent->client->resp.ghost->score = ent->client->resp.score;
+		Q_strlcpy(ent->client->resp.ghost->netname, ent->client->pers.netname, sizeof(ent->client->resp.ghost->netname));
+		ent->client->resp.ghost->number = ent->s.number;
+	}
+
+	// set crosshair ID
+	if (ent->client->resp.id_state)
+		SetCrosshairIDView(ent);
+	else {
+		ent->client->ps.stats[STAT_CROSSHAIR_ID_VIEW] = 0;
+		ent->client->ps.stats[STAT_CROSSHAIR_ID_VIEW_COLOR] = 0;
+	}
+
+	if (ctf->integer) {
+		ent->client->ps.stats[STAT_MATCH_STATE] = level.match > MATCH_NONE ? CONFIG_MATCH_STATE : 0;
+		ent->client->ps.stats[STAT_TEAMPLAY_INFO] = level.warnactive ? CONFIG_CTF_TEAMINFO : 0;
+	}
 	//
 	// match timer
 	//
 
 	// Q2Eaks game timer
-	if (g_match_timer->integer) {
+	if (!ctf->integer && ent->client->resp.timer_state) {
 		// Don't update any more than once/second
 		static int lasttime = 0;
 		int	t = timelimit->value ? (gtime_t::from_min(timelimit->value) - level.time).seconds<int>() : level.time.seconds<int>();
 
 		if (t != ent->client->last_match_timer_update) {
 			ent->client->last_match_timer_update = t;
-			char game_timer[64];
-			G_FmtTo(game_timer, "{:02}:{:02}", t / 60, t % 60);
 
-			ent->client->ps.stats[STAT_MATCH_TIMER] = CONFIG_CTF_MATCH;
-			gi.configstring(CONFIG_CTF_MATCH, game_timer);
+			ent->client->ps.stats[STAT_MATCH_STATE] = CONFIG_MATCH_STATE;
+			gi.configstring(CONFIG_MATCH_STATE, G_TimeString(t * 1000));
 		}
+	} else {
+		ent->client->ps.stats[STAT_MATCH_STATE] = 0;
 	}
 
 }
@@ -1541,7 +1544,7 @@ void G_SetSpectatorStats(edict_t * ent) {
 		cl->ps.stats[STAT_LAYOUTS] |= LAYOUTS_INVENTORY;
 
 	if (cl->chase_target && cl->chase_target->inuse) {
-		cl->ps.stats[STAT_CHASE] = CS_PLAYERSKINS +
+		cl->ps.stats[STAT_CHASE] = CONFIG_CTF_PLAYER_NAME +
 			(cl->chase_target - g_edicts) - 1;
 		//cl->ps.stats[STAT_SHOW_STATUSBAR] = 1;
 	} else {

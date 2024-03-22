@@ -1411,11 +1411,13 @@ void ClientEndServerFrame(edict_t *ent)
 
 	current_player = ent;
 	current_client = ent->client;
-
-	int limit = GT_ScoreLimit();
-	if (scorelimit != limit) {
-		ent->client->ps.stats[STAT_SCORELIMIT] = limit;
-		scorelimit = limit;
+	
+	if (deathmatch->integer) {
+		int limit = GT_ScoreLimit();
+		if (!ent->client->ps.stats[STAT_SCORELIMIT] || limit != atoi(gi.get_configstring(CONFIG_STORY))) {
+			ent->client->ps.stats[STAT_SCORELIMIT] = CONFIG_STORY;
+			gi.configstring(CONFIG_STORY, limit ? G_Fmt("{}", limit).data() : "");
+		}
 	}
 
 	// check fog changes

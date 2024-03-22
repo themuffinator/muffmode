@@ -409,7 +409,43 @@ trigger_push
 
 ==============================================================================
 */
+#if 0
+/*
+=================
+AimAtTarget
 
+Calculate origin2 so the target apogee will be hit
+=================
+*/
+static void AimAtTarget(edict_t *self) {
+	edict_t *ent;
+	vec3_t	origin;
+	float	height, gravity, time, forward;
+	float	dist;
+
+	origin = self->absmin + self->absmax;
+	origin *= 0.5;
+
+	ent = G_PickTarget(self->target);
+
+	height = ent->s.origin[2] - origin[2];
+	gravity = sv_gravity->value;
+	time = sqrt(height / (0.5 * gravity));
+	if (!time) {
+		G_FreeEdict(self);
+		return;
+	}
+
+	// set origin2 to the push velocity
+	self->origin2 = ent->s.origin - origin;
+	self->origin2[2] = 0;
+	dist = self->origin2.normalize();
+
+	forward = dist / time;
+	self->origin2 *= forward;
+	self->origin2[2] = time * gravity;
+}
+#endif
 constexpr spawnflags_t SPAWNFLAG_PUSH_ONCE = 0x01_spawnflag;
 constexpr spawnflags_t SPAWNFLAG_PUSH_PLUS = 0x02_spawnflag;
 constexpr spawnflags_t SPAWNFLAG_PUSH_SILENT = 0x04_spawnflag;
@@ -428,7 +464,7 @@ static TOUCH(trigger_push_touch) (edict_t *self, edict_t *other, const trace_t &
 
 	if (strcmp(other->classname, "grenade") == 0) {
 		other->velocity = self->movedir * (self->speed * 10);
-	} else if (other->health > 0 || freeze->integer && other->client && other->client->frozen) {
+	} else if (other->health > 0 || (freeze->integer && other->client && other->client->frozen)) {
 		other->velocity = self->movedir * (self->speed * 10);
 
 		if (other->client) {

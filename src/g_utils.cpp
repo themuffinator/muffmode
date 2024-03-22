@@ -802,7 +802,7 @@ bool loc_CanSee(edict_t *targ, edict_t *inflictor) {
 	viewpoint[2] += inflictor->viewheight;
 
 	for (i = 0; i < 8; i++) {
-		trace = gi.traceline(viewpoint, targpoints[i], inflictor, MASK_SOLID);
+		trace = gi.traceline(viewpoint, targpoints[i], inflictor, CONTENTS_MIST|MASK_WATER|MASK_SOLID);
 		if (trace.fraction == 1.0f)
 			return true;
 	}
@@ -839,6 +839,9 @@ G_TimeString
 */
 const char *G_TimeString(const int64_t msec) {
 	int hours, mins, seconds;
+
+	if (msec < 0)
+		return "OVERTIME";
 
 	seconds = msec / 1000;
 	mins = seconds / 60;

@@ -1389,8 +1389,7 @@ static void Cmd_Switchteam_f(edict_t *ent) {
 			ent->client->resp.team = best_team;
 			ent->client->resp.ctf_state = 0;
 			char value[MAX_INFO_VALUE] = { 0 };
-			gi.Info_ValueForKey(ent->client->pers.userinfo, "skin", value, sizeof(value));
-			G_AssignPlayerSkin(ent, value);
+			G_AssignPlayerSkin(ent, ent->client->pers.skin);
 
 			// if anybody has a menu open, update it immediately
 			Menu_Dirty();
@@ -1839,9 +1838,7 @@ bool SetTeam(edict_t *ent, const char *s, bool inactive) {
 	ent->client->resp.ctf_state = 0;
 
 	if (IsTeamplay() && client->resp.team != TEAM_SPECTATOR) {
-		char value[MAX_INFO_VALUE] = { 0 };
-		gi.Info_ValueForKey(ent->client->pers.userinfo, "skin", value, sizeof(value));
-		G_AssignPlayerSkin(ent, value);
+		G_AssignPlayerSkin(ent, ent->client->pers.skin);
 	}
 
 	// assign a ghost if we are in match mode
@@ -1910,9 +1907,7 @@ void Team_Join(edict_t *ent, team_t desired_team, bool inactive) {
 	ent->client->chase_target = nullptr;
 
 	if (IsTeamplay() && desired_team != TEAM_SPECTATOR) {
-		char value[MAX_INFO_VALUE] = { 0 };
-		gi.Info_ValueForKey(ent->client->pers.userinfo, "skin", value, sizeof(value));
-		G_AssignPlayerSkin(ent, value);
+		G_AssignPlayerSkin(ent, ent->client->pers.skin);
 	}
 
 	// assign a ghost if we are in match mode
@@ -1994,6 +1989,16 @@ static void Cmd_CrosshairID_f(edict_t *ent) {
 		gi.LocClient_Print(ent, PRINT_HIGH, "Activating player identication display.\n");
 		ent->client->resp.id_state = true;
 	}
+}
+
+/*
+=================
+Cmd_Timer_f
+=================
+*/
+static void Cmd_Timer_f(edict_t *ent) {
+	ent->client->resp.timer_state ^= true;
+	gi.LocClient_Print(ent, PRINT_HIGH, "{} match timer display.\n", ent->client->resp.timer_state ? "Activating" : "Disabling");
 }
 
 
@@ -2367,12 +2372,12 @@ bool Match_CheckRules() {
 			else
 				G_FmtTo(text, "SETUP: {} not ready", j);
 
-			gi.configstring(CONFIG_CTF_MATCH, text);
+			gi.configstring(CONFIG_MATCH_STATE, text);
 			break;
 
 		case MATCH_PREGAME:
 			G_FmtTo(text, "{:02}:{:02} UNTIL START", t / 60, t % 60);
-			gi.configstring(CONFIG_CTF_MATCH, text);
+			gi.configstring(CONFIG_MATCH_STATE, text);
 
 			if (t <= 10 && !level.countdown) {
 				level.countdown = true;
@@ -2382,7 +2387,7 @@ bool Match_CheckRules() {
 
 		case MATCH_GAME:
 			G_FmtTo(text, "{:02}:{:02} MATCH", t / 60, t % 60);
-			gi.configstring(CONFIG_CTF_MATCH, text);
+			gi.configstring(CONFIG_MATCH_STATE, text);
 			if (t <= 10 && !level.countdown) {
 				level.countdown = true;
 				gi.positioned_sound(world->s.origin, world, CHAN_AUTO | CHAN_RELIABLE, gi.soundindex("world/10_0.wav"), 1, ATTN_NONE, 0);
@@ -2394,39 +2399,41 @@ bool Match_CheckRules() {
 		}
 		return false;
 	} else {
-		int tally_red_score = 0, tally_blue_score = 0;
+		if (IsTeamplay()) {
+			int tally_red_score = 0, tally_blue_score = 0;
 
-		if (level.time == gtime_t::from_sec(level.lasttime))
-			return false;
-		level.lasttime = level.time.seconds<int>();
-		// this is only done in non-match (public) mode
+			if (level.time == gtime_t::from_sec(level.lasttime))
+				return false;
+			level.lasttime = level.time.seconds<int>();
+			// this is only done in non-match (public) mode
 
-		if (warn_unbalanced->integer) {
-			// count up the team totals
-			for (i = 1; i <= game.maxclients; i++) {
-				ent = g_edicts + i;
-				if (!ent->inuse)
-					continue;
-				if (ent->client->resp.team == TEAM_RED)
-					tally_red_score++;
-				else if (ent->client->resp.team == TEAM_BLUE)
-					tally_blue_score++;
-			}
-
-			if (tally_red_score - tally_blue_score >= 2 && tally_blue_score >= 2) {
-				if (level.warnactive != TEAM_RED) {
-					level.warnactive = TEAM_RED;
-					gi.configstring(CONFIG_CTF_TEAMINFO, "WARNING: Red has too many players");
+			if (warn_unbalanced->integer) {
+				// count up the team totals
+				for (i = 1; i <= game.maxclients; i++) {
+					ent = g_edicts + i;
+					if (!ent->inuse)
+						continue;
+					if (ent->client->resp.team == TEAM_RED)
+						tally_red_score++;
+					else if (ent->client->resp.team == TEAM_BLUE)
+						tally_blue_score++;
 				}
-			} else if (tally_blue_score - tally_red_score >= 2 && tally_red_score >= 2) {
-				if (level.warnactive != TEAM_BLUE) {
-					level.warnactive = TEAM_BLUE;
-					gi.configstring(CONFIG_CTF_TEAMINFO, "WARNING: Blue has too many players");
-				}
+
+				if (tally_red_score - tally_blue_score >= 2 && tally_blue_score >= 2) {
+					if (level.warnactive != TEAM_RED) {
+						level.warnactive = TEAM_RED;
+						gi.configstring(CONFIG_CTF_TEAMINFO, "WARNING: Red has too many players");
+					}
+				} else if (tally_blue_score - tally_red_score >= 2 && tally_red_score >= 2) {
+					if (level.warnactive != TEAM_BLUE) {
+						level.warnactive = TEAM_BLUE;
+						gi.configstring(CONFIG_CTF_TEAMINFO, "WARNING: Blue has too many players");
+					}
+				} else
+					level.warnactive = 0;
 			} else
 				level.warnactive = 0;
-		} else
-			level.warnactive = 0;
+		}
 	}
 
 	if (capturelimit->integer &&
@@ -2667,6 +2674,7 @@ client_commands_t cmds[] = {
 	{"target",			Cmd_Target_f,			CF_ALLOW_DEAD | CF_ALLOW_SPEC | CF_CHEAT_PROTECT},
 	{"team",			Cmd_Team_f,				CF_ALLOW_DEAD | CF_ALLOW_SPEC},
 	{"teleport",		Cmd_Teleport_f,			CF_ALLOW_SPEC | CF_CHEAT_PROTECT},
+	{"timer",			Cmd_Timer_f,			CF_ALLOW_SPEC},
 	{"unhook",			Cmd_UnHook_f,			CF_NONE},
 	{"use",				Cmd_Use_f,				CF_NONE},
 	{"use_index",		Cmd_Use_f,				CF_NONE},

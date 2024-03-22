@@ -205,18 +205,20 @@ cvar_t *g_expert;
 cvar_t *g_item_bobbing;
 cvar_t *g_weapon_force_central_projection;
 
+cvar_t *g_allow_custom_skins;
+
 static cvar_t *g_frames_per_frame;
 
 int ii_duel_header;
 int ii_highlight;
-int ii_ctf_red_default;
-int ii_ctf_blue_default;
 int ii_ctf_red_dropped;
 int ii_ctf_blue_dropped;
 int ii_ctf_red_taken;
 int ii_ctf_blue_taken;
-int ii_teams_logo_red;
-int ii_teams_logo_blue;
+int ii_teams_red_default;
+int ii_teams_blue_default;
+int ii_teams_red_tiny;
+int ii_teams_blue_tiny;
 int ii_teams_header_red;
 int ii_teams_header_blue;
 int mi_ctf_red_flag, mi_ctf_blue_flag; // [Paril-KEX]
@@ -669,6 +671,8 @@ static void InitGame() {
 
 	g_item_bobbing = gi.cvar("g_item_bobbing", "1", CVAR_NOFLAGS);
 	g_weapon_force_central_projection = gi.cvar("g_weapon_force_central_projection", "0", CVAR_NOFLAGS);
+
+	g_allow_custom_skins = gi.cvar("g_allow_custom_skins", "1", CVAR_NOFLAGS);
 
 	// items
 	InitItems();

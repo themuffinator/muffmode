@@ -102,28 +102,121 @@ bool P_UseCoopInstancedItems() {
 
 //=======================================================================
 
-static bool ClientUsesCustomModel(gclient_t *cl) {
-#if 0
-	char val[MAX_INFO_VALUE] = { 0 };
-	gi.Info_ValueForKey(cl->pers.userinfo, "skin", val, sizeof(val));
-	std::string_view t(val);
+constexpr int8_t MAX_PLAYER_STOCK_MODELS = 3;
+constexpr int8_t MAX_PLAYER_STOCK_SKINS = 24;
 
-	const char *originals[] = {
-		"male", "female", "cyborg"
-	};
+struct p_mods_skins_t {
+	const char *mname;		// first model will be default model
+	const char *sname[MAX_PLAYER_STOCK_SKINS];	//index 0 will be default skin
+};
 
-	if (size_t i = t.find_first_of('/'); i != std::string_view::npos)
-		t = t.substr(0, i);
+p_mods_skins_t original_models[MAX_PLAYER_STOCK_MODELS] = {
+	{
+		"male",
+		{
+			"grunt",
 
-	for (size_t i = 0; i < sizeof(originals); i++) {
-		if (!Q_strcasecmp(originals[i], t.data())) {
-			//TODO: now check skins
-			gi.Com_PrintFmt_("{}: a={} b={}\n", __FUNCTION__, originals[i], t.data());
-			return true;
-		}	
+			"cipher",
+			"claymore",
+			"ctf_b",
+			"ctf_r",
+			"deaddude",
+			"disguise",
+			"flak",
+			"howitzer",
+			"insane1",
+			"insane2",
+			"insane3",
+			"major",
+			"nightops",
+			"pointman",
+			"psycho",
+			"rampage",
+			"razor",
+			"recon",
+			"rogue_b",
+			"rogue_r",
+			"scout",
+			"sniper",
+			"viper"
+		}
+	},
+	{
+		"female",
+		{
+			"athena",
+
+			"brianna",
+			"cobalt",
+			"ctf_b",
+			"ctf_r",
+			"disguise",
+			"ensign",
+			"jezebel",
+			"jungle",
+			"lotus",
+			"rogue_b",
+			"rogue_r",
+			"stiletto",
+			"venus",
+			"voodoo"
+		}
+	},
+	{
+		"cyborg",
+		{
+			"oni911",
+
+			"ctf_b",
+			"ctf_r",
+			"disguise",
+			"ps9000",
+			"tyr574"
+		}
 	}
-#endif
-	return true;
+};
+
+static const char *ClientSkinOverride(const char *s) {
+
+	if (g_allow_custom_skins->integer) {
+		//gi.Com_PrintFmt("{}: returning {}\n", __FUNCTION__, s);
+		return s;
+	}
+
+	size_t i;
+	std::string pm(s);
+	std::string ps(s);
+	std::string_view t(s);
+	if (i = t.find_first_of('/'); i != std::string_view::npos) {
+		pm = t.substr(0, i);
+		ps = t.substr(i + 1, strlen(s) - i - 1);
+	}
+
+	if (!pm.length()) {
+		pm = "male";
+		ps = "grunt";
+	}
+
+	// check stock model list
+	for (i = 0; i < MAX_PLAYER_STOCK_MODELS; i++) {
+		if (pm == original_models[i].mname) {
+			// found the model, now check stock skin list
+			for (size_t j = 0; j < MAX_PLAYER_STOCK_SKINS; j++)
+				if (ps == original_models[i].sname[j]) {
+					//return G_Fmt("{}/{}", pm, ps).data();
+					// found the skin, no change in player skin
+					return s;
+				}
+
+			// didn't find the skin but found the model, return model default skin
+			gi.Com_PrintFmt("{}: reverting to default skin for model: {} -> {}\n", __FUNCTION__, s, original_models[i].mname, original_models[i].sname[0]);
+			return G_Fmt("{}/{}", original_models[i].mname, original_models[i].sname[0]).data();
+		}
+	}
+
+	//gi.Com_PrintFmt("{}: returning {}\n", __FUNCTION__, s);
+	gi.Com_PrintFmt("{}: reverting to default model: {} -> male/grunt\n", __FUNCTION__, s);
+	return "male/grunt";
 }
 
 //=======================================================================
@@ -426,13 +519,14 @@ static void ClientObituary(edict_t *self, edict_t *inflictor, edict_t *attacker,
 					gi.LocClient_Print(attacker, PRINT_CENTER, "You fragged {}, your team mate :(", self->client->pers.netname);
 				} else {
 					if (attacker->client->resp.kill_count && !(attacker->client->resp.kill_count % 10)) {
-						gi.LocBroadcast_Print(PRINT_CENTER, "{} is on a {} spree\nwith {} frags!\n", attacker->client->pers.netname, freeze->integer ? "freezing" : "fragging", attacker->client->resp.kill_count);
+						gi.LocBroadcast_Print(PRINT_CENTER, "{} is on a {} spree\nwith {} frags!", attacker->client->pers.netname, freeze->integer ? "freezing" : "fragging", attacker->client->resp.kill_count);
 					} else if (self->client->resp.kill_count >= 10) {
-						gi.LocBroadcast_Print(PRINT_CENTER, "{} ended {}'s\n{} spree!\n", attacker->client->pers.netname, freeze->integer ? "freezing" : "fragging", self->client->pers.netname);
+						gi.LocBroadcast_Print(PRINT_CENTER, "{} put an end to {}'s\n{} spree!", attacker->client->pers.netname, freeze->integer ? "freezing" : "fragging", self->client->pers.netname);
 					} else if (!IsTeamplay()) {
 						gi.LocClient_Print(attacker, PRINT_CENTER, "You {} {}\n{} place with {}", freeze->integer ? "froze" : "fragged",
 							self->client->pers.netname, G_PlaceString(attacker->client->resp.rank + 1), attacker->client->resp.score);
 					}
+					self->client->resp.kill_count = 0;
 				}
 				gi.local_sound(attacker, CHAN_AUTO, gi.soundindex("nav_editor/select_node.wav"), 1, ATTN_NONE, 0);
 			}
@@ -672,7 +766,7 @@ DIE(player_die) (edict_t *self, edict_t *inflictor, edict_t *attacker, int damag
 		if (!mod.no_point_loss)
 			G_AdjustPlayerScore(self->client, -1, !!teamplay->integer, -1);
 	}
-	self->client->resp.kill_count = 0;
+	//self->client->resp.kill_count = 0;
 
 	self->svflags |= SVF_DEADMONSTER;
 
@@ -1009,6 +1103,7 @@ void InitClientPersistant(edict_t *ent, gclient_t *client) {
 static void InitClientResp(gclient_t *client) {
 	team_t team = client->resp.team;
 	bool id_state = client->resp.id_state;
+	bool timer_state = client->resp.timer_state;
 	bool inactive = client->resp.inactive;
 	bool admin = client->resp.admin;
 	bool showed_help = client->resp.showed_help;
@@ -1017,6 +1112,7 @@ static void InitClientResp(gclient_t *client) {
 
 	client->resp.team = team;
 	client->resp.id_state = id_state;
+	client->resp.timer_state = timer_state;
 	client->resp.inactive = inactive;
 	client->resp.admin = admin;
 	client->resp.showed_help = showed_help;
@@ -2022,9 +2118,7 @@ static bool InitPlayerTeam(edict_t *ent) {
 		ent->client->resp.inactivity_time = 0_ms;
 
 		if (IsTeamplay() && ent->client->resp.team != TEAM_SPECTATOR) {
-			char value[MAX_INFO_VALUE] = { 0 };
-			gi.Info_ValueForKey(ent->client->pers.userinfo, "skin", value, sizeof(value));
-			G_AssignPlayerSkin(ent, value);
+			G_AssignPlayerSkin(ent, ent->client->pers.skin);
 		}
 
 		// assign a ghost if we are in match mode
@@ -2693,28 +2787,24 @@ called whenever the player updates a userinfo variable.
 ============
 */
 void ClientUserinfoChanged(edict_t *ent, const char *userinfo) {
+	char val[MAX_INFO_VALUE] = { 0 };
+
 	// set name
 	if (!gi.Info_ValueForKey(userinfo, "name", ent->client->pers.netname, sizeof(ent->client->pers.netname)))
 		Q_strlcpy(ent->client->pers.netname, "badinfo", sizeof(ent->client->pers.netname));
 
-	// set spectator
-	char val[MAX_INFO_VALUE] = { 0 };
-	gi.Info_ValueForKey(userinfo, "spectator", val, sizeof(val));
-
-	// no more pers.spectator
-	ent->client->pers.spectator = false;
-
 	// set skin
 	if (!gi.Info_ValueForKey(userinfo, "skin", val, sizeof(val)))
 		Q_strlcpy(val, "male/grunt", sizeof(val));
-
-	ent->client->pers.skin_icon_index = gi.imageindex(G_Fmt("/players/{}_i", val).data());
-
+	//if (Q_strncasecmp(ent->client->pers.skin, val, sizeof(ent->client->pers.skin))) {
+		Q_strlcpy(ent->client->pers.skin, ClientSkinOverride(val), sizeof(ent->client->pers.skin));
+		ent->client->pers.skin_icon_index = gi.imageindex(G_Fmt("/players/{}_i", ent->client->pers.skin).data());
+	//}
 	int playernum = ent - g_edicts - 1;
 
 	// combine name and skin into a configstring
 	if (IsTeamplay())
-		G_AssignPlayerSkin(ent, val);
+		G_AssignPlayerSkin(ent, ent->client->pers.skin);
 
 	else {
 #if 0
@@ -2722,7 +2812,7 @@ void ClientUserinfoChanged(edict_t *ent, const char *userinfo) {
 		char dogtag[MAX_INFO_VALUE] = { 0 };
 		gi.Info_ValueForKey(userinfo, "dogtag", dogtag, sizeof(dogtag));
 #endif
-		gi.configstring(CS_PLAYERSKINS + playernum, G_Fmt("{}\\{}", ent->client->pers.netname, val).data());
+		gi.configstring(CS_PLAYERSKINS + playernum, G_Fmt("{}\\{}", ent->client->pers.netname, ent->client->pers.skin).data());
 	}
 
 	//  set player name field (used in id_state view)
@@ -2763,13 +2853,7 @@ void ClientUserinfoChanged(edict_t *ent, const char *userinfo) {
 	} else {
 		ent->client->pers.bob_skip = false;
 	}
-#if 0
-	if (ClientUsesCustomModel(ent->client)) {
-		gi.Com_Print("PLAYER USES CUSTOM MODEL\n");
-	} else {
-		gi.Com_Print("PLAYER USES STANDARD MODEL\n");
-	}
-#endif
+
 	// save off the userinfo in case we want to check something later
 	Q_strlcpy(ent->client->pers.userinfo, userinfo, sizeof(ent->client->pers.userinfo));
 }
@@ -2953,6 +3037,7 @@ bool ClientConnect(edict_t *ent, char *userinfo, const char *social_id, bool is_
 		ent->client->resp.team = deathmatch->integer ? TEAM_NONE : TEAM_FREE;
 		ent->client->resp.spectator_state = deathmatch->integer ? SPECTATOR_FREE : SPECTATOR_NOT;
 		ent->client->resp.id_state = true;
+		ent->client->resp.timer_state = true;
 
 		InitClientResp(ent->client);
 		if (!game.autosaved || !ent->client->pers.weapon)
