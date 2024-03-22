@@ -505,7 +505,7 @@ void ED_CallSpawn(edict_t *ent) {
 					ent->classname = item->classname;
 				}
 			}
-			if (g_dm_powerups_style->integer && item->flags & IF_SUPER_POWERUP) {
+			if (g_dm_powerups_style->integer && deathmatch->integer && item->flags & IF_SUPER_POWERUP) {
 				int32_t r = irandom(30, 60);
 				DelayPowerup(ent, item, gtime_t::from_sec(r));
 			} else {

@@ -1378,7 +1378,7 @@ THINK(DoRespawn) (edict_t *ent) -> void
 		}
 	}
 	
-	if (g_dm_powerups_style->integer) {
+	if (g_dm_powerups_style->integer && deathmatch->integer) {
 		if (ent->item->flags & IF_SUPER_POWERUP) {
 			gi.LocBroadcast_Print(PRINT_HIGH, "{} has spawned!\n", ent->item->pickup_name);
 
@@ -1456,7 +1456,7 @@ static bool Pickup_SuperPowerup(edict_t *ent, edict_t *other)
 
 	if (IsInstantItemsEnabled() || is_dropped_from_death) {
 		bool use = false;
-		gtime_t t = g_dm_powerups_style->integer ? gtime_t::from_sec(ent->count) : (ent->nextthink - level.time);
+		gtime_t t = (g_dm_powerups_style->integer && deathmatch->integer) ? gtime_t::from_sec(ent->count) : (ent->nextthink - level.time);
 		switch (ent->item->id) {
 		case IT_POWERUP_QUAD:
 			quad_drop_timeout_hack = t;
@@ -1845,7 +1845,7 @@ static bool Pickup_Pack(edict_t *ent, edict_t *other)
 //======================================================================
 
 static void Use_Powerup_BroadcastMsg(edict_t *ent, gitem_t *item, const char *name) {
-	if (g_dm_powerups_style->integer) {
+	if (g_dm_powerups_style->integer && deathmatch->integer) {
 		if (g_quadhog->integer && item->id == IT_POWERUP_QUAD) {
 			gi.LocBroadcast_Print(PRINT_CENTER, "{} is the Quad Hog!\n", ent->client->pers.netname);
 		} else {
@@ -2935,7 +2935,7 @@ static THINK(DelayPowerup_Think) (edict_t *ent) -> void {
 	// send an effect
 	ent->s.event = EV_ITEM_RESPAWN;
 
-	if (g_dm_powerups_style->integer) {
+	if (g_dm_powerups_style->integer && deathmatch->integer) {
 		if (ent->item->flags & (IF_POWERUP | IF_SUPER_POWERUP | IF_SPHERE)) {
 			gi.LocBroadcast_Print(PRINT_HIGH, "{} has spawned!\n", ent->item->pickup_name);
 
