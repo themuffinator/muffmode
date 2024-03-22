@@ -2753,7 +2753,11 @@ void ClientCommand(edict_t *ent) {
 				if (!AdminOk(ent))
 					return;
 		} else {
-			gi.LocClient_Print(ent, PRINT_HIGH, "Invalid client command: \"{}\"\n", cmd);
+			// always allow replace_/disable_ item cvars
+			if (gi.argc() > 1 && strstr(cmd, "replace_") || strstr(cmd, "disable_")) {
+				gi.cvar_forceset(cmd, gi.argv(1));
+			} else
+				gi.LocClient_Print(ent, PRINT_HIGH, "Invalid client command: \"{}\"\n", cmd);
 			return;
 		}
 	}
