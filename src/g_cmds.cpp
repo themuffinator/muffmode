@@ -2599,8 +2599,6 @@ static void Cmd_Hook_f(edict_t *ent) {
 	if (!g_allow_grapple->integer || !g_grapple_offhand->integer)
 		return;
 
-	// add hook time (1-2 frames), hook unfired once level.time exceeds this
-	//ent->client->hook_cmdtime = level.time + 500_ms;
 	Weapon_Hook(ent);
 }
 

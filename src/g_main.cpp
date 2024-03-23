@@ -522,7 +522,7 @@ static void InitGame() {
 	g_coop_num_lives = gi.cvar("g_coop_num_lives", "2", CVAR_LATCH);
 	g_coop_instanced_items = gi.cvar("g_coop_instanced_items", "1", CVAR_LATCH);
 	g_allow_grapple = gi.cvar("g_allow_grapple", "auto", CVAR_NOFLAGS);
-	g_grapple_offhand = gi.cvar("g_grapple_offhand", "1", CVAR_NOFLAGS);
+	g_grapple_offhand = gi.cvar("g_grapple_offhand", "0", CVAR_NOFLAGS);
 	g_grapple_fly_speed = gi.cvar("g_grapple_fly_speed", G_Fmt("{}", CTF_DEFAULT_GRAPPLE_SPEED).data(), CVAR_NOFLAGS);
 	g_grapple_pull_speed = gi.cvar("g_grapple_pull_speed", G_Fmt("{}", CTF_DEFAULT_GRAPPLE_PULL_SPEED).data(), CVAR_NOFLAGS);
 	g_grapple_damage = gi.cvar("g_grapple_damage", "10", CVAR_NOFLAGS);
