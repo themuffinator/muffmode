@@ -20,6 +20,12 @@ Muff Mode is a server-side mod for [QUAKE II Remastered](https://github.com/id-S
 - EyeCam spectating, smooth with aim prediction
 - Many more features, see release changelogs for more info!
 
+## Deathmatch Refinements
+- Intermission pre-delay: a one second intermission pre-delay means you can see your winning frag or capture before final scores (no damage is taken or additional scoring during this delay).
+- Minimum respawn delay: a short respawn delay helps avoid accidental respawning and creates a smoother transition.
+- Kill beeps and frag messages highlight your frags.
+- Sudden death: matches go into sudden death whilst scores are tied.
+
 ## Gameplay Balance Changes
 * Plasma Beam DM damage reduced from 15 to 10.
 * Railgun: restored to 150 damage in campaigns, rail knockback is now equal to damage*2 (no difference in DM).
@@ -29,8 +35,13 @@ Muff Mode is a server-side mod for [QUAKE II Remastered](https://github.com/id-S
 * Rebreather: increased holding time from 30 to 60 seconds.
 * Player Feedback:
 	* Added Fragging Spree award - broadcasted message "x is on a fragging spree with x frags" per every 10 frags achieved without dying or killing a team mate
+	
+### Client Commands
+* id: toggle crosshair ID drawing
+* timer: toggle match timer drawing
 
 ## Server Settings
+ - **g_allow_custom_skins**: when set to 0, reverts any custom player models or skins to stock replacements (default: 0)
  - **g_corpse_sink_time**: sets time in seconds for corpses to sink and disappear (default: 60)
  - **g_dm_force_join**: replaces g_teamplay_force_join, the menu forces the cvar change so this gets around that, it now applies to regular DM too so the change makes sense.
  - **g_dm_no_self_damage**: when set to 1, disables any self damage after calculating knockback (default: 0)
@@ -89,17 +100,18 @@ Muff Mode is a server-side mod for [QUAKE II Remastered](https://github.com/id-S
  * Save and load .ent files to override entire map entity string, located in baseq2/maps/[mapname].ent:
 	* **g_entity_override_save**: when set to 1, will save entity override file upon map load (should one not already be loaded) (default: 0)
 	* **g_entity_override_load**: when set to 1, will load entity override file upon map load (default: 1)
-	* **New entity keys**: "gametype" and "not_gametype": set conditional list of gametypes to respectively spawn or not spawn the entity in. The list can be comma or space separated. The following values correspond to a particular gametype:
-		campaign: Campaigns
-		ffa: Deathmatch
-		tournament: Duel
-		team: Team Deathmatch
-		ctf: Capture the Flag
-		ca: Clan Arena
-		ft: Freeze Tag
-			Example: "gametype" "ffa tournament" - this will spawn the entity only in deathmatches and duels.
-	* **New entity keys**: "**notteam**" and "**notfree**": removes an entity from team gametypes or non-team gametypes respectively.
-		Example: "**notteam**" "1" - the entity will not spawn in team gametypes such as TDM, CTF, FreezeTag and Clan Arena.
+ * New entity keys**: "gametype" and "not_gametype": set conditional list of gametypes to respectively spawn or not spawn the entity in. The list can be comma or space separated. The following values correspond to a particular gametype:
+	campaign: Campaigns
+	ffa: Deathmatch
+	tournament: Duel
+	team: Team Deathmatch
+	ctf: Capture the Flag
+	ca: Clan Arena
+	ft: Freeze Tag
+		Example: "gametype" "ffa tournament" - this will spawn the entity only in deathmatches and duels.
+ * New entity keys**: "**notteam**" and "**notfree**": removes an entity from team gametypes or non-team gametypes respectively.
+	Example: "**notteam**" "1" - the entity will not spawn in team gametypes such as TDM, CTF, FreezeTag and Clan Arena.
+ * misc_teleporter: **"mins"/"maxs" "x y z"** entity keys to override teleport trigger size, removes teleporter pad if either keys are set
 * Hacky Map Fixes:
 	* bunk1: button for lift to ware2 now has a wait of -1 (never returns), stops co-op players from pushing the button again and toggling the lift!
 
