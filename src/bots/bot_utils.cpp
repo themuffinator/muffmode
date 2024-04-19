@@ -2,7 +2,7 @@
 // Licensed under the GNU General Public License 2.0.
 
 #include "../g_local.h"
-#include "../m_player.h"
+#include "../monsters/m_player.h"
 #include "bot_utils.h"
 
 constexpr int Team_Coop_Monster = 0;
@@ -106,7 +106,7 @@ void Player_UpdateState( edict_t * player ) {
 		player->sv.ent_flags |= SVFL_WAS_TELEFRAGGED;
 	}
 
-	if ( ClientIsSpectating(player->client) ) {
+	if ( !ClientIsPlaying(player->client) ) {
 		player->sv.ent_flags |= SVFL_IS_SPECTATOR;
 	}
 
@@ -421,7 +421,7 @@ const edict_t * FindLocalPlayer() {
 	const edict_t * localPlayer = nullptr;
 
 	const edict_t * ent = &g_edicts[ 0 ];
-	for ( uint32_t i = 0; i < globals.num_edicts; i++, ent++ ) {
+	for ( size_t i = 0; i < globals.num_edicts; i++, ent++ ) {
 		if ( !ent->inuse || !( ent->svflags & SVF_PLAYER ) ) {
 			continue;
 		}
@@ -446,7 +446,7 @@ const edict_t * FindFirstBot() {
 	const edict_t * firstBot = nullptr;
 
 	const edict_t * ent = &g_edicts[ 0 ];
-	for ( uint32_t i = 0; i < globals.num_edicts; i++, ent++ ) {
+	for ( size_t i = 0; i < globals.num_edicts; i++, ent++ ) {
 		if ( !ent->inuse || !( ent->svflags & SVF_PLAYER ) ) {
 			continue;
 		}
@@ -475,7 +475,7 @@ const edict_t * FindFirstMonster() {
 	const edict_t * firstMonster = nullptr;
 
 	const edict_t * ent = &g_edicts[ 0 ];
-	for ( uint32_t i = 0; i < globals.num_edicts; i++, ent++ ) {
+	for ( size_t i = 0; i < globals.num_edicts; i++, ent++ ) {
 		if ( !ent->inuse || !( ent->svflags & SVF_MONSTER ) ) {
 			continue;
 		}

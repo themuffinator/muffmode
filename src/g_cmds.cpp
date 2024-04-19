@@ -1,12 +1,28 @@
 // Copyright (c) ZeniMax Media Inc.
 // Licensed under the GNU General Public License 2.0.
 #include "g_local.h"
-#include "m_player.h"
+#include "monsters/m_player.h"
 /*freeze*/
 #if 0
 #include "freeze.h"
 #endif
 /*freeze*/
+
+enum cmd_flags_t : uint32_t {
+	CF_NONE = 0,
+	CF_ALLOW_DEAD = bit_v<0>,
+	CF_ALLOW_INT = bit_v<1>,
+	CF_ALLOW_SPEC = bit_v<2>,
+	CF_MATCH_ONLY = bit_v<3>,
+	CF_ADMIN_ONLY = bit_v<4>,
+	CF_CHEAT_PROTECT = bit_v<5>,
+};
+
+struct cmds_t {
+	const		char *name;
+	void		(*func)(edict_t *ent);
+	uint32_t	flags;
+};
 
 static void Cmd_Print_State(edict_t *ent, bool on_state) {
 	const char *s = gi.argv(0);
@@ -20,7 +36,7 @@ static inline bool CheatsOk(edict_t *ent) {
 		return true;
 	}
 	
-	if (!sv_cheats->integer) {
+	if (!g_cheats->integer) {
 		gi.LocClient_Print(ent, PRINT_HIGH, "Cheats must be enabled to use this command.\n");
 		return false;
 	}
@@ -38,7 +54,7 @@ static inline bool AliveOk(edict_t *ent) {
 }
 
 static inline bool SpectatorOk(edict_t *ent) {
-	if (ClientIsSpectating(ent->client)) {
+	if (!ClientIsPlaying(ent->client)) {
 		//gi.LocClient_Print(ent, PRINT_HIGH, "Spectators cannot use this command.\n");
 		return false;
 	}
@@ -46,17 +62,8 @@ static inline bool SpectatorOk(edict_t *ent) {
 	return true;
 }
 
-static inline bool MatchOk(edict_t *ent) {
-	if (!deathmatch->integer || level.match == MATCH_NONE) {
-		gi.LocClient_Print(ent, PRINT_HIGH, "Command can only be used in match mode.\n");
-		return false;
-	}
-
-	return true;
-}
-
 static inline bool AdminOk(edict_t *ent) {
-	if (level.match == MATCH_NONE || !allow_admin->integer || !ent->client->resp.admin) {
+	if (!g_allow_admin->integer || !ent->client->resp.admin) {
 		gi.LocClient_Print(ent, PRINT_HIGH, "Only admins can use this command.\n");
 		return false;
 	}
@@ -74,7 +81,7 @@ static void SelectNextItem(edict_t *ent, item_flags_t itflags, bool menu = true)
 	cl = ent->client;
 
 	if (menu && cl->menu) {
-		PMenu_Next(ent);
+		P_Menu_Next(ent);
 		return;
 	} else if (menu && cl->chase_target) {
 		ChaseNext(ent);
@@ -102,7 +109,7 @@ static void SelectNextItem(edict_t *ent, item_flags_t itflags, bool menu = true)
 }
 
 static void Cmd_InvNextP_f(edict_t *ent) {
-	SelectNextItem(ent, IF_POWERUP | IF_SUPER_POWERUP | IF_SPHERE);
+	SelectNextItem(ent, IF_TIMED | IF_POWERUP | IF_SPHERE);
 }
 
 static void Cmd_InvNextW_f(edict_t *ent) {
@@ -121,7 +128,7 @@ static void SelectPrevItem(edict_t *ent, item_flags_t itflags) {
 	cl = ent->client;
 
 	if (cl->menu) {
-		PMenu_Prev(ent);
+		P_Menu_Prev(ent);
 		return;
 	} else if (cl->chase_target) {
 		ChasePrev(ent);
@@ -149,7 +156,7 @@ static void SelectPrevItem(edict_t *ent, item_flags_t itflags) {
 }
 
 static void Cmd_InvPrevP_f(edict_t *ent) {
-	SelectPrevItem(ent, IF_POWERUP | IF_SUPER_POWERUP | IF_SPHERE);
+	SelectPrevItem(ent, IF_TIMED | IF_POWERUP | IF_SPHERE);
 }
 
 static void Cmd_InvPrevW_f(edict_t *ent) {
@@ -236,7 +243,7 @@ static void Cmd_Give_f(edict_t *ent) {
 
 	if (give_all || Q_strcasecmp(name, "ammo") == 0) {
 		if (give_all)
-			SpawnAndGiveItem(ent, IT_ITEM_PACK);
+			SpawnAndGiveItem(ent, IT_PACK);
 
 		for (i = 0; i < IT_TOTAL; i++) {
 			it = itemlist + i;
@@ -260,7 +267,7 @@ static void Cmd_Give_f(edict_t *ent) {
 	}
 
 	if (give_all) {
-		SpawnAndGiveItem(ent, IT_ITEM_POWER_SHIELD);
+		SpawnAndGiveItem(ent, IT_POWER_SHIELD);
 
 		if (!give_all)
 			return;
@@ -273,7 +280,7 @@ static void Cmd_Give_f(edict_t *ent) {
 				continue;
 			if (it->flags & (IF_ARMOR | IF_POWER_ARMOR | IF_WEAPON | IF_AMMO | IF_NOT_GIVEABLE | IF_TECH))
 				continue;
-			else if (it->pickup == GT_CTF_PickupFlag)
+			else if (it->pickup == CTF_PickupFlag)
 				continue;
 			else if ((it->flags & IF_HEALTH) && !it->use)
 				continue;
@@ -424,7 +431,7 @@ static void Cmd_Spawn_f(edict_t *ent) {
 		trace_t tr = gi.traceline(ent->s.origin + vec3_t{ 0.f, 0.f, (float)ent->viewheight }, end, other, MASK_SHOT | CONTENTS_MONSTERCLIP);
 		other->s.origin = tr.endpos;
 
-		for (int32_t i = 0; i < 3; i++) {
+		for (size_t i = 0; i < 3; i++) {
 			if (tr.plane.normal[i] > 0)
 				other->s.origin[i] -= other->mins[i] * tr.plane.normal[i];
 			else
@@ -661,8 +668,12 @@ static void Cmd_Inven_f(edict_t *ent) {
 	globals.server_flags &= ~SERVER_FLAG_SLOW_TIME;
 
 	if (deathmatch->integer && ent->client->menu) {
-		PMenu_Close(ent);
+		P_Menu_Close(ent);
 		ent->client->update_chase = true;
+		if (!ent->client->initial_menu_closure) {
+			gi.LocClient_Print(ent, PRINT_CENTER, "%bind:inven:Toggles Menu%{}", " ");
+			ent->client->initial_menu_closure = true;
+		}
 		return;
 	}
 
@@ -672,7 +683,7 @@ static void Cmd_Inven_f(edict_t *ent) {
 	}
 
 	if (deathmatch->integer) {
-		Menu_Open_Join(ent);
+		G_Menu_Join_Open(ent);
 		return;
 	}
 	globals.server_flags |= SERVER_FLAG_SLOW_TIME;
@@ -696,9 +707,12 @@ static void Cmd_InvUse_f(edict_t *ent) {
 	gitem_t *it;
 
 	if (deathmatch->integer && ent->client->menu) {
-		PMenu_Select(ent);
+		P_Menu_Select(ent);
 		return;
 	}
+
+	if (ent->client->resp.team == TEAM_SPECTATOR)
+		return;
 
 	if (ent->health <= 0 || ent->deadflag)
 		return;
@@ -878,6 +892,32 @@ static void Cmd_InvDrop_f(edict_t *ent) {
 
 /*
 =================
+Cmd_Forfeit_f
+=================
+*/
+static void Cmd_Forfeit_f(edict_t *ent) {
+	if (!duel->integer) {
+		gi.LocClient_Print(ent, PRINT_HIGH, "Forfeit is only available in a duel.\n");
+		return;
+	}
+	if (level.match_state < MS_MATCH_IN_PROGRESS) {
+		gi.LocClient_Print(ent, PRINT_HIGH, "Forfeit is not available during warmup.\n");
+		return;
+	}
+	if (ent->client != &game.clients[level.sorted_clients[1]]) {
+		gi.LocClient_Print(ent, PRINT_HIGH, "Forfeit is only available to the losing player.\n");
+		return;
+	}
+	if (!g_allow_forfeit->integer) {
+		gi.LocClient_Print(ent, PRINT_HIGH, "Forfeits are not enabled on this server.\n");
+		return;
+	}
+
+	QueueIntermission(G_Fmt("{} forfeits the match.", ent->client->resp.netname).data());
+}
+
+/*
+=================
 Cmd_Kill_f
 =================
 */
@@ -987,7 +1027,7 @@ static void Cmd_PutAway_f(edict_t *ent) {
 	globals.server_flags &= ~SERVER_FLAG_SLOW_TIME;
 
 	if (deathmatch->integer && ent->client->menu)
-		PMenu_Close(ent);
+		P_Menu_Close(ent);
 	ent->client->update_chase = true;
 }
 
@@ -1009,12 +1049,11 @@ static int PlayerSort(const void *a, const void *b) {
 
 /*
 =================
-Cmd_Players_f
+PlayersList
 =================
 */
-static void Cmd_Players_f(edict_t *ent) {
-	size_t	i;
-	size_t	count;
+static void PlayersList(edict_t *ent, bool ranked) {
+	size_t	i, count;
 	static std::string	small, large;
 	int		index[MAX_CLIENTS];
 
@@ -1027,6 +1066,10 @@ static void Cmd_Players_f(edict_t *ent) {
 			index[count] = i;
 			count++;
 		}
+
+	// sort by frags
+	if (ranked)
+		qsort(index, count, sizeof(index[0]), PlayerSort);
 
 	// print information
 	large[0] = 0;
@@ -1063,6 +1106,25 @@ static void Cmd_Players_f(edict_t *ent) {
 	gi.LocClient_Print(ent, PRINT_HIGH | PRINT_NO_NOTIFY, "\n");
 }
 
+/*
+=================
+Cmd_Players_f
+=================
+*/
+static void Cmd_Players_f(edict_t *ent) {
+	PlayersList(ent, false);
+}
+
+/*
+=================
+Cmd_PlayersRanked_f
+=================
+*/
+static void Cmd_PlayersRanked_f(edict_t *ent) {
+	PlayersList(ent, true);
+}
+
+
 bool CheckFlood(edict_t *ent) {
 	int		   i;
 	gclient_t *cl;
@@ -1098,9 +1160,7 @@ Cmd_Wave_f
 =================
 */
 static void Cmd_Wave_f(edict_t *ent) {
-	int i;
-
-	i = atoi(gi.argv(1));
+	int i = atoi(gi.argv(1));
 
 	// no dead or noclip waving
 	if (ent->deadflag || ent->movetype == MOVETYPE_NOCLIP)
@@ -1223,7 +1283,7 @@ static void Cmd_Wave_f(edict_t *ent) {
 				gi.unicast(player, false);
 
 				gi.local_sound(player, CHAN_AUTO, gi.soundindex("misc/help_marker.wav"), 1.0f, ATTN_NONE, 0.0f, key);
-				gi.LocClient_Print(player, PRINT_HIGH, other_notify_msg, ent->client->pers.netname);
+				gi.LocClient_Print(player, PRINT_HIGH, other_notify_msg, ent->client->resp.netname);
 			}
 		}
 	} else {
@@ -1237,15 +1297,15 @@ static void Cmd_Wave_f(edict_t *ent) {
 			if (!gi.inPVS(ent->s.origin, targ->s.origin, false)) continue;
 
 			if (aiming_at && other_notify_msg)
-				gi.LocClient_Print(targ, PRINT_TTS, other_notify_msg, ent->client->pers.netname, aiming_at->client->pers.netname);
+				gi.LocClient_Print(targ, PRINT_TTS, other_notify_msg, ent->client->resp.netname, aiming_at->client->resp.netname);
 			else if (other_notify_none_msg)
-				gi.LocClient_Print(targ, PRINT_TTS, other_notify_none_msg, ent->client->pers.netname);
+				gi.LocClient_Print(targ, PRINT_TTS, other_notify_none_msg, ent->client->resp.netname);
 		}
 
 		if (aiming_at && other_notify_msg)
-			gi.LocClient_Print(ent, PRINT_TTS, other_notify_msg, ent->client->pers.netname, aiming_at->client->pers.netname);
+			gi.LocClient_Print(ent, PRINT_TTS, other_notify_msg, ent->client->resp.netname, aiming_at->client->resp.netname);
 		else if (other_notify_none_msg)
-			gi.LocClient_Print(ent, PRINT_TTS, other_notify_none_msg, ent->client->pers.netname);
+			gi.LocClient_Print(ent, PRINT_TTS, other_notify_none_msg, ent->client->resp.netname);
 	}
 
 	ent->client->anim_time = 0_ms;
@@ -1270,7 +1330,7 @@ static void Cmd_Say_f(edict_t *ent, bool arg0) {
 		return;
 
 	text.clear();
-	fmt::format_to(std::back_inserter(text), FMT_STRING("{}: "), ent->client->pers.netname);
+	fmt::format_to(std::back_inserter(text), FMT_STRING("{}: "), ent->client->resp.netname);
 
 	if (arg0) {
 		text += gi.argv(0);
@@ -1293,7 +1353,7 @@ static void Cmd_Say_f(edict_t *ent, bool arg0) {
 	if (text.back() != '\n')
 		text.push_back('\n');
 
-	if (sv_dedicated->integer)
+	if (g_dedicated->integer)
 		gi.Client_Print(nullptr, PRINT_CHAT, text.c_str());
 
 	for (uint32_t j = 1; j <= game.maxclients; j++) {
@@ -1329,13 +1389,13 @@ static void Cmd_Say_Team_f(edict_t *who, const char *msg_in) {
 		msg++;
 	}
 
-	for (uint32_t i = 0; i < game.maxclients; i++) {
+	for (size_t i = 0; i < game.maxclients; i++) {
 		cl_ent = g_edicts + 1 + i;
 		if (!cl_ent->inuse)
 			continue;
 		if (cl_ent->client->resp.team == who->client->resp.team)
 			gi.LocClient_Print(cl_ent, PRINT_CHAT, "({}): {}\n",
-				who->client->pers.netname, msg);
+				who->client->resp.netname, msg);
 	}
 }
 #endif
@@ -1345,54 +1405,26 @@ static void Cmd_Say_Team_f(edict_t *who, const char *msg_in) {
 Cmd_Switchteam_f
 =================
 */
-void Cmd_Observer_f(edict_t *ent);
 static void Cmd_Switchteam_f(edict_t *ent) {
-	if (!IsTeamplay())
+	if (!Teams())
 		return;
 
 	// [Paril-KEX] in force-join, just do a regular team join.
 	if (g_dm_force_join->integer) {
 		// check if we should even switch teams
-		edict_t *player;
-		uint32_t team_red_count = 0, team_blue_count = 0;
-		team_t best_team;
-
-		for (uint32_t i = 1; i <= game.maxclients; i++) {
-			player = &g_edicts[i];
-
-			// NB: we are counting ourselves in this one, unlike
-			// the other assign team func
-			if (!player->inuse)
-				continue;
-
-			switch (player->client->resp.team) {
-			case TEAM_RED:
-				team_red_count++;
-				break;
-			case TEAM_BLUE:
-				team_blue_count++;
-				break;
-			default:
-				break;
-			}
-		}
-
-		if (team_red_count < team_blue_count)
-			best_team = TEAM_RED;
-		else
-			best_team = TEAM_BLUE;
+		team_t best_team = PickTeam(-1);
 
 		if (ent->client->resp.team != best_team) {
-			////
+
 			ent->svflags = SVF_NONE;
 			ent->flags &= ~FL_GODMODE;
 			ent->client->resp.team = best_team;
 			ent->client->resp.ctf_state = 0;
-			char value[MAX_INFO_VALUE] = { 0 };
+
 			G_AssignPlayerSkin(ent, ent->client->pers.skin);
 
 			// if anybody has a menu open, update it immediately
-			Menu_Dirty();
+			P_Menu_Dirty();
 
 			if (ent->solid == SOLID_NOT) {
 				// spectator
@@ -1401,7 +1433,7 @@ static void Cmd_Switchteam_f(edict_t *ent) {
 				G_PostRespawn(ent);
 
 				gi.LocBroadcast_Print(PRINT_HIGH, "$g_joined_team",
-					ent->client->pers.netname, Teams_TeamName(best_team));
+					ent->client->resp.netname, Teams_TeamName(best_team));
 				return;
 			}
 
@@ -1410,19 +1442,19 @@ static void Cmd_Switchteam_f(edict_t *ent) {
 
 			// don't even bother waiting for death frames
 			ent->deadflag = true;
-			respawn(ent);
+			ClientRespawn(ent);
 
 			G_SetPlayerScore(ent->client, 0);
 
 			gi.LocBroadcast_Print(PRINT_HIGH, "$g_changed_team",
-				ent->client->pers.netname, Teams_TeamName(best_team));
+				ent->client->resp.netname, Teams_TeamName(best_team));
 		}
 
 		return;
 	}
 
-	if (!ClientIsSpectating(ent->client))
-		Cmd_Observer_f(ent);
+	if (ClientIsPlaying(ent->client))
+		SetTeam(ent, TEAM_SPECTATOR, false, false);
 }
 
 static void Cmd_ListMonsters_f(edict_t *ent) {
@@ -1454,19 +1486,18 @@ TeamCount
 Returns number of players on a team
 ================
 */
-int TeamCount(int ignoreClientNum, team_t team) {
-	int		count = 0;
+int8_t TeamCount(int8_t ignore_client_num, team_t team) {
+	uint8_t	count = 0;
 
 	for (size_t i = 0; i < game.maxclients; i++) {
-		if (i == ignoreClientNum) {
+		if (i == ignore_client_num)
 			continue;
-		}
-		if (!game.clients[i].pers.connected) {
+		if (!game.clients[i].pers.connected)
 			continue;
-		}
-		if (game.clients[i].resp.team == team) {
-			count++;
-		}
+		if (game.clients[i].resp.team != team)
+			continue;
+
+		count++;
 	}
 
 	return count;
@@ -1478,27 +1509,55 @@ int TeamCount(int ignoreClientNum, team_t team) {
 PickTeam
 ================
 */
-team_t PickTeam(int ignoreClientNum) {
-	int		counts[TEAM_NUM_TEAMS];
+team_t PickTeam(int ignore_client_num) {
+	uint8_t counts[TEAM_NUM_TEAMS] = {};
 
-	if (!IsTeamplay())
+	if (!Teams())
 		return TEAM_FREE;
 
-	counts[TEAM_BLUE] = TeamCount(ignoreClientNum, TEAM_BLUE);
-	counts[TEAM_RED] = TeamCount(ignoreClientNum, TEAM_RED);
+	counts[TEAM_BLUE] = TeamCount(ignore_client_num, TEAM_BLUE);
+	counts[TEAM_RED] = TeamCount(ignore_client_num, TEAM_RED);
 
-	if (counts[TEAM_BLUE] > counts[TEAM_RED]) {
+	if (counts[TEAM_BLUE] > counts[TEAM_RED])
 		return TEAM_RED;
-	}
-	if (counts[TEAM_RED] > counts[TEAM_BLUE]) {
+
+	if (counts[TEAM_RED] > counts[TEAM_BLUE])
 		return TEAM_BLUE;
-	}
+
 	// equal team count, so join the team with the lowest score
-	if (level.team_scores[TEAM_BLUE] > level.team_scores[TEAM_RED]) {
+	if (level.team_scores[TEAM_BLUE] > level.team_scores[TEAM_RED])
 		return TEAM_RED;
-	} else if (level.team_scores[TEAM_RED] > level.team_scores[TEAM_BLUE]) {
+	if (level.team_scores[TEAM_RED] > level.team_scores[TEAM_BLUE])
 		return TEAM_BLUE;
+
+	// equal team scores, so join team with lowest total individual scores
+	// skip in tdm as it's redundant
+	if (!teamplay->integer) {
+		int iscore_red = 0, iscore_blue = 0;
+
+		for (size_t i = 0; i < game.maxclients; i++) {
+			if (i == ignore_client_num)
+				continue;
+			if (!game.clients[i].pers.connected)
+				continue;
+
+			if (game.clients[i].resp.team == TEAM_RED) {
+				iscore_red += game.clients[i].resp.score;
+				continue;
+			}
+			if (game.clients[i].resp.team == TEAM_BLUE) {
+				iscore_blue += game.clients[i].resp.score;
+				continue;
+			}
+		}
+
+		if (iscore_blue > iscore_red)
+			return TEAM_RED;
+		if (iscore_red > iscore_blue)
+			return TEAM_BLUE;
 	}
+
+	// otherwise just randomly select a team
 	return brandom() ? TEAM_RED : TEAM_BLUE;
 }
 
@@ -1511,8 +1570,8 @@ Let everyone know about a team change
 */
 void BroadcastTeamChange(edict_t *ent, int old_team, bool inactive) {
 	const char *s = nullptr, *t = nullptr;
-	char name[MAX_INFO_VALUE] = { 0 };
-	int32_t client_num;
+	char		name[MAX_INFO_VALUE] = { 0 };
+	int32_t		client_num;
 
 	if (!deathmatch->integer)
 		return;
@@ -1520,7 +1579,7 @@ void BroadcastTeamChange(edict_t *ent, int old_team, bool inactive) {
 	if (!ent->client)
 		return;
 
-	if (ent->client->resp.team == old_team)
+	if (!duel->integer && ent->client->resp.team == old_team)
 		return;
 
 	client_num = ent - g_edicts - 1;
@@ -1537,8 +1596,13 @@ void BroadcastTeamChange(edict_t *ent, int old_team, bool inactive) {
 			s = G_Fmt("{} is inactive,\nmoved to spectators.\n", name).data();
 			t = "You are inactive and have been\nmoved to spectators.";
 		} else {
-			s = G_Fmt("{} joined the spectators.\n", name).data();
-			t = "You are now spectating.";
+			if (duel->integer && ent->client->resp.duel_queued) {
+				s = G_Fmt("{} is in the queue to play.\n", name).data();
+				t = "You are in the queue to play.";
+			} else {
+				s = G_Fmt("{} joined the spectators.\n", name).data();
+				t = "You are now spectating.";
+			}
 		}
 		break;
 	case TEAM_RED:
@@ -1549,20 +1613,28 @@ void BroadcastTeamChange(edict_t *ent, int old_team, bool inactive) {
 	}
 
 	if (s) {
-		for (size_t i = 0; i < game.maxclients; i++) {
-			if (&g_edicts[i] == ent)
+		edict_t *e = g_edicts;
+		for (size_t i = 1; i <= game.maxclients; i++, e++) {
+			if (e == ent)
 				continue;
-			if (!g_edicts[i].client)
+			if (!e->client)
 				continue;
-			if (!g_edicts[i].client->pers.connected)
+			if (!e->client->pers.connected)
 				continue;
-			if (g_edicts[i].svflags & SVF_BOT)
+			if (e->svflags & SVF_BOT)
 				continue;
-			gi.LocClient_Print(&g_edicts[i], PRINT_CENTER, s);
+			gi.LocClient_Print(e, PRINT_CENTER, s);
 		}
 	}
+	
+	if (g_motd->string[0]) {
+		gi.LocCenter_Print(ent, g_motd->string);
+		return;
+	}
 
-	if (t) {
+	if (level.match_state == MS_WARMUP_READYUP) {
+		gi.LocClient_Print(ent, PRINT_CENTER, G_Fmt("%bind:inven:Toggles Menu%{}\nType \"ready\" in console to ready up.", t).data());
+	} else if (t) {
 		gi.LocClient_Print(ent, PRINT_CENTER, G_Fmt("%bind:inven:Toggles Menu%{}", t).data() );
 	}
 }
@@ -1574,43 +1646,223 @@ AllowTeamSwitch
 =================
 */
 bool AllowTeamSwitch(int client_num, int new_team) {
-	if (g_teamplay_force_balance->integer) {
-		int		counts[TEAM_NUM_TEAMS];
+	if (maxplayers->integer && level.num_playing_clients >= maxplayers->integer) {
+		gi.LocClient_Print(&g_edicts[client_num], PRINT_HIGH, "Maximum player count has been reached.\n");
+		return false; // ignore the request
+	}
 
-		counts[TEAM_BLUE] = TeamCount(client_num, TEAM_BLUE);
-		counts[TEAM_RED] = TeamCount(client_num, TEAM_RED);
+	if (level.locked[new_team]) {
+		gi.LocClient_Print(&g_edicts[client_num], PRINT_HIGH, "{} is locked.\n", Teams_TeamName(new_team));
+		return false; // ignore the request
+	}
 
-		// We allow a spread of two
-		if (g_teamplay_force_balance->integer && ((new_team == TEAM_RED && counts[TEAM_RED] - counts[TEAM_BLUE] > 1) ||
-			(new_team == TEAM_BLUE && counts[TEAM_BLUE] - counts[TEAM_RED] > 1))) {
-			gi.LocClient_Print(&g_edicts[client_num], PRINT_HIGH, "{} has too many players.\n", Teams_TeamName(new_team));
-			return false; // ignore the request
+	if (Teams()) {
+		if (g_teamplay_force_balance->integer) {
+			uint8_t counts[TEAM_NUM_TEAMS] = {};
+
+			counts[TEAM_BLUE] = TeamCount(client_num, TEAM_BLUE);
+			counts[TEAM_RED] = TeamCount(client_num, TEAM_RED);
+
+			// We allow a spread of two
+			if ((new_team == TEAM_RED && abs(counts[TEAM_RED] - counts[TEAM_BLUE]) > 1) ||
+				(new_team == TEAM_BLUE && counts[TEAM_BLUE] - counts[TEAM_RED] > 1)) {
+				gi.LocClient_Print(&g_edicts[client_num], PRINT_HIGH, "{} has too many players.\n", Teams_TeamName(new_team));
+				return false; // ignore the request
+			}
+
+			// It's ok, the team we are switching to has less or same number of players
 		}
-
-		// It's ok, the team we are switching to has less or same number of players
 	}
 
 	return true;
 }
 
+/*
+=================
+AllowClientTeamSwitch
+=================
+*/
 bool AllowClientTeamSwitch(edict_t *ent) {
-	if (!deathmatch->integer) {
-		gi.LocClient_Print(ent, PRINT_HIGH, "You may not switch teams during campaigns.\n");
+	if (!deathmatch->integer)
 		return false;
-	}
 
 	if (g_dm_force_join->integer || !g_teamplay_allow_team_pick->integer) {
 		if (!(ent->svflags & SVF_BOT)) {
-			gi.LocClient_Print(ent, PRINT_HIGH, "Team choosing is disabled.");
+			gi.LocClient_Print(ent, PRINT_HIGH, "Team picks are disabled.");
 			return false;
 		}
 	}
 	
-	if (ent->client->resp.switch_team_time > level.time) {
+	if (ent->client->resp.team_delay_time > level.time) {
 		gi.LocClient_Print(ent, PRINT_HIGH, "You may not switch teams more than once per 5 seconds.\n");
 		return false;
 	}
 
+	return true;
+}
+
+/*
+=============
+SortRandom
+=============
+*/
+static int SortRandom(const void *a, const void *b) {
+	gclient_t *ca, *cb;
+
+	ca = &game.clients[*(int *)a];
+	cb = &game.clients[*(int *)b];
+
+	// sort special clients last
+	if (ca->resp.spectator_client < 0)
+		return 1;
+	if (cb->resp.spectator_client < 0)
+		return -1;
+
+	// then connecting clients
+	if (!ca->pers.connected)
+		return 1;
+	if (!cb->pers.connected)
+		return -1;
+
+	// then spectators
+	if (ca->resp.team == TEAM_SPECTATOR && cb->resp.team == TEAM_SPECTATOR) {
+		if (ca->resp.spectator_time > cb->resp.spectator_time)
+			return -1;
+		if (ca->resp.spectator_time < cb->resp.spectator_time)
+			return 1;
+		return 0;
+	}
+	if (ca->resp.team == TEAM_SPECTATOR)
+		return 1;
+	if (cb->resp.team == TEAM_SPECTATOR)
+		return -1;
+
+	// then randomly
+	return brandom() ? 1 : -1;
+}
+#if 0
+int RandomIntArray(int array[]) {
+	uint32_t count = ARRAY_LEN(array);
+
+	for (int i = 0; i < count; i++) {
+		int j = rand() % count;
+		std::swap(array[i], array[j]);
+	}
+}
+#endif
+/*
+================
+TeamShuffle
+
+Randomly shuffles all players in teamplay
+================
+*/
+static bool TeamShuffle() {
+	if (!Teams())
+		return false;
+
+	if (level.num_playing_clients < 3)
+		return false;
+
+	bool join_red = true;
+	gclient_t *cl;
+	edict_t *ent;
+#if 0
+	// ---
+	int array[MAX_CLIENTS];
+	uint32_t count = MAX_CLIENTS;
+
+	std::vector<int> myvector(count);
+	std::copy(level.sorted_clients, level.sorted_clients + count, myvector.begin());
+
+	for (std::vector<int>::iterator it = myvector.begin(); it != myvector.end(); ++it) {
+
+	}
+
+	for (int i = 0; i < count; i++) {
+		int j = rand() % count;
+		std::swap(array[i], array[j]);
+	}
+	// ---
+#endif
+	// randomise player list
+	//qsort(level.random_clients, level.num_connected_clients, sizeof(level.random_clients[0]), SortRandom);
+#if 0
+	int count = 0;
+	edict_t *e2 = nullptr;
+	int ar[MAX_CLIENTS];
+	bool red = !!irandom(2);
+
+	std::vector<int> v{ 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32 };
+	std::random_device rd;
+	std::mt19937 g(rd());
+	std::shuffle(v.begin(), v.end(), g);
+
+	std::shuffle(level.sorted_clients, level.sorted_clients + MAX_CLIENTS - 1, ar);
+
+	for (size_t i = 0; i < game.maxclients; i++) {
+		cl = &game.clients[level.sorted_clients[i]];
+		ent = &g_edicts[cl - game.clients];
+
+		if (!ent)
+			continue;
+		if (!ent->inuse)
+			continue;
+		if (!cl)
+			continue;
+		if (!cl->pers.connected)
+			continue;
+		if (cl->resp.team == TEAM_SPECTATOR)
+			continue;
+
+		SetTeam(ent, red ? TEAM_RED : TEAM_BLUE, false, true);
+		red ^= true;
+	}
+#endif
+#if 0
+	// randomize list
+	for (size_t i = 0; i < game.maxclients, count < level.num_playing_clients; i++) {
+		cl = &game.clients[level.sorted_clients[i]];
+		ent = &g_edicts[cl - game.clients];
+
+		if (!cl->pers.connected)
+			continue;
+		if (cl->resp.team == TEAM_SPECTATOR)
+			continue;
+
+		count++;
+	}
+
+	for (size_t i = 0; i < game.maxclients; i++) {
+		cl = &game.clients[level.random_clients[i]];
+		ent = &g_edicts[cl - game.clients];
+
+		if (!cl->pers.connected)
+			continue;
+		if (cl->resp.team == TEAM_SPECTATOR)
+			continue;
+
+		// alternate between red and blue
+		cl->resp.team = join_red ? TEAM_RED : TEAM_BLUE;
+		join_red ^= true;
+
+		G_AssignPlayerSkin(ent, cl->pers.skin);
+
+		// assign a ghost code
+		Match_Ghost_DoAssign(ent);
+
+		ClientSpawn(ent);
+
+		G_PostRespawn(ent);
+
+		if (level.match_state == MS_WARMUP_READYUP) {
+			gi.LocCenter_Print(ent, "Type \"ready\" in console to ready up.\n");
+		}
+
+		// if anybody has a menu open, update it immediately
+		P_Menu_Dirty();
+	}
+#endif
 	return true;
 }
 
@@ -1657,266 +1909,93 @@ static void StopFollowing(edict_t *ent, bool release) {
 	ent->client->ps.damage_blend = {};
 	ent->client->ps.rdflags = RDF_NONE;
 }
-#if 0
+
 /*
 =================
 SetTeam
 =================
 */
-bool SetTeam(edict_t *ent, const char *s, bool inactive) {
-	team_t				new_team, old_team;
-	gclient_t *client;
-	int					client_num;
-	spectator_state_t	spec_state;
-	int					spec_client;
-
-	//
-	// see what change is requested
-	//
-
-	client_num = ent - g_edicts;
-	client = game.clients + client_num;
-
-#if 0
-	// early team override
-	if (!client->pers.connected && IsTeamplay()) {
-		if (!Q_strcasecmp(s, "red") || !Q_strcasecmp(s, "r")) {
-			new_team = TEAM_RED;
-		} else if (!Q_strcasecmp(s, "blue") || !Q_strcasecmp(s, "b")) {
-			new_team = TEAM_BLUE;
-		} else {
-			new_team = TEAM_FREE;
-		}
-		if (new_team != TEAM_FREE && AllowTeamSwitch(client_num, new_team)) {
-			client->resp.team = new_team;
-			client->pers.team_state.state = TEAM_BEGIN;
-			//G_WriteClientSessionData(client);
-			// count current clients and rank for scoreboard
-			CalculateRanks();
-		}
-
-		return true; // bypass flood protection
-	}
-#endif
-
-	if (!Q_strcasecmp(s, "follow1")) {
-		new_team = TEAM_SPECTATOR;
-		spec_state = SPECTATOR_FOLLOW;
-		spec_client = -1;
-	} else if (!Q_strcasecmp(s, "follow2")) {
-		new_team = TEAM_SPECTATOR;
-		spec_state = SPECTATOR_FOLLOW;
-		spec_client = -2;
-	} else if (!Q_strcasecmp(s, "spectator") || !Q_strcasecmp(s, "s")) {
-		new_team = TEAM_SPECTATOR;
-		spec_state = SPECTATOR_FREE;
-	} else if (IsTeamplay()) {
-		// if running a team game, assign player to one of the teams
-		spec_state = SPECTATOR_NOT;
-		if (!Q_strcasecmp(s, "red") || !Q_strcasecmp(s, "r")) {
-			new_team = TEAM_RED;
-			spec_state = SPECTATOR_NOT;
-		} else if (!Q_strcasecmp(s, "blue") || !Q_strcasecmp(s, "b") || s[0] == 'b') {
-			new_team = TEAM_BLUE;
-			spec_state = SPECTATOR_NOT;
-		} else if (!Q_strcasecmp(s, "auto") || !Q_strcasecmp(s, "a")) {
-			// pick the team with the least number of players
-			new_team = PickTeam(client_num);
-			spec_state = SPECTATOR_NOT;
-		} else {
-			return false;
-		}
-
-		if (!AllowTeamSwitch(client_num, new_team)) {
-			return false;
-		}
-
-	} else {
-		if (!Q_strcasecmp(s, "free") || !Q_strcasecmp(s, "f") ||
-			!Q_strcasecmp(s, "auto") || !Q_strcasecmp(s, "a")) {
-			new_team = TEAM_FREE;
-			spec_state = SPECTATOR_NOT;
-		} else {
-			return false;
-		}
-	}
-
-	spec_client = client_num;
-
-	// override decision if limiting the players
-	if (duel->integer && level.num_nonspectator_clients >= 2) {
-		//todo: if team free, add to queue
-		new_team = TEAM_SPECTATOR;
-		spec_state = SPECTATOR_FREE;
-	} else if (!deathmatch->integer && level.num_nonspectator_clients >= 4) {	// this should never happen
-		new_team = TEAM_SPECTATOR;
-		spec_state = SPECTATOR_FREE;
-	} else if (maxplayers->integer > 0 && level.num_nonspectator_clients >= maxplayers->integer) {
-		new_team = TEAM_SPECTATOR;
-		spec_state = SPECTATOR_FREE;
-	}
-
-	//
-	// decide if we will allow the change
-	//
-	old_team = client->resp.team;
-	if (new_team == old_team) {
-		if (old_team != TEAM_SPECTATOR)
-			return false;
-
-		// do soft release if possible
-		if (client->ps.stats[STAT_CHASE]) {
-			StopFollowing(ent, true);
-			return false;
-		}
-
-		// second spectator team request will move player to intermission point
-		if (old_team == TEAM_SPECTATOR && !client->ps.stats[STAT_CHASE]) {	//pers.team??
-			ent->s.origin = level.intermission_origin;
-			ent->client->ps.pmove.origin = level.intermission_origin;
-			ent->client->ps.viewangles = level.intermission_angle;
-			return false;
-		}
-	} else {
-		if (!AllowClientTeamSwitch(ent))
-			return false;
-	}
-
-	//
-	// execute the team change
-	//
-	PMenu_Close(ent);
-
-	// if the player was dead leave the body
-	if (ent->health <= 0) {
-		CopyToBodyQue(ent);
-	}
-
-	// if they are playing a duel, count as a loss
-	if (duel->integer && old_team == TEAM_FREE) {
-		ent->client->resp.losses++;
-	}
-
-	// he starts at 'base'
-	client->pers.team_state.state = TEAM_BEGIN;
-	ent->client->resp.inactive = false;
-
-	if (old_team != TEAM_SPECTATOR) {
-#if 0
-		// revert any casted votes
-		if (old_team != new_team)
-			G_RevertVote(ent->client);
-#endif
-		// Kill him (makes sure he loses flags, etc)
-		ent->flags &= ~FL_GODMODE;
-		ent->client->ps.stats[STAT_HEALTH] = ent->health = 0;
-		ent->client->ps.stats[STAT_SHOW_STATUSBAR] = new_team == TEAM_SPECTATOR ? 0 : 1;
-		player_die(ent, ent, ent, 100000, vec3_origin, MOD_CHANGE_TEAM);
-	}
-
-	// they go to the end of the line for duels
-	if (duel->integer && new_team == TEAM_SPECTATOR) {
-		client->resp.spectator_time = 0;
-		//todo: add to queue
-	}
-
-	BroadcastTeamChange(ent, old_team, inactive);
-
-	client->resp.team = new_team;
-	client->resp.spectator_state = spec_state;
-	client->resp.spectator_client = spec_client;
-
-	//G_WriteClientSessionData(client);
-
-	// get and distribute relevent parameters
-	ClientUserinfoChanged(ent, ent->client->pers.userinfo);
-
-	ent->client->resp.switch_team_time = level.time + 5_sec;
-
-	//q2
-	ent->svflags &= ~SVF_NOCLIENT;
-	ent->client->resp.ctf_state = 0;
-
-	if (IsTeamplay() && client->resp.team != TEAM_SPECTATOR) {
-		G_AssignPlayerSkin(ent, ent->client->pers.skin);
-	}
-
-	// assign a ghost if we are in match mode
-	if (level.match == MATCH_GAME) {
-		if (ent->client->resp.ghost)
-			ent->client->resp.ghost->code = 0;
-		ent->client->resp.ghost = nullptr;
-		P_Match_AssignGhost(ent);
-	}
-
-	ClientSpawn(ent);
-
-	G_PostRespawn(ent);
-
-	if (level.match == MATCH_SETUP) {
-		gi.LocCenter_Print(ent, "Type \"ready\" in console to ready up.\n");
-	}
-
-	// if anybody has a menu open, update it immediately
-	Menu_Dirty();
-	//-q2
-
-	//ClientBegin(ent);
-
-	return true;
-}
-#endif
-
-void Team_Join(edict_t *ent, team_t desired_team, bool inactive) {
+bool SetTeam(edict_t *ent, team_t desired_team, bool inactive, bool force) {
 	team_t old_team = ent->client->resp.team;
+	bool queue = false;
 
-	if (desired_team != TEAM_SPECTATOR && desired_team == ent->client->resp.team) {
-		PMenu_Close(ent);
-		return;
-	}
+	if (!force) {
+		if (level.match_state == MS_MATCH_IN_PROGRESS && g_match_lock->integer) {
+			gi.LocClient_Print(ent, PRINT_HIGH, "Match is locked, no joining permitted.\n");
+			P_Menu_Close(ent);
+			return false;
+		}
 
-	if (!AllowTeamSwitch(ent - g_edicts, desired_team))
-		return;
+		if (desired_team != TEAM_SPECTATOR && desired_team == ent->client->resp.team) {
+			P_Menu_Close(ent);
+			return false;
+		}
 
-	if (!inactive && ent->client->resp.switch_team_time > level.time) {
-		gi.LocClient_Print(ent, PRINT_HIGH, "You may not switch teams more than once per 5 seconds.\n");
-		return;
+		if (duel->integer) {
+			if (desired_team != TEAM_SPECTATOR && level.num_playing_clients >= 2) {
+				desired_team = TEAM_SPECTATOR;
+				queue = true;
+				P_Menu_Close(ent);
+			}
+		}
+
+		if (!AllowTeamSwitch(ent - g_edicts, desired_team))
+			return false;
+
+		if (!inactive && ent->client->resp.team_delay_time > level.time) {
+			gi.LocClient_Print(ent, PRINT_HIGH, "You may not switch teams more than once per 5 seconds.\n");
+			P_Menu_Close(ent);
+			return false;
+		}
+	} else {
+		if (duel->integer) {
+			if (desired_team == TEAM_NONE) {
+				desired_team = TEAM_SPECTATOR;
+				queue = true;
+			}
+		}
 	}
 
 	// allow the change...
 
-	PMenu_Close(ent);
+	P_Menu_Close(ent);
 
 	// start as spectator
 	if (ent->movetype == MOVETYPE_NOCLIP)
 		Weapon_Grapple_DoReset(ent->client);
 
-	GT_CTF_DeadDropFlag(ent);
+	CTF_DeadDropFlag(ent);
 	Tech_DeadDrop(ent);
 
 	ent->svflags &= ~SVF_NOCLIENT;
+	ent->client->resp.score = 0;
 	ent->client->resp.team = desired_team;
 	ent->client->resp.ctf_state = 0;
-	ent->client->resp.inactive = false;
+	ent->client->resp.inactive = inactive;
 	ent->client->resp.inactivity_time = 0_ms;
-	ent->client->resp.switch_team_time = level.time + 5_sec;
+	ent->client->resp.team_join_time = level.time;
+	ent->client->resp.team_delay_time = force ? level.time : level.time + 5_sec;
 	ent->client->resp.spectator_state = desired_team == TEAM_SPECTATOR ? SPECTATOR_FREE : SPECTATOR_NOT;
 	ent->client->resp.spectator_client = 0;
 	ent->client->resp.spectator_time = 0;
+	ent->client->resp.duel_queued = queue;
 
 	ent->client->chase_target = nullptr;
 
-	if (IsTeamplay() && desired_team != TEAM_SPECTATOR) {
-		G_AssignPlayerSkin(ent, ent->client->pers.skin);
+	if (desired_team != TEAM_SPECTATOR) {
+		if (Teams())
+			G_AssignPlayerSkin(ent, ent->client->pers.skin);
+
+		G_RevertVote(ent->client);
+		ent->client->resp.initialised = true;
+
+		// assign a ghost code
+		Match_Ghost_DoAssign(ent);
 	}
 
-	// assign a ghost if we are in match mode
-	if (level.match == MATCH_GAME) {
-		if (ent->client->resp.ghost)
-			ent->client->resp.ghost->code = 0;
-		ent->client->resp.ghost = nullptr;
-		P_Match_AssignGhost(ent);
-	}
+	// if they are playing a duel, count as a loss
+	if (duel->integer && old_team == TEAM_FREE)
+		ent->client->resp.losses++;
 
 	ClientSpawn(ent);
 
@@ -1924,13 +2003,12 @@ void Team_Join(edict_t *ent, team_t desired_team, bool inactive) {
 
 	BroadcastTeamChange(ent, old_team, inactive);
 
-	if (level.match == MATCH_SETUP) {
-		gi.LocCenter_Print(ent, "Type \"ready\" in console to ready up.\n");
-	}
 	ent->client->ps.stats[STAT_SHOW_STATUSBAR] = desired_team == TEAM_SPECTATOR ? 0 : 1;
 
 	// if anybody has a menu open, update it immediately
-	Menu_Dirty();
+	P_Menu_Dirty();
+
+	return true;
 }
 
 /*
@@ -1944,9 +2022,13 @@ static void Cmd_Team_f(edict_t *ent) {
 		switch (ent->client->resp.team) {
 		case TEAM_BLUE:
 		case TEAM_RED:
-		case TEAM_FREE:
-		case TEAM_SPECTATOR:
 			gi.LocClient_Print(ent, PRINT_HIGH, "Your team: {}.\n", Teams_TeamName(ent->client->resp.team));
+			break;
+		case TEAM_FREE:
+			gi.LocClient_Print(ent, PRINT_HIGH, "You are in the match.\n");
+			break;
+		case TEAM_SPECTATOR:
+			gi.LocClient_Print(ent, PRINT_HIGH, "You are spectating.\n");
 			break;
 		default:
 			break;
@@ -1955,25 +2037,11 @@ static void Cmd_Team_f(edict_t *ent) {
 	}
 
 	const char *s = gi.argv(1);
-	team_t team = TEAM_NONE;
+	team_t team = StringToTeamNum(s);
+	if (team == TEAM_NONE)
+		return;
 
-	if (!Q_strcasecmp(s, "spectator") || !Q_strcasecmp(s, "s")) {
-		team = TEAM_SPECTATOR;
-	} else if (!Q_strcasecmp(s, "auto") || !Q_strcasecmp(s, "a")) {
-		team = PickTeam(-1);
-	} else if (IsTeamplay()) {
-		if (!Q_strcasecmp(s, "blue") || !Q_strcasecmp(s, "b"))
-			team = TEAM_BLUE;
-		else if (!Q_strcasecmp(s, "red") || !Q_strcasecmp(s, "r"))
-			team = TEAM_BLUE;
-		else return;
-	} else {
-		if (!Q_strcasecmp(s, "free") || !Q_strcasecmp(s, "f"))
-			team = TEAM_FREE;
-		else return;
-	}
-
-	Team_Join(ent, team, false);
+	SetTeam(ent, team, false, false);
 }
 
 /*
@@ -1982,13 +2050,8 @@ Cmd_CrosshairID_f
 =================
 */
 static void Cmd_CrosshairID_f(edict_t *ent) {
-	if (ent->client->resp.id_state) {
-		gi.LocClient_Print(ent, PRINT_HIGH, "Disabling player identication display.\n");
-		ent->client->resp.id_state = false;
-	} else {
-		gi.LocClient_Print(ent, PRINT_HIGH, "Activating player identication display.\n");
-		ent->client->resp.id_state = true;
-	}
+	ent->client->resp.id_state ^= true;
+	gi.LocClient_Print(ent, PRINT_HIGH, "{} player identication display.\n", ent->client->resp.id_state ? "Activating" : "Disabling");
 }
 
 /*
@@ -1999,6 +2062,37 @@ Cmd_Timer_f
 static void Cmd_Timer_f(edict_t *ent) {
 	ent->client->resp.timer_state ^= true;
 	gi.LocClient_Print(ent, PRINT_HIGH, "{} match timer display.\n", ent->client->resp.timer_state ? "Activating" : "Disabling");
+}
+
+/*
+=================
+Cmd_FragMessages_f
+=================
+*/
+static void Cmd_FragMessages_f(edict_t *ent) {
+	ent->client->resp.fragmessage_state ^= true;
+	gi.LocClient_Print(ent, PRINT_HIGH, "{} frag messages.\n", ent->client->resp.fragmessage_state ? "Activating" : "Disabling");
+}
+
+/*
+=================
+Cmd_KillBeep_f
+=================
+*/
+static void Cmd_KillBeep_f(edict_t *ent) {
+	int num = 0;
+	if (gi.argc() > 1) {
+		num = atoi(gi.argv(1));
+		if (num < 0)
+			num = 0;
+		else if (num > 4)
+			num = 4;
+	} else {
+		num = (ent->client->resp.killbeep_num + 1) % 5;
+	}
+	const char *sb[5] = { "off", "clang", "beep-boop", "insane", "tang-tang" };
+	ent->client->resp.killbeep_num = num;
+	gi.LocClient_Print(ent, PRINT_HIGH, "Kill beep changed to: {}\n", sb[num]);
 }
 
 
@@ -2016,11 +2110,11 @@ static void Cmd_Ghost_f(edict_t *ent) {
 		return;
 	}
 
-	if (!ClientIsSpectating(ent->client)) {
+	if (ClientIsPlaying(ent->client)) {
 		gi.LocClient_Print(ent, PRINT_HIGH, "You are already in the game.\n");
 		return;
 	}
-	if (level.match != MATCH_GAME) {
+	if (level.match_state != MS_MATCH_IN_PROGRESS) {
 		gi.LocClient_Print(ent, PRINT_HIGH, "No match is in progress.\n");
 		return;
 	}
@@ -2040,7 +2134,7 @@ static void Cmd_Ghost_f(edict_t *ent) {
 			ent->flags &= ~FL_GODMODE;
 			ClientSpawn(ent);
 			gi.LocBroadcast_Print(PRINT_HIGH, "{} has been reinstated to {} team.\n",
-				ent->client->pers.netname, Teams_TeamName(ent->client->resp.team));
+				ent->client->resp.netname, Teams_TeamName(ent->client->resp.team));
 			return;
 		}
 	}
@@ -2049,7 +2143,7 @@ static void Cmd_Ghost_f(edict_t *ent) {
 
 
 static void Cmd_Stats_f(edict_t *ent) {
-	if (!IsTeamplay())
+	if (!ctf->integer)
 		return;
 
 	ghost_t *g;
@@ -2058,13 +2152,13 @@ static void Cmd_Stats_f(edict_t *ent) {
 
 	text.clear();
 
-	if (level.match == MATCH_SETUP) {
+	if (level.match_state == MS_WARMUP_READYUP) {
 		for (uint32_t i = 1; i <= game.maxclients; i++) {
 			e2 = g_edicts + i;
 			if (!e2->inuse)
 				continue;
-			if (!e2->client->resp.ready && !ClientIsSpectating(e2->client)) {
-				std::string_view str = G_Fmt("{} is not ready.\n", e2->client->pers.netname);
+			if (!e2->client->resp.ready && ClientIsPlaying(e2->client)) {
+				std::string_view str = G_Fmt("{} is not ready.\n", e2->client->resp.netname);
 
 				if (text.length() + str.length() < MAX_STRING_CHARS - 50)
 					text += str;
@@ -2118,32 +2212,6 @@ static void Cmd_Stats_f(edict_t *ent) {
 	gi.Client_Print(ent, PRINT_HIGH, text.c_str());
 }
 
-
-void Cmd_Observer_f(edict_t *ent) {
-	if (g_dm_force_join->integer) return;
-
-	// start as spectator
-	if (ent->movetype == MOVETYPE_NOCLIP)
-		Weapon_Grapple_DoReset(ent->client);
-
-	GT_CTF_DeadDropFlag(ent);
-	Tech_DeadDrop(ent);
-
-	ent->deadflag = false;
-	ent->movetype = MOVETYPE_NOCLIP;
-	ent->solid = SOLID_NOT;
-	ent->svflags |= SVF_NOCLIENT;
-	ent->client->resp.team = TEAM_SPECTATOR;
-	ent->client->resp.spectator_state = SPECTATOR_FREE;
-	ent->client->resp.spectator_client = 0;
-	ent->client->resp.spectator_time = 0;
-	ent->client->resp.inactive = false;
-	ent->client->ps.gunindex = 0;
-	ent->client->ps.gunskin = 0;
-	G_SetPlayerScore(ent->client, 0);
-	ClientSpawn(ent);
-}
-
 static void Cmd_Boot_f(edict_t *ent) {
 	edict_t *targ;
 
@@ -2177,358 +2245,695 @@ static void Cmd_Boot_f(edict_t *ent) {
 	gi.AddCommandString(G_Fmt("kick {}\n", i - 1).data());
 }
 
-/*-----------------------------------------------------------------------*/
+/*----------------------------------------------------------------*/
 
-/* VOTING */
+// NEW VOTING CODE
 
-void Voting_Warp_f(edict_t *ent) {
+static bool Vote_Val_None(edict_t *ent) {
+	return true;
+}
+
+static void Vote_Pass_Map() {
+	Q_strlcpy(level.forcemap, level.vote_arg, sizeof(level.forcemap));
+	Match_End();
+}
+
+static bool Vote_Val_Map(edict_t *ent) {
 	char *token;
 
-	if (gi.argc() < 2) {
-		gi.LocClient_Print(ent, PRINT_HIGH, "Where do you want to warp to?\n");
-		gi.LocClient_Print(ent, PRINT_HIGH, "Available levels are: {}\n", g_map_list->string);
-		return;
+	if (gi.argc() < 3) {
+		gi.LocClient_Print(ent, PRINT_HIGH, "Valid maps are: {}\n", g_map_list->string);
+		return false;
 	}
 
 	const char *mlist = g_map_list->string;
 
 	while (*(token = COM_Parse(&mlist))) {
-		if (Q_strcasecmp(token, gi.argv(1)) == 0)
+		if (!Q_strcasecmp(token, gi.argv(2)))
 			break;
 	}
 
 	if (!*token) {
-		gi.LocClient_Print(ent, PRINT_HIGH, "Unknown level.\n");
-		gi.LocClient_Print(ent, PRINT_HIGH, "Available levels are: {}\n", g_map_list->string);
-		return;
-	}
-
-	if (ent->client->resp.admin) {
-		gi.LocBroadcast_Print(PRINT_HIGH, "{} is warping to level {}.\n",
-			ent->client->pers.netname, gi.argv(1));
-		Q_strlcpy(level.forcemap, gi.argv(1), sizeof(level.forcemap));
-		EndDMLevel();
-		return;
-	}
-
-	if (Voting_Begin(ent, VOTING_MAP, G_Fmt("{} has requested warping to level {}.\n",
-		ent->client->pers.netname, gi.argv(1)).data()))
-		Q_strlcpy(level.voting_map, gi.argv(1), sizeof(level.voting_map));
-}
-
-void Voting_Passed() {
-	gi.LocBroadcast_Print(PRINT_HIGH, "Vote passed.\n");
-
-	switch (level.voting_type) {
-	case VOTING_MATCH:
-		// reset into match mode
-		if (competition->integer < 3)
-			gi.cvar_set("competition", "2");
-		level.match = MATCH_SETUP;
-		Match_ResetAllPlayers();
-		break;
-
-	case VOTING_ADMIN:
-		level.voting_target->client->resp.admin = true;
-		gi.LocBroadcast_Print(PRINT_HIGH, "{} has become an admin.\n", level.voting_target->client->pers.netname);
-		gi.LocClient_Print(level.voting_target, PRINT_HIGH, "Type 'admin' to access the adminstration menu.\n");
-		break;
-
-	case VOTING_MAP:
-		gi.LocBroadcast_Print(PRINT_HIGH, "{} is warping to level {}.\n",
-			level.voting_target->client->pers.netname, level.voting_map);
-		Q_strlcpy(level.forcemap, level.voting_map, sizeof(level.forcemap));
-		EndDMLevel();
-		break;
-
-	default:
-		break;
-	}
-	level.voting_type = VOTING_NONE;
-}
-
-void Cmd_CallVote_f(edict_t *ent) {
-	const char *arg = NULL;
-
-	if (gi.argc() < 2) {
-		gi.LocClient_Print(ent, PRINT_HIGH, "Usage: {} [command] [...]\n", gi.argv(0));
-	}
-
-	arg = gi.argv(1);
-
-
-}
-
-void Cmd_Vote_f(edict_t *ent) {
-	const char *arg = NULL;
-
-	if (level.voting_type == VOTING_NONE) {
-		gi.LocClient_Print(ent, PRINT_HIGH, "No vote in progress.\n");
-		return;
-	}
-	if (gi.argc() < 2) {
-		gi.LocClient_Print(ent, PRINT_HIGH, "Usage: {} [yes/no]\n", gi.argv(0));
-	}
-	if (ent->client->resp.voted) {
-		gi.LocClient_Print(ent, PRINT_HIGH, "Vote already cast.\n");
-		return;
-	}
-	if (ClientIsSpectating(ent->client)) {
-		gi.LocClient_Print(ent, PRINT_HIGH, "Not allowed to vote as spectator.\n");
-		return;
-	}
-	if (level.voting_target == ent) {
-		gi.LocClient_Print(ent, PRINT_HIGH, "You can't vote for yourself.\n");
-		return;
-	}
-
-	gi.LocClient_Print(ent, PRINT_HIGH, "Vote cast.\n");
-	ent->client->resp.voted = true;
-
-	arg = gi.argv(1);
-
-	if (arg[0] == 'y' || arg[0] == 'Y' || arg[0] == '1') {
-		level.voting_count_yes++;
-		if (level.voting_count_yes == level.voting_votes_needed) {
-			// the election has been won
-			Voting_Passed();
-			return;
-		}
-	} else {
-		level.voting_count_no++;	//VOTE(%i):%s yes:%i no:%i
-		gi.LocBroadcast_Print(PRINT_HIGH, "{}\n", level.voting_name);
-		gi.LocBroadcast_Print(PRINT_CHAT, "VOTE({}): yes:{} no:{} needed:{}\n", (level.voting_time - level.time).seconds<int>(), level.voting_count_yes, level.voting_count_no, level.voting_votes_needed);
-	}
-}
-
-void Match_Start();
-void Match_End();
-bool Match_CheckRules() {
-	int		 t;
-	uint32_t i, j;
-	char	 text[64];
-	edict_t *ent;
-
-	if (level.voting_type != VOTING_NONE && level.voting_time <= level.time) {
-		gi.LocBroadcast_Print(PRINT_CHAT, "Voting timed out and has been cancelled.\n");
-		level.voting_type = VOTING_NONE;
-	}
-
-	if (level.match != MATCH_NONE) {
-		t = (level.matchtime - level.time).seconds<int>();
-
-		// no team warnings in match mode
-		level.warnactive = 0;
-
-		if (t <= 0) { // time ended on something
-			switch (level.match) {
-			case MATCH_SETUP:
-				// go back to normal mode
-				if (competition->integer < 3) {
-					level.match = MATCH_NONE;
-					gi.cvar_set("competition", "1");
-					Match_ResetAllPlayers();
-				} else {
-					// reset the time
-					level.matchtime = level.time + gtime_t::from_min(matchsetuptime->value);
-				}
-				return false;
-
-			case MATCH_PREGAME:
-				// match started!
-				Match_Start();
-				gi.positioned_sound(world->s.origin, world, CHAN_AUTO | CHAN_RELIABLE, gi.soundindex("misc/tele_up.wav"), 1, ATTN_NONE, 0);
-				return false;
-
-			case MATCH_GAME:
-				// match ended!
-				Match_End();
-				gi.positioned_sound(world->s.origin, world, CHAN_AUTO | CHAN_RELIABLE, gi.soundindex("misc/bigtele.wav"), 1, ATTN_NONE, 0);
-				return false;
-
-			default:
-				break;
-			}
-		}
-
-		if (t == level.lasttime)
-			return false;
-
-		level.lasttime = t;
-
-		switch (level.match) {
-		case MATCH_SETUP:
-			for (j = 0, i = 1; i <= game.maxclients; i++) {
-				ent = g_edicts + i;
-				if (!ent->inuse)
-					continue;
-				if (!ClientIsSpectating(ent->client) &&
-					!ent->client->resp.ready)
-					j++;
-			}
-
-			if (competition->integer < 3)
-				G_FmtTo(text, "{:02}:{:02} SETUP: {} not ready", t / 60, t % 60, j);
-			else
-				G_FmtTo(text, "SETUP: {} not ready", j);
-
-			gi.configstring(CONFIG_MATCH_STATE, text);
-			break;
-
-		case MATCH_PREGAME:
-			G_FmtTo(text, "{:02}:{:02} UNTIL START", t / 60, t % 60);
-			gi.configstring(CONFIG_MATCH_STATE, text);
-
-			if (t <= 10 && !level.countdown) {
-				level.countdown = true;
-				gi.positioned_sound(world->s.origin, world, CHAN_AUTO | CHAN_RELIABLE, gi.soundindex("world/10_0.wav"), 1, ATTN_NONE, 0);
-			}
-			break;
-
-		case MATCH_GAME:
-			G_FmtTo(text, "{:02}:{:02} MATCH", t / 60, t % 60);
-			gi.configstring(CONFIG_MATCH_STATE, text);
-			if (t <= 10 && !level.countdown) {
-				level.countdown = true;
-				gi.positioned_sound(world->s.origin, world, CHAN_AUTO | CHAN_RELIABLE, gi.soundindex("world/10_0.wav"), 1, ATTN_NONE, 0);
-			}
-			break;
-
-		default:
-			break;
-		}
-		return false;
-	} else {
-		if (IsTeamplay()) {
-			int tally_red_score = 0, tally_blue_score = 0;
-
-			if (level.time == gtime_t::from_sec(level.lasttime))
-				return false;
-			level.lasttime = level.time.seconds<int>();
-			// this is only done in non-match (public) mode
-
-			if (warn_unbalanced->integer) {
-				// count up the team totals
-				for (i = 1; i <= game.maxclients; i++) {
-					ent = g_edicts + i;
-					if (!ent->inuse)
-						continue;
-					if (ent->client->resp.team == TEAM_RED)
-						tally_red_score++;
-					else if (ent->client->resp.team == TEAM_BLUE)
-						tally_blue_score++;
-				}
-
-				if (tally_red_score - tally_blue_score >= 2 && tally_blue_score >= 2) {
-					if (level.warnactive != TEAM_RED) {
-						level.warnactive = TEAM_RED;
-						gi.configstring(CONFIG_CTF_TEAMINFO, "WARNING: Red has too many players");
-					}
-				} else if (tally_blue_score - tally_red_score >= 2 && tally_red_score >= 2) {
-					if (level.warnactive != TEAM_BLUE) {
-						level.warnactive = TEAM_BLUE;
-						gi.configstring(CONFIG_CTF_TEAMINFO, "WARNING: Blue has too many players");
-					}
-				} else
-					level.warnactive = 0;
-			} else
-				level.warnactive = 0;
-		}
-	}
-
-	if (capturelimit->integer &&
-		(level.team_scores[TEAM_RED] >= capturelimit->integer ||
-			level.team_scores[TEAM_BLUE] >= capturelimit->integer)) {
-		gi.LocBroadcast_Print(PRINT_HIGH, "$g_capturelimit_hit");
-		return true;
-	}
-	return false;
-}
-
-bool Voting_Begin(edict_t *ent, voting_t type, const char *msg) {
-	int		 count;
-	edict_t *e;
-
-	if (g_voting_percentage->value <= 0) {
-		gi.LocClient_Print(ent, PRINT_HIGH, "Voting is disabled, only an admin can process this action.\n");
+		gi.LocClient_Print(ent, PRINT_HIGH, "Unknown map.\n");
+		gi.LocClient_Print(ent, PRINT_HIGH, "Valid maps are: {}\n", g_map_list->string);
 		return false;
 	}
-
-	if (level.voting_type != VOTING_NONE) {
-		gi.LocClient_Print(ent, PRINT_HIGH, "Voting is already in progress.\n");
-		return false;
-	}
-
-	// clear votes
-	count = 0;
-	for (uint32_t i = 1; i <= game.maxclients; i++) {
-		e = g_edicts + i;
-		e->client->resp.voted = false;
-		if (e->inuse && !ClientIsSpectating(e->client))
-			count++;
-	}
-
-	if (count < 2) {
-		gi.LocClient_Print(ent, PRINT_HIGH, "Not enough players to vote.\n");
-		return false;
-	}
-
-	level.voting_target = ent;
-	level.voting_type = type;
-	level.voting_count_yes = 0;
-	level.voting_votes_needed = (int)((count * g_voting_percentage->value) / 100);
-	level.voting_time = level.time + 20_sec; // twenty seconds for election
-	Q_strlcpy(level.voting_name, msg, sizeof(level.voting_name));
-
-	// tell everyone
-	gi.Broadcast_Print(PRINT_CHAT, level.voting_name);
-	gi.LocBroadcast_Print(PRINT_HIGH, "Type VOTE YES or VOTE NO to vote on this request.\n");
-	gi.LocBroadcast_Print(PRINT_HIGH, "VOTE({}): yes:{} no:{} needed:{}\n", (level.voting_time - level.time).seconds<int>(), level.voting_count_yes, level.voting_count_no, level.voting_votes_needed);
 
 	return true;
 }
 
+static void Vote_Pass_RestartMatch() {
+	Q_strlcpy(level.forcemap, level.mapname, sizeof(level.forcemap));
+	Match_End();
+}
+
+static void Vote_Pass_Gametype() {
+	const char *arg = level.vote_arg;
+
+	for (size_t i = 0; i < GT_NUM_GAMETYPES; i++) {
+		if (!Q_strcasecmp(arg, gt_short_name[i])) {
+			GT_Change(i);
+			break;
+		}
+	}
+}
+
+static bool Vote_Val_Gametype(edict_t *ent) {
+	const char *arg = gi.argv(2);
+
+	for (size_t i = 0; i < GT_NUM_GAMETYPES; i++) {
+		if (!Q_strcasecmp(arg, gt_short_name[i]))
+			return true;
+	}
+
+	return false;
+}
+
+static void Vote_Pass_NextMap() {
+	Match_End();
+}
+
+static void Vote_Pass_ShuffleTeams() {
+	TeamShuffle();
+}
+
+static bool Vote_Val_ShuffleTeams(edict_t *ent) {
+	if (!Teams())
+		return false;
+
+	return true;
+}
+
+static void Vote_Pass_Unlagged() {
+	int argi = atoi(level.vote_arg);
+
+	gi.LocBroadcast_Print(PRINT_HIGH, "Lag compensation has been {}.\n", argi ? "ENABLED" : "DISABLED");
+
+	gi.cvar_forceset("g_lag_compensation", argi ? "1" : "0");
+}
+
+static bool Vote_Val_Unlagged(edict_t *ent) {
+	int arg = atoi(gi.argv(2));
+
+
+	return true;
+}
+
+static void Vote_Pass_Cointoss() {
+	gi.LocBroadcast_Print(PRINT_HIGH, "The coin is: {}\n", brandom() ? "HEADS" : "TAILS");
+}
+
+static void Vote_Pass_Timelimit() {
+	const char *s = G_Fmt("{}", level.vote_arg).data();
+	int argi = atoi(s);
+
+	if (!argi)
+		gi.LocBroadcast_Print(PRINT_HIGH, "Time limit has been DISABLED.\n");
+	else
+		gi.LocBroadcast_Print(PRINT_HIGH, "Time limit has been set to {}.\n", G_TimeString(argi * 1000));
+
+	gi.cvar_forceset("timelimit", level.vote_arg);
+}
+
+static bool Vote_Val_Timelimit(edict_t *ent) {
+	int argi = atoi(gi.argv(2));
+
+	if (argi < 0) {
+		gi.LocClient_Print(ent, PRINT_HIGH, "Invalid time limit value.\n");
+		return false;
+	}
+	
+	if (argi == timelimit->integer) {
+		gi.LocClient_Print(ent, PRINT_HIGH, "Time limit is already set to {}.\n", G_TimeString(argi * 1000));
+		return false;
+	}
+	return true;
+}
+
+static void Vote_Pass_Scorelimit() {
+	int argi = atoi(level.vote_arg);
+
+	//if (argi)
+		gi.LocBroadcast_Print(PRINT_HIGH, "Score limit has been set to {}.\n", argi);
+	//else
+	//	gi.LocBroadcast_Print(PRINT_HIGH, "Score limit has been DISABLED.\n");
+
+	gi.cvar_forceset(G_Fmt("{}limit", GT_ScoreLimitString()).data(), level.vote_arg);
+}
+
+static bool Vote_Val_Scorelimit(edict_t *ent) {
+	int argi = atoi(gi.argv(2));
+
+	if (argi < 0) {
+		gi.LocClient_Print(ent, PRINT_HIGH, "Invalid score limit value.\n");
+		return false;
+	}
+
+	if (argi == GT_ScoreLimit()) {
+		gi.LocClient_Print(ent, PRINT_HIGH, "Score limit is already set to {}.\n", argi);
+		return false;
+	}
+
+	return true;
+}
+
+vcmds_t vote_cmds[] = {
+	{"map",					Vote_Val_Map,			Vote_Pass_Map,			1,		2,	"[mapname]",						"changes to the specified map"},
+	{"nextmap",				Vote_Val_None,			Vote_Pass_NextMap,		2,		1,	"",									"move to the next map in the rotation"},
+	{"restart",				Vote_Val_None,			Vote_Pass_RestartMatch,	4,		1,	"",									"restarts the current match"},
+	{"gametype",			Vote_Val_Gametype,		Vote_Pass_Gametype,		8,		2,	"<ffa|duel|tdm|ctf|ca|ft|horde>",	"changes the current gametype"},
+	{"timelimit",			Vote_Val_Timelimit,		Vote_Pass_Timelimit,	16,		2,	"<0..$>",							"alters the match time limit, 0 for no time limit"},
+	{"scorelimit",			Vote_Val_Scorelimit,	Vote_Pass_Scorelimit,	32,		2,	"<0..$>",							"alters the match score limit, 0 for no score limit"},
+	{"shuffle",				Vote_Val_ShuffleTeams,	Vote_Pass_ShuffleTeams,	64,		2,	"",									"shuffles teams"},
+	{"unlagged",			Vote_Val_Unlagged,		Vote_Pass_Unlagged,		128,	2,	"<0/1>",							"enables or disables lag compensation"},
+	{"cointoss",			Vote_Val_None,			Vote_Pass_Cointoss,		256,	1,	"",									"invokes a HEADS or TAILS cointoss"},
+};
+
+/*
+===============
+FindVoteCmdByName
+
+===============
+*/
+static vcmds_t *FindVoteCmdByName(const char *name) {
+	vcmds_t *cc = vote_cmds;
+
+	for (size_t i = 0; i < ARRAY_LEN(vote_cmds); i++, cc++) {
+		if (!cc->name)
+			continue;
+		if (!Q_strcasecmp(cc->name, name))
+			return cc;
+	}
+
+	return nullptr;
+}
+
+/*
+==================
+Cmd_Vote_Passed
+==================
+*/
+void Cmd_Vote_Passed() {
+	level.vote->func();
+
+	level.vote = nullptr;
+	Q_strlcpy(level.vote_arg, nullptr, sizeof(level.vote_arg));
+	level.vote_execute_time = 0_sec;
+}
+
+/*
+=================
+ValidVoteCommand
+=================
+*/
+static bool ValidVoteCommand(edict_t *ent) {
+	if (!ent->client)
+		return false; // not fully in game yet
+
+	level.vote = nullptr;
+
+	vcmds_t *cc = FindVoteCmdByName(gi.argv(1));
+
+	if (!cc) {
+		gi.LocClient_Print(ent, PRINT_HIGH, "Invalid vote command: {}\n", gi.argv(1));
+		return false;
+	}
+
+	if (cc->args && gi.argc() < (2 + cc->args ? 1 : 0)) {
+		gi.LocClient_Print(ent, PRINT_HIGH, "{}: {}\nUsage: {} {}\n", cc->name, cc->help, cc->name, cc->args);
+		return false;
+	}
+
+	if (!cc->val_func(ent))
+		return false;
+
+	level.vote = cc;
+	Q_strlcpy(level.vote_arg, gi.argv(2), sizeof(level.vote_arg));
+	gi.Com_PrintFmt("vote_arg={}\n", level.vote_arg);
+	return true;
+}
+
+/*
+==================
+Cmd_CallVote_f
+==================
+*/
+static void Cmd_CallVote_f(edict_t *ent) {
+	if (!deathmatch->integer)
+		return;
+
+	// formulate list of allowed voting commands
+	vcmds_t *cc = vote_cmds;
+
+	char vstr[1024] = " ";
+	for (size_t i = 0; i < ARRAY_LEN(vote_cmds); i++, cc++) {
+		if (!cc->name)
+			continue;
+		
+		if (g_vote_flags->integer & cc->flag)
+			continue;
+			
+		strcat(vstr, G_Fmt("{} ", cc->name).data());
+	}
+
+	if (!g_allow_voting->integer || strlen(vstr) <= 1) {
+		gi.LocClient_Print(ent, PRINT_HIGH, "Voting not allowed here.\n\"");
+		return;
+	}
+
+	if (gi.argc() < 2) {
+		gi.LocClient_Print(ent, PRINT_HIGH, "Usage: {} <command> <params>\nValid Voting Commands:{}\n", gi.argv(0), vstr);
+		return;
+	}
+
+	if (!g_allow_vote_midgame->integer && level.match_state >= MS_MATCH_COUNTDOWN) {
+		gi.LocClient_Print(ent, PRINT_HIGH, "Voting is only allowed during the warm up period.\n\"");
+		return;
+	}
+
+	if (level.vote_time) {
+		gi.LocClient_Print(ent, PRINT_HIGH, "A vote is already in progress.\n\"");
+		return;
+	}
+
+	// if there is still a vote to be executed
+	if (level.vote_execute_time || level.restarted) {
+		gi.LocClient_Print(ent, PRINT_HIGH, "Previous vote command is still awaiting execution.\n\"");
+		return;
+	}
+
+	if (g_vote_limit->integer && ent->client->pers.vote_count >= g_vote_limit->integer) {
+		gi.LocClient_Print(ent, PRINT_HIGH, "You have called the maximum number of votes ({}).\n\"", g_vote_limit->integer);
+		return;
+	}
+	if (!g_allow_spec_vote->integer && !ClientIsPlaying(ent->client)) {
+		gi.LocClient_Print(ent, PRINT_HIGH, "You are not allowed to call a vote as a spectator.\n\"");
+		return;
+	}
+
+	// make sure it is a valid command to vote on
+	if (!ValidVoteCommand(ent))
+		return;
+
+	gi.LocBroadcast_Print(PRINT_CENTER, "{} called a vote:\n{}{}\n", ent->client->resp.netname, gi.argv(1), (gi.argc() > 2 && strlen(level.vote->args)) ? G_Fmt(" {}", gi.argv(2)).data() : "");
+
+	// start the voting, the caller automatically votes yes
+	level.vote_time = level.time;
+	level.vote_yes = 1;
+	level.vote_no = 0;
+
+	for (size_t i = 0; i < game.maxclients; i++)
+		game.clients[i].pers.voted = 0;
+
+	ent->client->pers.voted = 1;
+
+	ent->client->pers.vote_count++;
+
+	//trap_SetConfigstring(CS_VOTE_TIME, va("%i", level.vote_time));
+	//trap_SetConfigstring(CS_VOTE_STRING, level.vote_display_string);
+	//trap_SetConfigstring(CS_VOTE_YES, va("%i", level.vote_yes));
+	//trap_SetConfigstring(CS_VOTE_NO, va("%i", level.vote_no));
+}
+
+/*
+==================
+Cmd_Vote_f
+==================
+*/
+static void Cmd_Vote_f(edict_t *ent) {
+	if (!deathmatch->integer)
+		return;
+
+	if (!level.vote_time) {
+		gi.LocClient_Print(ent, PRINT_HIGH, "print \"No vote in progress.\n\"");
+		return;
+	}
+
+	if (ent->client->pers.voted != 0) {
+		gi.LocClient_Print(ent, PRINT_HIGH, "print \"Vote already cast.\n\"");
+		return;
+	}
+
+	if (ent->client->resp.team == TEAM_SPECTATOR) {
+		gi.LocClient_Print(ent, PRINT_HIGH, "print \"Not allowed to vote as spectator.\n\"");
+		return;
+	}
+
+	gi.LocClient_Print(ent, PRINT_HIGH, "print \"Vote cast.\n\"");
+
+	const char *arg = gi.argv(1);
+
+	if (arg[0] == 'y' || arg[0] == 'Y' || arg[0] == '1') {
+		level.vote_yes++;
+		ent->client->pers.voted = 1;
+		//trap_SetConfigstring(CS_VOTE_YES, va("%i", level.vote_yes));
+	} else {
+		level.vote_no++;
+		ent->client->pers.voted = -1;
+		//trap_SetConfigstring(CS_VOTE_NO, va("%i", level.vote_no));
+	}
+	
+	// a majority will be determined in CheckVote, which will also account
+	// for players entering or leaving
+}
+
+void G_RevertVote(gclient_t *client) {
+	if (!level.vote_time)
+		return;
+
+	if (client->pers.voted == 1) {
+		level.vote_yes--;
+		client->pers.voted = 0;
+		//trap_SetConfigstring(CS_VOTE_YES, va("%i", level.vote_yes));
+	} else if (client->pers.voted == -1) {
+		level.vote_no--;
+		client->pers.voted = 0;
+		//trap_SetConfigstring(CS_VOTE_NO, va("%i", level.vote_no));
+	}
+}
+
 /*----------------------------------------------------------------*/
 
+/*
+=================
+Cmd_Admin_AllReady_f
+=================
+*/
+static void Cmd_Admin_AllReady_f(edict_t *ent) {
+	if (level.match_state != MS_WARMUP_READYUP) {
+		gi.LocClient_Print(ent, PRINT_HIGH, "Cannot change ready state at this point.\n");
+		return;
+	}
+	ReadyAll();
+}
+
+/*
+=================
+Cmd_Admin_AllUnready_f
+=================
+*/
+static void Cmd_Admin_AllUnready_f(edict_t *ent) {
+	if (level.match_state != MS_WARMUP_READYUP) {
+		gi.LocClient_Print(ent, PRINT_HIGH, "Cannot change ready state at this point.\n");
+		return;
+	}
+	UnReadyAll();
+}
+
+/*
+=================
+Cmd_Admin_LockTeam_f
+=================
+*/
+static void Cmd_Admin_LockTeam_f(edict_t *ent) {
+	if (gi.argc() < 3) {
+		gi.LocClient_Print(ent, PRINT_HIGH, "Usage: {} {} [team]\n", gi.argv(0), gi.argv(1));
+		return;
+	}
+
+	team_t team = StringToTeamNum(gi.argv(2));
+
+	if (team == TEAM_NONE || team == TEAM_SPECTATOR) {
+		gi.LocClient_Print(ent, PRINT_HIGH, "Invalid team.\n");
+		return;
+	}
+
+	if (level.locked[team]) {
+		gi.LocClient_Print(ent, PRINT_HIGH, "{} is already locked.\n", Teams_TeamName(team));
+		return;
+	}
+
+	gi.LocBroadcast_Print(PRINT_HIGH, "{} has been locked\n", Teams_TeamName(team));
+	level.locked[team] = true;
+}
+
+/*
+=================
+Cmd_Admin_UnlockTeam_f
+=================
+*/
+static void Cmd_Admin_UnlockTeam_f(edict_t *ent) {
+	if (gi.argc() < 3) {
+		gi.LocClient_Print(ent, PRINT_HIGH, "Usage: {} {} [team]\n", gi.argv(0), gi.argv(1));
+		return;
+	}
+
+	team_t team = StringToTeamNum(gi.argv(2));
+
+	if (team == TEAM_NONE || team == TEAM_SPECTATOR) {
+		gi.LocClient_Print(ent, PRINT_HIGH, "Invalid team.\n");
+		return;
+	}
+
+	if (!level.locked[team]) {
+		gi.LocClient_Print(ent, PRINT_HIGH, "{} is already unlocked.\n", Teams_TeamName(team));
+		return;
+	}
+
+	gi.LocBroadcast_Print(PRINT_HIGH, "{} has been unlocked\n", Teams_TeamName(team));
+	level.locked[team] = false;
+}
+
+/*
+=================
+Cmd_Admin_SetTeam_f
+=================
+*/
+static void Cmd_Admin_SetTeam_f(edict_t *ent) {
+	// admin forceteam [playername/num] [team]
+	if (gi.argc() < 4) {
+		gi.LocClient_Print(ent, PRINT_HIGH, "Usage: {} {} [playername/num] [team]\n", gi.argv(0), gi.argv(1));
+		return;
+	}
+
+	char name[MAX_NETNAME];
+	team_t team = StringToTeamNum(gi.argv(3));
+	edict_t *targ = nullptr;
+
+	if (team == TEAM_NONE)
+		return;
+
+	Q_strlcpy(name, gi.argv(2), sizeof(name));
+
+	for (size_t i = 0; i < game.maxclients; i++) {
+		if (!Q_strcasecmp(name, game.clients[i].resp.netname)) {
+			targ = &g_edicts[&game.clients[i] - game.clients];
+			break;
+		}
+	}
+
+	if (!targ) {
+		size_t num = atoi(gi.argv(2));
+		if (num >= 0 && num < game.maxclients) {
+			targ = &g_edicts[&game.clients[num] - game.clients];
+		}
+	}
+
+	if (!targ || !targ->inuse || !targ->client) {
+		gi.LocClient_Print(ent, PRINT_HIGH, "Invalid client name or number.\n");
+		return;
+	}
+
+	if (targ->client->resp.team == team) {
+		gi.LocClient_Print(ent, PRINT_HIGH, "Client is already on selected team.\n");
+		return;
+	}
+
+	if ((Teams() && team == TEAM_FREE) || (!Teams() && team != TEAM_SPECTATOR && team != TEAM_FREE)) {
+		gi.LocClient_Print(ent, PRINT_HIGH, "Invalid team.\n");
+		return;
+	}
+
+	SetTeam(targ, team, false, true);
+}
+
+/*
+=================
+Cmd_Admin_Shuffle_f
+=================
+*/
+static void Cmd_Admin_Shuffle_f(edict_t *ent) {
+	TeamShuffle();
+
+	gi.Com_Print("SHUFFLE\n");
+}
+
+/*
+=================
+Cmd_Admin_StartMatch_f
+=================
+*/
+static void Cmd_Admin_StartMatch_f(edict_t *ent) {
+	if (level.match_state > MS_WARMUP_READYUP) {
+		gi.LocClient_Print(ent, PRINT_HIGH, "Match has already started.\n");
+		return;
+	}
+
+	Match_Start();
+}
+
+/*
+=================
+Cmd_Admin_EndMatch_f
+=================
+*/
+static void Cmd_Admin_EndMatch_f(edict_t *ent) {
+	if (level.match_state < MS_MATCH_IN_PROGRESS) {
+		gi.LocClient_Print(ent, PRINT_HIGH, "Match has not yet begun.\n");
+		return;
+	}
+	if (level.intermission_time) {
+		gi.LocClient_Print(ent, PRINT_HIGH, "Match has already ended.\n");
+		return;
+	}
+	QueueIntermission("Admin has forced the match to end.");
+}
+
+/*
+=================
+Cmd_Admin_ResetMatch_f
+=================
+*/
+static void Cmd_Admin_ResetMatch_f(edict_t *ent) {
+	if (level.match_state < MS_MATCH_IN_PROGRESS) {
+		gi.LocClient_Print(ent, PRINT_HIGH, "Match has not yet begun.\n");
+		return;
+	}
+	if (level.intermission_time) {
+		gi.LocClient_Print(ent, PRINT_HIGH, "Match has already ended.\n");
+		return;
+	}
+	
+	gi.LocBroadcast_Print(PRINT_HIGH, "Admin has reset the match.\n");
+	Match_Reset();
+}
+
+/*
+=================
+Cmd_Admin_ForceVote_f
+=================
+*/
+static void Cmd_Admin_ForceVote_f(edict_t *ent) {
+	if (!deathmatch->integer)
+		return;
+
+	if (!level.vote_time) {
+		gi.LocClient_Print(ent, PRINT_HIGH, "print \"No vote in progress.\n\"");
+		return;
+	}
+
+	const char *arg = gi.argv(2);
+
+	if (arg[0] == 'y' || arg[0] == 'Y' || arg[0] == '1') {
+		gi.LocBroadcast_Print(PRINT_HIGH, "Admin passed vote.\n");
+		level.vote_execute_time = level.time + 3_sec;
+	} else {
+		gi.LocBroadcast_Print(PRINT_HIGH, "Admin failed vote.\n");
+		level.vote_time = 0_sec;
+	}
+}
+
+cmds_t admin_cmds[] = {
+	{"readyall",		Cmd_Admin_AllReady_f},
+	{"unreadyall",		Cmd_Admin_AllUnready_f},
+	{"startmatch",		Cmd_Admin_StartMatch_f},
+	{"endmatch",		Cmd_Admin_EndMatch_f},
+	{"reset",			Cmd_Admin_ResetMatch_f},
+	{"lockteam",		Cmd_Admin_LockTeam_f},
+	{"unlockteam",		Cmd_Admin_UnlockTeam_f },
+	{"setteam",			Cmd_Admin_SetTeam_f},
+	{"shuffle",			Cmd_Admin_Shuffle_f},
+	{"vote",			Cmd_Admin_ForceVote_f },
+};
+
+/*
+===============
+FindAdminCmdByName
+
+===============
+*/
+static cmds_t *FindAdminCmdByName(const char *name) {
+	cmds_t *cc = admin_cmds;
+	int					i;
+
+	for (i = 0; i < (sizeof(admin_cmds) / sizeof(admin_cmds[0])); i++, cc++) {
+		if (!cc->name)
+			continue;
+		if (!Q_strcasecmp(cc->name, name))
+			return cc;
+	}
+
+	return nullptr;
+}
+
 static void Cmd_Admin_f(edict_t *ent) {
-	if (!allow_admin->integer) {
+	if (!g_allow_admin->integer) {
 		gi.LocClient_Print(ent, PRINT_HIGH, "Administration is disabled\n");
 		return;
 	}
 
+	if (!ent->client->resp.admin) {
+		gi.LocClient_Print(ent, PRINT_HIGH, "You do not have administrative rights.\n");
+		return;
+	}
+	/*
 	if (gi.argc() > 1 && admin_password->string && *admin_password->string &&
 		!ent->client->resp.admin && strcmp(admin_password->string, gi.argv(1)) == 0) {
 		ent->client->resp.admin = true;
-		gi.LocBroadcast_Print(PRINT_HIGH, "{} has become an admin.\n", ent->client->pers.netname);
+		gi.LocBroadcast_Print(PRINT_HIGH, "{} has become an admin.\n", ent->client->resp.netname);
 		gi.LocClient_Print(ent, PRINT_HIGH, "Type 'admin' to access the adminstration menu.\n");
 	}
+	*/
+	// run command if valid...
 
-	if (!ent->client->resp.admin) {
-		Voting_Begin(ent, VOTING_ADMIN, G_Fmt("{} has requested admin rights.\n",
-			ent->client->pers.netname).data());
+	if (gi.argc() < 2) {
+		// formulate list of admin commands
+		cmds_t *ac = admin_cmds;
+
+		char vstr[1024] = " ";
+		for (size_t i = 0; i < ARRAY_LEN(admin_cmds); i++, ac++) {
+			if (!ac->name)
+				continue;
+
+			strcat(vstr, G_Fmt("{} ", ac->name).data());
+		}
+
+		gi.LocClient_Print(ent, PRINT_HIGH, "Usage: {} <command> <params>\nValid Admin Commands:{}\n", gi.argv(0), vstr);
 		return;
 	}
 
-	if (ent->client->menu)
-		PMenu_Close(ent);
+	cmds_t *cc = FindAdminCmdByName(gi.argv(1));
 
-	//Menu_Admin(ent);
+	if (!cc)
+		return;
+
+	if (!cc->func)
+		return;
+
+	cc->func(ent);
+
+	if (ent->client->menu)
+		P_Menu_Close(ent);
+
+	//G_Menu_Admin(ent);
 }
 
 /*----------------------------------------------------------------*/
 
 static void Cmd_Ready_f(edict_t *ent) {
-	uint32_t i;
-	edict_t *e;
-	uint32_t count_total, count_ready;
-
-	if (ClientIsSpectating(ent->client)) {
-		gi.LocClient_Print(ent, PRINT_HIGH, "Pick a team first (hit <TAB> for menu)\n");
+	if (level.match_state == MS_WARMUP_DEFAULT) {
+		if (Teams()) {
+			gi.LocClient_Print(ent, PRINT_HIGH, "You cannot ready until teams are present and balanced.\n");
+		} else if (duel->integer) {
+			gi.LocClient_Print(ent, PRINT_HIGH, "You cannot ready until your opponent is present.\n");
+		} else {
+			gi.LocClient_Print(ent, PRINT_HIGH, "You cannot ready until players are present.\n");
+		}
 		return;
 	}
 
-	if (level.match != MATCH_SETUP) {
-		gi.LocClient_Print(ent, PRINT_HIGH, "A match is not being setup.\n");
+	if (level.match_state != MS_WARMUP_READYUP) {
+		gi.LocClient_Print(ent, PRINT_HIGH, "You cannot ready at this stage of the match.\n");
 		return;
 	}
 
@@ -2538,41 +2943,12 @@ static void Cmd_Ready_f(edict_t *ent) {
 	}
 
 	ent->client->resp.ready = true;
-
-	count_total = count_ready = 0;
-	for (count_ready = 0, i = 1; i <= game.maxclients; i++) {
-		e = g_edicts + i;
-		if (!e->inuse)
-			continue;
-
-		if (!ClientIsSpectating(e->client)) {
-			count_total++;
-
-			if (e->client->resp.ready || e->svflags & SVF_BOT)
-				count_ready++;
-		}
-	}
-
-	if ((float)count_ready / (float)count_total >= g_warmup_ready_percentage->value) {
-		// enough players have readied
-		gi.LocBroadcast_Print(PRINT_CENTER, "Match starting...\n");
-		level.match = MATCH_PREGAME;
-		level.matchtime = level.time + gtime_t::from_sec(g_warmup_countdown->value);
-		level.countdown = false;
-		gi.positioned_sound(world->s.origin, world, CHAN_AUTO | CHAN_RELIABLE, gi.soundindex("misc/talk1.wav"), 1, ATTN_NONE, 0);
-	} else {
-		gi.LocBroadcast_Print(PRINT_CENTER, "{} is ready.\n", ent->client->pers.netname);
-	}
+	gi.LocBroadcast_Print(PRINT_CENTER, "{} is ready.\n", ent->client->resp.netname);
 }
 
 static void Cmd_NotReady_f(edict_t *ent) {
-	if (ClientIsSpectating(ent->client)) {
-		gi.LocClient_Print(ent, PRINT_HIGH, "Pick a team first (hit <TAB> for menu)\n");
-		return;
-	}
-
-	if (level.match != MATCH_SETUP && level.match != MATCH_PREGAME) {
-		gi.LocClient_Print(ent, PRINT_HIGH, "A match is not being setup.\n");
+	if (level.match_state != MS_WARMUP_READYUP) {
+		gi.LocClient_Print(ent, PRINT_HIGH, "You cannot ready at this stage of the match.\n");
 		return;
 	}
 
@@ -2582,20 +2958,31 @@ static void Cmd_NotReady_f(edict_t *ent) {
 	}
 
 	ent->client->resp.ready = false;
+	gi.LocBroadcast_Print(PRINT_CENTER, "{} is NOT ready.\n", ent->client->resp.netname);
+}
 
-	if (level.match == MATCH_PREGAME) {
-		gi.LocBroadcast_Print(PRINT_CENTER, "Match halted.\n");
-		level.match = MATCH_SETUP;
-		level.matchtime = level.time + gtime_t::from_min(matchsetuptime->value);
-	} else {
-		gi.LocBroadcast_Print(PRINT_CENTER, "{} is not ready.\n", ent->client->pers.netname);
+static void Cmd_ReadyUp_f(edict_t *ent) {
+	if (level.match_state == MS_WARMUP_DEFAULT) {
+		if (Teams()) {
+			gi.LocClient_Print(ent, PRINT_HIGH, "You cannot ready until teams are present and balanced.\n");
+		} else if (duel->integer) {
+			gi.LocClient_Print(ent, PRINT_HIGH, "You cannot ready until your opponent is present.\n");
+		} else {
+			gi.LocClient_Print(ent, PRINT_HIGH, "You cannot ready until players are present.\n");
+		}
+		return;
 	}
+
+	if (level.match_state != MS_WARMUP_READYUP) {
+		gi.LocClient_Print(ent, PRINT_HIGH, "You cannot ready at this stage of the match.\n");
+		return;
+	}
+
+	ent->client->resp.ready ^= true;
+	gi.LocBroadcast_Print(PRINT_CENTER, "{} is {}ready.\n", ent->client->resp.netname, ent->client->resp.ready ? "" : "NOT ");
 }
 
 static void Cmd_Hook_f(edict_t *ent) {
-	if (!ent->client)
-		return;
-
 	if (!g_allow_grapple->integer || !g_grapple_offhand->integer)
 		return;
 
@@ -2603,46 +2990,47 @@ static void Cmd_Hook_f(edict_t *ent) {
 }
 
 static void Cmd_UnHook_f(edict_t *ent) {
-	if (!ent->client)
-		return;
 	Weapon_Grapple_DoReset(ent->client);
+}
+
+static void Cmd_MapList_f(edict_t *ent) {
+	const char *s = g_map_list->string;
+	if (g_map_list->string[0])
+		s = G_Fmt("Current Map List:\n{}\n", g_map_list->string).data();
+	else
+		s = "No Map List set.\n";
+	gi.LocClient_Print(ent, PRINT_HIGH, s);
+}
+
+static void Cmd_Motd_f(edict_t *ent) {
+	const char *s = g_motd->string;
+	if (g_motd->string[0])
+		s = G_Fmt("Message of the Day:\n{}\n", g_motd->string).data();
+	else
+		s = "No Message of the Day set.\n";
+	gi.LocClient_Print(ent, PRINT_HIGH, s);
 }
 
 // =========================================
 
-enum cmd_flags_t : uint32_t {
-	CF_NONE = 0,
-	CF_ALLOW_DEAD = bit_v<0>,
-	CF_ALLOW_INT = bit_v<1>,
-	CF_ALLOW_SPEC = bit_v<2>,
-	CF_MATCH_ONLY = bit_v<3>,
-	CF_ADMIN_ONLY = bit_v<4>,
-	CF_CHEAT_PROTECT = bit_v<5>,
-};
-
-struct client_commands_t {
-	const		char *name;
-	void		(*func)(edict_t *ent);
-	uint32_t	flags;
-};
-
-client_commands_t cmds[] = {
-	{"-hk",				Cmd_UnHook_f,			CF_NONE},
-	{"+hk",				Cmd_Hook_f,				CF_NONE},
-	//{"callvote",		Cmd_CallVote_f,			CF_ALLOW_DEAD|CF_ALLOW_SPEC},
+cmds_t client_cmds[] = {
+	{"a",				Cmd_Admin_f,			CF_ALLOW_INT | CF_ALLOW_SPEC},
 	{"admin",			Cmd_Admin_f,			CF_ALLOW_INT | CF_ALLOW_SPEC},
 	{"alertall",		Cmd_AlertAll_f,			CF_ALLOW_SPEC | CF_CHEAT_PROTECT},
 	{"boot",			Cmd_Boot_f,				CF_ALLOW_INT | CF_ALLOW_SPEC},
+	{"callvote",		Cmd_CallVote_f,			CF_ALLOW_DEAD},
 	{"checkpoi",		Cmd_CheckPOI_f,			CF_ALLOW_SPEC | CF_CHEAT_PROTECT},
 	{"clear_ai_enemy",	Cmd_Clear_AI_Enemy_f,	CF_CHEAT_PROTECT},
+	{"cv",				Cmd_CallVote_f,			CF_ALLOW_DEAD},
 	{"drop",			Cmd_Drop_f,				CF_NONE},
 	{"drop_index",		Cmd_Drop_f,				CF_NONE},
+	{"fm",				Cmd_FragMessages_f,		CF_ALLOW_SPEC | CF_ALLOW_DEAD},
 	{"ghost",			Cmd_Ghost_f,			CF_ALLOW_DEAD | CF_ALLOW_INT | CF_ALLOW_SPEC},
 	{"give",			Cmd_Give_f,				CF_ALLOW_SPEC | CF_CHEAT_PROTECT},
 	{"god",				Cmd_God_f,				CF_ALLOW_SPEC | CF_CHEAT_PROTECT},
 	{"help",			Cmd_Help_f,				CF_ALLOW_DEAD | CF_ALLOW_SPEC},
 	{"hook",			Cmd_Hook_f,				CF_NONE},
-	{"id",				Cmd_CrosshairID_f,		CF_ALLOW_SPEC},
+	{"id",				Cmd_CrosshairID_f,		CF_ALLOW_SPEC | CF_ALLOW_DEAD},
 	{"immortal",		Cmd_Immortal_f,			CF_ALLOW_SPEC | CF_CHEAT_PROTECT},
 	{"invdrop",			Cmd_InvDrop_f,			CF_NONE},
 	{"inven",			Cmd_Inven_f,			CF_ALLOW_DEAD | CF_ALLOW_SPEC},
@@ -2653,17 +3041,22 @@ client_commands_t cmds[] = {
 	{"invprevp",		Cmd_InvPrevP_f,			CF_NONE},
 	{"invprevw",		Cmd_InvPrevW_f,			CF_NONE},
 	{"invuse",			Cmd_InvUse_f,			CF_ALLOW_SPEC},	//spec for menu up/down
+	{"forfeit",			Cmd_Forfeit_f,			CF_ALLOW_DEAD},
+	{"kb",				Cmd_KillBeep_f,			CF_ALLOW_SPEC | CF_ALLOW_DEAD},
 	{"kill",			Cmd_Kill_f,				CF_NONE},
 	{"kill_ai",			Cmd_Kill_AI_f,			CF_CHEAT_PROTECT},
 	{"listmonsters",	Cmd_ListMonsters_f,		CF_ALLOW_DEAD | CF_ALLOW_INT | CF_ALLOW_SPEC | CF_CHEAT_PROTECT},
+	{"maplist",			Cmd_MapList_f,			CF_ALLOW_DEAD | CF_ALLOW_SPEC},
+	{"motd",			Cmd_Motd_f,				CF_ALLOW_SPEC | CF_ALLOW_INT},
 	{"noclip",			Cmd_Noclip_f,			CF_ALLOW_SPEC | CF_CHEAT_PROTECT},
 	{"notarget",		Cmd_Notarget_f,			CF_ALLOW_SPEC | CF_CHEAT_PROTECT},
 	{"notready",		Cmd_NotReady_f,			CF_ALLOW_DEAD},
 	{"novisible",		Cmd_Novisible_f,		CF_ALLOW_SPEC | CF_CHEAT_PROTECT},
-	{"observer",		Cmd_Observer_f,			CF_ALLOW_SPEC},
 	{"players",			Cmd_Players_f,			CF_ALLOW_DEAD | CF_ALLOW_INT | CF_ALLOW_SPEC},
+	{"playrank",		Cmd_PlayersRanked_f,	CF_ALLOW_DEAD | CF_ALLOW_INT | CF_ALLOW_SPEC},
 	{"putaway",			Cmd_PutAway_f,			CF_ALLOW_SPEC},	//spec for menu close
 	{"ready",			Cmd_Ready_f,			CF_ALLOW_DEAD},
+	{"readyup",			Cmd_ReadyUp_f,			CF_ALLOW_DEAD},
 	{"score",			Cmd_Score_f,			CF_ALLOW_DEAD | CF_ALLOW_INT | CF_ALLOW_SPEC},
 	{"setpoi",			Cmd_SetPOI_f,			CF_ALLOW_SPEC | CF_CHEAT_PROTECT},
 	{"spawn",			Cmd_Spawn_f,			CF_ALLOW_SPEC | CF_CHEAT_PROTECT},
@@ -2672,27 +3065,18 @@ client_commands_t cmds[] = {
 	{"target",			Cmd_Target_f,			CF_ALLOW_DEAD | CF_ALLOW_SPEC | CF_CHEAT_PROTECT},
 	{"team",			Cmd_Team_f,				CF_ALLOW_DEAD | CF_ALLOW_SPEC},
 	{"teleport",		Cmd_Teleport_f,			CF_ALLOW_SPEC | CF_CHEAT_PROTECT},
-	{"timer",			Cmd_Timer_f,			CF_ALLOW_SPEC},
+	{"timer",			Cmd_Timer_f,			CF_ALLOW_SPEC | CF_ALLOW_DEAD},
 	{"unhook",			Cmd_UnHook_f,			CF_NONE},
 	{"use",				Cmd_Use_f,				CF_NONE},
 	{"use_index",		Cmd_Use_f,				CF_NONE},
 	{"use_index_only",	Cmd_Use_f,				CF_NONE},
 	{"use_only",		Cmd_Use_f,				CF_NONE},
-	{"warp",			Voting_Warp_f,			CF_ALLOW_INT | CF_ALLOW_SPEC},
+	{"vote",			Cmd_Vote_f,				CF_ALLOW_DEAD},
 	{"wave",			Cmd_Wave_f,				CF_NONE},
 	{"weaplast",		Cmd_WeapLast_f,			CF_NONE},
 	{"weapnext",		Cmd_WeapNext_f,			CF_NONE},
 	{"weapprev",		Cmd_WeapPrev_f,			CF_NONE},
-	{"where",			Cmd_Where_f,			CF_ALLOW_SPEC},
-#if 0
-	{"forceready",		Cmd_Match_Ready_f,		CF_ADMIN_ONLY},
-	{"forcenotready",	Cmd_Match_NotReady_f,	CF_ADMIN_ONLY},
-
-	{"setteam",			Cmd_Admin_SetTeam_f,	CF_ADMIN_ONLY},
-	{"forcestart",		Cmd_Admin_ForceStart_f,	CF_ADMIN_ONLY},
-	{"forceend",		Cmd_Admin_ForceEnd_f,	CF_ADMIN_ONLY},
-	{"shuffle",			Cmd_Admin_Shuffle_f,	CF_ADMIN_ONLY}
-#endif
+	{"where",			Cmd_Where_f,			CF_ALLOW_SPEC}
 };
 
 /*
@@ -2701,11 +3085,11 @@ FindClientCmdByName
 
 ===============
 */
-static client_commands_t *FindClientCmdByName(const char *name) {
-	client_commands_t *cc = cmds;
+static cmds_t *FindClientCmdByName(const char *name) {
+	cmds_t *cc = client_cmds;
 	int					i;
 
-	for (i = 0; i < (sizeof(cmds) / sizeof(cmds[0])); i++, cc++) {
+	for (i = 0; i < (sizeof(client_cmds) / sizeof(client_cmds[0])); i++, cc++) {
 		if (!cc->name)
 			continue;
 		if (!Q_strcasecmp(cc->name, name))
@@ -2721,13 +3105,14 @@ ClientCommand
 =================
 */
 void ClientCommand(edict_t *ent) {
-	client_commands_t *cc;
+	cmds_t *cc;
 	const char *cmd;
 
 	if (!ent->client)
 		return; // not fully in game yet
 
 	cmd = gi.argv(0);
+	cc = FindClientCmdByName(cmd);
 
 	// [Paril-KEX] these have to go through the lobby system
 #ifndef KEX_Q2_GAME
@@ -2736,7 +3121,7 @@ void ClientCommand(edict_t *ent) {
 		return;
 	}
 	if (!Q_strcasecmp(cmd, "say_team") == 0 || !Q_strcasecmp(cmd, "steam")) {
-		if (IsTeamplay())
+		if (Teams())
 			Cmd_Say_Team_f(ent, gi.args());
 		else
 			Cmd_Say_f(ent, false);
@@ -2744,20 +3129,13 @@ void ClientCommand(edict_t *ent) {
 	}
 #endif
 
-	cc = FindClientCmdByName(cmd);
 	if (!cc) {
-		if (cmd == "admin") {
-			if (!(cc->flags & CF_ADMIN_ONLY))
-				if (!AdminOk(ent))
-					return;
-		} else {
-			// always allow replace_/disable_ item cvars
-			if (gi.argc() > 1 && strstr(cmd, "replace_") || strstr(cmd, "disable_")) {
-				gi.cvar_forceset(cmd, gi.argv(1));
-			} else
-				gi.LocClient_Print(ent, PRINT_HIGH, "Invalid client command: \"{}\"\n", cmd);
-			return;
-		}
+		// always allow replace_/disable_ item cvars
+		if (gi.argc() > 1 && strstr(cmd, "replace_") || strstr(cmd, "disable_")) {
+			gi.cvar_forceset(cmd, gi.argv(1));
+		} else
+			gi.LocClient_Print(ent, PRINT_HIGH, "Invalid client command: \"{}\"\n", cmd);
+		return;
 	}
 
 	if (cc->flags & CF_CHEAT_PROTECT)
@@ -2773,8 +3151,7 @@ void ClientCommand(edict_t *ent) {
 			return;
 
 	if (cc->flags & CF_MATCH_ONLY)
-		if (!MatchOk(ent))
-			return;
+		return;
 
 	if (!(cc->flags & CF_ALLOW_INT))
 		if (level.intermission_time)

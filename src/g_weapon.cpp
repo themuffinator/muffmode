@@ -3245,7 +3245,7 @@ static THINK(Trap_Think) (edict_t *ent) -> void {
 				ent->s.frame = 5;
 
 				// link up any gibs that this monster may have spawned
-				for (uint32_t i = 0; i < globals.num_edicts; i++) {
+				for (size_t i = 0; i < globals.num_edicts; i++) {
 					edict_t *e = &g_edicts[i];
 
 					if (!e->inuse)

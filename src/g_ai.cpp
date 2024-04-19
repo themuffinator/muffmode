@@ -727,7 +727,7 @@ bool FindTarget(edict_t *self)
 
             if (!FacingIdeal(self))
                 skip_found = false;
-            else if (!SV_CloseEnough(self, client, 8.f))
+            else if (!G_CloseEnough(self, client, 8.f))
                 skip_found = false;
 
             if (!skip_found && (self->monsterinfo.aiflags & AI_TEMP_STAND_GROUND))
@@ -1467,7 +1467,7 @@ void ai_run(edict_t *self, float dist)
         if (self->enemy)
             v = self->s.origin - self->enemy->s.origin;
 
-        bool touching_noise = SV_CloseEnough(self, self->enemy, dist * (gi.tick_rate / 10));
+        bool touching_noise = G_CloseEnough(self, self->enemy, dist * (gi.tick_rate / 10));
 
         if ((!self->enemy) || (touching_noise && FacingIdeal(self)))
         {

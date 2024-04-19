@@ -505,12 +505,8 @@ void ED_CallSpawn(edict_t *ent) {
 					ent->classname = item->classname;
 				}
 			}
-			if (g_dm_powerups_style->integer && deathmatch->integer && item->flags & IF_SUPER_POWERUP) {
-				int32_t r = irandom(30, 60);
-				DelayPowerup(ent, item, gtime_t::from_sec(r));
-			} else {
-				SpawnItem(ent, item);
-			}
+
+			SpawnItem(ent, item);
 			return;
 		}
 	}
@@ -771,9 +767,9 @@ static const std::initializer_list<field_t> entity_fields = {
 			if (type == 0)
 				s->monsterinfo.power_armor_type = IT_NULL;
 			else if (type == 1)
-				s->monsterinfo.power_armor_type = IT_ITEM_POWER_SCREEN;
+				s->monsterinfo.power_armor_type = IT_POWER_SCREEN;
 			else
-				s->monsterinfo.power_armor_type = IT_ITEM_POWER_SHIELD;
+				s->monsterinfo.power_armor_type = IT_POWER_SHIELD;
 		}
 	},
 
@@ -1076,9 +1072,7 @@ void G_FindTeams() {
 		}
 	}
 
-	// ROGUE
 	G_FixTeams();
-	// ROGUE
 
 	gi.Com_PrintFmt("{} teams with {} entities\n", c, c2);
 }
@@ -1246,7 +1240,7 @@ static void PrecacheAssets() {
 
 	ii_highlight = gi.imageindex("i_ctfj");
 
-	if (IsTeamplay()) {
+	if (Teams()) {
 		ii_teams_red_default = gi.imageindex("i_ctf1");
 		ii_teams_blue_default = gi.imageindex("i_ctf2");
 		ii_teams_red_tiny = gi.imageindex("sbfctf1");
@@ -1529,7 +1523,7 @@ void SpawnEntities(const char *mapname, const char *entities, const char *spawnp
 	level.coop_health_scaling = clamp(g_coop_health_scaling->value, 0.f, 1.f);
 
 	// set client fields on player entities
-	for (uint32_t i = 0; i < game.maxclients; i++) {
+	for (size_t i = 0; i < game.maxclients; i++) {
 		g_edicts[i + 1].client = game.clients + i;
 
 		// "disconnect" all players since the level is switching
@@ -1601,7 +1595,7 @@ void SpawnEntities(const char *mapname, const char *entities, const char *spawnp
 
 	if (competition->integer > 1) {
 		level.match = MATCH_SETUP;
-		level.matchtime = level.time + gtime_t::from_min(matchsetuptime->value);
+		level.match_time = level.time + gtime_t::from_min(matchsetuptime->value);
 	}
 
 	QuadHog_SetupSpawn(5_sec);
@@ -1642,7 +1636,7 @@ static void G_InitStatusbar() {
 		// armor
 		sb.ifstat(STAT_SHOW_STATUSBAR).ifstat(STAT_ARMOR_ICON).xv(200).rnum().xv(250).pic(STAT_ARMOR_ICON).endifstat().endifstat();
 
-		// selected item
+		// selected inventory item
 		sb.ifstat(STAT_SHOW_STATUSBAR).ifstat(STAT_SELECTED_ICON).xv(296).pic(STAT_SELECTED_ICON).endifstat().endifstat();
 
 		sb.yb(-50);
@@ -1654,8 +1648,11 @@ static void G_InitStatusbar() {
 		sb.ifstat(STAT_SHOW_STATUSBAR).ifstat(STAT_SELECTED_ITEM_NAME).yb(-34).xv(319).loc_stat_rstring(STAT_SELECTED_ITEM_NAME).yb(-58).endifstat().endifstat();
 	}
 
-	// timer
-	sb.ifstat(STAT_TIMER_ICON).xv(262).num(2, STAT_TIMER).xv(296).pic(STAT_TIMER_ICON).endifstat();
+	// powerup timer
+	sb.ifstat(STAT_SHOW_STATUSBAR).ifstat(STAT_POWERUP_ICON).xv(262).num(2, STAT_POWERUP_TIME).xv(296).pic(STAT_POWERUP_ICON).endifstat().endifstat();
+
+	// tech held
+	sb.ifstat(STAT_SHOW_STATUSBAR).ifstat(STAT_TECH).yb(-137).xr(-26).pic(STAT_TECH).endifstat().endifstat();
 
 	sb.yb(-50);
 	if (!minhud) {
@@ -1669,10 +1666,10 @@ static void G_InitStatusbar() {
 		// key display
 		// move up if the timer is active
 		// FIXME: ugly af
-		sb.ifstat(STAT_TIMER_ICON).yb(-76).endifstat();
+		sb.ifstat(STAT_POWERUP_ICON).yb(-76).endifstat();
 		sb.ifstat(STAT_SELECTED_ITEM_NAME)
 			.yb(-58)
-			.ifstat(STAT_TIMER_ICON)
+			.ifstat(STAT_POWERUP_ICON)
 			.yb(-84)
 			.endifstat()
 			.endifstat();
@@ -1692,49 +1689,41 @@ static void G_InitStatusbar() {
 
 		sb.story();
 	} else {
-		if (IsTeamplay()) {
-			// mini scores
-			// red team
-			sb.yb(-110).ifstat(STAT_MINISCORE_FIRST_PIC).xr(-26).pic(STAT_MINISCORE_FIRST_PIC).endifstat().xr(-78).num(3, STAT_MINISCORE_FIRST_SCORE);
-			sb.ifstat(STAT_MINISCORE_FIRST_POS).yb(-112).xr(-28).pic(STAT_MINISCORE_FIRST_POS).endifstat();// joined overlay
-			// blue team
-			sb.yb(-83).ifstat(STAT_MINISCORE_SECOND_PIC).xr(-26).pic(STAT_MINISCORE_SECOND_PIC).endifstat().xr(-78).num(3, STAT_MINISCORE_SECOND_SCORE);
-			sb.ifstat(STAT_MINISCORE_SECOND_POS).yb(-85).xr(-28).pic(STAT_MINISCORE_SECOND_POS).endifstat();// joined overlay
+		if (Teams()) {
+			// flag carrier indicator
+			if (ctf->integer)
+				sb.ifstat(STAT_CTF_FLAG_PIC).xr(-24).yt(26).pic(STAT_CTF_FLAG_PIC).endifstat();
 
-			if (ctf->integer) {
-				// have flag graph
-				sb.ifstat(STAT_CTF_FLAG_PIC).yt(26).xr(-24).pic(STAT_CTF_FLAG_PIC).endifstat();
-			}
-
-			// team info
+			// teams unbalanced warning
 			sb.ifstat(STAT_TEAMPLAY_INFO).xl(0).yb(-88).stat_string(STAT_TEAMPLAY_INFO).endifstat();
-		} else {
-			// spectator
-			sb.ifstat(STAT_SPECTATOR).xv(0).yb(-58).string2("SPECTATOR MODE").endifstat();	//104
-
-			// chase cam
-			sb.ifstat(STAT_CHASE).xv(0).yb(-68).string("FOLLOWING").xv(80).stat_string(STAT_CHASE).endifstat();
-
-			// mini scores
-			sb.ifstat(STAT_MINISCORE_FIRST_PIC).xr(-26).yb(-110).pic(STAT_MINISCORE_FIRST_PIC).xr(-78).num(3, STAT_MINISCORE_FIRST_SCORE).endifstat();
-			sb.ifstat(STAT_MINISCORE_FIRST_POS).xr(-28).yb(-112).pic(STAT_MINISCORE_FIRST_POS).endifstat();
-			sb.ifstat(STAT_MINISCORE_SECOND_PIC).xr(-26).yb(-83).pic(STAT_MINISCORE_SECOND_PIC).xr(-78).num(3, STAT_MINISCORE_SECOND_SCORE).endifstat();
-			sb.ifstat(STAT_MINISCORE_SECOND_POS).xr(-28).yb(-85).pic(STAT_MINISCORE_SECOND_POS).endifstat();
 		}
 
+		// countdown
+		//sb.ifstat(STAT_COUNTDOWN).xv(192).yt(-124).num(2, STAT_COUNTDOWN).endifstat();
+		sb.ifstat(STAT_COUNTDOWN).xv(144).yb(-256).num(2, STAT_COUNTDOWN).endifstat();
+
+		// match state/timer
+		sb.ifstat(STAT_MATCH_STATE).xv(0).yb(-78).stat_string(STAT_MATCH_STATE).endifstat();
+
+		// chase cam
+		sb.ifstat(STAT_CHASE).xv(0).yb(-68).string("FOLLOWING").xv(80).stat_string(STAT_CHASE).endifstat();
+
+		// spectator
+		sb.ifstat(STAT_SPECTATOR).xv(0).yb(-58).string2("SPECTATOR MODE").endifstat();
+
+		// mini scores...
+		// red/first
+		sb.ifstat(STAT_MINISCORE_FIRST_PIC).xr(-26).yb(-110).pic(STAT_MINISCORE_FIRST_PIC).xr(-78).num(3, STAT_MINISCORE_FIRST_SCORE).endifstat();
+		sb.ifstat(STAT_MINISCORE_FIRST_POS).xr(-28).yb(-112).pic(STAT_MINISCORE_FIRST_POS).endifstat();
+		// blue/second
+		sb.ifstat(STAT_MINISCORE_SECOND_PIC).xr(-26).yb(-83).pic(STAT_MINISCORE_SECOND_PIC).xr(-78).num(3, STAT_MINISCORE_SECOND_SCORE).endifstat();
+		sb.ifstat(STAT_MINISCORE_SECOND_POS).xr(-28).yb(-85).pic(STAT_MINISCORE_SECOND_POS).endifstat();
 		// score limit
 		sb.ifstat(STAT_MINISCORE_FIRST_PIC).xr(-28).yb(-57).stat_string(STAT_SCORELIMIT).endifstat();
 
 		// crosshair id
 		sb.ifstat(STAT_CROSSHAIR_ID_VIEW).xv(122).yb(-160).stat_pname(STAT_CROSSHAIR_ID_VIEW).endifstat();	//112 -58
 		sb.ifstat(STAT_CROSSHAIR_ID_VIEW_COLOR).xv(156).yb(-170).pic(STAT_CROSSHAIR_ID_VIEW_COLOR).endifstat();	//106 -160 //96 -58
-
-		// match state/timer
-		sb.ifstat(STAT_MATCH_STATE).xv(0).yb(-78).stat_string(STAT_MATCH_STATE).endifstat();
-		//sb.ifstat(STAT_SHOW_STATUSBAR).ifstat(STAT_MATCH_STATE).xv(180).yb(-42).stat_string(STAT_MATCH_STATE).endifstat().endifstat();
-
-		// tech
-		sb.ifstat(STAT_TECH).yb(-137).xr(-26).pic(STAT_TECH).endifstat();
 	}
 
 	gi.configstring(CS_STATUSBAR, sb.sb.str().c_str());
@@ -1756,7 +1745,7 @@ static void G_SetGametypeName(void) {
 			} else if (g_quadhog->integer) {
 				s = "Quad Hog CTF";
 			} else {
-				s = "Capture the Flag";
+				s = gt_long_name[GT_CTF];
 			}
 		} else if (freeze->integer) {
 			if (g_instagib->integer) {
@@ -1770,7 +1759,7 @@ static void G_SetGametypeName(void) {
 			} else if (g_quadhog->integer) {
 				s = "Quad Hog Freeze";
 			} else {
-				s = "Freeze Tag";
+				s = gt_long_name[GT_FREEZE];
 			}
 		} else if (clanarena->integer) {
 			if (g_instagib->integer) {
@@ -1784,7 +1773,7 @@ static void G_SetGametypeName(void) {
 			} else if (g_quadhog->integer) {
 				s = "Quad Hog CA";
 			} else {
-				s = "Clan Arena";
+				s = gt_long_name[GT_CA];
 			}
 		} else if (teamplay->integer) {
 			if (g_instagib->integer) {
@@ -1798,7 +1787,7 @@ static void G_SetGametypeName(void) {
 			} else if (g_quadhog->integer) {
 				s = "Quad Hog TDM";
 			} else {
-				s = "Team Deathmatch";
+				s = gt_long_name[GT_TDM];
 			}
 		} else if (duel->integer) {
 			if (g_instagib->integer) {
@@ -1812,7 +1801,7 @@ static void G_SetGametypeName(void) {
 			} else if (g_quadhog->integer) {
 				s = "Quad Hog Duel";
 			} else {
-				s = "Duel";
+				s = gt_long_name[GT_DUEL];
 			}
 		} else if (horde->integer) {
 			if (g_instagib->integer) {
@@ -1826,21 +1815,21 @@ static void G_SetGametypeName(void) {
 			} else if (g_quadhog->integer) {
 				s = "Quad Hog Horde";
 			} else {
-				s = "Horde Mode";
+				s = gt_long_name[GT_HORDE];
 			}
 		} else if (deathmatch->integer) {
 			if (g_instagib->integer) {
 				s = "InstaGib";
 			} else if (g_vampiric_damage->integer) {
-				s = "Vampiric Deathmatch";
+				s = "Vampiric FFA";
 			} else if (g_frenzy->integer) {
-				s = "Frenzy Deathmatch";
+				s = "Frenzy FFA";
 			} else if (g_nadefest->integer) {
 				s = "NadeFest";
 			} else if (g_quadhog->integer) {
 				s = "Quad Hog";
 			} else {
-				s = "Deathmatch";
+				s = gt_long_name[GT_FFA];
 			}
 		} else {
 			s = "Unknown Gametype";
@@ -1937,7 +1926,7 @@ void SP_worldspawn(edict_t *ent) {
 	// [Paril-KEX]
 	if (!deathmatch->integer)
 		gi.configstring(CS_GAME_STYLE, G_Fmt("{}", (int32_t)game_style_t::GAME_STYLE_PVE).data());
-	else if (IsTeamplay())
+	else if (Teams())
 		gi.configstring(CS_GAME_STYLE, G_Fmt("{}", (int32_t)game_style_t::GAME_STYLE_TDM).data());
 	else
 		gi.configstring(CS_GAME_STYLE, G_Fmt("{}", (int32_t)game_style_t::GAME_STYLE_FFA).data());
@@ -1966,25 +1955,25 @@ void SP_worldspawn(edict_t *ent) {
 
 	// [Paril-KEX] air accel handled by game DLL now, and allow
 	// it to be changed in sp/coop
-	gi.configstring(CS_AIRACCEL, G_Fmt("{}", sv_airaccelerate->integer).data());
-	pm_config.airaccel = sv_airaccelerate->integer;
+	gi.configstring(CS_AIRACCEL, G_Fmt("{}", g_airaccelerate->integer).data());
+	pm_config.airaccel = g_airaccelerate->integer;
 
-	game.airacceleration_modified = sv_airaccelerate->modified_count;
+	game.airacceleration_modified = g_airaccelerate->modified_count;
 
 	//---------------
 
 	if (!st.gravity) {
 		level.gravity = 800.f;
-		gi.cvar_set("sv_gravity", "800");
+		gi.cvar_set("g_gravity", "800");
 	} else {
 		level.gravity = atof(st.gravity);
-		gi.cvar_set("sv_gravity", st.gravity);
+		gi.cvar_set("g_gravity", st.gravity);
 	}
 
 	snd_fry.assign("player/fry.wav"); // standing in lava / slime
 
 	if (!deathmatch->integer)
-		PrecacheItem(GetItemByIndex(IT_ITEM_COMPASS));
+		PrecacheItem(GetItemByIndex(IT_COMPASS));
 
 	if (!g_instagib->integer && !g_nadefest->integer)
 		PrecacheItem(GetItemByIndex(IT_WEAPON_BLASTER));
@@ -1995,9 +1984,10 @@ void SP_worldspawn(edict_t *ent) {
 		PrecacheItem(GetItemByIndex(IT_WEAPON_GRAPPLE));
 	}
 
-	if (g_dm_random_items->integer)
+	if (g_dm_random_items->integer) {
 		for (item_id_t i = static_cast<item_id_t>(IT_NULL + 1); i < IT_TOTAL; i = static_cast<item_id_t>(i + 1))
 			PrecacheItem(GetItemByIndex(i));
+	}
 
 	PrecachePlayerSounds();
 

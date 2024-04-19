@@ -14,6 +14,8 @@ constexpr const char *GAMEMOD_VERSION = "0.12.6";
 
 //==================================================================
 
+#define ARRAY_LEN(x)		(sizeof(x) / sizeof(*(x)))
+
 constexpr const int32_t GIB_HEALTH = -40;
 
 enum gametype_t {
@@ -27,19 +29,50 @@ enum gametype_t {
 	GT_NUM_GAMETYPES
 };
 
+constexpr const char *gt_short_name[GT_NUM_GAMETYPES] = {
+	"horde",
+	"ffa",
+	"duel",
+	"tdm",
+	"ctf",
+	"ca",
+	"ft"
+};
+constexpr const char *gt_long_name[GT_NUM_GAMETYPES] = {
+	"Horde Mode",
+	"Free For All",
+	"Duel",
+	"Team Deathmatch",
+	"Capture the Flag",
+	"Clan Arena",
+	"Freeze Tag"
+};
+constexpr const char *gt_cvar[GT_NUM_GAMETYPES] = {
+	"horde",
+	"deathmatch",
+	"duel",
+	"teamplay",
+	"ctf",
+	"clanarena",
+	"freeze"
+};
+
 typedef enum {
-	WARMUP_NONE,
-	WARMUP_DELAYED,			// pre-warmup (delay is active)
-	WARMUP_DEFAULT,			// 'waiting for players' / multiple teams short of players
-	WARMUP_SHORT_TEAMS,		// teams: one team is short of players
-#if 0
-	WARMUP_SHORT_RED,		// teams: red team has too few players
-	WARMUP_SHORT_BLUE,		// teams: blue team has too few players
-#endif
-	WARMUP_IMBA,			// teams: teams are imbalanced
-	WARMUP_READYUP,			// time for players to get ready
-	WARMUP_COUNTDOWN		// all conditions met, counting down to match start
-} warmupStates_t;
+	MS_NONE,
+	MS_WARMUP_DELAYED,		// pre-warmup (delay is active)
+	MS_WARMUP_DEFAULT,		// 'waiting for players' / match short of players / imbalanced teams
+	MS_WARMUP_READYUP,		// time for players to get ready
+	MS_MATCH_COUNTDOWN,	// all conditions met, counting down to match start, check conditions again at end of countdown before match start
+	MS_MATCH_IN_PROGRESS,	// match is in progress, not used in round-based gametypes
+	MS_MATCH_ENDED			// match or final round has ended
+} match_states_t;
+
+typedef enum {
+	MS_ROUND_NONE,
+	MS_ROUND_COUNTDOWN,		// round-based gametypes only: initial delay before round starts
+	MS_ROUND_IN_PROGRESS,	// round-based gametypes only: round is in progress
+	MS_ROUND_ENDED			// round-based gametypes only: round has ended
+} match_round_states_t;
 
 #define	RANK_TIED_FLAG		0x4000
 
@@ -67,6 +100,17 @@ enum match_t {
 	MATCH_GAME,
 	MATCH_POST
 };
+
+struct vcmds_t {
+	const		char *name;
+	bool		(*val_func)(edict_t *ent);
+	void		(*func)();
+	int32_t		flag;
+	int8_t		min_args;
+	const		char *args;
+	const		char *help;
+};
+extern vcmds_t vote_cmds[];
 
 extern int ii_highlight;
 extern int ii_duel_header;
@@ -289,17 +333,16 @@ struct spawnflags_t {
 // these spawnflags affect every entity. note that items are a bit special
 // because these 8 bits are instead used for power cube bits.
 constexpr spawnflags_t  SPAWNFLAG_NONE = spawnflags_t(0);
-constexpr spawnflags_t	SPAWNFLAG_NOT_EASY = spawnflags_t(0x00000100),
-SPAWNFLAG_NOT_MEDIUM = spawnflags_t(0x00000200),
-SPAWNFLAG_NOT_HARD = spawnflags_t(0x00000400),
-SPAWNFLAG_NOT_DEATHMATCH = spawnflags_t(0x00000800),
-SPAWNFLAG_NOT_COOP = spawnflags_t(0x00001000),
-SPAWNFLAG_RESERVED1 = spawnflags_t(0x00002000),
-SPAWNFLAG_COOP_ONLY = spawnflags_t(0x00004000),
-SPAWNFLAG_RESERVED2 = spawnflags_t(0x00008000);
+constexpr spawnflags_t	SPAWNFLAG_NOT_EASY	= spawnflags_t(0x00000100),
+				SPAWNFLAG_NOT_MEDIUM		= spawnflags_t(0x00000200),
+				SPAWNFLAG_NOT_HARD			= spawnflags_t(0x00000400),
+				SPAWNFLAG_NOT_DEATHMATCH	= spawnflags_t(0x00000800),
+				SPAWNFLAG_NOT_COOP			= spawnflags_t(0x00001000),
+				SPAWNFLAG_RESERVED1			= spawnflags_t(0x00002000),
+				SPAWNFLAG_COOP_ONLY			= spawnflags_t(0x00004000);
 
 constexpr spawnflags_t SPAWNFLAG_EDITOR_MASK = (SPAWNFLAG_NOT_EASY | SPAWNFLAG_NOT_MEDIUM | SPAWNFLAG_NOT_HARD | SPAWNFLAG_NOT_DEATHMATCH |
-	SPAWNFLAG_NOT_COOP | SPAWNFLAG_RESERVED1 | SPAWNFLAG_COOP_ONLY | SPAWNFLAG_RESERVED2);
+	SPAWNFLAG_NOT_COOP | SPAWNFLAG_RESERVED1 | SPAWNFLAG_COOP_ONLY);
 
 // use this for global spawnflags
 constexpr spawnflags_t operator "" _spawnflag(unsigned long long int v) {
@@ -796,7 +839,7 @@ enum item_flags_t : uint32_t {
 	IF_ARMOR			= bit_v<2>,
 	IF_STAY_COOP		= bit_v<3>,
 	IF_KEY				= bit_v<4>,
-	IF_POWERUP			= bit_v<5>,
+	IF_TIMED			= bit_v<5>, // minor powerup items
 	IF_NOT_GIVEABLE		= bit_v<6>, // item can not be given
 	IF_HEALTH			= bit_v<7>,
 	IF_TECH				= bit_v<8>,
@@ -806,14 +849,14 @@ enum item_flags_t : uint32_t {
 	IF_POWERUP_ONOFF	= bit_v<12>, // [Paril-KEX] for wheel; can't store more than one, show on/off state
 	IF_NOT_RANDOM		= bit_v<13>, // [Paril-KEX] item never shows up in randomizations
 	IF_POWER_ARMOR		= bit_v<14>,
-	IF_SUPER_POWERUP	= bit_v<15>,
+	IF_POWERUP			= bit_v<15>,
 	IF_SPHERE			= bit_v<16>,
 
 	IF_ANY = 0xFFFFFFFF
 };
 
 MAKE_ENUM_BITFLAGS(item_flags_t);
-constexpr item_flags_t IF_TYPE_MASK = (IF_WEAPON | IF_AMMO | IF_POWERUP | IF_SUPER_POWERUP | IF_SPHERE | IF_ARMOR | IF_POWER_ARMOR | IF_KEY);
+constexpr item_flags_t IF_TYPE_MASK = (IF_WEAPON | IF_AMMO | IF_TIMED | IF_POWERUP | IF_SPHERE | IF_ARMOR | IF_POWER_ARMOR | IF_KEY);
 
 // health edict_t->style
 enum {
@@ -840,8 +883,8 @@ enum item_id_t : int32_t {
 	IT_ARMOR_JACKET,
 	IT_ARMOR_SHARD,
 
-	IT_ITEM_POWER_SCREEN,
-	IT_ITEM_POWER_SHIELD,
+	IT_POWER_SCREEN,
+	IT_POWER_SHIELD,
 
 	IT_WEAPON_GRAPPLE,
 	IT_WEAPON_BLASTER,
@@ -883,18 +926,18 @@ enum item_id_t : int32_t {
 	IT_POWERUP_SILENCER,
 	IT_POWERUP_REBREATHER,
 	IT_POWERUP_ENVIROSUIT,
-	IT_ITEM_ANCIENT_HEAD,
-	IT_ITEM_LEGACY_HEAD,
-	IT_ITEM_ADRENALINE,
-	IT_ITEM_BANDOLIER,
-	IT_ITEM_PACK,
-	IT_ITEM_IR_GOGGLES,
+	IT_ANCIENT_HEAD,
+	IT_LEGACY_HEAD,
+	IT_ADRENALINE,
+	IT_BANDOLIER,
+	IT_PACK,
+	IT_IR_GOGGLES,
 	IT_POWERUP_DOUBLE,
-	IT_ITEM_SPHERE_VENGEANCE,
-	IT_ITEM_SPHERE_HUNTER,
-	IT_ITEM_SPHERE_DEFENDER,
-	IT_ITEM_DOPPELGANGER,
-	IT_ITEM_TAG_TOKEN,
+	IT_SPHERE_VENGEANCE,
+	IT_SPHERE_HUNTER,
+	IT_SPHERE_DEFENDER,
+	IT_DOPPELGANGER,
+	IT_TAG_TOKEN,
 
 	IT_KEY_DATA_CD,
 	IT_KEY_POWER_CUBE,
@@ -925,8 +968,8 @@ enum item_id_t : int32_t {
 	IT_TECH_TIME_ACCEL,
 	IT_TECH_AUTODOC,
 
-	IT_ITEM_FLASHLIGHT,
-	IT_ITEM_COMPASS,
+	IT_FLASHLIGHT,
+	IT_COMPASS,
 
 	IT_TOTAL
 };
@@ -937,49 +980,51 @@ constexpr const char *ITEM_CTF_FLAG_RED = "item_flag_team_red";
 constexpr const char *ITEM_CTF_FLAG_BLUE = "item_flag_team_blue";
 
 struct gitem_t {
-	item_id_t	id;		   // matches item list index
-	const char *classname; // spawning name
-	bool (*pickup)(edict_t *ent, edict_t *other);
-	void (*use)(edict_t *ent, gitem_t *item);
-	void (*drop)(edict_t *ent, gitem_t *item);
-	void (*weaponthink)(edict_t *ent);
-	const char *pickup_sound;
-	const char *world_model;
-	effects_t	world_model_flags;
-	const char *view_model;
+	item_id_t		id;		   // matches item list index
+	const char		*classname; // spawning name
+	bool			(*pickup)(edict_t *ent, edict_t *other);
+	void			(*use)(edict_t *ent, gitem_t *item);
+	void			(*drop)(edict_t *ent, gitem_t *item);
+	void			(*weaponthink)(edict_t *ent);
+	const char		*pickup_sound;
+	const char		*world_model;
+	effects_t		world_model_flags;
+	const char		*view_model;
 
 	// client side info
-	const char *icon;
-	const char *use_name; // for use command, english only
-	const char *pickup_name; // for printing on pickup
-	const char *pickup_name_definite; // definite article version for languages that need it
+	const char		*icon;
+	const char		*use_name; // for use command, english only
+	const char		*pickup_name; // for printing on pickup
+	const char		*pickup_name_definite; // definite article version for languages that need it
 
-	int			 quantity = 0;	  // for ammo how much, for weapons how much is used per shot
-	item_id_t	 ammo = IT_NULL;  // for weapons
-	item_id_t	 chain = IT_NULL; // weapon chain root
-	item_flags_t flags = IF_NONE; // IT_* flags
+	int				quantity = 0;	  // for ammo how much, for weapons how much is used per shot
+	item_id_t		ammo = IT_NULL;  // for weapons
+	item_id_t		chain = IT_NULL; // weapon chain root
+	item_flags_t	flags = IF_NONE; // IT_* flags
 
-	const char *vwep_model = nullptr; // vwep model string (for weapons)
+	const char		*vwep_model = nullptr; // vwep model string (for weapons)
 
 	const gitem_armor_t *armor_info = nullptr;
-	int					 tag = 0;
+	int				tag = 0;
 
-	const char *precaches = nullptr; // string of all models, sounds, and images this item will use
+	const char		*precaches = nullptr; // string of all models, sounds, and images this item will use
 
-	int32_t				sort_id = 0; // used by some items to control their sorting
-	int32_t				quantity_warn = 5; // when to warn on low ammo
+	int32_t			sort_id = 0; // used by some items to control their sorting
+	int32_t			quantity_warn = 5; // when to warn on low ammo
 
 	// set in InitItems, don't set by hand
 	// circular list of chained weapons
-	gitem_t *chain_next = nullptr;
+	gitem_t			*chain_next = nullptr;
+
 	// set in SP_worldspawn, don't set by hand
 	// model index for vwep
-	int32_t vwep_index = 0;
+	int32_t			vwep_index = 0;
+
 	// set in SetItemNames, don't set by hand
 	// offset into CS_WHEEL_AMMO/CS_WHEEL_WEAPONS/CS_WHEEL_POWERUPS
-	int32_t ammo_wheel_index = -1;
-	int32_t weapon_wheel_index = -1;
-	int32_t powerup_wheel_index = -1;
+	int32_t			ammo_wheel_index = -1;
+	int32_t			weapon_wheel_index = -1;
+	int32_t			powerup_wheel_index = -1;
 };
 
 // means of death
@@ -1134,9 +1179,9 @@ struct ghost_t {
 	int		basedef;
 	int		carrierdef;
 
-	int		code;	// ghost code
-	team_t	team;	// team
-	int		score; // frags at time of disconnect
+	int		code;		// ghost code
+	team_t	team;		// team
+	int		score;		// score at time of disconnect
 	edict_t *ent;
 };
 
@@ -1277,44 +1322,68 @@ struct level_locals_t {
 
 	char		gamemod_name[64];
 	char		gametype_name[64];
-	
+
 	//voting
-	voting_t	voting_type;			// vote type
-	edict_t		*voting_target;			// for admin election, who's being elected
-	char		voting_map[32];			// for map election, target level
-	int			voting_count_yes;		// votes so far
-	int			voting_count_no;		// vetos so far
-	int			voting_votes_needed;	// votes needed
-	gtime_t		voting_time;			// remaining time until election times out
-	gtime_t		voting_execution_time;
-	char		voting_name[256];		// election name
+	char		vote_string[256];
+	char		vote_display_string[256];
+	gtime_t		vote_time;				// level.time vote was called
+	gtime_t		vote_execute_time;		// time the vote is executed
+	int8_t		vote_yes;
+	int8_t		vote_no;
+	int8_t		num_voting_clients;		// set by CalculateRanks
+	vcmds_t		*vote;
+	char		vote_arg[32];
 
 	//q3
-	int			num_connected_clients;
-	int			num_nonspectator_clients;	// includes connecting clients
-	int			num_playing_clients;		// connected, non-spectators
-	int			num_human_clients;			// bots excluded
+	uint8_t		num_connected_clients;
+	uint8_t		num_nonspectator_clients;	// includes connecting clients
+	uint8_t		num_playing_clients;		// connected, non-spectators
+	uint8_t		num_human_clients;			// bots excluded
 	int			sorted_clients[MAX_CLIENTS];// sorted by score
-	int			follow1, follow2;			// clientNums for auto-follow spectators
+	int			random_clients[MAX_CLIENTS];// sorted randomly
+	uint8_t		follow1, follow2;			// clientNums for auto-follow spectators
+
+	int			num_living_red;
+	int			num_eliminated_red;
+	int			num_living_blue;
+	int			num_eliminated_blue;
 
 	int			team_scores[TEAM_NUM_TEAMS];
 
-	int			warmup_state;
-	gtime_t		warmup_time;				// restart match at this time
+	uint8_t		match_state;
+	int			match_state_queued;
+	gtime_t		match_state_timer;			// change match state at this time
 	int			warmup_modification_count;	// for detecting if g_warmup_countdown is changed
 
+	gtime_t		countdown_check;
+
+	int			round_number;
+	uint8_t		round_state;
+	int			round_state_queued;
+	gtime_t		round_state_timer;			// change match state at this time
+
+	bool		restarted;
+
+	gtime_t		overtime;
+	bool		suddendeath;
+
+	int			count_living[TEAM_NUM_TEAMS];
+
+	bool		locked[TEAM_NUM_TEAMS];
+
+	const char	*map_queue[32];
 //ctf
-	gtime_t last_flag_capture;
-	int		last_capture_team;
+	gtime_t		last_flag_capture;
+	int			last_capture_team;
 
-	match_t match;	   // match state
-	gtime_t matchtime; // time for match start/end (depends on state)
-	int		lasttime;  // last time update, explicitly truncated to seconds
-	bool	countdown; // has audio countdown started?
+	match_t		match;	   // match state
+	gtime_t		match_time; // time for match start/end (depends on state)
+	//int			lasttime;  // last time update, explicitly truncated to seconds
+	bool		countdown; // has audio countdown started?
 
-	int		warnactive; // true if stat string 30 is active
+	int			warnactive; // true if stat string 30 is active
 
-	ghost_t ghosts[MAX_CLIENTS]; // ghost codes
+	ghost_t		ghosts[MAX_CLIENTS]; // ghost codes
 //-ctf
 };
 
@@ -1930,22 +1999,21 @@ extern cvar_t *g_instant_weapon_switch;
 extern cvar_t *g_dm_force_join;
 extern cvar_t *g_teamplay_allow_team_pick;
 extern cvar_t *g_teamplay_force_balance;
-extern cvar_t *g_voting_percentage;
 
 extern cvar_t *password;
 extern cvar_t *spectator_password;
 extern cvar_t *needpass;
 extern cvar_t *g_select_empty;
-extern cvar_t *sv_dedicated;
+extern cvar_t *g_dedicated;
 
 extern cvar_t *filterban;
 
-extern cvar_t *sv_gravity;
-extern cvar_t *sv_maxvelocity;
+extern cvar_t *g_gravity;
+extern cvar_t *g_maxvelocity;
 
 extern cvar_t *gun_x, *gun_y, *gun_z;
-extern cvar_t *sv_rollspeed;
-extern cvar_t *sv_rollangle;
+extern cvar_t *g_rollspeed;
+extern cvar_t *g_rollangle;
 
 extern cvar_t *run_pitch;
 extern cvar_t *run_roll;
@@ -1953,7 +2021,7 @@ extern cvar_t *bob_up;
 extern cvar_t *bob_pitch;
 extern cvar_t *bob_roll;
 
-extern cvar_t *sv_cheats;
+extern cvar_t *g_cheats;
 extern cvar_t *g_debug_monster_paths;
 extern cvar_t *g_debug_monster_kills;
 extern cvar_t *maxspectators;
@@ -1965,11 +2033,9 @@ extern cvar_t *flood_msgs;
 extern cvar_t *flood_persecond;
 extern cvar_t *flood_waitdelay;
 
-extern cvar_t *sv_maplist;
+extern cvar_t *g_skip_view_modifiers;
 
-extern cvar_t *g_skipViewModifiers;
-
-extern cvar_t *sv_stopspeed; // PGM - this was a define in g_phys.c
+extern cvar_t *g_stopspeed; // PGM - this was a define in g_phys.c
 
 extern cvar_t *g_strict_saves;
 extern cvar_t *g_coop_health_scaling;
@@ -2002,7 +2068,6 @@ extern cvar_t *g_teamplay_armor_protect;
 extern cvar_t *g_allow_techs;
 extern cvar_t *g_dm_powerups_style;
 extern cvar_t *g_corpse_sink_time;
-extern cvar_t *g_match_timer;
 
 extern cvar_t *g_start_items;
 extern cvar_t *g_map_list;
@@ -2017,7 +2082,7 @@ extern cvar_t *g_entity_override_save;
 
 extern cvar_t *g_motd;
 
-extern cvar_t *huntercam;
+extern cvar_t *g_huntercam;
 extern cvar_t *g_dm_strong_mines;
 extern cvar_t *g_dm_random_items;
 
@@ -2039,7 +2104,7 @@ extern cvar_t *g_grapple_damage;
 
 extern cvar_t *g_frag_messages;
 
-extern cvar_t *sv_airaccelerate;
+extern cvar_t *g_airaccelerate;
 
 extern cvar_t *g_knockback_scale;
 extern cvar_t *g_frozen_time;
@@ -2063,11 +2128,11 @@ extern cvar_t *g_warmup_ready_percentage;
 
 //ctf
 extern cvar_t *competition;
-extern cvar_t *matchlock;
+extern cvar_t *g_match_lock;
 extern cvar_t *matchsetuptime;
 extern cvar_t *matchstarttime;
 extern cvar_t *admin_password;
-extern cvar_t *allow_admin;
+extern cvar_t *g_allow_admin;
 extern cvar_t *warn_unbalanced;
 //-ctf
 extern cvar_t *g_eyecam;
@@ -2086,20 +2151,38 @@ extern cvar_t *g_weapon_force_central_projection;
 
 extern cvar_t *g_allow_custom_skins;
 
+extern cvar_t *g_allow_voting;
+extern cvar_t *g_allow_vote_midgame;
+extern cvar_t *g_allow_spec_vote;
+extern cvar_t *g_vote_limit;
+extern cvar_t *g_vote_flags;
+
+extern cvar_t *g_dm_auto_join;
+
+extern cvar_t *g_dm_overtime;
+
+extern cvar_t *g_dm_do_warmup;
+extern cvar_t *g_dm_do_readyup;
+
+extern cvar_t *g_item_chain_random;
+
+extern cvar_t *g_allow_forfeit;
+
 #define world (&g_edicts[0])
 
 uint32_t GetUnicastKey();
 
 // item spawnflags
-constexpr spawnflags_t SPAWNFLAG_ITEM_TRIGGER_SPAWN = 0x00000001_spawnflag;
-constexpr spawnflags_t SPAWNFLAG_ITEM_NO_TOUCH = 0x00000002_spawnflag;
-constexpr spawnflags_t SPAWNFLAG_ITEM_TOSS_SPAWN = 0x00000004_spawnflag;
-constexpr spawnflags_t SPAWNFLAG_ITEM_MAX = 0x00000008_spawnflag;
+constexpr spawnflags_t SPAWNFLAG_ITEM_TRIGGER_SPAWN		= 0x00000001_spawnflag;
+constexpr spawnflags_t SPAWNFLAG_ITEM_NO_TOUCH			= 0x00000002_spawnflag;
+constexpr spawnflags_t SPAWNFLAG_ITEM_TOSS_SPAWN		= 0x00000004_spawnflag;
+constexpr spawnflags_t SPAWNFLAG_ITEM_MAX				= 0x00000008_spawnflag;
 // 8 bits reserved for editor flags & power cube bits
 // (see SPAWNFLAG_NOT_EASY above)
-constexpr spawnflags_t SPAWNFLAG_ITEM_DROPPED = 0x00010000_spawnflag;
-constexpr spawnflags_t SPAWNFLAG_ITEM_DROPPED_PLAYER = 0x00020000_spawnflag;
-constexpr spawnflags_t SPAWNFLAG_ITEM_TARGETS_USED = 0x00040000_spawnflag;
+constexpr spawnflags_t SPAWNFLAG_ITEM_SUSPENDED			= 0x00008000_spawnflag;
+constexpr spawnflags_t SPAWNFLAG_ITEM_DROPPED			= 0x00010000_spawnflag;
+constexpr spawnflags_t SPAWNFLAG_ITEM_DROPPED_PLAYER	= 0x00020000_spawnflag;
+constexpr spawnflags_t SPAWNFLAG_ITEM_TARGETS_USED		= 0x00040000_spawnflag;
 
 extern gitem_t itemlist[IT_TOTAL];
 
@@ -2111,13 +2194,12 @@ void Cmd_Help_f(edict_t *ent);
 void Cmd_Score_f(edict_t *ent);
 
 void G_AssignPlayerSkin(edict_t *ent, const char *s);
-void G_AssignPlayerTeam(gclient_t *who);
 
 team_t PickTeam(int ignoreClientNum);
 void BroadcastTeamChange(edict_t *ent, int old_team, bool inactive);
-bool SetTeam(edict_t *ent, const char *s, bool inactive);
 bool AllowTeamSwitch(int client_num, int new_team);
 bool AllowClientTeamSwitch(edict_t *ent);
+int8_t TeamCount(int8_t ignore_client_num, team_t team);
 
 //
 // g_items.c
@@ -2148,7 +2230,6 @@ edict_t		*Drop_Item(edict_t *ent, gitem_t *item);
 void		SetRespawn(edict_t *ent, gtime_t delay, bool hide_self = true);
 void		ChangeWeapon(edict_t *ent);
 bool		SpawnItem(edict_t *ent, gitem_t *item);
-void		DelayPowerup(edict_t *ent, gitem_t *item, gtime_t time);
 void		Think_Weapon(edict_t *ent);
 item_id_t	ArmorIndex(edict_t *ent);
 item_id_t	PowerArmorType(edict_t *ent);
@@ -2158,12 +2239,12 @@ gitem_t		*GetItemByPowerup(powerup_t powerup);
 bool		Add_Ammo(edict_t *ent, gitem_t *item, int count);
 void		G_CheckPowerArmor(edict_t *ent);
 void		Touch_Item(edict_t *ent, edict_t *other, const trace_t &tr, bool other_touching_self);
-void		droptofloor(edict_t *ent);
+//void		FinishSpawningItem(edict_t *ent);
 void		P_ToggleFlashlight(edict_t *ent, bool state);
 bool		Entity_IsVisibleToPlayer(edict_t *ent, edict_t *player);
 void		Compass_Update(edict_t *ent, bool first);
 item_id_t	DoRandomRespawn(edict_t *ent);
-void		DoRespawn(edict_t *ent);
+void		RespawnItem(edict_t *ent);
 void		fire_doppleganger(edict_t *ent, const vec3_t &start, const vec3_t &aimdir);
 
 //
@@ -2209,7 +2290,7 @@ void G_PlayerNotifyGoal(edict_t *player);
 const char *Teams_TeamName(int team);
 const char *Teams_OtherTeamName(int team);
 int Teams_OtherTeamNum(team_t team);
-bool IsTeamplay();
+bool Teams();
 void G_AdjustPlayerScore(gclient_t *cl, int32_t offset, bool adjust_team, int32_t team_offset);
 void Horde_AdjustPlayerScore(gclient_t *cl, int32_t offset);
 void G_SetPlayerScore(gclient_t *cl, int32_t value);
@@ -2218,13 +2299,11 @@ void G_SetTeamScore(int team, int32_t value);
 const char *G_PlaceString(int rank);
 bool ItemSpawnsEnabled();
 bool loc_CanSee(edict_t *targ, edict_t *inflictor);
-bool IsMatch();
-bool IsMatchSetup();
-bool IsMatchOn();
-bool Voting_Begin(edict_t *ent, voting_t type, const char *msg);
-void Team_Join(edict_t *ent, team_t desired_team, bool inactive);
+bool SetTeam(edict_t *ent, team_t desired_team, bool inactive, bool force);
 const char *G_TimeString(const int64_t msec);
 const char *G_TimeStringMs(const int64_t msec);
+void BroadcastSpectatorMessage(const char *msg);
+team_t StringToTeamNum(const char *in);
 
 //
 // g_spawn.c
@@ -2534,7 +2613,7 @@ constexpr spawnflags_t SPAWNFLAG_CHANGELEVEL_NO_END_OF_UNIT = 16_spawnflag;
 constexpr spawnflags_t SPAWNFLAG_CHANGELEVEL_FADE_OUT = 32_spawnflag;
 constexpr spawnflags_t SPAWNFLAG_CHANGELEVEL_IMMEDIATE_LEAVE = 64_spawnflag;
 
-void respawn(edict_t *ent);
+void ClientRespawn(edict_t *ent);
 void BeginIntermission(edict_t *targ);
 void ClientSpawn(edict_t *ent);
 void InitClientPersistant(edict_t *ent, gclient_t *client);
@@ -2542,7 +2621,8 @@ void InitBodyQue();
 void CopyToBodyQue(edict_t *ent);
 void ClientBeginServerFrame(edict_t *ent);
 void ClientUserinfoChanged(edict_t *ent, const char *userinfo);
-void P_Match_AssignGhost(edict_t *ent);
+void Match_Ghost_Assign(edict_t *ent);
+void Match_Ghost_DoAssign(edict_t *ent);
 void P_AssignClientSkinnum(edict_t *ent);
 void P_ForceFogTransition(edict_t *ent, bool instant);
 void P_SendLevelPOI(edict_t *ent);
@@ -2560,6 +2640,25 @@ select_spawn_result_t SelectDeathmatchSpawnPoint(vec3_t avoid_point, bool farthe
 void G_PostRespawn(edict_t *self);
 
 //
+// g_ctf.c
+//
+bool CTF_PickupFlag(edict_t *ent, edict_t *other);
+void CTF_DropFlag(edict_t *ent, gitem_t *item);
+void CTF_ClientEffects(edict_t *player);
+void CTF_DeadDropFlag(edict_t *self);
+void CTF_FlagSetup(edict_t *ent);
+void CTF_ResetTeamFlag(team_t team);
+void CTF_ResetFlags();
+void CTF_ScoreBonuses(edict_t *targ, edict_t *inflictor, edict_t *attacker);
+void CTF_CheckHurtCarrier(edict_t *targ, edict_t *attacker);
+
+
+//
+// g_menu.c
+//
+void G_Menu_Join_Open(edict_t *ent);
+
+//
 // g_player.c
 //
 void player_die(edict_t *self, edict_t *inflictor, edict_t *attacker, int damage, const vec3_t &point, const mod_t &mod);
@@ -2568,7 +2667,7 @@ void player_die(edict_t *self, edict_t *inflictor, edict_t *attacker, int damage
 // g_svcmds.c
 //
 void ServerCommand();
-bool SV_FilterPacket(const char *from);
+bool G_FilterPacket(const char *from);
 
 //
 // p_view.c
@@ -2634,7 +2733,7 @@ extern byte damage_multiplier;
 bool M_CheckBottom_Fast_Generic(const vec3_t &absmins, const vec3_t &absmaxs, bool ceiling);
 bool M_CheckBottom_Slow_Generic(const vec3_t &origin, const vec3_t &absmins, const vec3_t &absmaxs, edict_t *ignore, contents_t mask, bool ceiling, bool allow_any_step_height);
 bool M_CheckBottom(edict_t *ent);
-bool SV_CloseEnough(edict_t *ent, edict_t *goal, float dist);
+bool G_CloseEnough(edict_t *ent, edict_t *goal, float dist);
 bool M_walkmove(edict_t *ent, float yaw, float dist);
 void M_MoveToGoal(edict_t *ent, float dist);
 void M_ChangeYaw(edict_t *ent);
@@ -2660,12 +2759,23 @@ void		G_Impact(edict_t *e1, const trace_t &trace);
 //
 void SaveClientData();
 void FetchClientEntData(edict_t *ent);
-void EndDMLevel();
+void Match_Start();
+void Match_End();
+void Match_Reset();
 void FindIntermissionPoint(void);
 void CalculateRanks();
 void CheckExitRules();
+void GT_Change(int gt);
 int GT_ScoreLimit();
 const char *GT_ScoreLimitString();
+void G_RevertVote(gclient_t *client);
+void Cmd_Vote_Passed();
+void ExitLevel();
+void Teams_CalcRankings(std::array<uint32_t, MAX_CLIENTS> &player_ranks); // [Paril-KEX]
+void ReadyAll();
+void UnReadyAll();
+void QueueIntermission(const char *msg);
+void Match_Reset();
 
 //
 // g_chase.c
@@ -2761,10 +2871,9 @@ constexpr spawnflags_t SPAWNFLAG_LANDMARK_KEEP_Z = 1_spawnflag;
 	return G_PowerUpExpiringRelative(time - level.time);
 }
 
-bool ClientIsSpectating(gclient_t *cl);
+bool ClientIsPlaying(gclient_t *cl);
 
-#include "ctf/g_ctf.h"
-#include "ctf/p_ctf_menu.h"
+#include "p_menu.h"
 //============================================================================
 
 // client_t->anim_priority
@@ -2896,7 +3005,10 @@ struct client_persistant_t {
 	int32_t	dmg_team;		// for team damage checks and warnings
 
 	int		skin_icon_index;
-	char skin[MAX_INFO_VALUE];
+	char	skin[MAX_INFO_VALUE];
+
+	int32_t	vote_count;			// to prevent people from constantly calling votes
+	int			voted;
 };
 
 // client data that stays across deathmatch respawns
@@ -2933,11 +3045,13 @@ struct client_respawn_t {
 	bool				inactivity_warning;
 
 	//q3
-	gtime_t				switch_team_time;
+	gtime_t				team_join_time;
+	gtime_t				team_delay_time;
 	int					spectator_time;		// for determining next-in-line to play
 	spectator_state_t	spectator_state;
-	int					spectator_client;	// for chasecam and follow mode
+	int8_t				spectator_client;	// for chasecam and follow mode
 	int					wins, losses;		// duel stats
+	bool				duel_queued;
 
 	int32_t				kill_count;	// for rampage award, reset on respawn
 
@@ -2946,6 +3060,14 @@ struct client_respawn_t {
 	int					rank;
 
 	bool				timer_state;
+	bool				fragmessage_state;
+	int					killbeep_num;
+
+	bool				initialised;
+
+	bool				is_a_bot;
+
+	char				netname[MAX_NETNAME];
 };
 
 // [Paril-KEX] seconds until we are fully invisible after
@@ -3086,7 +3208,7 @@ struct gclient_t {
 	gtime_t empty_click_sound;
 
 	bool		inmenu;	  // in menu
-	pmenuhnd_t *menu;	  // current menu
+	menu_hnd_t *menu;	  // current menu
 	gtime_t		menutime; // time to update menu
 	bool		menudirty;
 
@@ -3173,6 +3295,10 @@ struct gclient_t {
 
 	client_match_stats_t mstats;
 	bool hit_target;
+
+	gtime_t		initial_menu_delay;
+	bool		initial_menu_shown;
+	bool		initial_menu_closure;
 };
 
 // ==========================================
@@ -3201,7 +3327,7 @@ struct edict_t {
 	// of gclient_t to be a player_state_t
 	// but the rest of it is opaque
 
-	sv_entity_t sv;	       // read only info about this entity for the server
+	g_entity_t sv;	       // read only info about this entity for the server
 
 	bool     inuse;
 

@@ -85,8 +85,8 @@ void G_CheckVelocity(edict_t *ent)
 	//
 	float speed = ent->velocity.length();
 
-	if (speed > sv_maxvelocity->value)
-		ent->velocity = (ent->velocity / speed) * sv_maxvelocity->value;
+	if (speed > g_maxvelocity->value)
+		ent->velocity = (ent->velocity / speed) * g_maxvelocity->value;
 }
 
 /*
@@ -807,7 +807,7 @@ void G_AddRotationalFriction(edict_t *ent)
 	float adjustment;
 
 	ent->s.angles += (ent->avelocity * gi.frame_time_s);
-	adjustment = gi.frame_time_s * sv_stopspeed->value * g_friction;
+	adjustment = gi.frame_time_s * g_stopspeed->value * g_friction;
 
 	for (n = 0; n < 3; n++)
 	{
@@ -873,7 +873,7 @@ static void G_Physics_Step(edict_t *ent)
 	if ((ent->flags & FL_FLY) && (ent->velocity[2] != 0) && !(ent->monsterinfo.aiflags & AI_ALTERNATE_FLY))
 	{
 		speed = fabsf(ent->velocity[2]);
-		control = speed < sv_stopspeed->value ? sv_stopspeed->value : speed;
+		control = speed < g_stopspeed->value ? g_stopspeed->value : speed;
 		friction = g_friction / 3;
 		newspeed = speed - (gi.frame_time_s * control * friction);
 		if (newspeed < 0)
@@ -886,7 +886,7 @@ static void G_Physics_Step(edict_t *ent)
 	if ((ent->flags & FL_SWIM) && (ent->velocity[2] != 0) && !(ent->monsterinfo.aiflags & AI_ALTERNATE_FLY))
 	{
 		speed = fabsf(ent->velocity[2]);
-		control = speed < sv_stopspeed->value ? sv_stopspeed->value : speed;
+		control = speed < g_stopspeed->value ? g_stopspeed->value : speed;
 		newspeed = speed - (gi.frame_time_s * control * g_waterfriction * (float) ent->waterlevel);
 		if (newspeed < 0)
 			newspeed = 0;
@@ -909,7 +909,7 @@ static void G_Physics_Step(edict_t *ent)
 				if (ent->deadflag)
 					friction *= 0.5f;
 
-				control = speed < sv_stopspeed->value ? sv_stopspeed->value : speed;
+				control = speed < g_stopspeed->value ? g_stopspeed->value : speed;
 				newspeed = speed - gi.frame_time_s * control * friction;
 
 				if (newspeed < 0)

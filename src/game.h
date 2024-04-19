@@ -1687,7 +1687,7 @@ static constexpr int32_t    Item_UnknownRespawnTime = INT_MAX;
 static constexpr int32_t    Item_Invalid = -1;
 static constexpr int32_t    Item_Null = 0;
 
-enum sv_ent_flags_t : uint64_t {
+enum g_ent_flags_t : uint64_t {
     SVFL_NONE               = 0, // no flags
     SVFL_ONGROUND           = bit_v< 0 >,
     SVFL_HAS_DMG_BOOST      = bit_v< 1 >,
@@ -1721,7 +1721,7 @@ enum sv_ent_flags_t : uint64_t {
     SVFL_IS_SPECTATOR       = bit_v< 29 >,
     SVFL_IN_TEAM            = bit_v< 30 >
 };
-MAKE_ENUM_BITFLAGS( sv_ent_flags_t );
+MAKE_ENUM_BITFLAGS( g_ent_flags_t );
 
 static constexpr int Max_Armor_Types = 3;
 
@@ -1731,9 +1731,9 @@ struct armorInfo_t {
 };
 
 // Used by AI/Tools on the engine side...
-struct sv_entity_t {
+struct g_entity_t {
     bool                        init;
-    sv_ent_flags_t              ent_flags;
+    g_ent_flags_t              ent_flags;
     button_t                    buttons;
     uint32_t	                spawnflags;
     int32_t                     item_id;
@@ -1775,7 +1775,7 @@ struct edict_shared_t
                            // of gclient_t to be a player_state_t
                            // but the rest of it is opaque
 
-    sv_entity_t sv;        // read only info about this entity for the server
+    g_entity_t sv;        // read only info about this entity for the server
 
 	bool     inuse;
 

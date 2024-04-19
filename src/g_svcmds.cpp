@@ -97,10 +97,10 @@ static bool StringToFilter(const char *s, ipfilter_t *f) {
 
 /*
 =================
-SV_FilterPacket
+G_FilterPacket
 =================
 */
-bool SV_FilterPacket(const char *from) {
+bool G_FilterPacket(const char *from) {
 	int		 i;
 	unsigned in;
 	byte	 m[4];
@@ -159,7 +159,7 @@ static void SVCmd_AddIP_f() {
 
 /*
 =================
-SV_RemoveIP_f
+G_RemoveIP_f
 =================
 */
 static void SVCmd_RemoveIP_f() {
@@ -187,7 +187,7 @@ static void SVCmd_RemoveIP_f() {
 
 /*
 =================
-SV_ListIP_f
+G_ListIP_f
 =================
 */
 static void SVCmd_ListIP_f() {
@@ -204,12 +204,12 @@ static void SVCmd_ListIP_f() {
 // [Paril-KEX]
 static void SVCmd_NextMap_f() {
 	gi.LocBroadcast_Print(PRINT_HIGH, "$g_map_ended_by_server");
-	EndDMLevel();
+	Match_End();
 }
 
 /*
 =================
-SV_WriteIP_f
+G_WriteIP_f
 =================
 */
 static void SVCmd_WriteIP_f(void) {

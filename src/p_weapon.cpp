@@ -3,7 +3,7 @@
 // g_weapon.c
 
 #include "g_local.h"
-#include "m_player.h"
+#include "monsters/m_player.h"
 
 bool is_quad;
 bool is_quadfire;
@@ -353,9 +353,12 @@ void ChangeWeapon(edict_t *ent)
 	if (ent->client->pers.weapon)
 	{
 		ent->client->pers.lastweapon = ent->client->pers.weapon;
-
-		if (ent->client->newweapon && ent->client->newweapon != ent->client->pers.weapon)
-			gi.sound(ent, CHAN_WEAPON, gi.soundindex("weapons/change.wav"), 1, ATTN_NORM, 0);
+		
+		if (ent->client->newweapon && ent->client->newweapon != ent->client->pers.weapon) {
+			//muff: only make the sound if we can switch faster
+			if (g_quick_weapon_switch->integer || g_instant_weapon_switch->integer)
+				gi.sound(ent, CHAN_WEAPON, gi.soundindex("weapons/change.wav"), 1, ATTN_NORM, 0);
+		}
 	}
 
 	ent->client->pers.weapon = ent->client->newweapon;
@@ -526,7 +529,7 @@ Called by ClientBeginServerFrame and ClientThink
 */
 void Think_Weapon(edict_t *ent)
 {
-	if (ClientIsSpectating(ent->client))
+	if (!ClientIsPlaying(ent->client))
 		return;
 
 	// if just died, put the weapon away
@@ -890,6 +893,9 @@ static inline weapon_ready_state_t Weapon_HandleReady(edict_t *ent, int FRAME_FI
 	{
 		bool request_firing = ent->client->weapon_fire_buffered || ((ent->client->latched_buttons | ent->client->buttons) & BUTTON_ATTACK);
 
+		if (level.match_state == MS_MATCH_COUNTDOWN)
+			request_firing = false;
+
 		if (request_firing && ent->client->weapon_fire_finished <= level.time)
 		{
 			ent->client->latched_buttons &= ~BUTTON_ATTACK;
@@ -1155,6 +1161,9 @@ void Throw_Generic(edict_t *ent, int FRAME_FIRE_LAST, int FRAME_IDLE_LAST, int F
 	if (ent->client->weaponstate == WEAPON_READY)
 	{
 		bool request_firing = ent->client->weapon_fire_buffered || ((ent->client->latched_buttons | ent->client->buttons) & BUTTON_ATTACK);
+
+		if (level.match_state == MS_MATCH_COUNTDOWN)
+			request_firing = false;
 
 		if (request_firing && ent->client->weapon_fire_finished <= level.time)
 		{
@@ -2684,7 +2693,7 @@ ION RIPPER
 */
 static void weapon_ionripper_fire(edict_t *ent) {
 	vec3_t tempang;
-	int	   damage = deathmatch->integer ? 30 : 50;
+	int	   damage = deathmatch->integer ? 20 : 50;	//30: 50;
 
 	if (is_quad)
 		damage *= damage_multiplier;
@@ -2697,7 +2706,7 @@ static void weapon_ionripper_fire(edict_t *ent) {
 
 	P_AddWeaponKick(ent, ent->client->v_forward * -3, { -3.f, 0.f, 0.f });
 
-	fire_ionripper(ent, start, dir, damage, 500, EF_IONRIPPER);
+	fire_ionripper(ent, start, dir, damage, 800, EF_IONRIPPER);	//500
 
 	// send muzzle flash
 	gi.WriteByte(svc_muzzleflash);

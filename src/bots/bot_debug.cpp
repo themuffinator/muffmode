@@ -159,7 +159,7 @@ Bot_UpdateDebug
 ================
 */
 void Bot_UpdateDebug() {
-	if ( !sv_cheats->integer ) {
+	if ( !g_cheats->integer ) {
 		return;
 	}
 

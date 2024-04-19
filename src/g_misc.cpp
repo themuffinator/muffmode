@@ -538,7 +538,7 @@ static shadow_light_info_t shadowlightinfo[MAX_SHADOW_LIGHTS];
 
 const shadow_light_data_t *GetShadowLightData(int32_t entity_number)
 {
-	for (int32_t i = 0; i < level.shadow_light_count; i++)
+	for (size_t i = 0; i < level.shadow_light_count; i++)
 	{
 		if (shadowlightinfo[i].entity_number == entity_number)
 			return &shadowlightinfo[i].shadowlight;
@@ -2439,7 +2439,7 @@ void SP_info_world_text( edict_t * self ) {
 	}
 }
 
-#include "m_player.h"
+#include "monsters/m_player.h"
 
 static USE( misc_player_mannequin_use ) ( edict_t * self, edict_t * other, edict_t * activator ) -> void {
 	self->monsterinfo.aiflags |= AI_TARGET_ANGER;

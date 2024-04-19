@@ -3,9 +3,13 @@
 
 #include "g_local.h"
 #include "bots/bot_includes.h"
+#include "monsters/m_player.h"	// match starts
 
 CHECK_GCLIENT_INTEGRITY;
 CHECK_EDICT_INTEGRITY;
+
+constexpr int32_t DEFAULT_GRAPPLE_SPEED = 650; // speed of grapple in flight
+constexpr float	  DEFAULT_GRAPPLE_PULL_SPEED = 650; // speed player is pulled at
 
 std::mt19937 mt_rand;
 
@@ -53,22 +57,22 @@ static cvar_t *maxclients;
 cvar_t *maxspectators;
 static cvar_t *maxentities;
 cvar_t *g_select_empty;
-cvar_t *sv_dedicated;
+cvar_t *g_dedicated;
 
 cvar_t *filterban;
 
-cvar_t *sv_maxvelocity;
-cvar_t *sv_gravity;
+cvar_t *g_maxvelocity;
+cvar_t *g_gravity;
 
 cvar_t *g_dm_force_join;
 cvar_t *g_teamplay_allow_team_pick;
 cvar_t *g_teamplay_force_balance;
 cvar_t *g_voting_percentage;
 
-cvar_t *g_skipViewModifiers;
+cvar_t *g_skip_view_modifiers;
 
-cvar_t *sv_rollspeed;
-cvar_t *sv_rollangle;
+cvar_t *g_rollspeed;
+cvar_t *g_rollangle;
 cvar_t *gun_x;
 cvar_t *gun_y;
 cvar_t *gun_z;
@@ -79,7 +83,7 @@ cvar_t *bob_up;
 cvar_t *bob_pitch;
 cvar_t *bob_roll;
 
-cvar_t *sv_cheats;
+cvar_t *g_cheats;
 
 cvar_t *g_debug_monster_paths;
 cvar_t *g_debug_monster_kills;
@@ -91,11 +95,11 @@ cvar_t *flood_msgs;
 cvar_t *flood_persecond;
 cvar_t *flood_waitdelay;
 
-cvar_t *sv_stopspeed; // PGM	 (this was a define in g_phys.c)
+cvar_t *g_stopspeed; // PGM	 (this was a define in g_phys.c)
 
 cvar_t *g_strict_saves;
 
-cvar_t *huntercam;
+cvar_t *g_huntercam;
 cvar_t *g_dm_strong_mines;
 cvar_t *g_dm_random_items;
 
@@ -147,7 +151,6 @@ cvar_t *g_teamplay_armor_protect;
 cvar_t *g_allow_techs;
 cvar_t *g_dm_powerups_style;
 cvar_t *g_corpse_sink_time;
-cvar_t *g_match_timer;
 cvar_t *g_start_items;
 cvar_t *g_map_list;
 cvar_t *g_map_list_shuffle;
@@ -161,7 +164,7 @@ cvar_t *g_inactivity;
 cvar_t *g_entity_override_load;
 cvar_t *g_entity_override_save;
 
-cvar_t *sv_airaccelerate;
+cvar_t *g_airaccelerate;
 cvar_t *g_knockback_scale;
 cvar_t *g_frozen_time;
 cvar_t *g_damage_scale;
@@ -184,11 +187,11 @@ cvar_t *g_warmup_ready_percentage;
 
 //ctf
 cvar_t *competition;
-cvar_t *matchlock;
+cvar_t *g_match_lock;
 cvar_t *matchsetuptime;
 cvar_t *matchstarttime;
 cvar_t *admin_password;
-cvar_t *allow_admin;
+cvar_t *g_allow_admin;
 cvar_t *warn_unbalanced;
 //-ctf
 cvar_t *g_eyecam;
@@ -206,6 +209,23 @@ cvar_t *g_item_bobbing;
 cvar_t *g_weapon_force_central_projection;
 
 cvar_t *g_allow_custom_skins;
+
+cvar_t *g_allow_voting;
+cvar_t *g_allow_vote_midgame;
+cvar_t *g_allow_spec_vote;
+cvar_t *g_vote_limit;
+cvar_t *g_vote_flags;
+
+cvar_t *g_dm_auto_join;
+
+cvar_t *g_dm_overtime;
+
+cvar_t *g_dm_do_warmup;
+cvar_t *g_dm_do_readyup;
+
+cvar_t *g_item_chain_random;
+
+cvar_t *g_allow_forfeit;
 
 static cvar_t *g_frames_per_frame;
 
@@ -317,17 +337,53 @@ static void Horde_InitFirstWave() {
 	Horde_CreateWave();
 }
 
+void GT_Change(int gt) {
+	if (gt < 0)
+		return;
+
+	if (gt >= GT_NUM_GAMETYPES)
+		return;
+
+	if (coop->integer)
+		gi.cvar_forceset("coop", "0");
+
+	if (!deathmatch->integer)
+		gi.cvar_forceset("deathmatch", "1");
+	
+	// action the cvar changes
+	for (size_t i = 0; i < GT_NUM_GAMETYPES; i++) {
+		gi.cvar_forceset(gt_cvar[gt], i == gt ? "1" : "0");
+	}
+
+	// set pre-adjustments
+	switch (gt) {
+	case GT_HORDE:
+		break;
+	case GT_FFA:
+		break;
+	case GT_DUEL:
+		break;
+	case GT_TDM:
+		break;
+	case GT_CTF:
+		break;
+	case GT_CA:
+		break;
+	case GT_FREEZE:
+		break;
+	default:
+		break;
+	}
+
+	// restart the match
+
+
+	// announce it
+	gi.LocBroadcast_Print(PRINT_CENTER, "{}", gt_long_name[gt]);
+}
+
 static void G_InitGametype() {
 	constexpr const char *COOP = "coop";
-
-	constexpr const char *C[GT_NUM_GAMETYPES] = {
-		"horde",
-		"deathmatch",
-		"duel",
-		"teamplay",
-		"ctf",
-		"freeze"
-	};
 
 	bool force_dm = false;
 
@@ -338,19 +394,19 @@ static void G_InitGametype() {
 			gi.cvar_set(COOP, "0");
 		// force ctf off
 		if (ctf->integer)
-			gi.cvar_set(C[GT_CTF], "0");
+			gi.cvar_set(gt_cvar[GT_CTF], "0");
 		// force ca off
 		if (clanarena->integer)
-			gi.cvar_set(C[GT_CA], "0");
+			gi.cvar_set(gt_cvar[GT_CA], "0");
 		// force tdm off
 		if (teamplay->integer)
-			gi.cvar_set(C[GT_TDM], "0");
+			gi.cvar_set(gt_cvar[GT_TDM], "0");
 		// force duel off
 		if (duel->integer)
-			gi.cvar_set(C[GT_DUEL], "0");
+			gi.cvar_set(gt_cvar[GT_DUEL], "0");
 		// force horde off
 		if (horde->integer)
-			gi.cvar_set(C[GT_HORDE], "0");
+			gi.cvar_set(gt_cvar[GT_HORDE], "0");
 	}
 	if (clanarena->integer) {
 		force_dm = true;
@@ -359,16 +415,16 @@ static void G_InitGametype() {
 			gi.cvar_set(COOP, "0");
 		// force ctf off
 		if (ctf->integer)
-			gi.cvar_set(C[GT_CTF], "0");
+			gi.cvar_set(gt_cvar[GT_CTF], "0");
 		// force tdm off
 		if (teamplay->integer)
-			gi.cvar_set(C[GT_TDM], "0");
+			gi.cvar_set(gt_cvar[GT_TDM], "0");
 		// force duel off
 		if (duel->integer)
-			gi.cvar_set(C[GT_DUEL], "0");
+			gi.cvar_set(gt_cvar[GT_DUEL], "0");
 		// force horde off
 		if (horde->integer)
-			gi.cvar_set(C[GT_HORDE], "0");
+			gi.cvar_set(gt_cvar[GT_HORDE], "0");
 	}
 	if (ctf->integer) {
 		force_dm = true;
@@ -377,13 +433,13 @@ static void G_InitGametype() {
 			gi.cvar_set(COOP, "0");
 		// force tdm off
 		if (teamplay->integer)
-			gi.cvar_set(C[GT_TDM], "0");
+			gi.cvar_set(gt_cvar[GT_TDM], "0");
 		// force duel off
 		if (duel->integer)
-			gi.cvar_set(C[GT_DUEL], "0");
+			gi.cvar_set(gt_cvar[GT_DUEL], "0");
 		// force horde off
 		if (horde->integer)
-			gi.cvar_set(C[GT_HORDE], "0");
+			gi.cvar_set(gt_cvar[GT_HORDE], "0");
 	}
 	if (teamplay->integer) {
 		force_dm = true;
@@ -392,10 +448,10 @@ static void G_InitGametype() {
 			gi.cvar_set(COOP, "0");
 		// force duel off
 		if (duel->integer)
-			gi.cvar_set(C[GT_DUEL], "0");
+			gi.cvar_set(gt_cvar[GT_DUEL], "0");
 		// force horde off
 		if (horde->integer)
-			gi.cvar_set(C[GT_HORDE], "0");
+			gi.cvar_set(gt_cvar[GT_HORDE], "0");
 	}
 	if (duel->integer) {
 		force_dm = true;
@@ -404,7 +460,7 @@ static void G_InitGametype() {
 			gi.cvar_set(COOP, "0");
 		// force horde off
 		if (horde->integer)
-			gi.cvar_set(C[GT_HORDE], "0");
+			gi.cvar_set(gt_cvar[GT_HORDE], "0");
 	}
 	if (horde->integer) {
 		force_dm = true;
@@ -414,13 +470,13 @@ static void G_InitGametype() {
 	}
 
 	if (force_dm) {
-		gi.Com_PrintFmt("Forcing {}.\n", C[GT_FFA]);
-		gi.cvar_set(C[GT_FFA], "1");
+		gi.Com_PrintFmt("Forcing {}.\n", gt_cvar[GT_FFA]);
+		gi.cvar_set(gt_cvar[GT_FFA], "1");
 	} else if (deathmatch->integer) {
 	}
 
 	// force even maxplayers value during teamplay
-	if (IsTeamplay()) {
+	if (Teams()) {
 		int pmax = maxplayers->integer;
 
 		if (pmax != floor(pmax / 2))
@@ -439,7 +495,7 @@ is loaded.
 */
 static void PreInitGame() {
 	maxclients = gi.cvar("maxclients", G_Fmt("{}", MAX_SPLIT_PLAYERS).data(), CVAR_SERVERINFO | CVAR_LATCH);
-	minplayers = gi.cvar("minplayers", "1", CVAR_NOFLAGS);
+	minplayers = gi.cvar("minplayers", "2", CVAR_NOFLAGS);
 	maxplayers = gi.cvar("maxplayers", "16", CVAR_NOFLAGS);
 
 	deathmatch = gi.cvar("deathmatch", "0", CVAR_LATCH);
@@ -477,38 +533,25 @@ static void InitGame() {
 	gun_y = gi.cvar("gun_y", "0", CVAR_NOFLAGS);
 	gun_z = gi.cvar("gun_z", "0", CVAR_NOFLAGS);
 
-	// FIXME: sv_ prefix is wrong for these
-	sv_rollspeed = gi.cvar("sv_rollspeed", "200", CVAR_NOFLAGS);
-	sv_rollangle = gi.cvar("sv_rollangle", "2", CVAR_NOFLAGS);
-	sv_maxvelocity = gi.cvar("sv_maxvelocity", "2000", CVAR_NOFLAGS);
-	sv_gravity = gi.cvar("sv_gravity", "800", CVAR_NOFLAGS);
+	g_rollspeed = gi.cvar("g_rollspeed", "200", CVAR_NOFLAGS);
+	g_rollangle = gi.cvar("g_rollangle", "2", CVAR_NOFLAGS);
+	g_maxvelocity = gi.cvar("g_maxvelocity", "2000", CVAR_NOFLAGS);
+	g_gravity = gi.cvar("g_gravity", "800", CVAR_NOFLAGS);
 
-	g_skipViewModifiers = gi.cvar("g_skipViewModifiers", "0", CVAR_NOSET);
+	g_skip_view_modifiers = gi.cvar("g_skip_view_modifiers", "0", CVAR_NOSET);
 
-	sv_stopspeed = gi.cvar("sv_stopspeed", "100", CVAR_NOFLAGS); // PGM - was #define in g_phys.c
+	g_stopspeed = gi.cvar("g_stopspeed", "100", CVAR_NOFLAGS);
 
-	// ROGUE
-	huntercam = gi.cvar("huntercam", "1", CVAR_SERVERINFO | CVAR_LATCH);
+	g_huntercam = gi.cvar("g_huntercam", "1", CVAR_SERVERINFO | CVAR_LATCH);
 	g_dm_strong_mines = gi.cvar("g_dm_strong_mines", "0", CVAR_NOFLAGS);
 	g_dm_random_items = gi.cvar("g_dm_random_items", "0", CVAR_NOFLAGS);
-	// ROGUE
 
-	g_voting_percentage = gi.cvar("g_voting_percentage", "66", CVAR_NOFLAGS);
-
-	// [Kex] Instagib
+	// game modifications
 	g_instagib = gi.cvar("g_instagib", "0", CVAR_SERVERINFO | CVAR_LATCH);
 	g_instagib_splash = gi.cvar("g_instagib_splash", "0", CVAR_NOFLAGS);
-
-	// muff mode: quad hog
 	g_quadhog = gi.cvar("g_quadhog", "0", CVAR_SERVERINFO | CVAR_LATCH);
-
-	// muff mode: nade fest
 	g_nadefest = gi.cvar("g_nadefest", "0", CVAR_SERVERINFO | CVAR_LATCH);
-
-	// muff mode: weapons frenzy
 	g_frenzy = gi.cvar("g_frenzy", "0", CVAR_SERVERINFO | CVAR_LATCH);
-
-	// muff mode: vampire
 	g_vampiric_damage = gi.cvar("g_vampiric_damage", "0", CVAR_NOFLAGS);
 	g_vampiric_health_max = gi.cvar("g_vampiric_health_max", "500", CVAR_NOFLAGS);
 
@@ -523,8 +566,8 @@ static void InitGame() {
 	g_coop_instanced_items = gi.cvar("g_coop_instanced_items", "1", CVAR_LATCH);
 	g_allow_grapple = gi.cvar("g_allow_grapple", "auto", CVAR_NOFLAGS);
 	g_grapple_offhand = gi.cvar("g_grapple_offhand", "0", CVAR_NOFLAGS);
-	g_grapple_fly_speed = gi.cvar("g_grapple_fly_speed", G_Fmt("{}", CTF_DEFAULT_GRAPPLE_SPEED).data(), CVAR_NOFLAGS);
-	g_grapple_pull_speed = gi.cvar("g_grapple_pull_speed", G_Fmt("{}", CTF_DEFAULT_GRAPPLE_PULL_SPEED).data(), CVAR_NOFLAGS);
+	g_grapple_fly_speed = gi.cvar("g_grapple_fly_speed", G_Fmt("{}", DEFAULT_GRAPPLE_SPEED).data(), CVAR_NOFLAGS);
+	g_grapple_pull_speed = gi.cvar("g_grapple_pull_speed", G_Fmt("{}", DEFAULT_GRAPPLE_PULL_SPEED).data(), CVAR_NOFLAGS);
 	g_grapple_damage = gi.cvar("g_grapple_damage", "10", CVAR_NOFLAGS);
 
 	g_frag_messages = gi.cvar("g_frag_messages", "1", CVAR_NOFLAGS);
@@ -536,10 +579,10 @@ static void InitGame() {
 	bot_debug_move_to_point = gi.cvar("bot_debug_move_to_point", "0", CVAR_NOFLAGS);
 
 	// noset vars
-	sv_dedicated = gi.cvar("dedicated", "0", CVAR_NOSET);
+	g_dedicated = gi.cvar("dedicated", "0", CVAR_NOSET);
 
 	// latched vars
-	sv_cheats = gi.cvar("cheats",
+	g_cheats = gi.cvar("cheats",
 #if defined(_DEBUG)
 		"1"
 #else
@@ -580,7 +623,7 @@ static void InitGame() {
 
 	g_strict_saves = gi.cvar("g_strict_saves", "1", CVAR_NOFLAGS);
 
-	sv_airaccelerate = gi.cvar("sv_airaccelerate", "0", CVAR_NOFLAGS);
+	g_airaccelerate = gi.cvar("g_airaccelerate", "0", CVAR_NOFLAGS);
 
 	g_knockback_scale = gi.cvar("g_knockback_scale", "1.0", CVAR_NOFLAGS);
 	g_damage_scale = gi.cvar("g_damage_scale", "1", CVAR_NOFLAGS);
@@ -633,7 +676,6 @@ static void InitGame() {
 	g_dm_powerups_style = gi.cvar("g_dm_powerups_style", "1", CVAR_NOFLAGS);
 
 	g_corpse_sink_time = gi.cvar("g_corpse_sink_time", "15", CVAR_NOFLAGS);
-	g_match_timer = gi.cvar("g_match_timer", "1", CVAR_NOFLAGS);
 
 	g_motd = gi.cvar("g_motd", "", CVAR_NOFLAGS);
 
@@ -651,11 +693,11 @@ static void InitGame() {
 
 	//ctf
 	competition = gi.cvar("competition", "0", CVAR_SERVERINFO);
-	matchlock = gi.cvar("matchlock", "1", CVAR_SERVERINFO);
+	g_match_lock = gi.cvar("g_match_lock", "0", CVAR_SERVERINFO);
 	matchsetuptime = gi.cvar("matchsetuptime", "10", CVAR_NOFLAGS);
 	matchstarttime = gi.cvar("matchstarttime", "20", CVAR_NOFLAGS);
 	admin_password = gi.cvar("admin_password", "", CVAR_NOFLAGS);
-	allow_admin = gi.cvar("allow_admin", "1", CVAR_NOFLAGS);
+	g_allow_admin = gi.cvar("g_allow_admin", "1", CVAR_NOFLAGS);
 	warn_unbalanced = gi.cvar("warn_unbalanced", "0", CVAR_NOFLAGS);
 	//-ctf
 	g_eyecam = gi.cvar("g_eyecam", "1", CVAR_NOFLAGS);
@@ -673,6 +715,23 @@ static void InitGame() {
 	g_weapon_force_central_projection = gi.cvar("g_weapon_force_central_projection", "0", CVAR_NOFLAGS);
 
 	g_allow_custom_skins = gi.cvar("g_allow_custom_skins", "1", CVAR_NOFLAGS);
+
+	g_allow_voting = gi.cvar("g_allow_voting", "0", CVAR_NOFLAGS);
+	g_allow_vote_midgame = gi.cvar("g_allow_vote_midgame", "0", CVAR_NOFLAGS);
+	g_allow_spec_vote = gi.cvar("g_allow_spec_vote", "1", CVAR_NOFLAGS);
+	g_vote_limit = gi.cvar("g_vote_limit", "3", CVAR_NOFLAGS);
+	g_vote_flags = gi.cvar("g_vote_flags", "0", CVAR_NOFLAGS);
+
+	g_dm_auto_join = gi.cvar("g_dm_auto_join", "0", CVAR_NOFLAGS);
+
+	g_dm_overtime = gi.cvar("g_dm_overtime", "120", CVAR_NOFLAGS);
+
+	g_dm_do_warmup = gi.cvar("g_dm_do_warmup", "1", CVAR_NOFLAGS);
+	g_dm_do_readyup = gi.cvar("g_dm_do_readyup", "0", CVAR_NOFLAGS);
+
+	g_item_chain_random = gi.cvar("g_item_chain_random", "0", CVAR_NOFLAGS);
+
+	g_allow_forfeit = gi.cvar("g_allow_forfeit", "1", CVAR_NOFLAGS);
 
 	// items
 	InitItems();
@@ -698,11 +757,164 @@ static void InitGame() {
 
 	level.ready_to_exit = false;
 
+	level.match_state = MS_WARMUP_DELAYED;
+	level.match_state_timer = 0_sec;
+	level.match_time = level.time;
+
+	level.locked[TEAM_SPECTATOR] = false;
+	level.locked[TEAM_FREE] = false;
+	level.locked[TEAM_RED] = false;
+	level.locked[TEAM_BLUE] = false;
+
 	//Horde_InitFirstWave();
 	Horde_CreateWave();
 }
 
 //===================================================================
+
+#if 0
+bool Match_CheckRules() {
+	int		 t;
+	uint32_t i, j;
+	char	 text[64];
+	edict_t *ent;
+
+	if (level.voting_type != VOTING_NONE && level.voting_time <= level.time) {
+		gi.LocBroadcast_Print(PRINT_CHAT, "Voting timed out and has been cancelled.\n");
+		level.voting_type = VOTING_NONE;
+	}
+
+	if (level.match != MATCH_NONE) {
+		t = (level.match_time - level.time).seconds<int>();
+
+		// no team warnings in match mode
+		level.warnactive = 0;
+
+		if (t <= 0) { // time ended on something
+			switch (level.match) {
+			case MATCH_SETUP:
+				// go back to normal mode
+				if (competition->integer < 3) {
+					level.match = MATCH_NONE;
+					gi.cvar_set("competition", "1");
+					Match_Reset();
+				} else {
+					// reset the time
+					level.match_time = level.time + gtime_t::from_min(matchsetuptime->value);
+				}
+				return false;
+
+			case MATCH_PREGAME:
+				// match started!
+				Match_Start();
+				gi.positioned_sound(world->s.origin, world, CHAN_AUTO | CHAN_RELIABLE, gi.soundindex("misc/tele_up.wav"), 1, ATTN_NONE, 0);
+				return false;
+
+			case MATCH_GAME:
+				// match ended!
+				Match_End();
+				gi.positioned_sound(world->s.origin, world, CHAN_AUTO | CHAN_RELIABLE, gi.soundindex("misc/bigtele.wav"), 1, ATTN_NONE, 0);
+				return false;
+
+			default:
+				break;
+			}
+		}
+
+		if (t == level.lasttime)
+			return false;
+
+		level.lasttime = t;
+
+		switch (level.match) {
+		case MATCH_SETUP:
+			for (j = 0, i = 1; i <= game.maxclients; i++) {
+				ent = g_edicts + i;
+				if (!ent->inuse)
+					continue;
+				if (ClientIsPlaying(ent->client) &&
+					!ent->client->resp.ready)
+					j++;
+			}
+
+			if (competition->integer < 3)
+				G_FmtTo(text, "{:02}:{:02} SETUP: {} not ready", t / 60, t % 60, j);
+			else
+				G_FmtTo(text, "SETUP: {} not ready", j);
+
+			gi.configstring(CONFIG_MATCH_STATE, text);
+			break;
+
+		case MATCH_PREGAME:
+			G_FmtTo(text, "{:02}:{:02} UNTIL START", t / 60, t % 60);
+			gi.configstring(CONFIG_MATCH_STATE, text);
+
+			if (t <= 10 && !level.countdown) {
+				level.countdown = true;
+				gi.positioned_sound(world->s.origin, world, CHAN_AUTO | CHAN_RELIABLE, gi.soundindex("world/10_0.wav"), 1, ATTN_NONE, 0);
+			}
+			break;
+
+		case MATCH_GAME:
+			G_FmtTo(text, "{:02}:{:02} MATCH", t / 60, t % 60);
+			gi.configstring(CONFIG_MATCH_STATE, text);
+			if (t <= 10 && !level.countdown) {
+				level.countdown = true;
+				gi.positioned_sound(world->s.origin, world, CHAN_AUTO | CHAN_RELIABLE, gi.soundindex("world/10_0.wav"), 1, ATTN_NONE, 0);
+			}
+			break;
+
+		default:
+			break;
+		}
+		return false;
+	} else {
+		if (Teams()) {
+			int tally_red_score = 0, tally_blue_score = 0;
+
+			if (level.time == gtime_t::from_sec(level.lasttime))
+				return false;
+			level.lasttime = level.time.seconds<int>();
+			// this is only done in non-match (public) mode
+
+			if (warn_unbalanced->integer) {
+				// count up the team totals
+				for (i = 1; i <= game.maxclients; i++) {
+					ent = g_edicts + i;
+					if (!ent->inuse)
+						continue;
+					if (ent->client->resp.team == TEAM_RED)
+						tally_red_score++;
+					else if (ent->client->resp.team == TEAM_BLUE)
+						tally_blue_score++;
+				}
+
+				if (tally_red_score - tally_blue_score >= 2 && tally_blue_score >= 2) {
+					if (level.warnactive != TEAM_RED) {
+						level.warnactive = TEAM_RED;
+						gi.configstring(CONFIG_CTF_TEAMINFO, "WARNING: Red has too many players");
+					}
+				} else if (tally_blue_score - tally_red_score >= 2 && tally_red_score >= 2) {
+					if (level.warnactive != TEAM_BLUE) {
+						level.warnactive = TEAM_BLUE;
+						gi.configstring(CONFIG_CTF_TEAMINFO, "WARNING: Blue has too many players");
+					}
+				} else
+					level.warnactive = 0;
+			} else
+				level.warnactive = 0;
+		}
+	}
+
+	if (capturelimit->integer &&
+		(level.team_scores[TEAM_RED] >= capturelimit->integer ||
+			level.team_scores[TEAM_BLUE] >= capturelimit->integer)) {
+		gi.LocBroadcast_Print(PRINT_HIGH, "$g_capturelimit_hit");
+		return true;
+	}
+	return false;
+}
+#endif
 
 #if 0
 static void ClearBodyQue(void) {
@@ -716,8 +928,8 @@ static void ClearBodyQue(void) {
 		}
 	}
 }
-
-
+#endif
+/*
 static void G_WarmupEnd(void) {
 	gclient_t *client;
 	edict_t *ent;
@@ -727,19 +939,19 @@ static void G_WarmupEnd(void) {
 	//ClearBodyQue();
 
 	// return flags
-	GT_CTF_ResetFlags();
+	CTF_ResetFlags();
 
 	memset(level.team_scores, 0, sizeof(level.team_scores));
 
-	level.warmup_time = 0_ms;
-	level.warmup_state = WARMUP_NONE;
+	level.match_state_timer = 0_ms;
+	level.match_state = MS_NONE;
 	level.start_time = level.time;
 
-	Match_ResetAllPlayers();
-
+	Match_Reset();
+	
 	// respawn items, remove projectiles, etc.
-	ent = level.gentities + MAX_CLIENTS;
-	for (i = MAX_CLIENTS; i < level.num_entities; i++, ent++) {
+	ent = g_edicts + MAX_CLIENTS;
+	for (i = MAX_CLIENTS; i < MAX_ITEMS; i++, ent++) {
 
 		if (!ent->inuse)
 			continue;
@@ -789,71 +1001,530 @@ static void G_WarmupEnd(void) {
 		}
 	}
 }
+*/
 
+/*
+============
+Entities_Reset
+
+Reset clients and items
+============
+*/
+static void Entities_Reset() {
+	edict_t *ent;
+	size_t	i;
+
+	// reset the players
+	for (i = 1; i <= game.maxclients; i++) {
+		ent = g_edicts + i;
+
+		if (!ent->inuse)
+			continue;
+
+		if (!ent->client)
+			continue;
+
+		if (!ent->client->pers.connected)
+			continue;
+
+		//G_SetPlayerScore(ent->client, 0);
+		ent->client->resp.ctf_state = 0;
+		ent->client->resp.ghost = nullptr;
+		ent->client->resp.score = 0;
+
+		//gi.LocCenter_Print(ent, "MATCH HAS STARTED!");
+
+		if (ClientIsPlaying(ent->client)) {
+			// make up a ghost code
+			Match_Ghost_Assign(ent);
+			Weapon_Grapple_DoReset(ent->client);
+			ent->svflags = SVF_NOCLIENT;
+			ent->flags &= ~FL_GODMODE;
+
+			ent->client->respawn_time = level.time;	// +random_time(1_sec, 4_sec);
+			ent->client->ps.pmove.pm_type = PM_DEAD;
+			ent->client->anim_priority = ANIM_DEATH;
+			ent->s.frame = FRAME_death308 - 1;
+			ent->client->anim_end = FRAME_death308;
+			ent->deadflag = true;
+			ent->movetype = MOVETYPE_NOCLIP;
+			ent->client->ps.gunindex = 0;
+			ent->client->ps.gunskin = 0;
+			gi.linkentity(ent);
+		}
+	}
+
+	CalculateRanks();
+
+	// reset the level items
+	Tech_Reset();
+	CTF_ResetFlags();
+
+	// set up weapon chains
+	for (i = IT_NULL; i < IT_TOTAL; i = static_cast<item_id_t>(i + 1)) {
+		if (!itemlist[i].chain)
+			continue;
+
+		gitem_t *item = &itemlist[i];
+
+		// already initialized
+		if (item->chain_next)
+			continue;
+
+		gitem_t *chain_item = &itemlist[item->chain];
+
+		if (!chain_item)
+			gi.Com_ErrorFmt("Invalid item chain {} for {}", (int32_t)item->chain, item->pickup_name);
+
+		// set up initial chain
+		if (!chain_item->chain_next)
+			chain_item->chain_next = chain_item;
+
+		// if we're not the first in chain, add us now
+		if (chain_item != item) {
+			gitem_t *c;
+
+			// end of chain is one whose chain_next points to chain_item
+			for (c = chain_item; c->chain_next != chain_item; c = c->chain_next)
+				continue;
+
+			// splice us in
+			item->chain_next = chain_item;
+			c->chain_next = item;
+		}
+	}
+
+	for (ent = g_edicts + 1, i = 1; i < globals.num_edicts; i++, ent++) {
+		if (ent->inuse && ent->item) {	//!ent->client) {
+			if (ent->solid == SOLID_NOT && /*ent->think == RespawnItem && */ent->nextthink >= level.time) {
+				// powerups don't spawn in for a while
+				if (g_dm_powerups_style->integer && (ent->item->flags & IF_POWERUP)) {
+					ent->svflags |= SVF_NOCLIENT;
+					ent->solid = SOLID_NOT;
+
+					ent->nextthink = level.time + gtime_t::from_sec(irandom(30, 60));
+					ent->think = RespawnItem;
+					continue;
+				} else {
+					ent->nextthink = 0_ms;
+					RespawnItem(ent);
+				}
+			}
+		}
+	}
+}
+
+/*
+============
+Match_Start
+
+Starts a match
+============
+*/
+void Match_Start() {
+	if (!deathmatch->integer)
+		return;
+
+	level.match_time = level.time;	// +gtime_t::from_min(timelimit->value);
+	level.overtime = 0_sec;
+
+	const char *s = G_TimeString(timelimit->value ? timelimit->value : 0 * 1000);
+	gi.configstring(CONFIG_MATCH_STATE, s);
+
+	level.match_state = MS_MATCH_IN_PROGRESS;
+	level.match_state_timer = level.time;
+
+	level.team_scores[TEAM_RED] = level.team_scores[TEAM_BLUE] = 0;
+
+	memset(level.ghosts, 0, sizeof(level.ghosts));
+
+	Entities_Reset();
+
+	gi.LocBroadcast_Print(PRINT_TTS, "The match has started!\n");
+	gi.LocBroadcast_Print(PRINT_CENTER, "FIGHT!");
+	gi.positioned_sound(world->s.origin, world, CHAN_AUTO | CHAN_RELIABLE, gi.soundindex("misc/tele_up.wav"), 1, ATTN_NONE, 0);
+}
+
+/*
+============
+Match_Reset
+============
+*/
+void Match_Reset() {
+
+	if (!g_dm_do_warmup->integer) {
+		Match_Start();
+		return;
+	}
+
+	Entities_Reset();
+
+	level.match_time = level.time;
+	level.match_state = MS_WARMUP_DEFAULT;
+	level.match_state_timer = 0_sec;
+
+	CalculateRanks();
+
+	gi.LocBroadcast_Print(PRINT_TTS, "The match has been reset.\n");
+}
 
 /*
 =============
-CheckTournament
+Duel_AddPlayer
 
-Once a frame, check for changes in tournament player state
+If there are less than two players in the arena, place the
+next queued player in the game and restart
 =============
 */
-static void CheckTournament(void) {
+static void Duel_AddPlayer(void) {
+	gclient_t	*client, *next_in_line;
+
+	if (level.num_playing_clients >= 2)
+		return;
+
+	// never change during intermission
+	if (level.match_state == MS_MATCH_ENDED || level.intermission_time || level.intermission_queued)
+		return;
+
+	next_in_line = nullptr;
+
+	for (size_t i = 0; i < game.maxclients; i++) {
+		client = &game.clients[i];
+		if (!client->pers.connected)
+			continue;
+
+		if (client->resp.team != TEAM_SPECTATOR)
+			continue;
+
+		if (!client->resp.duel_queued)
+			continue;
+
+		if (client->resp.spectator_client < 0)
+			continue;
+
+		if (!next_in_line || client->resp.spectator_time > next_in_line->resp.spectator_time)
+			next_in_line = client;
+	}
+
+	if (!next_in_line)
+		return;
+
+	level.match_state_timer = 0_sec;
+	level.match_state = MS_WARMUP_DEFAULT;
+
+	// set them to free-for-all team
+	SetTeam(&g_edicts[next_in_line - game.clients], TEAM_FREE, false, false);
+}
+
+/*
+=======================
+Duel_RemoveLoser
+
+Make the loser a queued player at the back of the line
+=======================
+*/
+static void Duel_RemoveLoser(void) {
+	int client_num;
+
+	if (level.num_playing_clients != 2)
+		return;
+
+	client_num = level.sorted_clients[1];
+
+	if (!game.clients[client_num].pers.connected)
+		return;
+
+	gi.Com_PrintFmt( "Duel: Moving the loser, {}, to spectator.\n", game.clients[client_num].resp.netname);
+
+	// make them a queued player
+	SetTeam(&g_edicts[client_num+1], TEAM_NONE, false, true);
+}
+
+/*
+=======================
+Duel_MatchEnd_AdjustScores
+=======================
+*/
+static void Duel_MatchEnd_AdjustScores(void) {
+	if (!duel->integer)
+		return;
+
+	int client_num;
+
+	client_num = level.sorted_clients[0];
+	if (game.clients[client_num].pers.connected) {
+		game.clients[client_num].resp.wins++;
+		//ClientUserinfoChanged(&g_edicts[client_num], g_edicts[client_num].client->pers.userinfo);
+	}
+
+	client_num = level.sorted_clients[1];
+	if (game.clients[client_num].pers.connected) {
+		game.clients[client_num].resp.losses++;
+		//ClientUserinfoChanged(&g_edicts[client_num], g_edicts[client_num].client->pers.userinfo);
+	}
+}
+
+/*
+=============
+ReadyAll
+=============
+*/
+void ReadyAll() {
+	uint8_t i;
+	edict_t *e;
+
+	for (i = 1; i <= game.maxclients; i++) {
+		e = g_edicts + i;
+		if (!e->inuse)
+			continue;
+		if (!e->client)
+			continue;
+
+		e->client->resp.ready = true;
+	}
+}
+
+/*
+=============
+UnReadyAll
+=============
+*/
+void UnReadyAll() {
+	uint8_t i;
+	edict_t *e;
+
+	for (i = 1; i <= game.maxclients; i++) {
+		e = g_edicts + i;
+		if (!e->inuse)
+			continue;
+		if (!e->client)
+			continue;
+
+		e->client->resp.ready = false;
+	}
+}
+
+/*
+=============
+CheckReady
+=============
+*/
+static bool CheckReady() {
+	uint8_t i, count_total, count_ready;
+	edict_t *e;
+
+	if (!g_dm_do_readyup->integer)
+		return true;
+
+	count_total = count_ready = 0;
+	for (i = 1; i <= game.maxclients; i++) {
+		e = g_edicts + i;
+		if (!e->inuse)
+			continue;
+		if (!e->client)
+			continue;
+		if (!ClientIsPlaying(e->client))
+			continue;
+		if (e->svflags & SVF_BOT)
+			continue;
+
+		count_total++;
+
+		if (e->client->resp.ready)
+			count_ready++;
+	}
+
+	if (!count_ready || !count_total)
+		return false;
+
+	if (duel->integer && count_ready == 2 && count_total == 2)
+		return true;
+
+	if (((float)count_ready / (float)count_total) * 100 >= g_warmup_ready_percentage->value * 100)
+		return true;
+	return false;
+}
+
+/*
+=============
+Round_End
+=============
+*/
+static void Round_End() {
+	level.round_state = MS_ROUND_NONE;
+	level.round_state_timer = level.time + 1_sec;
+}
+
+/*
+=============
+CheckRoundState
+=============
+*/
+static void CheckRoundState(void) {
+	if (!clanarena->integer)
+		return;
+
+	if (level.match_state != MS_MATCH_IN_PROGRESS)
+		return;
+
+	// initiate round
+	if (level.round_state == MS_ROUND_NONE) {
+		if (level.round_state_timer > level.time)
+			return;
+		level.round_state = MS_ROUND_COUNTDOWN;
+		level.round_state_timer = level.time + 10_sec;
+		return;
+	}
+
+	// start round
+	if (level.round_state == MS_ROUND_COUNTDOWN) {
+		if (level.match_state_timer > level.round_state_timer) {
+			level.round_state = MS_ROUND_IN_PROGRESS;
+			level.round_state_timer = 0_sec;
+			level.round_number++;
+		} else {
+			return;
+		}
+	}
+
+	// end round
+	if (level.round_state == MS_ROUND_IN_PROGRESS) {
+		if (!level.num_living_red && level.num_eliminated_red && level.num_living_blue) {
+			G_AdjustTeamScore(TEAM_BLUE, 1);
+			gi.LocBroadcast_Print(PRINT_CENTER, "BLUE TEAM wins the round!\n");
+			Round_End();
+			return;
+		}
+		if (!level.num_living_blue && level.num_eliminated_blue && level.num_living_red) {
+			G_AdjustTeamScore(TEAM_RED, 1);
+			gi.LocBroadcast_Print(PRINT_CENTER, "RED TEAM wins the round!\n");
+			Round_End();
+			return;
+		}
+	}
+}
+
+/*
+=============
+CheckCountdown
+=============
+*/
+static void CheckCountdown(void) {
+	if (level.match_state != MS_MATCH_COUNTDOWN) {
+		if (level.countdown_check) {
+			level.countdown_check = 0_sec;
+		}
+		return;
+	}
+
+	int t = (level.match_state_timer - level.time).seconds<int>() + 1;
+
+	if (!level.countdown_check || level.countdown_check.seconds<int>() > t) {
+		if (t <= 10) {
+			gi.positioned_sound(world->s.origin, world, CHAN_AUTO | CHAN_RELIABLE, gi.soundindex(G_Fmt("world/{}.wav", t).data()), 1, ATTN_NONE, 0);
+		}
+		level.countdown_check = gtime_t::from_sec(t);
+	}
+}
+
+/*
+=============
+CheckWarmupState
+
+Once a frame, check for changes in match state during warmup
+=============
+*/
+static void CheckWarmupState(void) {
+
+	if (!deathmatch->integer)
+		return;
+
+	if (!g_dm_do_warmup->integer) {
+		Match_Start();
+		return;
+	}
 
 	// check because we run 3 game frames before calling Connect and/or ClientBegin
 	// for clients on a map_restart
-	if (!level.num_playing_clients)
+	if (!level.num_playing_clients) {
+		if (level.match_state != MS_WARMUP_DELAYED) {
+			level.match_state = MS_WARMUP_DELAYED;
+			level.match_state_timer = level.time + 5_sec;
+		}
+		return;
+	}
+
+	if (level.match_state == MS_WARMUP_DELAYED && level.match_state_timer > level.time)
 		return;
 
 	if (duel->integer) {
 
-		// pull in a spectator if needed
+		// pull in a queued spectator if needed
 		if (level.num_playing_clients < 2)
-			GT_Duel_AddPlayer();
+			Duel_AddPlayer();
 
 		// if we don't have two players, go back to "waiting for players"
 		if (level.num_playing_clients != 2) {
-			if (level.warmup_time != -1_sec) {
-				level.warmup_time = -1_sec;
-				level.warmup_state = WARMUP_DEFAULT;
+			if (level.match_state <= MS_MATCH_COUNTDOWN) {
+				if (level.match_state == MS_WARMUP_READYUP)
+					UnReadyAll();
+				else if (level.match_state == MS_MATCH_COUNTDOWN)
+					gi.LocBroadcast_Print(PRINT_CENTER, "Countdown cancelled:\nnot enough players.\n");
+
+				if (level.match_state != MS_WARMUP_DEFAULT) {
+					level.match_state_timer = 0_sec;
+					level.match_state = MS_WARMUP_DEFAULT;
+				}
 				//G_LogPrintf("Warmup:\n");
 			}
 			return;
 		}
 
-		if (!level.warmup_time)
+		if (level.match_state > MS_MATCH_COUNTDOWN)
 			return;
 
 		// if the warmup is changed at the console, restart it
 		if (g_warmup_countdown->modified_count != level.warmup_modification_count) {
 			level.warmup_modification_count = g_warmup_countdown->modified_count;
-			level.warmup_time = -1_sec;
-			level.warmup_state = WARMUP_DEFAULT;
+			level.match_state_timer = 0_sec;
+			level.match_state = MS_WARMUP_DEFAULT;
 		}
 
-		// if all players have arrived, start the countdown
-		if (level.warmup_time < 0_sec) {
-			if (level.num_playing_clients == 2) {
+		// if all players have arrived, let them ready up
+		if (level.match_state == MS_WARMUP_DEFAULT) {
+			level.match_state = MS_WARMUP_READYUP;
+			level.match_state_timer = 0_ms;
+			return;
+		}
+
+		// if both players are ready, let's start
+		if (level.match_state == MS_WARMUP_READYUP) {
+			if (CheckReady()) {
 				if (g_warmup_countdown->integer > 0) {
-					level.warmup_time = level.time + gtime_t::from_sec(g_warmup_countdown->integer);
-					level.warmup_state = WARMUP_COUNTDOWN;
+					level.match_state_timer = level.time + gtime_t::from_sec(g_warmup_countdown->integer);
+					level.match_state = MS_MATCH_COUNTDOWN;
+					//gi.positioned_sound(world->s.origin, world, CHAN_AUTO | CHAN_RELIABLE, gi.soundindex("world/10_0.wav"), 1, ATTN_NONE, 0);
+
+					// announce it
+					if (&game.clients[level.sorted_clients[0]] && &game.clients[level.sorted_clients[1]])
+						gi.LocBroadcast_Print(PRINT_CENTER, "{} vs {}\nBegins in...", game.clients[level.sorted_clients[0]].resp.netname, game.clients[level.sorted_clients[1]].resp.netname);
 				} else {
-					level.warmup_time = 0_ms;
-					level.warmup_state = WARMUP_NONE;
+					level.match_state_timer = 0_ms;
+					level.match_state = MS_MATCH_IN_PROGRESS;
 				}
 			}
 			return;
 		}
 
-		// if the warmup time has counted down, restart
-		if (level.time > level.warmup_time) {
-			G_WarmupEnd();
+		// if the warmup time has counted down, start the match
+		if (level.match_state == MS_MATCH_COUNTDOWN && level.time.seconds() > level.match_state_timer.seconds()) {
+			Match_Start();
 			return;
 		}
-	} else if (deathmatch->integer && level.warmup_time != 0_sec) {
-		bool	not_enough = false;
+	} else {
+		bool not_enough = false;
 
-		if (IsTeamplay()) {
+		if (Teams()) {
 			int counts[TEAM_NUM_TEAMS];
 			counts[TEAM_BLUE] = TeamConnectedCount(-1, TEAM_BLUE);
 			counts[TEAM_RED] = TeamConnectedCount(-1, TEAM_RED);
@@ -866,134 +1537,112 @@ static void CheckTournament(void) {
 		}
 
 		if (not_enough) {
-			if (level.warmup_time != -1_sec) {
-				level.warmup_time = -1_sec;
-				//G_LogPrintf("Warmup:\n");
+			if (level.match_state <= MS_MATCH_COUNTDOWN) {
+				if (level.match_state == MS_WARMUP_READYUP)
+					UnReadyAll();
+				else if (level.match_state == MS_MATCH_COUNTDOWN)
+					gi.LocBroadcast_Print(PRINT_CENTER, "Countdown cancelled:\nnot enough players.\n");
+
+				if (level.match_state != MS_WARMUP_DEFAULT) {
+					level.match_state = MS_WARMUP_DEFAULT;
+					level.match_state_timer = 0_sec;
+					//G_LogPrintf("Warmup:\n");
+				}
 			}
-			return; // still waiting for team members
+			return; // still waiting for players
 		}
 
-		if (level.warmup_time == 0_sec)
+		if (level.match_state == MS_WARMUP_DEFAULT) {
+			level.match_state = MS_WARMUP_READYUP;
+			level.match_state_timer = 0_sec;
+			//G_LogPrintf("Warmup:\n");
+			return;
+		}
+
+		if (level.match_state > MS_MATCH_COUNTDOWN)
 			return;
 
 		// if the warmup is changed at the console, restart it
 		if (g_warmup_countdown->modified_count != level.warmup_modification_count) {
 			level.warmup_modification_count = g_warmup_countdown->modified_count;
-			level.warmup_time = -1_sec;
+			level.match_state_timer = 0_sec;
+			level.match_state = MS_WARMUP_DEFAULT;
 		}
 
-		// if all players have arrived, start the countdown
-		if (level.warmup_time < 0_sec) {
-			if (g_warmup_countdown->integer > 0) {
-				level.warmup_time = level.time + gtime_t::from_sec(g_warmup_countdown->integer);
-				level.warmup_state = WARMUP_COUNTDOWN;
-			} else {
-				level.warmup_time = 0_ms;
-				level.warmup_state = WARMUP_NONE;
+		// if enough players have arrived, let them ready up
+		if (level.match_state == MS_WARMUP_DEFAULT) {
+			level.match_state = MS_WARMUP_READYUP;
+			level.match_state_timer = 0_ms;
+			return;
+		}
+
+		// if enough players are ready, start countdown
+		if (level.match_state == MS_WARMUP_READYUP) {
+			if (CheckReady()) {
+				if (g_warmup_countdown->integer > 0) {
+					level.match_state_timer = level.time + gtime_t::from_sec(g_warmup_countdown->integer);
+					level.match_state = MS_MATCH_COUNTDOWN;
+					//gi.positioned_sound(world->s.origin, world, CHAN_AUTO | CHAN_RELIABLE, gi.soundindex("world/10_0.wav"), 1, ATTN_NONE, 0);
+
+					// announce it
+					gi.LocBroadcast_Print(PRINT_CENTER, "{}\nBegins in...", level.gametype_name);
+				} else {
+					level.match_state_timer = 0_ms;
+					level.match_state = MS_MATCH_COUNTDOWN;
+				}
 			}
 			return;
 		}
 
-		// if the warmup time has counted down, restart
-		if (level.time > level.warmup_time) {
-			G_WarmupEnd();
+		// if the warmup time has counted down, start the match
+		if (level.match_state == MS_MATCH_COUNTDOWN && level.time.seconds() > level.match_state_timer.seconds()) {
+			Match_Start();
 			return;
 		}
 	}
 }
 
-
 /*
-=============
-GT_Duel_AddPlayer
-
-If there are less than two players in the arena, place the
-next queued player in the game and restart
-=============
+==================
+CheckVote
+==================
 */
-void GT_Duel_AddPlayer(void) {
-	int			i;
-	gclient_t *client, *nextInLine;
+static void CheckVote(void) {
 
-	if (level.num_playing_clients >= 2)
+	// vote has passed, execute
+	if (level.vote_execute_time) {
+		if (level.time > level.vote_execute_time) {
+			Cmd_Vote_Passed();
+			//gi.AddCommandString(G_Fmt("{} {}\n", level.vote->name, level.vote_arg).data());
+		}
+		return;
+	}
+
+	if (!level.vote_time)
 		return;
 
-	// never change during intermission
-	if (level.intermission_time)
-		return;
-
-	nextInLine = NULL;
-
-	for (i = 0; i < game.maxclients; i++) {
-		client = &game.clients[i];
-		if (!client->pers.connected)
-			continue;
-
-		if (client->resp.team != TEAM_SPECTATOR)
-			continue;
-
-		// never select the dedicated spectator
-		if (client->resp.spectator_client < 0)
-			continue;
-
-		if (!nextInLine || client->resp.spectator_time > nextInLine->resp.spectator_time) {
-			nextInLine = client;
+	if (level.time - level.vote_time >= 30_sec) {
+		gi.LocBroadcast_Print(PRINT_HIGH, "Vote failed.\n");
+	} else {
+		if (level.vote_yes > level.num_voting_clients / 2) {
+			// execute the command, then remove the vote
+			gi.LocBroadcast_Print(PRINT_HIGH, "Vote passed.\n");
+			level.vote_execute_time = level.time + 3_sec;
+		} else if (level.vote_no >= level.num_voting_clients / 2) {
+			// same behavior as a timeout
+			gi.LocBroadcast_Print(PRINT_HIGH, "Vote failed.\n");
+		} else {
+			// still waiting for a majority
+			return;
 		}
 	}
 
-	if (!nextInLine)
-		return;
-
-	level.warmup_time = -1_sec;
-	level.warmup_state = WARMUP_DEFAULT;
-
-	// set them to free-for-all team
-	SetTeam(&g_edicts[nextInLine - game.clients], "f", false);
+	level.vote_time = 0_sec;
+	//trap_SetConfigstring( CS_VOTE_TIME, "" );
 }
 
+// ----------------
 
-/*
-=======================
-GT_Duel_RemoveLoser
-
-Make the loser a queued player at the back of the line
-=======================
-*/
-static void GT_Duel_RemoveLoser(void) {
-	int clientNum;
-
-	if (level.num_playing_clients != 2)
-		return;
-
-	clientNum = level.sorted_clients[1];
-
-	if (!game.clients[clientNum].pers.connected)
-		return;
-
-	// make them a spectator
-	SetTeam(&g_edicts[clientNum], "q", false);
-}
-
-
-/*
-=======================
-GT_Duel_MatchEnd_AdjustScores
-=======================
-*/
-static void GT_Duel_MatchEnd_AdjustScores(void) {
-	int client_num = level.sorted_clients[0];
-	if (game.clients[client_num].pers.connected) {
-		game.clients[client_num].resp.wins++;
-		ClientUserinfoChanged(&g_edicts[client_num], g_edicts[client_num].client->pers.userinfo);
-	}
-
-	client_num = level.sorted_clients[1];
-	if (game.clients[client_num].pers.connected) {
-		game.clients[client_num].resp.losses++;
-		ClientUserinfoChanged(&g_edicts[client_num], g_edicts[client_num].client->pers.userinfo);
-	}
-}
-#endif
 /*
 ==================
 FindIntermissionPoint
@@ -1042,47 +1691,51 @@ wait 10 seconds before going on.
 Adapted from Quake III
 =================
 */
+
 static void CheckIntermissionExit(void) {
-	int16_t		ready, not_ready;
-	size_t		i;
-	gclient_t *cl;
+	int			ready, not_ready;
+	gclient_t	*cl;
+	edict_t		*ent;
 
-	//gi.LocBroadcast_Print(PRINT_HIGH, "{}\n", __FUNCTION__);
+	// see which players are ready
+	ready = not_ready = 0;
+	cl = game.clients;
+	ent = g_edicts + 1;
+	for (size_t i = 0; i < game.maxclients; i++, cl++, ent++) {
+		if (!ent->inuse)
+			continue;
+		if (!cl)
+			continue;
+		if (!cl->pers.connected)
+			continue;
+		if (!ClientIsPlaying(cl))
+			continue;
 
-	// never exit in less than five seconds
-	if (level.time < level.intermission_time + 5_sec && !level.exit_time) {
-		return;
+		if (ent->client->resp.is_a_bot) {
+			cl->ready_to_exit = true;
+			//gi.Client_Print(&g_edicts[1], PRINT_HIGH, "THERE BE A BOT\n");
+			//continue;
+		}
+
+		if (cl->ready_to_exit) {
+			ready++;
+			//gi.Client_Print(&g_edicts[1], PRINT_HIGH, "READY\n");
+			//continue;
+		} else {
+			//gi.Client_Print(&g_edicts[1], PRINT_HIGH, "NOT READY\n");
+			not_ready++;
+		}
 	}
 
 	// vote in progress
-	if (level.voting_time || level.voting_execution_time) {
-		level.ready_to_exit = false;
-		return;
+	if (level.vote_time || level.vote_execute_time) {
+		ready = 0;
+		not_ready = 1;
 	}
 
-	// see which players are ready
-	ready = 0;
-	not_ready = 0;
-	for (i = 0; i < game.maxclients; i++) {
-		cl = game.clients + i;
-		if (!cl->pers.connected) {
-			ready++;
-			continue;
-		}
-		if (g_edicts[i + 1].svflags & SVF_BOT) {
-			ready++;
-			continue;
-		}
-		if (cl->resp.team == TEAM_SPECTATOR) {
-			ready++;
-			continue;
-		}
-		if (cl->ready_to_exit) {
-			ready++;
-			continue;
-		}
-		not_ready++;
-	}
+	// never exit in less than five seconds
+	if (level.time < level.intermission_time + 5_sec && !level.exit_time)
+		return;
 
 	// if nobody wants to go, clear timer
 	// skip this if no players present
@@ -1093,7 +1746,9 @@ static void CheckIntermissionExit(void) {
 
 	// if everyone wants to go, go now
 	if (!not_ready) {
-		EndDMLevel();
+		//gi.Client_Print(&g_edicts[1], PRINT_HIGH, "EXIT THE DAMNED LEVEL\n");
+		//Match_End();
+		ExitLevel();
 		return;
 	}
 
@@ -1108,7 +1763,8 @@ static void CheckIntermissionExit(void) {
 	if (level.time < level.exit_time)
 		return;
 
-	EndDMLevel();
+	//Match_End();
+	ExitLevel();
 }
 
 /*
@@ -1123,7 +1779,7 @@ static bool ScoreIsTied(void) {
 		return false;
 	}
 
-	if (IsTeamplay())
+	if (Teams())
 		return level.team_scores[TEAM_RED] == level.team_scores[TEAM_BLUE];
 
 	return game.clients[level.sorted_clients[0]].resp.score == game.clients[level.sorted_clients[1]].resp.score;
@@ -1156,6 +1812,18 @@ static int SortRanks(const void *a, const void *b) {
 
 	// then spectators
 	if (ca->resp.team == TEAM_SPECTATOR && cb->resp.team == TEAM_SPECTATOR) {
+		if (ca->resp.duel_queued && cb->resp.duel_queued) {
+			if (ca->resp.spectator_time > cb->resp.spectator_time)
+				return -1;
+			if (ca->resp.spectator_time < cb->resp.spectator_time)
+				return 1;
+		}
+		if (ca->resp.duel_queued) {
+			return -1;
+		}
+		if (cb->resp.duel_queued) {
+			return 1;
+		}
 		if (ca->resp.spectator_time > cb->resp.spectator_time)
 			return -1;
 		if (ca->resp.spectator_time < cb->resp.spectator_time)
@@ -1197,17 +1865,24 @@ void CalculateRanks() {
 	gclient_t *cl;
 	size_t		i;
 
+	if (level.restarted)
+		return;
+
 	level.num_connected_clients = 0;
 	level.num_nonspectator_clients = 0;
 	level.num_playing_clients = 0;
 	level.num_human_clients = 0;
+	level.num_eliminated_red = 0;
+	level.num_eliminated_blue = 0;
+	level.num_living_red = 0;
+	level.num_living_blue = 0;
 	for (i = 0; i < game.maxclients; i++) {
 		cl = &game.clients[i];
 		if (cl->pers.connected) {
 			level.sorted_clients[level.num_connected_clients] = i;
 			level.num_connected_clients++;
 
-			if (!ClientIsSpectating(cl)) {
+			if (ClientIsPlaying(cl)) {
 				level.num_nonspectator_clients++;
 
 				// decide if this should be auto-followed
@@ -1221,6 +1896,20 @@ void CalculateRanks() {
 					} else if (level.follow2 == -1) {
 						level.follow2 = i;
 					}
+
+					if (Teams()) {
+						if (cl->resp.team == TEAM_RED) {
+							if (cl->pers.health > 0)
+								level.num_living_red++;
+							else
+								level.num_eliminated_red++;
+						} else {
+							if (cl->pers.health > 0)
+								level.num_living_blue++;
+							else
+								level.num_eliminated_blue++;
+						}
+					}
 				}
 			}
 		}
@@ -1229,7 +1918,7 @@ void CalculateRanks() {
 	qsort(level.sorted_clients, level.num_connected_clients, sizeof(level.sorted_clients[0]), SortRanks);
 
 	// set the rank value for all clients that are connected and not spectators
-	if (IsTeamplay()) {
+	if (Teams()) {
 		// in team games, rank is just the order of the teams, 0=red, 1=blue, 2=tied
 		for (i = 0; i < level.num_connected_clients; i++) {
 			cl = &game.clients[level.sorted_clients[i]];
@@ -1352,7 +2041,7 @@ static void ClientEndServerFrames() {
 
 	// calc the player views now that all pushing
 	// and damage has been added
-	for (uint32_t i = 0; i < game.maxclients; i++) {
+	for (size_t i = 0; i < game.maxclients; i++) {
 		ent = g_edicts + 1 + i;
 		if (!ent->inuse || !ent->client)
 			continue;
@@ -1391,15 +2080,13 @@ inline std::vector<std::string> str_split(const std::string_view &str, char by) 
 
 /*
 =================
-EndDMLevel
+Match_End
 
 The time limit or score limit has been exceeded
 =================
 */
-void EndDMLevel() {
+void Match_End() {
 	edict_t *ent;
-
-	//gi.LocBroadcast_Print(PRINT_HIGH, "{}\n", __FUNCTION__);
 	
 	// stay on same level flag
 	if (g_dm_same_level->integer) {
@@ -1510,8 +2197,18 @@ static void CheckNeedPass() {
 	}
 }
 
-static void LogExit(const char *string) {
+void QueueIntermission(const char *msg) {
+	if (level.intermission_queued)
+		return;
+
+	level.match_state = MS_MATCH_ENDED;
+	level.match_state_timer = 0_sec;
+	level.match_time = level.time;
+
+	gi.LocBroadcast_Print(PRINT_CHAT, "MATCH END: {}\n", msg[0] ? msg : "Unknown Reason");
 	level.intermission_queued = level.time;
+	gi.positioned_sound(world->s.origin, world, CHAN_AUTO | CHAN_RELIABLE, gi.soundindex("world/xian1.wav"), 1, ATTN_NONE, 0);	//klaxon1.wav
+	gi.configstring(CS_CDTRACK, "0");
 }
 
 int GT_ScoreLimit() {
@@ -1543,6 +2240,9 @@ void CheckExitRules() {
 	gclient_t	*cl;
 	int			scorelimit = 0;
 
+	if (!deathmatch->integer)
+		return;
+
 	// if at the intermission, wait for all non-bots to
 	// signal ready, then go to next level
 	if (level.intermission_time) {
@@ -1553,17 +2253,70 @@ void CheckExitRules() {
 	if (level.intermission_queued) {
 		if (level.time - level.intermission_queued >= 1_sec) {
 			level.intermission_queued = 0_ms;
-			EndDMLevel();
+			Match_End();
 		}
 		return;
 	}
 
-	if (!deathmatch->integer)
+	if (level.match_state < MS_MATCH_IN_PROGRESS)
 		return;
+	
+	if (level.time - level.match_time <= FRAME_TIME_MS)
+		return;
+		
+	if (timelimit->value) {
+		//if (level.time >= gtime_t::from_min(timelimit->value) + level.overtime) {
+		if (level.time >= level.match_time + gtime_t::from_min(timelimit->value) + level.overtime) {
+			// check for overtime
+			if (ScoreIsTied()) {
+				if (duel->integer) {
+					if (g_dm_overtime->integer > 0) {
+						level.overtime += gtime_t::from_sec(g_dm_overtime->integer);
+						gi.LocBroadcast_Print(PRINT_CENTER, "Overtime!\n{} added", G_TimeString(g_dm_overtime->integer * 1000));
+						gi.positioned_sound(world->s.origin, world, CHAN_AUTO | CHAN_RELIABLE, gi.soundindex("world/klaxon2.wav"), 1, ATTN_NONE, 0);
+						return;
+					}
+				} else {
+					if (!level.suddendeath) {
+						gi.LocBroadcast_Print(PRINT_CENTER, "Sudden Death!");
+						level.suddendeath = true;
+						gi.positioned_sound(world->s.origin, world, CHAN_AUTO | CHAN_RELIABLE, gi.soundindex("world/klaxon2.wav"), 1, ATTN_NONE, 0);
+						return;
+					}
+				}
+				return;
+			}
 
-	if (ctf->integer && Match_CheckRules()) {
-		EndDMLevel();
+			// find the winner and broadcast it
+			if (Teams()) {
+				if (level.team_scores[TEAM_RED] > level.team_scores[TEAM_BLUE]) {
+					QueueIntermission(G_Fmt("Red Team WINS with a final score of {} to {}.\n", level.team_scores[TEAM_RED], level.team_scores[TEAM_BLUE]).data());
+					return;
+				}
+				if (level.team_scores[TEAM_BLUE] > level.team_scores[TEAM_RED]) {
+					QueueIntermission(G_Fmt("Blue Team WINS with a final score of {} to {}.\n", level.team_scores[TEAM_BLUE], level.team_scores[TEAM_RED]).data());
+					return;
+				}
+			} else {
+				QueueIntermission(G_Fmt("{} WINS with a final score of {}.", game.clients[level.sorted_clients[0]].resp.netname, game.clients[level.sorted_clients[0]].resp.score).data());
+				return;
+			}
+
+			QueueIntermission("Timelimit hit.");
+			return;
+		}
+	}
+
+	if (minplayers->integer && level.num_playing_clients < minplayers->integer) {
+		QueueIntermission("Not enough players remaining.");
 		return;
+	}
+
+	if (Teams() && g_teamplay_force_balance->integer) {
+		if (abs(TeamCount(-1, TEAM_RED) - TeamCount(-1, TEAM_BLUE)) > 1) {
+			QueueIntermission("Teams are imbalanced.");
+			return;
+		}
 	}
 
 	// check for sudden death
@@ -1572,54 +2325,29 @@ void CheckExitRules() {
 		return;
 	}
 
-	if (level.warmup_time)
-		return;
-
-	if (IsMatch())
-		return; // no checking in match mode
-
-	if (timelimit->value) {
-		if (level.time >= gtime_t::from_min(timelimit->value)) {
-			gi.LocBroadcast_Print(PRINT_HIGH, "$g_timelimit_hit");
-			LogExit("Time limit hit.");
-			return;
-		}
-	}
-#if 0
-	if (level.num_playing_clients < minplayers->integer) {
-		gi.LocBroadcast_Print(PRINT_HIGH, "MATCH END: Not enough players remaining.\n");
-		LogExit("Not enough players remaining.");
-		return;
-	}
-#endif
 	scorelimit = GT_ScoreLimit();
 	if (!scorelimit) return;
 
-	if (IsTeamplay()) {
+	if (Teams()) {
 		if (level.team_scores[TEAM_RED] >= scorelimit) {
-			gi.LocBroadcast_Print(PRINT_HIGH, "Red Team hit the {} limit.\n", GT_ScoreLimitString());
-			LogExit("Score limit hit.");
+			QueueIntermission(G_Fmt("Red Team WINS! (hit the {} limit)", GT_ScoreLimitString()).data());
 			return;
 		}
 
 		if (level.team_scores[TEAM_BLUE] >= scorelimit) {
-			gi.LocBroadcast_Print(PRINT_HIGH, "Blue Team hit the {} limit.\n", GT_ScoreLimitString());
-			LogExit("Score limit hit.");
+			QueueIntermission(G_Fmt("Blue Team WINS! (hit the {} limit)", GT_ScoreLimitString()).data());
 			return;
 		}
 	} else {
 		for (size_t i = 0; i < game.maxclients; i++) {
 			cl = game.clients + i;
-			if (!cl->pers.connected) {
+			if (!cl->pers.connected)
 				continue;
-			}
-			if (cl->resp.team != TEAM_FREE) {
+			if (cl->resp.team != TEAM_FREE)
 				continue;
-			}
 
 			if (cl->resp.score >= scorelimit) {
-				gi.LocBroadcast_Print(PRINT_HIGH, "{} hit the {} limit.\n", cl->pers.netname, GT_ScoreLimitString());
-				LogExit("Score limit hit.");
+				QueueIntermission(G_Fmt("{} WINS! (hit the {} limit)", cl->resp.netname, GT_ScoreLimitString()).data());
 				return;
 			}
 		}
@@ -1627,12 +2355,36 @@ void CheckExitRules() {
 }
 
 static bool Match_NextMap() {
-	if (level.match == MATCH_POST) {
-		level.match = MATCH_SETUP;
-		Match_ResetAllPlayers();
+	if (level.match_state == MS_MATCH_ENDED) {
+		level.match_state = MS_WARMUP_DELAYED;
+		Match_Reset();
 		return true;
 	}
 	return false;
+}
+
+/*
+============
+Teams_CalcRankings
+
+End game rankings
+============
+*/
+void Teams_CalcRankings(std::array<uint32_t, MAX_CLIENTS> &player_ranks) {
+	if (!Teams())
+		return;
+
+	// we're all winners.. or losers. whatever
+	if (level.team_scores[TEAM_RED] == level.team_scores[TEAM_BLUE]) {
+		player_ranks.fill(1);
+		return;
+	}
+
+	team_t winning_team = (level.team_scores[TEAM_RED] > level.team_scores[TEAM_BLUE]) ? TEAM_RED : TEAM_BLUE;
+
+	for (auto player : active_players())
+		if (player->client->pers.spawned && ClientIsPlaying(player->client))
+			player_ranks[player->s.number - 1] = player->client->resp.team == winning_team ? 1 : 2;
 }
 
 /*
@@ -1641,42 +2393,34 @@ BeginIntermission
 =============
 */
 void BeginIntermission(edict_t *targ) {
-	edict_t *ent, *client;
-
-	//gi.LocBroadcast_Print(PRINT_HIGH, "{}\n", __FUNCTION__);
+	edict_t *cl_ent;
 
 	if (level.intermission_time)
 		return; // already activated
 
-	if (ctf->integer)
-		Teams_CalcScores();
-
-	gi.LocBroadcast_Print(PRINT_HIGH, "{}\n", __FUNCTION__);
-
-#if 0
 	// if in a duel, change the wins / losses
-	if (duel->integer) {
-		GT_Duel_MatchEnd_AdjustScores();
-#endif
+	Duel_MatchEnd_AdjustScores();
 
 	game.autosaved = false;
 
 	level.intermission_time = level.time;
 
 	// respawn any dead clients
-	for (uint32_t i = 0; i < game.maxclients; i++) {
-		client = g_edicts + 1 + i;
-		if (!client->inuse)
+	for (size_t i = 0; i < game.maxclients; i++) {
+		cl_ent = g_edicts + 1 + i;
+		if (!cl_ent->inuse)
 			continue;
-		if (client->health <= 0) {
+		if (cl_ent->health <= 0) {
 			// give us our max health back since it will reset
 			// to pers.health; in instanced items we'd lose the items
 			// we touched so we always want to respawn with our max.
 			if (P_UseCoopInstancedItems())
-				client->client->pers.health = client->client->pers.max_health = client->max_health;
+				cl_ent->client->pers.health = cl_ent->client->pers.max_health = cl_ent->max_health;
 
-			respawn(client);
+			ClientRespawn(cl_ent);
 		}
+
+		//MoveClientToIntermission(client);
 	}
 
 	level.intermission_server_frame = gi.ServerFrame();
@@ -1693,14 +2437,14 @@ void BeginIntermission(edict_t *targ) {
 
 	if (strstr(level.changemap, "*")) {
 		if (coop->integer) {
-			for (uint32_t i = 0; i < game.maxclients; i++) {
-				client = g_edicts + 1 + i;
-				if (!client->inuse)
+			for (size_t i = 0; i < game.maxclients; i++) {
+				cl_ent = g_edicts + 1 + i;
+				if (!cl_ent->inuse)
 					continue;
 				// strip players of all keys between units
 				for (uint32_t n = 0; n < IT_TOTAL; n++)
 					if (itemlist[n].flags & IF_KEY)
-						client->client->pers.inventory[n] = 0;
+						cl_ent->client->pers.inventory[n] = 0;
 			}
 		}
 
@@ -1734,6 +2478,9 @@ void BeginIntermission(edict_t *targ) {
 	level.intermission_exit = false;
 
 	if (!level.level_intermission_set) {
+		FindIntermissionPoint();
+		/*
+		edict_t *ent;
 		// find an intermission spot
 		ent = G_FindByString<&edict_t::classname>(nullptr, "info_player_intermission");
 		if (!ent) { // the map creator forgot to put in an intermission point...
@@ -1751,14 +2498,15 @@ void BeginIntermission(edict_t *targ) {
 
 		level.intermission_origin = ent->s.origin;
 		level.intermission_angle = ent->s.angles;
+		*/
 	}
 
 	// move all clients to the intermission point
-	for (uint32_t i = 0; i < game.maxclients; i++) {
-		client = g_edicts + 1 + i;
-		if (!client->inuse)
+	for (size_t i = 0; i < game.maxclients; i++) {
+		cl_ent = g_edicts + 1 + i;
+		if (!cl_ent->inuse)
 			continue;
-		MoveClientToIntermission(client);
+		MoveClientToIntermission(cl_ent);
 	}
 }
 
@@ -1767,7 +2515,7 @@ void BeginIntermission(edict_t *targ) {
 ExitLevel
 =============
 */
-static void ExitLevel() {
+void ExitLevel() {
 	// [Paril-KEX] N64 fade
 	if (level.intermission_fade) {
 		level.intermission_fade_time = level.time + 1.3_sec;
@@ -1775,9 +2523,20 @@ static void ExitLevel() {
 		return;
 	}
 
-	gi.LocBroadcast_Print(PRINT_HIGH, "{}\n", __FUNCTION__);
-
 	ClientEndServerFrames();
+
+	// if we are running a duel, kick the loser to queue,
+	// which will automatically grab the next queued player and restart
+	if (duel->integer) {
+		if (!level.restarted) {
+			Duel_RemoveLoser();
+			//trap_SendConsoleCommand(EXEC_APPEND, "map_restart 0\n");
+			//Match_Reset();
+			level.restarted = true;
+			//level.intermission_time = 0_sec;
+		}
+		//return;
+	}
 
 	level.intermission_time = 0_ms;
 
@@ -1786,7 +2545,7 @@ static void ExitLevel() {
 	if (level.intermission_clear) {
 		level.intermission_clear = false;
 
-		for (uint32_t i = 0; i < game.maxclients; i++) {
+		for (size_t i = 0; i < game.maxclients; i++) {
 			// [Kex] Maintain user info to keep the player skin. 
 			char userinfo[MAX_INFO_STRING];
 			memcpy(userinfo, game.clients[i].pers.userinfo, sizeof(userinfo));
@@ -1808,10 +2567,10 @@ static void ExitLevel() {
 			for (auto player : active_players())
 				player->client->pers.lives = g_coop_num_lives->integer + 1;
 	}
-
+	/*
 	if (Match_NextMap())
 		return;
-
+		*/
 	if (level.changemap == nullptr) {
 		gi.Com_Error("Got null changemap when trying to exit level. Was a trigger_changelevel configured correctly?");
 		return;
@@ -1849,7 +2608,7 @@ static void CheckMinMaxPlayers() {
 		return;
 
 	// set min/maxplayer limits
-	if (minplayers->integer < 1) gi.cvar_set("minplayers", "1");
+	if (minplayers->integer < 2) gi.cvar_set("minplayers", "2");
 	else if (minplayers->integer > maxclients->integer) gi.cvar_set("minplayers", maxclients->string);
 	if (maxplayers->integer < 0) gi.cvar_set("maxplayers", maxclients->string);
 	if (maxplayers->integer > maxclients->integer) gi.cvar_set("maxplayers", maxclients->string);
@@ -1859,16 +2618,16 @@ static void CheckMinMaxPlayers() {
 	maxplayers_mod_count = maxplayers->modified_count;
 }
 
-static void G_CheckCvars() {
-	if (Cvar_WasModified(sv_airaccelerate, game.airacceleration_modified)) {
+static void CheckCvars() {
+	if (Cvar_WasModified(g_airaccelerate, game.airacceleration_modified)) {
 		// [Paril-KEX] air accel handled by game DLL now, and allow
 		// it to be changed in sp/coop
-		gi.configstring(CS_AIRACCEL, G_Fmt("{}", sv_airaccelerate->integer).data());
-		pm_config.airaccel = sv_airaccelerate->integer;
+		gi.configstring(CS_AIRACCEL, G_Fmt("{}", g_airaccelerate->integer).data());
+		pm_config.airaccel = g_airaccelerate->integer;
 	}
 
-	if (Cvar_WasModified(sv_gravity, game.gravity_modified))
-		level.gravity = sv_gravity->value;
+	if (Cvar_WasModified(g_gravity, game.gravity_modified))
+		level.gravity = g_gravity->value;
 
 	CheckMinMaxPlayers();
 }
@@ -1891,7 +2650,11 @@ Advances the world by 0.1 seconds
 static inline void G_RunFrame_(bool main_loop) {
 	level.in_frame = true;
 
-	G_CheckCvars();
+	// cancel vote if timed out
+	CheckVote();
+
+	// for tracking changes
+	CheckCvars();
 
 	Bot_UpdateDebug();
 
@@ -1950,7 +2713,7 @@ static inline void G_RunFrame_(bool main_loop) {
 	// even the world gets a chance to think
 	//
 	ent = &g_edicts[0];
-	for (uint32_t i = 0; i < globals.num_edicts; i++, ent++) {
+	for (size_t i = 0; i < globals.num_edicts; i++, ent++) {
 		if (!ent->inuse) {
 			// defer removing client info so that disconnected, etc works
 			if (i > 0 && i <= game.maxclients) {
@@ -1998,6 +2761,12 @@ static inline void G_RunFrame_(bool main_loop) {
 		G_RunEntity(ent);
 	}
 
+	// see if it is time to do a match restart
+	CheckWarmupState();
+	CheckCountdown();
+
+	CheckRoundState();
+
 	// see if it is time to end a deathmatch
 	CheckExitRules();
 	//gi.Com_PrintFmt("intermission ---> {} {}\n", level.intermission_time ? "time" : "", level.intermission_queued ? "queued" : "");
@@ -2033,7 +2802,7 @@ static inline void G_RunFrame_(bool main_loop) {
 		level.entry->time += FRAME_TIME_S;
 
 	// [Paril-KEX] run monster pains now
-	for (uint32_t i = 0; i < globals.num_edicts + 1 + game.maxclients + BODY_QUEUE_SIZE; i++) {
+	for (size_t i = 0; i < globals.num_edicts + 1 + game.maxclients + BODY_QUEUE_SIZE; i++) {
 		edict_t *e = &g_edicts[i];
 
 		if (!e->inuse || !(e->svflags & SVF_MONSTER))
@@ -2057,7 +2826,7 @@ void G_RunFrame(bool main_loop) {
 	if (main_loop && !G_AnyPlayerSpawned())
 		return;
 
-	for (int32_t i = 0; i < g_frames_per_frame->integer; i++)
+	for (size_t i = 0; i < g_frames_per_frame->integer; i++)
 		G_RunFrame_(main_loop);
 
 	// match details.. only bother if there's at least 1 player in-game
@@ -2081,7 +2850,7 @@ player processing happens outside RunFrame
 ================
 */
 void G_PrepFrame() {
-	for (uint32_t i = 0; i < globals.num_edicts; i++)
+	for (size_t i = 0; i < globals.num_edicts; i++)
 		g_edicts[i].s.event = EV_NONE;
 
 	for (auto player : active_players())

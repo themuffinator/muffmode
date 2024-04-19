@@ -40,7 +40,7 @@ using stuck_object_trace_fn_t = trace_t(const vec3_t &, const vec3_t &, const ve
 stuck_result_t G_FixStuckObject_Generic(vec3_t &origin, const vec3_t &own_mins, const vec3_t &own_maxs, std::function<stuck_object_trace_fn_t> trace);
 
 enum team_t {
-	TEAM_NONE = -1,
+	TEAM_NONE,	// = -1,
 	TEAM_SPECTATOR,
 	TEAM_FREE,
 	TEAM_RED,
@@ -210,8 +210,8 @@ enum player_stat_t
     STAT_SELECTED_ICON = 6,
     STAT_PICKUP_ICON = 7,
     STAT_PICKUP_STRING = 8,
-    STAT_TIMER_ICON = 9,
-    STAT_TIMER = 10,
+    STAT_POWERUP_ICON = 9,
+    STAT_POWERUP_TIME = 10,
     STAT_HELPICON = 11,
     STAT_SELECTED_ITEM = 12,
     STAT_LAYOUTS = 13,
@@ -267,6 +267,8 @@ enum player_stat_t
 	STAT_DUEL_HEADER,
 
 	STAT_SHOW_STATUSBAR,
+
+	STAT_COUNTDOWN,
 
 	// don't use; just for verification
     STAT_LAST

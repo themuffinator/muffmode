@@ -129,6 +129,24 @@ void SpawnDamage(int type, const vec3_t &origin, const vec3_t &normal, int damag
 }
 
 /*
+================
+Match_CanDamage
+================
+*/
+static bool Match_CanDamage() {
+	if (level.intermission_queued)
+		return false;
+
+	switch (level.match_state) {
+	case MS_MATCH_COUNTDOWN:
+	case MS_MATCH_ENDED:
+		return false;
+	}
+
+	return true;
+}
+
+/*
 ============
 T_Damage
 
@@ -191,7 +209,7 @@ static int CheckPowerArmor(edict_t *ent, const vec3_t &point, const vec3_t &norm
 	if (!*power)
 		return 0;
 
-	if (power_armor_type == IT_ITEM_POWER_SCREEN)
+	if (power_armor_type == IT_POWER_SCREEN)
 	{
 		vec3_t vec;
 		float  dot;
@@ -211,8 +229,8 @@ static int CheckPowerArmor(edict_t *ent, const vec3_t &point, const vec3_t &norm
 	}
 	else
 	{
-		if (ctf->integer)
-			damagePerCell = 1; // power armor is weaker in CTF
+		if (deathmatch->integer)
+			damagePerCell = 1; // power armor is weaker in DM
 		else
 			damagePerCell = 2;
 		pa_te_type = TE_SCREEN_SPARKS;
@@ -261,7 +279,7 @@ static int CheckPowerArmor(edict_t *ent, const vec3_t &point, const vec3_t &norm
 		gi.WriteByte(svc_temp_entity);
 		gi.WriteByte(TE_POWER_SPLASH);
 		gi.WriteEntity(ent);
-		gi.WriteByte((power_armor_type == IT_ITEM_POWER_SCREEN) ? 1 : 0);
+		gi.WriteByte((power_armor_type == IT_POWER_SCREEN) ? 1 : 0);
 		gi.multicast(ent->s.origin, MULTICAST_PHS, false);
 	}
 
@@ -502,7 +520,7 @@ bool OnSameTeam(edict_t *ent1, edict_t *ent2)
 	// [Paril-KEX] coop 'team' support
 	if (coop->integer)
 		return ent1->client && ent2->client;
-	else if (IsTeamplay() && ent1->client && ent2->client)
+	else if (Teams() && ent1->client && ent2->client)
 	{
 		if (ent1->client->resp.team == ent2->client->resp.team)
 			return true;
@@ -533,11 +551,6 @@ void T_Damage(edict_t *targ, edict_t *inflictor, edict_t *attacker, const vec3_t
 	bool	   sphere_notified;
 
 	if (!targ->takedamage)
-		return;
-
-	// the intermission has already been qualified for, so don't
-	// allow any extra scoring
-	if (level.intermission_queued)
 		return;
 
 	if (g_instagib->integer && attacker->client && targ->client) {
@@ -599,11 +612,11 @@ void T_Damage(edict_t *targ, edict_t *inflictor, edict_t *attacker, const vec3_t
 	// power amplifier tech
 	damage = Tech_ApplyPowerAmp(attacker, damage);
 
-	/*freeze*/
+/*freeze*/
 	if (freeze->integer && client && client->frozen)
 		knockback *= 2;
 	else
-		/*freeze*/
+/*freeze*/
 		if ((targ->flags & FL_NO_KNOCKBACK) ||
 			((targ->flags & FL_ALIVE_KNOCKBACK_ONLY) && (!targ->deadflag || targ->dead_time != level.time)))
 			knockback = 0;
@@ -644,6 +657,11 @@ void T_Damage(edict_t *targ, edict_t *inflictor, edict_t *attacker, const vec3_t
 	save = 0;
 
 	if (!(dflags & DAMAGE_NO_PROTECTION)) {
+
+		if (!Match_CanDamage()) {
+			take = 0;
+			save = damage;
+		}
 
 		/*freeze*/
 #if 0
@@ -718,7 +736,7 @@ void T_Damage(edict_t *targ, edict_t *inflictor, edict_t *attacker, const vec3_t
 	}
 
 	// team armor protect
-	if (IsTeamplay() && targ->client && attacker->client &&
+	if (Teams() && targ->client && attacker->client &&
 		targ->client->resp.team == attacker->client->resp.team && targ != attacker &&
 		g_teamplay_armor_protect->integer) {
 		psave = asave = 0;
@@ -745,7 +763,7 @@ void T_Damage(edict_t *targ, edict_t *inflictor, edict_t *attacker, const vec3_t
 	// resistance tech
 	take = Tech_ApplyDisruptorShield(targ, take);
 
-	GT_CTF_CheckHurtCarrier(targ, attacker);
+	CTF_CheckHurtCarrier(targ, attacker);
 
 	// this option will do damage both to the armor and person. originally for DPU rounds
 	if (dflags & DAMAGE_DESTROY_ARMOR) {
@@ -812,7 +830,7 @@ void T_Damage(edict_t *targ, edict_t *inflictor, edict_t *attacker, const vec3_t
 				SpawnDamage(te_sparks, point, normal, take);
 		}
 
-		if (!IsMatchSetup())
+		if (level.match_state != MS_MATCH_COUNTDOWN)
 			targ->health = targ->health - take;
 
 		if ((targ->flags & FL_IMMORTAL) && targ->health <= 0)

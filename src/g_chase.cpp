@@ -12,7 +12,7 @@ void UpdateChaseCam(edict_t *ent) {
 
 	// is our chase target gone?
 	if (!ent->client->chase_target->inuse || !ent->client->chase_target->client || ent->client->chase_target->client->resp.spectator) {
-		Team_Join(ent, TEAM_SPECTATOR, false);
+		SetTeam(ent, TEAM_SPECTATOR, false, false);
 		/*
 		edict_t *old = ent->client->chase_target;
 
@@ -38,7 +38,7 @@ void UpdateChaseCam(edict_t *ent) {
 			ent->client->pers.hand = RIGHT_HANDED;
 			ent->client->pers.weapon = nullptr;
 
-			Team_Join(ent, TEAM_SPECTATOR, false);
+			SetTeam(ent, TEAM_SPECTATOR, false, false);
 			return;
 		}
 		*/
@@ -171,7 +171,7 @@ void ChaseNext(edict_t *ent) {
 		e = g_edicts + i;
 		if (!e->inuse)
 			continue;
-		if (!ClientIsSpectating(e->client))
+		if (ClientIsPlaying(e->client))
 			break;
 	} while (e != ent->client->chase_target);
 
@@ -194,7 +194,7 @@ void ChasePrev(edict_t *ent) {
 		e = g_edicts + i;
 		if (!e->inuse)
 			continue;
-		if (!ClientIsSpectating(e->client))
+		if (ClientIsPlaying(e->client))
 			break;
 	} while (e != ent->client->chase_target);
 
@@ -208,7 +208,7 @@ void GetChaseTarget(edict_t *ent) {
 
 	for (i = 1; i <= game.maxclients; i++) {
 		other = g_edicts + i;
-		if (other->inuse && !ClientIsSpectating(other->client)) {
+		if (other->inuse && ClientIsPlaying(other->client)) {
 			ent->client->chase_target = other;
 			ent->client->update_chase = true;
 			UpdateChaseCam(ent);

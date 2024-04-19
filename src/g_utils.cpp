@@ -129,6 +129,28 @@ void G_PrintActivationMessage(edict_t *ent, edict_t *activator, bool coop_global
 	}
 }
 
+void BroadcastSpectatorMessage(const char *msg) {
+	edict_t *ent;
+
+	for (size_t i = 0; i < game.maxclients; i++) {
+		ent = g_edicts + i;
+
+		if (!ent->inuse)
+			continue;
+
+		if (!ent->client)
+			continue;
+
+		if (!ent->client->pers.connected)
+			continue;
+
+		if (ent->client->resp.team != TEAM_SPECTATOR)
+			continue;
+
+		gi.LocClient_Print(ent, PRINT_HIGH, msg);
+	}
+}
+
 void G_MonsterKilled(edict_t *self);
 
 /*
@@ -376,10 +398,10 @@ void G_TouchTriggers(edict_t *ent) {
 	static edict_t *touch[MAX_EDICTS];
 	edict_t *hit;
 
-	/*freeze*/
+/*freeze*/
 	if (freeze->integer && ent->client && ent->client->frozen);
 	else
-		/*freeze*/
+/*freeze*/
 			// dead things don't activate triggers!
 		if ((ent->client || (ent->svflags & SVF_MONSTER)) && (ent->health <= 0))
 			return;
@@ -544,6 +566,9 @@ int Teams_OtherTeamNum(team_t team) {
 	return -1; // invalid value
 }
 
+constexpr const char *TEAM_RED_SKIN = "ctf_r";
+constexpr const char *TEAM_BLUE_SKIN = "ctf_b";
+
 /*
 =================
 G_AssignPlayerSkin
@@ -560,61 +585,19 @@ void G_AssignPlayerSkin(edict_t *ent, const char *s) {
 
 	switch (ent->client->resp.team) {
 	case TEAM_RED:
-		t = G_Fmt("{}\\{}{}\\default", ent->client->pers.netname, t, TEAM_RED_SKIN);
+		t = G_Fmt("{}\\{}{}\\default", ent->client->resp.netname, t, TEAM_RED_SKIN);
 		break;
 	case TEAM_BLUE:
-		t = G_Fmt("{}\\{}{}\\default", ent->client->pers.netname, t, TEAM_BLUE_SKIN);
+		t = G_Fmt("{}\\{}{}\\default", ent->client->resp.netname, t, TEAM_BLUE_SKIN);
 		break;
 	default:
-		t = G_Fmt("{}\\{}\\default", ent->client->pers.netname, s);
+		t = G_Fmt("{}\\{}\\default", ent->client->resp.netname, s);
 		break;
 	}
 
 	gi.configstring(CS_PLAYERSKINS + playernum, t.data());
 
-	//	gi.LocClient_Print(ent, PRINT_HIGH, "$g_assigned_team", ent->client->pers.netname);
-}
-
-/*
-=================
-G_AssignPlayerTeam
-=================
-*/
-void G_AssignPlayerTeam(gclient_t *who) {
-	edict_t *player;
-	uint32_t team_red_count = 0, team_blue_count = 0;
-
-	who->resp.ctf_state = 0;
-
-	if (!g_dm_force_join->integer && !(g_edicts[1 + (who - game.clients)].svflags & SVF_BOT)) {
-		who->resp.team = TEAM_SPECTATOR;
-		who->ps.stats[STAT_SHOW_STATUSBAR] = 0;
-		return;
-	}
-
-	for (uint32_t i = 1; i <= game.maxclients; i++) {
-		player = &g_edicts[i];
-
-		if (!player->inuse || player->client == who)
-			continue;
-
-		switch (player->client->resp.team) {
-		case TEAM_RED:
-			team_red_count++;
-			break;
-		case TEAM_BLUE:
-			team_blue_count++;
-			break;
-		default:
-			break;
-		}
-	}
-	if (team_red_count < team_blue_count)
-		who->resp.team = TEAM_RED;
-	else if (team_blue_count < team_red_count)
-		who->resp.team = TEAM_BLUE;
-	else
-		who->resp.team = brandom() ? TEAM_RED : TEAM_BLUE;
+	//	gi.LocClient_Print(ent, PRINT_HIGH, "$g_assigned_team", ent->client->resp.netname);
 }
 
 /*
@@ -625,7 +608,7 @@ G_AdjustPlayerScore
 void G_AdjustPlayerScore(gclient_t *cl, int32_t offset, bool adjust_team, int32_t team_offset) {
 	if (!cl) return;
 
-	if (level.warmup_time)
+	if (level.match_state != MS_MATCH_IN_PROGRESS)
 		return;
 
 	if (level.intermission_queued)
@@ -636,7 +619,7 @@ void G_AdjustPlayerScore(gclient_t *cl, int32_t offset, bool adjust_team, int32_
 		CalculateRanks();
 	}
 
-	if (adjust_team && team_offset && IsTeamplay()) {
+	if (adjust_team && team_offset && Teams()) {
 		G_AdjustTeamScore(cl->resp.team, team_offset);
 	}
 }
@@ -650,6 +633,9 @@ void Horde_AdjustPlayerScore(gclient_t *cl, int32_t offset) {
 	if (!horde->integer) return;
 	if (!cl) return;
 
+	if (level.match_state != MS_MATCH_IN_PROGRESS)
+		return;
+
 	gi.Com_PrintFmt("monster kill score = {}\n", offset);
 	G_AdjustPlayerScore(cl, offset, false, 0);
 }
@@ -662,7 +648,7 @@ G_SetPlayerScore
 void G_SetPlayerScore(gclient_t *cl, int32_t value) {
 	if (!cl) return;
 
-	if (level.warmup_time)
+	if (level.match_state != MS_MATCH_IN_PROGRESS)
 		return;
 
 	if (level.intermission_queued)
@@ -680,7 +666,7 @@ G_AdjustTeamScore
 */
 void G_AdjustTeamScore(int team, int32_t offset) {
 
-	if (level.warmup_time)
+	if (level.match_state != MS_MATCH_IN_PROGRESS)
 		return;
 
 	if (level.intermission_queued)
@@ -690,6 +676,7 @@ void G_AdjustTeamScore(int team, int32_t offset) {
 		level.team_scores[TEAM_RED] += offset;
 	else if (team == TEAM_BLUE)
 		level.team_scores[TEAM_BLUE] += offset;
+	CalculateRanks();
 }
 
 
@@ -700,7 +687,7 @@ G_SetTeamScore
 */
 void G_SetTeamScore(int team, int32_t value) {
 
-	if (level.warmup_time)
+	if (level.match_state != MS_MATCH_IN_PROGRESS)
 		return;
 
 	if (level.intermission_queued)
@@ -710,6 +697,7 @@ void G_SetTeamScore(int team, int32_t value) {
 		level.team_scores[TEAM_RED] = value;
 	else if (team == TEAM_BLUE)
 		level.team_scores[TEAM_BLUE] = value;
+	CalculateRanks();
 }
 
 
@@ -810,26 +798,8 @@ bool loc_CanSee(edict_t *targ, edict_t *inflictor) {
 	return false;
 }
 
-bool IsTeamplay() {
+bool Teams() {
 	return ctf->integer || teamplay->integer || freeze->integer || clanarena->integer;
-}
-
-bool IsMatch() {
-	if (level.match > MATCH_NONE)
-		return true;
-	return false;
-}
-
-bool IsMatchSetup() {
-	if (level.match == MATCH_SETUP || level.match == MATCH_PREGAME)
-		return true;
-	return false;
-}
-
-bool IsMatchOn() {
-	if (level.match == MATCH_GAME)
-		return true;
-	return false;
 }
 
 /*
@@ -838,21 +808,19 @@ G_TimeString
 =================
 */
 const char *G_TimeString(const int64_t msec) {
+	int ms = abs(msec);
 	int hours, mins, seconds;
 
-	if (msec < 0)
-		return "OVERTIME";
-
-	seconds = msec / 1000;
+	seconds = ms / 1000;
 	mins = seconds / 60;
 	seconds -= mins * 60;
 	hours = mins / 60;
 	mins -= hours * 60;
 
 	if (hours > 0) {
-		return G_Fmt("{}:{:02}:{:02}", hours, mins, seconds).data();
+		return G_Fmt("{}{}:{:02}:{:02}", msec < 1000 ? "-" : "", hours, mins, seconds).data();
 	} else {
-		return G_Fmt("{:02}:{:02}", mins, seconds).data();
+		return G_Fmt("{}{:02}:{:02}", msec < 1000 ? "-" : "", mins, seconds).data();
 	}
 }
 /*
@@ -875,4 +843,21 @@ const char *G_TimeStringMs(const int64_t msec) {
 	} else {
 		return G_Fmt("{:02}:{:02}.{}", mins, seconds, ms).data();
 	}
+}
+
+team_t StringToTeamNum(const char *in) {
+	if (!Q_strcasecmp(in, "spectator") || !Q_strcasecmp(in, "s")) {
+		return TEAM_SPECTATOR;
+	} else if (!Q_strcasecmp(in, "auto") || !Q_strcasecmp(in, "a")) {
+		return PickTeam(-1);
+	} else if (Teams()) {
+		if (!Q_strcasecmp(in, "blue") || !Q_strcasecmp(in, "b"))
+			return TEAM_BLUE;
+		else if (!Q_strcasecmp(in, "red") || !Q_strcasecmp(in, "r"))
+			return TEAM_RED;
+	} else {
+		if (!Q_strcasecmp(in, "free") || !Q_strcasecmp(in, "f"))
+			return TEAM_FREE;
+	}
+	return TEAM_NONE;
 }

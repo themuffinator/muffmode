@@ -420,11 +420,11 @@ void M_SetEffects(edict_t *ent)
 
 	if (ent->powerarmor_time > level.time)
 	{
-		if (ent->monsterinfo.power_armor_type == IT_ITEM_POWER_SCREEN)
+		if (ent->monsterinfo.power_armor_type == IT_POWER_SCREEN)
 		{
 			ent->s.effects |= EF_POWERSCREEN;
 		}
-		else if (ent->monsterinfo.power_armor_type == IT_ITEM_POWER_SHIELD)
+		else if (ent->monsterinfo.power_armor_type == IT_POWER_SHIELD)
 		{
 			ent->s.effects |= EF_COLOR_SHELL;
 			ent->s.renderfx |= RF_SHELL_GREEN;

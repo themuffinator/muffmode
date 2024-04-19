@@ -429,7 +429,7 @@ static void AimAtTarget(edict_t *self) {
 	ent = G_PickTarget(self->target);
 
 	height = ent->s.origin[2] - origin[2];
-	gravity = sv_gravity->value;
+	gravity = g_gravity->value;
 	time = sqrt(height / (0.5 * gravity));
 	if (!time) {
 		G_FreeEdict(self);
@@ -1097,7 +1097,7 @@ constexpr spawnflags_t SPAWNFLAG_COOP_RELAY_AUTO_FIRE = 1_spawnflag;
 
 static inline bool trigger_coop_relay_filter(edict_t *player) {
 	return (player->health <= 0 || player->deadflag || player->movetype == MOVETYPE_NOCLIP ||
-		ClientIsSpectating(player->client) || player->s.modelindex != MODELINDEX_PLAYER);
+		!ClientIsPlaying(player->client) || player->s.modelindex != MODELINDEX_PLAYER);
 }
 
 static bool trigger_coop_relay_can_use(edict_t *self, edict_t *activator) {

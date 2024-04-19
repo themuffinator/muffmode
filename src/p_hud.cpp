@@ -181,12 +181,12 @@ void G_ReportMatchDetails(bool is_end) {
 	player_ranks = {};
 
 	// teamplay is simple
-	if (IsTeamplay()) {
+	if (Teams()) {
 		Teams_CalcRankings(player_ranks);
 
 		gi.WriteByte(2);
-		gi.WriteString("RED TEAM"); // team 0
-		gi.WriteString("BLUE TEAM"); // team 1
+		gi.WriteString("RED TEAM");
+		gi.WriteString("BLUE TEAM");
 	} else {
 		// sort players by score, then match everybody to
 		// the current highest score downwards until we run out of players.
@@ -217,9 +217,9 @@ void G_ReportMatchDetails(bool is_end) {
 
 	for (auto player : active_players()) {
 		// leave spectators out of this data, they don't need to be seen.
-		if (player->client->pers.spawned && !ClientIsSpectating(player->client)) {
+		if (player->client->pers.spawned && ClientIsPlaying(player->client)) {
 			// just in case...
-			if (IsTeamplay() && ClientIsSpectating(player->client))
+			if (Teams() && !ClientIsPlaying(player->client))
 				continue;
 
 			num_players++;
@@ -230,16 +230,16 @@ void G_ReportMatchDetails(bool is_end) {
 
 	for (auto player : active_players()) {
 		// leave spectators out of this data, they don't need to be seen.
-		if (player->client->pers.spawned && !ClientIsSpectating(player->client)) {
+		if (player->client->pers.spawned && ClientIsPlaying(player->client)) {
 			// just in case...
-			if (IsTeamplay() && ClientIsSpectating(player->client))
+			if (Teams() && !ClientIsPlaying(player->client))
 				continue;
 
 			gi.WriteByte(player->s.number - 1);
 			gi.WriteLong(player->client->resp.score);
 			gi.WriteByte(player_ranks[player->s.number - 1]);
 
-			if (IsTeamplay())
+			if (Teams())
 				gi.WriteByte(player->client->resp.team == TEAM_RED ? 0 : 1);
 		}
 	}
@@ -252,7 +252,7 @@ void G_ReportMatchDetails(bool is_end) {
 TeamsScoreboardMessage
 ==================
 */
-void TeamsScoreboardMessage(edict_t * ent, edict_t * killer) {
+void TeamsScoreboardMessage(edict_t *ent, edict_t *killer) {
 	uint32_t	i, j, k, n;
 	uint32_t	sorted[2][MAX_CLIENTS];
 	int32_t		sortedscores[2][MAX_CLIENTS];
@@ -313,7 +313,9 @@ void TeamsScoreboardMessage(edict_t * ent, edict_t * killer) {
 		}
 	}
 	if (timelimit->value) {
-		fmt::format_to(std::back_inserter(string), FMT_STRING("xv 340 yv -10 time_limit {} "), gi.ServerFrame() + ((gtime_t::from_min(timelimit->value) - level.time)).milliseconds() / gi.frame_time_ms);
+		//int	t = timelimit->value ? (level.match_time + gtime_t::from_min(timelimit->value) + level.overtime - level.time).seconds<int>() : level.time.seconds<int>() - level.match_time.seconds<int>();
+		//fmt::format_to(std::back_inserter(string), FMT_STRING("xv 340 yv -10 time_limit {} "), t);
+		//fmt::format_to(std::back_inserter(string), FMT_STRING("xv 340 yv -10 time_limit {} "), gi.ServerFrame() + ((gtime_t::from_min(timelimit->value) - level.time)).milliseconds() / gi.frame_time_ms);
 		//fmt::format_to(std::back_inserter(string), FMT_STRING("xv 340 yv -10 loc_string2 1 {} "), gi.ServerFrame() + level.time.milliseconds() / gi.frame_time_ms);
 	}
 
@@ -395,7 +397,7 @@ void TeamsScoreboardMessage(edict_t * ent, edict_t * killer) {
 			cl = &game.clients[i];
 			if (!cl_ent->inuse ||
 				cl_ent->solid != SOLID_NOT ||
-				!ClientIsSpectating(cl_ent->client))
+				ClientIsPlaying(cl_ent->client))
 				continue;
 
 			if (!k) {
@@ -441,22 +443,24 @@ void TeamsScoreboardMessage(edict_t * ent, edict_t * killer) {
 DuelScoreboardMessage
 ==================
 */
-static void DuelScoreboardMessage(edict_t * ent, edict_t * killer) {
-	uint32_t	i, j, k, n;
-	gclient_t	*cl;
-	edict_t		*cl_ent;
+static void DuelScoreboardMessage(edict_t *ent, edict_t *killer) {
+	uint8_t		i;
+	uint32_t	j, k, n;
+	gclient_t *cl;
+	edict_t *cl_ent;
 
-	static std::string string;
+	static std::string entry, string;
+	int			x, y;
+
 	string.clear();
-
-	char value[MAX_INFO_VALUE] = { 0 };
-	gi.Info_ValueForKey(g_edicts[1].client->pers.userinfo, "name", value, sizeof(value));
 
 	if (fraglimit->integer) {
 		fmt::format_to(std::back_inserter(string), FMT_STRING("xv -20 yv -10 loc_string2 1 $g_score_frags \"{}\" "), fraglimit->integer);
 	}
 	if (timelimit->value) {
-		fmt::format_to(std::back_inserter(string), FMT_STRING("xv 340 yv -10 time_limit {} "), gi.ServerFrame() + ((gtime_t::from_min(timelimit->value) - level.time)).milliseconds() / gi.frame_time_ms);
+		//int	t = timelimit->value ? (level.match_time + gtime_t::from_min(timelimit->value) + level.overtime - level.time).seconds<int>() : level.time.seconds<int>() - level.match_time.seconds<int>();
+		//fmt::format_to(std::back_inserter(string), FMT_STRING("xv 340 yv -10 time_limit {} "), t);
+		//fmt::format_to(std::back_inserter(string), FMT_STRING("xv 340 yv -10 time_limit {} "), gi.ServerFrame() + ((gtime_t::from_min(timelimit->value) - level.time)).milliseconds() / gi.frame_time_ms);
 		//fmt::format_to(std::back_inserter(string), FMT_STRING("xv 340 yv -10 loc_string2 1 {} "), gi.ServerFrame() + level.time.milliseconds() / gi.frame_time_ms);
 	}
 	/*
@@ -475,28 +479,92 @@ static void DuelScoreboardMessage(edict_t * ent, edict_t * killer) {
 		value
 	);
 	*/
+
+	for (i = 0; i < 2; i++) {
+		cl = &game.clients[level.sorted_clients[i]];
+		cl_ent = g_edicts + 1 + level.sorted_clients[i];
+
+		if (!cl_ent)
+			continue;
+
+		if (!cl_ent->inuse)
+			continue;
+
+		if (!cl)
+			continue;
+
+		if (cl->resp.team != TEAM_FREE)
+			continue;
+
+		x = i ? 130 : -72;
+		y = 0;
+
+		fmt::format_to(std::back_inserter(entry), FMT_STRING("xv {} yv {} picn {} "), x, y, "/tags/default");
+
+		const char *s = G_Fmt("/players/{}_i", cl->pers.skin).data();
+		int32_t		img_index = cl->pers.skin_icon_index;
+
+		if (img_index)
+			fmt::format_to(std::back_inserter(entry), FMT_STRING("xv {} yv {} picn {} "), x, y, s);
+
+		if (string.length() + entry.length() > MAX_STRING_CHARS)
+			break;
+
+		string += entry;
+
+		entry.clear();
+
+		fmt::format_to(std::back_inserter(entry),
+			FMT_STRING("client {} {} {} {} {} {} "),
+			x, y, level.sorted_clients[i], cl->resp.score, cl->ping, (int32_t)(level.time - cl->resp.entertime).minutes());
+
+		if (string.length() + entry.length() > MAX_STRING_CHARS)
+			break;
+
+		string += entry;
+
+		entry.clear();
+	}
+
 	j = 58;
 
 	k = n = 0;
 	if (string.size() < MAX_STRING_CHARS - 50) {
 		for (i = 0; i < game.maxclients; i++) {
-			cl_ent = g_edicts + 1 + i;
-			cl = &game.clients[i];
+			cl = &game.clients[level.sorted_clients[i]];
+			cl_ent = &g_edicts[cl - game.clients];
+			/*
 			if (!cl_ent->inuse ||
 				cl_ent->solid != SOLID_NOT ||
-				!ClientIsSpectating(cl_ent->client))
+				ClientIsPlaying(cl))
+				continue;
+				*/
+
+			if (!cl_ent)
+				continue;
+
+			if (!cl_ent->inuse)
+				continue;
+
+			if (!cl)
+				continue;
+
+			if (ClientIsPlaying(cl))
+				continue;
+
+			if (!cl->resp.duel_queued)
 				continue;
 
 			if (!k) {
 				k = 1;
-				fmt::format_to(std::back_inserter(string), FMT_STRING("xv 0 yv {} loc_string2 0 \"$g_pc_spectators\" "), j);
+				fmt::format_to(std::back_inserter(string), FMT_STRING("xv 0 yv {} loc_string2 0 \"Queued Contenders\" "), j);
 				j += 8;
 			}
 
 			std::string_view entry = G_Fmt("ctf {} {} {} {} {} \"\" ",
-				(n & 1) ? 200 : -40,	// x
-				j,						// y
-				i,						// playernum
+				(n & 1) ? 200 : -40,		// x
+				j,							// y
+				level.sorted_clients[i],	// playernum
 				cl->resp.score,
 				cl->ping > 999 ? 999 : cl->ping);
 
@@ -524,7 +592,7 @@ DeathmatchScoreboardMessage
 
 ==================
 */
-void DeathmatchScoreboardMessage(edict_t * ent, edict_t * killer) {
+void DeathmatchScoreboardMessage(edict_t *ent, edict_t *killer) {
 	static std::string entry, string;
 	size_t		j;
 	int			sorted[MAX_CLIENTS];
@@ -534,7 +602,7 @@ void DeathmatchScoreboardMessage(edict_t * ent, edict_t * killer) {
 	gclient_t *cl;
 	edict_t *cl_ent;
 
-	if (IsTeamplay()) {
+	if (Teams()) {
 		TeamsScoreboardMessage(ent, ent->enemy);
 		return;
 	}
@@ -547,17 +615,17 @@ void DeathmatchScoreboardMessage(edict_t * ent, edict_t * killer) {
 	string.clear();
 
 	//  sort the clients by score
-	uint32_t total = 0;
-	for (uint32_t i = 0; i < game.maxclients; i++) {
+	uint8_t total = 0;
+	for (size_t i = 0; i < game.maxclients; i++) {
 		cl_ent = g_edicts + 1 + i;
-		if (!cl_ent->inuse || ClientIsSpectating(&game.clients[i]))
+		if (!cl_ent->inuse || !ClientIsPlaying(&game.clients[i]))
 			continue;
 		score = game.clients[i].resp.score;
 		for (j = 0; j < total; j++) {
 			if (score > sortedscores[j])
 				break;
 		}
-		for (uint32_t k = total; k > j; k--) {
+		for (uint8_t k = total; k > j; k--) {
 			sorted[k] = sorted[k - 1];
 			sortedscores[k] = sortedscores[k - 1];
 		}
@@ -570,7 +638,7 @@ void DeathmatchScoreboardMessage(edict_t * ent, edict_t * killer) {
 	if (total > 16)
 		total = 16;
 
-	for (uint32_t i = 0; i < total; i++) {
+	for (size_t i = 0; i < total; i++) {
 		cl = &game.clients[sorted[i]];
 		cl_ent = g_edicts + 1 + sorted[i];
 
@@ -616,7 +684,7 @@ void DeathmatchScoreboardMessage(edict_t * ent, edict_t * killer) {
 		fmt::format_to(std::back_inserter(string), FMT_STRING("xv -20 yv -10 loc_string2 1 $g_score_frags \"{}\" "), fraglimit->integer);
 	}
 	if (timelimit->value && !level.intermission_time) {
-		fmt::format_to(std::back_inserter(string), FMT_STRING("xv 340 yv -10 time_limit {} "), gi.ServerFrame() + ((gtime_t::from_min(timelimit->value) - level.time)).milliseconds() / gi.frame_time_ms);
+		//fmt::format_to(std::back_inserter(string), FMT_STRING("xv 340 yv -10 time_limit {} "), gi.ServerFrame() + ((gtime_t::from_min(timelimit->value) - level.time)).milliseconds() / gi.frame_time_ms);
 #if 0
 		//fmt::format_to(std::back_inserter(string), FMT_STRING("xv 340 yv -10 loc_string2 1 {} "), gi.ServerFrame() + level.time.milliseconds() / gi.frame_time_ms);
 		int32_t val = gi.ServerFrame() + ((gtime_t::from_min(timelimit->value) - level.time)).milliseconds() / gi.frame_time_ms;
@@ -646,7 +714,7 @@ Draw instead of help message.
 Note that it isn't that hard to overflow the 1400 byte message limit!
 ==================
 */
-void DeathmatchScoreboard(edict_t * ent) {
+void DeathmatchScoreboard(edict_t *ent) {
 
 	DeathmatchScoreboardMessage(ent, ent->enemy);
 	gi.unicast(ent, true);
@@ -660,7 +728,7 @@ Cmd_Score_f
 Display the scoreboard
 ==================
 */
-void Cmd_Score_f(edict_t * ent) {
+void Cmd_Score_f(edict_t *ent) {
 	if (level.intermission_time)
 		return;
 
@@ -670,7 +738,7 @@ void Cmd_Score_f(edict_t * ent) {
 	globals.server_flags &= ~SERVER_FLAG_SLOW_TIME;
 
 	if (ent->client->menu)
-		PMenu_Close(ent);
+		P_Menu_Close(ent);
 
 	if (!deathmatch->integer && !coop->integer)
 		return;
@@ -696,7 +764,7 @@ HelpComputer
 Draw help computer.
 ==================
 */
-static void HelpComputer(edict_t * ent) {
+static void HelpComputer(edict_t *ent) {
 	const char *sk;
 
 	if (skill->integer == 0)
@@ -762,7 +830,7 @@ Cmd_Help_f
 Display the current help message
 ==================
 */
-void Cmd_Help_f(edict_t * ent) {
+void Cmd_Help_f(edict_t *ent) {
 	// this is for backwards compatability
 	if (deathmatch->integer) {
 		Cmd_Score_f(ent);
@@ -793,7 +861,7 @@ void Cmd_Help_f(edict_t * ent) {
 
 // [Paril-KEX] for stats we want to always be set in coop
 // even if we're spectating
-void G_SetCoopStats(edict_t * ent) {
+void G_SetCoopStats(edict_t *ent) {
 	if (coop->integer && g_coop_enable_lives->integer)
 		ent->client->ps.stats[STAT_LIVES] = ent->client->pers.lives + 1;
 	else
@@ -818,12 +886,12 @@ struct powerup_info_t {
 	{ IT_POWERUP_INVISIBILITY, &gclient_t::pu_time_invisibility },
 	{ IT_POWERUP_ENVIROSUIT, &gclient_t::pu_time_enviro },
 	{ IT_POWERUP_REBREATHER, &gclient_t::pu_time_rebreather },
-	{ IT_ITEM_IR_GOGGLES, &gclient_t::ir_time },
+	{ IT_IR_GOGGLES, &gclient_t::ir_time },
 	{ IT_POWERUP_SILENCER, nullptr, &gclient_t::silencer_shots }
 };
 
 
-static void SetCrosshairIDView(edict_t * ent) {
+static void SetCrosshairIDView(edict_t *ent) {
 	vec3_t	 forward, dir;
 	trace_t	 tr;
 	edict_t *who, *best;
@@ -836,11 +904,11 @@ static void SetCrosshairIDView(edict_t * ent) {
 
 	ent->client->ps.stats[STAT_CROSSHAIR_ID_VIEW] = 0;
 	ent->client->ps.stats[STAT_CROSSHAIR_ID_VIEW_COLOR] = 0;
-	
+
 	AngleVectors(ent->client->v_angle, forward, nullptr, nullptr);
 	forward *= 1024;
 	forward = ent->s.origin + forward;
-	tr = gi.traceline(ent->s.origin, forward, ent, CONTENTS_MIST|MASK_WATER|MASK_SOLID);
+	tr = gi.traceline(ent->s.origin, forward, ent, CONTENTS_MIST | MASK_WATER | MASK_SOLID);
 	//gi.Draw_Line(ent->s.origin, tr.endpos, rgba_red, 5, false);
 	if (tr.fraction < 1 && tr.ent && tr.ent->client && tr.ent->health > 0) {
 		// don't show if traced client is spectating
@@ -858,7 +926,7 @@ static void SetCrosshairIDView(edict_t * ent) {
 			ent->client->ps.stats[STAT_CROSSHAIR_ID_VIEW_COLOR] = ii_teams_blue_tiny;
 		return;
 	}
-	
+
 	AngleVectors(ent->client->v_angle, forward, nullptr, nullptr);
 	best = nullptr;
 	for (uint32_t i = 1; i <= game.maxclients; i++) {
@@ -870,7 +938,7 @@ static void SetCrosshairIDView(edict_t * ent) {
 		d = forward.dot(dir);
 
 		// we have teammate indicators that are better for this
-		if (IsTeamplay() && ent->client->resp.team == who->client->resp.team)
+		if (Teams() && ent->client->resp.team == who->client->resp.team)
 			continue;
 
 		if (d > bd && loc_CanSee(ent, who)) {
@@ -888,7 +956,7 @@ static void SetCrosshairIDView(edict_t * ent) {
 }
 
 
-static void SetCTFStats(edict_t *ent, bool blink) {
+static void CTF_SetStats(edict_t *ent, bool blink) {
 	uint32_t i;
 	int		 p1, p2;
 	edict_t *e;
@@ -920,7 +988,7 @@ static void SetCTFStats(edict_t *ent, bool blink) {
 				e = G_FindByString<&edict_t::classname>(e, ITEM_CTF_FLAG_RED);
 
 				if (e == nullptr) {
-					GT_CTF_ResetFlag(TEAM_RED);
+					CTF_ResetTeamFlag(TEAM_RED);
 					gi.LocBroadcast_Print(PRINT_HIGH, "$g_flag_returned",
 						Teams_TeamName(TEAM_RED));
 					gi.sound(ent, CHAN_RELIABLE | CHAN_NO_PHS_ADD | CHAN_AUX, gi.soundindex("ctf/flagret.wav"), 1, ATTN_NONE, 0);
@@ -949,7 +1017,7 @@ static void SetCTFStats(edict_t *ent, bool blink) {
 				e = G_FindByString<&edict_t::classname>(e, ITEM_CTF_FLAG_BLUE);
 
 				if (e == nullptr) {
-					GT_CTF_ResetFlag(TEAM_BLUE);
+					CTF_ResetTeamFlag(TEAM_BLUE);
 					gi.LocBroadcast_Print(PRINT_HIGH, "$g_flag_returned",
 						Teams_TeamName(TEAM_BLUE));
 					gi.sound(ent, CHAN_RELIABLE | CHAN_NO_PHS_ADD | CHAN_AUX, gi.soundindex("ctf/flagret.wav"), 1, ATTN_NONE, 0);
@@ -990,8 +1058,8 @@ static void SetCTFStats(edict_t *ent, bool blink) {
 }
 
 
-static void SetMiniScoreStats(edict_t * ent) {
-	bool teams = IsTeamplay();
+static void SetMiniScoreStats(edict_t *ent) {
+	bool teams = Teams();
 	int16_t	pos1_num = -1, pos2_num = -1;
 	int16_t own_num = -1;
 
@@ -1090,7 +1158,7 @@ static void SetMiniScoreStats(edict_t * ent) {
 
 	// set scores and images
 	if (ctf->integer) {
-		SetCTFStats(ent, blink);
+		CTF_SetStats(ent, blink);
 	} else {
 		if (teams) {
 			ent->client->ps.stats[STAT_MINISCORE_FIRST_PIC] = ii_teams_red_default;
@@ -1139,8 +1207,8 @@ static void SetMiniScoreStats(edict_t * ent) {
 G_SetStats
 ===============
 */
-void G_SetStats(edict_t * ent) {
-	gitem_t			*item;
+void G_SetStats(edict_t *ent) {
+	gitem_t *item;
 	item_id_t		index;
 	int				cells = 0;
 	item_id_t		power_armor_type;
@@ -1153,8 +1221,19 @@ void G_SetStats(edict_t * ent) {
 	//
 	if (ent->s.renderfx & RF_USE_DISGUISE)
 		ent->client->ps.stats[STAT_HEALTH_ICON] = level.disguise_icon;
-	else
-		ent->client->ps.stats[STAT_HEALTH_ICON] = level.pic_health;
+	else {
+		switch (ent->client->resp.team) {
+		case TEAM_RED:
+			ent->client->ps.stats[STAT_HEALTH_ICON] = ii_teams_red_default;
+			break;
+		case TEAM_BLUE:
+			ent->client->ps.stats[STAT_HEALTH_ICON] = ii_teams_blue_default;
+			break;
+		default:
+			ent->client->ps.stats[STAT_HEALTH_ICON] = level.pic_health;
+			break;
+		}
+	}
 	ent->client->ps.stats[STAT_HEALTH] = ent->health;
 
 	//ent->client->ps.stats[STAT_SHOW_STATUSBAR] = ent->client->showscores ? 0 : ent->client->chase_target ? 1 : 0;
@@ -1209,7 +1288,7 @@ void G_SetStats(edict_t * ent) {
 
 		index = ArmorIndex(ent);
 		if (power_armor_type && (!index || (level.time.milliseconds() % 3000) < 1500)) { // flash between power armor and other armor icon
-			ent->client->ps.stats[STAT_ARMOR_ICON] = power_armor_type == IT_ITEM_POWER_SHIELD ? gi.imageindex("i_powershield") : gi.imageindex("i_powerscreen");
+			ent->client->ps.stats[STAT_ARMOR_ICON] = power_armor_type == IT_POWER_SHIELD ? gi.imageindex("i_powershield") : gi.imageindex("i_powerscreen");
 			ent->client->ps.stats[STAT_ARMOR] = cells;
 		} else if (index) {
 			item = GetItemByIndex(index);
@@ -1235,8 +1314,8 @@ void G_SetStats(edict_t * ent) {
 			uint16_t val;
 
 			switch (powerup->id) {
-			case IT_ITEM_POWER_SCREEN:
-			case IT_ITEM_POWER_SHIELD:
+			case IT_POWER_SCREEN:
+			case IT_POWER_SHIELD:
 				if (!ent->client->pers.inventory[powerup->id])
 					val = 0;
 				else if (ent->flags & FL_POWER_ARMOR)
@@ -1244,7 +1323,7 @@ void G_SetStats(edict_t * ent) {
 				else
 					val = 1;
 				break;
-			case IT_ITEM_FLASHLIGHT:
+			case IT_FLASHLIGHT:
 				if (!ent->client->pers.inventory[powerup->id])
 					val = 0;
 				else if (ent->flags & FL_FLASHLIGHT)
@@ -1260,23 +1339,23 @@ void G_SetStats(edict_t * ent) {
 			G_SetPowerupStat((uint16_t *)&ent->client->ps.stats[STAT_POWERUP_INFO_START], powerup->powerup_wheel_index, val);
 		}
 
-		ent->client->ps.stats[STAT_TIMER_ICON] = 0;
-		ent->client->ps.stats[STAT_TIMER] = 0;
+		ent->client->ps.stats[STAT_POWERUP_ICON] = 0;
+		ent->client->ps.stats[STAT_POWERUP_TIME] = 0;
 
 		//
 		// timers
 		//
 		if (ent->client->owned_sphere) {
 			if (ent->client->owned_sphere->spawnflags == SPHERE_DEFENDER) // defender
-				ent->client->ps.stats[STAT_TIMER_ICON] = gi.imageindex("p_defender");
+				ent->client->ps.stats[STAT_POWERUP_ICON] = gi.imageindex("p_defender");
 			else if (ent->client->owned_sphere->spawnflags == SPHERE_HUNTER) // hunter
-				ent->client->ps.stats[STAT_TIMER_ICON] = gi.imageindex("p_hunter");
+				ent->client->ps.stats[STAT_POWERUP_ICON] = gi.imageindex("p_hunter");
 			else if (ent->client->owned_sphere->spawnflags == SPHERE_VENGEANCE) // vengeance
-				ent->client->ps.stats[STAT_TIMER_ICON] = gi.imageindex("p_vengeance");
+				ent->client->ps.stats[STAT_POWERUP_ICON] = gi.imageindex("p_vengeance");
 			else // error case
-				ent->client->ps.stats[STAT_TIMER_ICON] = gi.imageindex("i_fixme");
+				ent->client->ps.stats[STAT_POWERUP_ICON] = gi.imageindex("i_fixme");
 
-			ent->client->ps.stats[STAT_TIMER] = ceil(ent->client->owned_sphere->wait - level.time.seconds());
+			ent->client->ps.stats[STAT_POWERUP_TIME] = ceil(ent->client->owned_sphere->wait - level.time.seconds());
 		} else {
 			powerup_info_t *best_powerup = nullptr;
 
@@ -1311,8 +1390,8 @@ void G_SetStats(edict_t * ent) {
 				else
 					value = ceil((ent->client->*best_powerup->time_ptr - level.time).seconds());
 
-				ent->client->ps.stats[STAT_TIMER_ICON] = gi.imageindex(GetItemByIndex(best_powerup->item)->icon);
-				ent->client->ps.stats[STAT_TIMER] = value;
+				ent->client->ps.stats[STAT_POWERUP_ICON] = gi.imageindex(GetItemByIndex(best_powerup->item)->icon);
+				ent->client->ps.stats[STAT_POWERUP_TIME] = value;
 			}
 		}
 
@@ -1360,7 +1439,7 @@ void G_SetStats(edict_t * ent) {
 			ent->client->ps.stats[STAT_LAYOUTS] |= LAYOUTS_INTERMISSION;
 	}
 
-	if (deathmatch->integer && ClientIsSpectating(ent->client) && !ent->client->ps.stats[STAT_CHASE])
+	if (deathmatch->integer && !ClientIsPlaying(ent->client) && !ent->client->ps.stats[STAT_CHASE])
 		ent->client->ps.stats[STAT_LAYOUTS] |= LAYOUTS_HIDE_CROSSHAIR;
 	else {
 		if (level.story_active)
@@ -1395,7 +1474,7 @@ void G_SetStats(edict_t * ent) {
 		if (num_keys_held > 3)
 			key_offset = (int32_t)(level.time.seconds() / 5);
 
-		for (int32_t i = 0; i < min(num_keys_held, (size_t)3); i++, stat = (player_stat_t)(stat + 1))
+		for (size_t i = 0; i < min(num_keys_held, (size_t)3); i++, stat = (player_stat_t)(stat + 1))
 			ent->client->ps.stats[stat] = gi.imageindex(GetItemByIndex(keys_held[(i + key_offset) % num_keys_held])->icon);
 	}
 
@@ -1411,7 +1490,7 @@ void G_SetStats(edict_t * ent) {
 		ent->client->ps.stats[STAT_HELPICON] = 0;
 
 	ent->client->ps.stats[STAT_SPECTATOR] = 0;
-	
+
 	// set & run the health bar stuff
 	for (size_t i = 0; i < MAX_HEALTH_BARS; i++) {
 		byte *health_byte = reinterpret_cast<byte *>(&ent->client->ps.stats[STAT_HEALTH_BARS]) + i;
@@ -1468,7 +1547,7 @@ void G_SetStats(edict_t * ent) {
 	// ghosting
 	if (ent->client->resp.ghost) {
 		ent->client->resp.ghost->score = ent->client->resp.score;
-		Q_strlcpy(ent->client->resp.ghost->netname, ent->client->pers.netname, sizeof(ent->client->resp.ghost->netname));
+		Q_strlcpy(ent->client->resp.ghost->netname, ent->client->resp.netname, sizeof(ent->client->resp.ghost->netname));
 		ent->client->resp.ghost->number = ent->s.number;
 	}
 
@@ -1481,24 +1560,47 @@ void G_SetStats(edict_t * ent) {
 	}
 
 	if (ctf->integer) {
-		ent->client->ps.stats[STAT_MATCH_STATE] = level.match > MATCH_NONE ? CONFIG_MATCH_STATE : 0;
+		//ent->client->ps.stats[STAT_MATCH_STATE] = level.match_state > MS_NONE ? CONFIG_MATCH_STATE : 0;
 		ent->client->ps.stats[STAT_TEAMPLAY_INFO] = level.warnactive ? CONFIG_CTF_TEAMINFO : 0;
 	}
+
+	// match countdown
+	ent->client->ps.stats[STAT_COUNTDOWN] = level.countdown_check.seconds<int>();
+
 	//
 	// match timer
 	//
 
 	// Q2Eaks game timer
-	if (!ctf->integer && ent->client->resp.timer_state) {
+	if (ent->client->resp.timer_state) {
 		// Don't update any more than once/second
 		static int lasttime = 0;
-		int	t = timelimit->value ? (gtime_t::from_min(timelimit->value) - level.time).seconds<int>() : level.time.seconds<int>();
+		//int	t = timelimit->value ? (gtime_t::from_min(timelimit->value) + level.overtime - level.time).seconds<int>() : level.time.seconds<int>();
+		int	t = timelimit->value ? (level.match_time + gtime_t::from_min(timelimit->value) + level.overtime - level.time).seconds<int>() : level.time.seconds<int>() - level.match_time.seconds<int>();
 
 		if (t != ent->client->last_match_timer_update) {
+			const char *s;
+
 			ent->client->last_match_timer_update = t;
 
+			switch (level.match_state) {
+			case MS_WARMUP_DELAYED:
+			case MS_WARMUP_DEFAULT:
+				s = "WARMUP";
+				break;
+			case MS_WARMUP_READYUP:
+				s = "WARMUP - READY UP!";
+				break;
+			case MS_MATCH_COUNTDOWN:
+				s = "COUNTDOWN";
+				break;
+			default:
+				s = t <= -1 && t >= -4 ? "OVERTIME!" : G_TimeString(t * 1000);
+				break;
+			}
+
 			ent->client->ps.stats[STAT_MATCH_STATE] = CONFIG_MATCH_STATE;
-			gi.configstring(CONFIG_MATCH_STATE, G_TimeString(t * 1000));
+			gi.configstring(CONFIG_MATCH_STATE, s);
 		}
 	} else {
 		ent->client->ps.stats[STAT_MATCH_STATE] = 0;
@@ -1511,7 +1613,7 @@ void G_SetStats(edict_t * ent) {
 G_CheckChaseStats
 ===============
 */
-void G_CheckChaseStats(edict_t * ent) {
+void G_CheckChaseStats(edict_t *ent) {
 	gclient_t *cl;
 
 	for (uint32_t i = 1; i <= game.maxclients; i++) {
@@ -1528,7 +1630,7 @@ void G_CheckChaseStats(edict_t * ent) {
 G_SetSpectatorStats
 ===============
 */
-void G_SetSpectatorStats(edict_t * ent) {
+void G_SetSpectatorStats(edict_t *ent) {
 	gclient_t *cl = ent->client;
 
 	if (!cl->chase_target)

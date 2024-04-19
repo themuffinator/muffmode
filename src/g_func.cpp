@@ -1274,13 +1274,13 @@ static THINK(func_spinning_think) (edict_t *ent) -> void {
 		ent->timestamp = level.time + random_time(1_sec, 6_sec);
 		ent->movedir = { ent->decel + frandom(ent->speed - ent->decel), ent->decel + frandom(ent->speed - ent->decel), ent->decel + frandom(ent->speed - ent->decel) };
 
-		for (int32_t i = 0; i < 3; i++) {
+		for (size_t i = 0; i < 3; i++) {
 			if (brandom())
 				ent->movedir[i] = -ent->movedir[i];
 		}
 	}
 
-	for (int32_t i = 0; i < 3; i++) {
+	for (size_t i = 0; i < 3; i++) {
 		if (ent->avelocity[i] == ent->movedir[i])
 			continue;
 
@@ -1668,7 +1668,7 @@ static THINK(smart_water_go_up) (edict_t *self) -> void {
 	// find the lowest player point.
 	lowestPlayerPt = 999999;
 	lowestPlayer = nullptr;
-	for (uint32_t i = 0; i < game.maxclients; i++) {
+	for (size_t i = 0; i < game.maxclients; i++) {
 		ent = &g_edicts[1 + i];
 
 		// don't count dead or unused player slots

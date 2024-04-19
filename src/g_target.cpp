@@ -213,7 +213,7 @@ void G_PlayerNotifyGoal(edict_t *player) {
 			const char *current_goal = level.goals;
 
 			// skip ahead by the number of goals we've finished
-			for (int32_t i = 0; i < level.goal_num; i++) {
+			for (size_t i = 0; i < level.goal_num; i++) {
 				while (*current_goal && *current_goal != '\t')
 					current_goal++;
 
@@ -1015,7 +1015,7 @@ static THINK(update_target_camera) (edict_t *self) -> void {
 
 	// only allow skipping after 2 seconds
 	if ((self->hackflags & HACKFLAG_SKIPPABLE) && level.time > 2_sec) {
-		for (uint32_t i = 0; i < game.maxclients; i++) {
+		for (size_t i = 0; i < game.maxclients; i++) {
 			edict_t *client = g_edicts + 1 + i;
 			if (!client->inuse || !client->client->pers.connected)
 				continue;
@@ -1067,7 +1067,7 @@ static THINK(update_target_camera) (edict_t *self) -> void {
 			level.intermission_origin = newpos;
 
 			// move all clients to the intermission point
-			for (uint32_t i = 0; i < game.maxclients; i++) {
+			for (size_t i = 0; i < game.maxclients; i++) {
 				edict_t *client = g_edicts + 1 + i;
 				if (!client->inuse) {
 					continue;
@@ -1169,7 +1169,7 @@ static USE(use_target_camera) (edict_t *self, edict_t *other, edict_t *activator
 	level.intermission_origin = self->s.origin;
 
 	// move all clients to the intermission point
-	for (uint32_t i = 0; i < game.maxclients; i++) {
+	for (size_t i = 0; i < game.maxclients; i++) {
 		edict_t *client = g_edicts + 1 + i;
 		if (!client->inuse) {
 			continue;
@@ -1183,7 +1183,7 @@ static USE(use_target_camera) (edict_t *self, edict_t *other, edict_t *activator
 			if (P_UseCoopInstancedItems())
 				client->client->pers.health = client->client->pers.max_health = client->max_health;
 
-			respawn(client);
+			ClientRespawn(client);
 		}
 
 		MoveClientToIntermission(client);
@@ -1216,7 +1216,7 @@ void SP_target_camera(edict_t *self) {
 */
 
 static USE(use_target_gravity) (edict_t *self, edict_t *other, edict_t *activator) -> void {
-	gi.cvar_set("sv_gravity", G_Fmt("{}", self->gravity).data());
+	gi.cvar_set("g_gravity", G_Fmt("{}", self->gravity).data());
 	level.gravity = self->gravity;
 }
 
@@ -2137,7 +2137,7 @@ USE(target_killplayers_use) (edict_t *self, edict_t *other, edict_t *activator) 
 		if (!ent->takedamage)
 			continue;
 
-		for (uint32_t i = 0; i < game.maxclients; i++) {
+		for (size_t i = 0; i < game.maxclients; i++) {
 			player = &g_edicts[1 + i];
 			if (!player->inuse)
 				continue;
@@ -2151,7 +2151,7 @@ USE(target_killplayers_use) (edict_t *self, edict_t *other, edict_t *activator) 
 	}
 
 	// kill the players
-	for (uint32_t i = 0; i < game.maxclients; i++) {
+	for (size_t i = 0; i < game.maxclients; i++) {
 		player = &g_edicts[1 + i];
 		if (!player->inuse)
 			continue;
