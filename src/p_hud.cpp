@@ -11,7 +11,7 @@ INTERMISSION
 ======================================================================
 */
 
-void DeathmatchScoreboard(edict_t *ent);
+void MultiplayerScoreboard(edict_t *ent);
 
 void MoveClientToIntermission(edict_t *ent) {
 	// [Paril-KEX]
@@ -66,7 +66,7 @@ void MoveClientToIntermission(edict_t *ent) {
 	// add the layout
 
 	if (deathmatch->integer) {
-		DeathmatchScoreboard(ent);
+		MultiplayerScoreboard(ent);
 		ent->client->showscores = true;
 		ent->client->ps.stats[STAT_SHOW_STATUSBAR] = 0;
 	}
@@ -708,15 +708,15 @@ void DeathmatchScoreboardMessage(edict_t *ent, edict_t *killer) {
 
 /*
 ==================
-DeathmatchScoreboard
+MultiplayerScoreboard
 
 Draw instead of help message.
 Note that it isn't that hard to overflow the 1400 byte message limit!
 ==================
 */
-void DeathmatchScoreboard(edict_t *ent) {
-
-	DeathmatchScoreboardMessage(ent, ent->enemy);
+void MultiplayerScoreboard(edict_t *ent) {
+	edict_t *e = ent->client->chase_target ? ent->client->chase_target : ent;
+	DeathmatchScoreboardMessage(e, e->enemy);
 	gi.unicast(ent, true);
 	ent->client->menutime = level.time + 3_sec;
 }
@@ -754,7 +754,7 @@ void Cmd_Score_f(edict_t *ent) {
 
 	//globals.server_flags |= SERVER_FLAG_SLOW_TIME;
 	ent->client->showscores = true;
-	DeathmatchScoreboard(ent);
+	MultiplayerScoreboard(ent);
 }
 
 /*
@@ -1585,17 +1585,19 @@ void G_SetStats(edict_t *ent) {
 
 			switch (level.match_state) {
 			case MS_WARMUP_DELAYED:
+				s = "";
+				break;
 			case MS_WARMUP_DEFAULT:
 				s = "WARMUP";
 				break;
 			case MS_WARMUP_READYUP:
-				s = "WARMUP - READY UP!";
+				s = "WARMUP: READY UP!";
 				break;
 			case MS_MATCH_COUNTDOWN:
 				s = "COUNTDOWN";
 				break;
 			default:
-				s = t <= -1 && t >= -4 ? "OVERTIME!" : G_TimeString(t * 1000);
+				s = t < 0 && t >= -4 ? "OVERTIME!" : G_TimeString(t * 1000);
 				break;
 			}
 

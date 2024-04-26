@@ -1065,6 +1065,8 @@ static THINK(update_target_camera) (edict_t *self) -> void {
 
 			camera_lookat_pathtarget(self, newpos, &level.intermission_angle);
 			level.intermission_origin = newpos;
+			level.spawn_spots[SPAWN_SPOT_INTERMISSION] = self;
+			level.spawn_spots[SPAWN_SPOT_INTERMISSION]->s.origin += delta;
 
 			// move all clients to the intermission point
 			for (size_t i = 0; i < game.maxclients; i++) {
@@ -1167,6 +1169,7 @@ static USE(use_target_camera) (edict_t *self, edict_t *other, edict_t *activator
 
 	camera_lookat_pathtarget(self, self->s.origin, &level.intermission_angle);
 	level.intermission_origin = self->s.origin;
+	level.spawn_spots[SPAWN_SPOT_INTERMISSION] = self;
 
 	// move all clients to the intermission point
 	for (size_t i = 0; i < game.maxclients; i++) {

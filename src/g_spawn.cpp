@@ -1363,7 +1363,7 @@ static void G_LocateSpawnSpots(void) {
 	const char *s = nullptr;
 	size_t		sl = 0;
 
-	level.spawn_spots[SPAWN_SPOT_INTERMISSION] = NULL;
+	level.spawn_spots[SPAWN_SPOT_INTERMISSION] = nullptr;
 	level.num_spawn_spots_free = 0;
 	level.num_spawn_spots_team = 0;
 
@@ -1574,9 +1574,7 @@ void SpawnEntities(const char *mapname, const char *entities, const char *spawnp
 			gi.Com_Error("SpawnEntities: Invalid or empty entity string.");
 
 		// do this before calling the spawn function so it can be overridden.
-		ent->gravityVector[0] = 0.0;
-		ent->gravityVector[1] = 0.0;
-		ent->gravityVector[2] = -1.0;
+		ent->gravityVector = {0.0, 0.0, -1.0};
 		
 		ED_CallSpawn(ent);
 
@@ -1699,7 +1697,6 @@ static void G_InitStatusbar() {
 		}
 
 		// countdown
-		//sb.ifstat(STAT_COUNTDOWN).xv(192).yt(-124).num(2, STAT_COUNTDOWN).endifstat();
 		sb.ifstat(STAT_COUNTDOWN).xv(144).yb(-256).num(2, STAT_COUNTDOWN).endifstat();
 
 		// match state/timer
@@ -1722,8 +1719,8 @@ static void G_InitStatusbar() {
 		sb.ifstat(STAT_MINISCORE_FIRST_PIC).xr(-28).yb(-57).stat_string(STAT_SCORELIMIT).endifstat();
 
 		// crosshair id
-		sb.ifstat(STAT_CROSSHAIR_ID_VIEW).xv(122).yb(-160).stat_pname(STAT_CROSSHAIR_ID_VIEW).endifstat();	//112 -58
-		sb.ifstat(STAT_CROSSHAIR_ID_VIEW_COLOR).xv(156).yb(-170).pic(STAT_CROSSHAIR_ID_VIEW_COLOR).endifstat();	//106 -160 //96 -58
+		sb.ifstat(STAT_CROSSHAIR_ID_VIEW).xv(122).yb(-152).stat_pname(STAT_CROSSHAIR_ID_VIEW).endifstat();	//112 -58
+		sb.ifstat(STAT_CROSSHAIR_ID_VIEW_COLOR).xv(156).yb(-162).pic(STAT_CROSSHAIR_ID_VIEW_COLOR).endifstat();	//106 -160 //96 -58
 	}
 
 	gi.configstring(CS_STATUSBAR, sb.sb.str().c_str());

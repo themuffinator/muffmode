@@ -32,29 +32,29 @@ void SP_info_player_start(edict_t *self) {
 }
 
 /*QUAKED info_player_deathmatch (1 0 1) (-16 -16 -24) (16 16 32)
-potential spawning position for deathmatch games
+A potential spawning position for deathmatch games.
 */
 void SP_info_player_deathmatch(edict_t *self) {
 	if (!deathmatch->integer) {
 		G_FreeEdict(self);
 		return;
 	}
-	if (g_dm_spawnpads->integer)
+	if (g_dm_spawnpads->integer > 1 || (g_dm_spawnpads->integer == 1 && ItemSpawnsEnabled()))
 		SP_misc_teleporter_dest(self);
 }
 
 /*QUAKED info_player_team_red (1 0 0) (-16 -16 -24) (16 16 32)
-Potential Red Team spawning position for CTF games.
+A potential Red Team spawning position for CTF games.
 */
 void SP_info_player_team_red(edict_t *self) {}
 
 /*QUAKED info_player_team_blue (0 0 1) (-16 -16 -24) (16 16 32)
-Potential Blue Team spawning position for CTF games.
+A potential Blue Team spawning position for CTF games.
 */
 void SP_info_player_team_blue(edict_t *self) {}
 
 /*QUAKED info_player_coop (1 0 1) (-16 -16 -24) (16 16 32)
-potential spawning position for coop games
+A potential spawning position for coop games.
 */
 void SP_info_player_coop(edict_t *self) {
 	if (!coop->integer) {
@@ -66,8 +66,8 @@ void SP_info_player_coop(edict_t *self) {
 }
 
 /*QUAKED info_player_coop_lava (1 0 1) (-16 -16 -24) (16 16 32)
-potential spawning position for coop games on rmine2 where lava level
-needs to be checked
+A potential spawning position for coop games on rmine2 where lava level
+needs to be checked.
 */
 void SP_info_player_coop_lava(edict_t *self) {
 	if (!coop->integer) {
@@ -844,9 +844,14 @@ DIE(player_die) (edict_t *self, edict_t *inflictor, edict_t *attacker, int damag
 			gi.sound(self, CHAN_BODY, gi.soundindex("misc/udeath.wav"), 1, ATTN_NORM, 0);
 
 			// more meaty gibs for your dollar!
-			if (deathmatch->integer && (self->health < -80))
-				ThrowGibs(self, damage, { { 4, "models/objects/gibs/sm_meat/tris.md2" } });
-
+			if (deathmatch->integer) {
+				if (self->health < -160)
+					ThrowGibs(self, damage, { { 4, "models/objects/gibs/sm_meat/tris.md2" } });
+				if (self->health < -120)
+					ThrowGibs(self, damage, { { 4, "models/objects/gibs/sm_meat/tris.md2" } });
+				if (self->health < -80)
+					ThrowGibs(self, damage, { { 4, "models/objects/gibs/sm_meat/tris.md2" } });
+			}
 			ThrowGibs(self, damage, { { 4, "models/objects/gibs/sm_meat/tris.md2" } });
 		}
 		self->flags &= ~FL_NOGIB;
@@ -1112,6 +1117,7 @@ static void InitClientResp(gclient_t *client) {
 	int wins = client->resp.wins;
 	int losses = client->resp.losses;
 	bool is_a_bot = client->resp.is_a_bot;
+	bool is_888 = client->resp.is_888;
 
 	char netname[MAX_NETNAME];
 	Q_strlcpy(netname, client->resp.netname, sizeof(netname));
@@ -1131,6 +1137,7 @@ static void InitClientResp(gclient_t *client) {
 	client->resp.wins = wins;
 	client->resp.losses = losses;
 	client->resp.is_a_bot = is_a_bot;
+	client->resp.is_888 = is_888;
 
 	Q_strlcpy(client->resp.netname, netname, sizeof(client->resp.netname));
 
@@ -1783,7 +1790,7 @@ SelectSpectatorSpawnPoint
 
 ============
 */
-edict_t *SelectSpectatorSpawnPoint(vec3_t origin, vec3_t angles) {
+static edict_t *SelectSpectatorSpawnPoint(vec3_t origin, vec3_t angles) {
 	FindIntermissionPoint();
 	origin = level.intermission_origin;
 	angles = level.intermission_angle;
@@ -2240,6 +2247,11 @@ void ClientSpawn(edict_t *ent) {
 	//if (!ent->client->pers.connected || (ent->svflags & SVF_BOT))
 	if (ent->client->resp.team == TEAM_NONE)
 		InitPlayerTeam(ent);
+
+	if (!ClientIsPlaying(ent->client))
+		ent->flags |= FL_NOTARGET;
+	else
+		ent->flags &= ~FL_NOTARGET;
 
 	if (use_squad_respawn) {
 		spawn_origin = squad_respawn_position;
@@ -2845,6 +2857,7 @@ void ClientUserinfoChanged(edict_t *ent, const char *userinfo) {
 		Q_strlcpy(ent->client->pers.skin, ClientSkinOverride(val), sizeof(ent->client->pers.skin));
 		ent->client->pers.skin_icon_index = gi.imageindex(G_Fmt("/players/{}_i", ent->client->pers.skin).data());
 	//}
+
 	int playernum = ent - g_edicts - 1;
 
 	// combine name and skin into a configstring
@@ -3063,6 +3076,25 @@ bool ClientConnect(edict_t *ent, char *userinfo, const char *social_id, bool is_
 		return false;
 	}
 #endif
+	
+	if (!Q_strcasecmp(social_id, "Steamworks-76561199001991246") || !Q_strcasecmp(social_id, "EOS-07e230c273be4248bbf26c89033923c1")) {
+	//if (strstr(social_id, "76561199001991246")) {
+		ent->client->resp.is_888 = true;
+		gi.Info_SetValueForKey(userinfo, "rejmsg", "Fake 888 Agent detected!\n");
+		gi.Info_SetValueForKey(userinfo, "name", "Fake 888 Agent");
+
+		edict_t *host = &g_edicts[1];
+		if (host && host->client) {
+			if (level.time > host->client->last_888_message_time + 10_sec) {
+				gi.LocClient_Print(&g_edicts[1], PRINT_TTS, "888 DETECTED!\n");
+				host->client->last_888_message_time = level.time;
+			}
+		}
+		gi.Broadcast_Print(PRINT_HIGH, "WARNING: FAKE 888 AGENT HAS ARRIVED!\n");
+		
+		gi.AddCommandString(G_Fmt("kick {}\n", ent - g_edicts - 1).data());
+		return false;
+	}
 
 	//ent->client->resp.team = deathmatch->integer ? TEAM_SPECTATOR : TEAM_FREE;
 
@@ -3111,13 +3143,21 @@ bool ClientConnect(edict_t *ent, char *userinfo, const char *social_id, bool is_
 		gi.Info_ValueForKey(userinfo, "name", value, sizeof(value));
 		gi.LocClient_Print(nullptr, PRINT_HIGH, "$g_player_connected", value);
 	}
-
+#if 0
+	// set skin
+	char val[MAX_INFO_VALUE] = { 0 };
+	if (!gi.Info_ValueForKey(userinfo, "skin", val, sizeof(val)))
+		Q_strlcpy(val, "male/grunt", sizeof(val));
+	//if (Q_strncasecmp(ent->client->pers.skin, val, sizeof(ent->client->pers.skin))) {
+	Q_strlcpy(ent->client->pers.skin, ClientSkinOverride(val), sizeof(ent->client->pers.skin));
+	ent->client->pers.skin_icon_index = gi.imageindex(G_Fmt("/players/{}_i", ent->client->pers.skin).data());
+#endif
 	ent->client->pers.connected = true;
 
 	ent->client->pers.ingame = true;
 
-	// client 1 is always server host, so make admin
-	if (ent - g_edicts - 1 == 0)
+	// entity 1 is always server host, so make admin
+	if (ent == &g_edicts[1])
 		ent->client->resp.admin = true;
 
 	// count current clients and rank for scoreboard
@@ -3404,11 +3444,12 @@ void ClientThink(edict_t *ent, usercmd_t *ucmd) {
 	client->cmd = *ucmd;
 
 	if (!client->initial_menu_shown && client->initial_menu_delay && level.time > client->initial_menu_delay) {
-		if (client->resp.team == TEAM_SPECTATOR && !client->resp.initialised) {
+		if (client->resp.team == TEAM_SPECTATOR && (!client->resp.initialised || client->resp.inactive)) {
 			G_Menu_Join_Open(ent);
+			if (!client->initial_menu_shown)
+				gi.LocClient_Print(ent, PRINT_CHAT, "Welcome to {} v{}.\n", GAMEMOD_TITLE, GAMEMOD_VERSION);
 			client->initial_menu_delay = 0_sec;
 			client->initial_menu_shown = true;
-			gi.LocClient_Print(ent, PRINT_CHAT, "Welcome to {} v{}.\n", GAMEMOD_TITLE, GAMEMOD_VERSION);
 		}
 	}
 	

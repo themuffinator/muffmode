@@ -869,12 +869,13 @@ static void G_SetClientEvent(edict_t *ent) {
 		return;
 
 	if (ent->client->ps.pmove.pm_flags & PMF_ON_LADDER) {
-		if (!deathmatch->integer &&
-			current_client->last_ladder_sound < level.time &&
-			(current_client->last_ladder_pos - ent->s.origin).length() > 48.f) {
-			ent->s.event = EV_LADDER_STEP;
-			current_client->last_ladder_pos = ent->s.origin;
-			current_client->last_ladder_sound = level.time + LADDER_SOUND_TIME;
+		if (g_ladder_steps->integer > 1 || (g_ladder_steps->integer == 1 && !deathmatch->integer)) {
+			if (current_client->last_ladder_sound < level.time &&
+				(current_client->last_ladder_pos - ent->s.origin).length() > 48.f) {
+				ent->s.event = EV_LADDER_STEP;
+				current_client->last_ladder_pos = ent->s.origin;
+				current_client->last_ladder_sound = level.time + LADDER_SOUND_TIME;
+			}
 		}
 	} else if (ent->groundentity && xyspeed > 225) {
 		if ((int)(current_client->bobtime + bobmove) != bobcycle_run)
@@ -1252,9 +1253,10 @@ void ClientEndServerFrame(edict_t *ent) {
 		return;
 
 	float bobtime, bobtime_run;
+	edict_t *e = g_eyecam->integer && ent->client->chase_target ? ent->client->chase_target : ent;
 
-	current_player = ent;
-	current_client = ent->client;
+	current_player = e;
+	current_client = e->client;
 
 	if (deathmatch->integer) {
 		int limit = GT_ScoreLimit();
@@ -1318,7 +1320,7 @@ void ClientEndServerFrame(edict_t *ent) {
 
 		// if the scoreboard is up, update it if a client leaves
 		if (deathmatch->integer && ent->client->showscores && ent->client->menutime) {
-			DeathmatchScoreboardMessage(ent, ent->enemy);
+			DeathmatchScoreboardMessage(e, e->enemy);
 			gi.unicast(ent, false);
 			ent->client->menutime = 0_ms;
 		}
@@ -1380,18 +1382,18 @@ void ClientEndServerFrame(edict_t *ent) {
 	bobfracsin = fabsf(sinf(bobtime * PIf));
 
 	// apply all the damage taken this frame
-	P_DamageFeedback(ent);
+	P_DamageFeedback(e);
 
 	// determine the view offsets
-	G_CalcViewOffset(ent);
+	G_CalcViewOffset(e);
 
 	// determine the gun offsets
-	G_CalcGunOffset(ent);
+	G_CalcGunOffset(e);
 
 	// determine the full screen color blend
 	// must be after viewoffset, so eye contents can be
 	// accurately determined
-	G_CalcBlend(ent);
+	G_CalcBlend(e);
 
 	if (g_matchstats->integer) {
 		if (ent->client->hit_target) {
@@ -1412,12 +1414,12 @@ void ClientEndServerFrame(edict_t *ent) {
 
 	G_SetClientEvent(ent);
 
-	G_SetClientEffects(ent);
+	G_SetClientEffects(e);
 
-	G_SetClientSound(ent);
+	G_SetClientSound(e);
 
 	G_SetClientFrame(ent);
-
+	
 	ent->client->oldvelocity = ent->velocity;
 	ent->client->oldviewangles = ent->client->ps.viewangles;
 	ent->client->oldgroundentity = ent->groundentity;
@@ -1436,8 +1438,9 @@ void ClientEndServerFrame(edict_t *ent) {
 		if (ent->client->menu) {
 			P_Menu_Do_Update(ent);
 			ent->client->menudirty = false;
-		} else
-			DeathmatchScoreboardMessage(ent, ent->enemy);
+		} else {
+			DeathmatchScoreboardMessage(e, e->enemy);
+		}
 		gi.unicast(ent, false);
 		ent->client->menutime = level.time + 3_sec;
 	}

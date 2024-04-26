@@ -652,13 +652,13 @@ void SP_func_plat(edict_t *ent) {
 		ent->decel = 5;
 	else
 		ent->decel *= 0.1f;
-	
+#if 0
 	if (g_mover_speed_scale->value != 1.0f) {
 		ent->speed = floor(ent->speed * g_mover_speed_scale->value);
 		ent->accel = floor(ent->accel * g_mover_speed_scale->value);
 		ent->decel = floor(ent->decel * g_mover_speed_scale->value);
 	}
-
+#endif
 	if (g_mover_debug->integer)
 		gi.Com_PrintFmt("Spawning {} - speed:{} accel:{} decel:{}\n", *ent, ent->speed, ent->accel, ent->decel);
 

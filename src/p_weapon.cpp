@@ -1090,7 +1090,7 @@ HAND GRENADES
 ======================================================================
 */
 
-void weapon_grenade_fire(edict_t *ent, bool held)
+static void weapon_grenade_fire(edict_t *ent, bool held)
 {
 	int	  damage = 125;
 	int	  speed;
@@ -2637,7 +2637,7 @@ static void PlasmaBeam_Fire(edict_t *ent) {
 	// jim requested more damage, so try 15/15 --- PGM 07/23/98
 	//muffmode: jim you are a silly boy, 15 is way OP for DM
 	damage = deathmatch->integer ? 10 : 15;
-	kick = deathmatch->integer ? 75 : 30; // really knock 'em around in deathmatch
+	kick = deathmatch->integer ? 50 : 30; // really knock 'em around in deathmatch, muffmode: jesus christ but not so much (was 75)
 
 	if (is_quad) {
 		damage *= damage_multiplier;

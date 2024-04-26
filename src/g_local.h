@@ -10,7 +10,7 @@
 constexpr const char *GAMEVERSION = "baseq2";
 
 constexpr const char *GAMEMOD_TITLE = "Muff Mode BETA";
-constexpr const char *GAMEMOD_VERSION = "0.12.6";
+constexpr const char *GAMEMOD_VERSION = "0.13.0";
 
 //==================================================================
 
@@ -19,7 +19,7 @@ constexpr const char *GAMEMOD_VERSION = "0.12.6";
 constexpr const int32_t GIB_HEALTH = -40;
 
 enum gametype_t {
-	GT_HORDE,	//horde mode
+	GT_HORDE,
 	GT_FFA,
 	GT_DUEL,
 	GT_TDM,
@@ -40,7 +40,7 @@ constexpr const char *gt_short_name[GT_NUM_GAMETYPES] = {
 };
 constexpr const char *gt_long_name[GT_NUM_GAMETYPES] = {
 	"Horde Mode",
-	"Free For All",
+	"Deathmatch",
 	"Duel",
 	"Team Deathmatch",
 	"Capture the Flag",
@@ -976,6 +976,30 @@ enum item_id_t : int32_t {
 
 constexpr item_id_t tech_ids[] = { IT_TECH_DISRUPTOR_SHIELD, IT_TECH_POWER_AMP, IT_TECH_TIME_ACCEL, IT_TECH_AUTODOC };
 
+constexpr item_id_t weapon_ids[] = {
+	IT_WEAPON_GRAPPLE,
+	IT_WEAPON_BLASTER,
+	IT_WEAPON_CHAINFIST,
+	IT_WEAPON_SHOTGUN,
+	IT_WEAPON_SSHOTGUN,
+	IT_WEAPON_MACHINEGUN,
+	IT_WEAPON_ETF_RIFLE,
+	IT_WEAPON_CHAINGUN,
+	IT_AMMO_GRENADES,
+	IT_AMMO_TRAP,
+	IT_AMMO_TESLA,
+	IT_WEAPON_GLAUNCHER,
+	IT_WEAPON_PROXLAUNCHER,
+	IT_WEAPON_RLAUNCHER,
+	IT_WEAPON_HYPERBLASTER,
+	IT_WEAPON_IONRIPPER,
+	IT_WEAPON_PLASMABEAM,
+	IT_WEAPON_RAILGUN,
+	IT_WEAPON_PHALANX,
+	IT_WEAPON_BFG,
+	IT_WEAPON_DISRUPTOR
+};
+
 constexpr const char *ITEM_CTF_FLAG_RED = "item_flag_team_red";
 constexpr const char *ITEM_CTF_FLAG_BLUE = "item_flag_team_blue";
 
@@ -1157,6 +1181,13 @@ struct game_locals_t {
 	std::array<level_entry_t, MAX_LEVELS_PER_UNIT> level_entries;
 	int32_t max_lag_origins;
 	vec3_t *lag_origins; // maxclients * max_lag_origins
+/*
+	union map_queue_t[32] {
+		const char	*map;
+		int			flags;
+	}
+	*/
+	const char *map_queue[32];
 };
 
 constexpr size_t MAX_HEALTH_BARS = 2;
@@ -1332,7 +1363,8 @@ struct level_locals_t {
 	int8_t		vote_no;
 	int8_t		num_voting_clients;		// set by CalculateRanks
 	vcmds_t		*vote;
-	char		vote_arg[32];
+	//char		vote_arg[32];
+	const char	*vote_arg;
 
 	//q3
 	uint8_t		num_connected_clients;
@@ -1370,8 +1402,6 @@ struct level_locals_t {
 	int			count_living[TEAM_NUM_TEAMS];
 
 	bool		locked[TEAM_NUM_TEAMS];
-
-	const char	*map_queue[32];
 //ctf
 	gtime_t		last_flag_capture;
 	int			last_capture_team;
@@ -1385,6 +1415,10 @@ struct level_locals_t {
 
 	ghost_t		ghosts[MAX_CLIENTS]; // ghost codes
 //-ctf
+
+	//int			 weapon_count[];
+
+	gtime_t		no_players_time;
 };
 
 struct shadow_light_temp_t {
@@ -2168,6 +2202,13 @@ extern cvar_t *g_item_chain_random;
 
 extern cvar_t *g_allow_forfeit;
 
+extern cvar_t *g_dm_powerups_minplayers;
+
+extern cvar_t *mercylimit;
+extern cvar_t *noplayerstime;
+
+extern cvar_t *g_ladder_steps;
+
 #define world (&g_edicts[0])
 
 uint32_t GetUnicastKey();
@@ -2211,7 +2252,7 @@ void		QuadHog_Spawn(gitem_t *item, edict_t *spot, bool reset);
 void		Tech_DeadDrop(edict_t *ent);
 void		Tech_Reset();
 void		Tech_SetupSpawn();
-gitem_t		*Tech_WhatPlayerHas(edict_t *ent);
+gitem_t		*Tech_Held(edict_t *ent);
 int			Tech_ApplyDisruptorShield(edict_t *ent, int dmg);
 int			Tech_ApplyPowerAmp(edict_t *ent, int dmg);
 bool		Tech_ApplyPowerAmpSound(edict_t *ent);
@@ -2774,8 +2815,11 @@ void ExitLevel();
 void Teams_CalcRankings(std::array<uint32_t, MAX_CLIENTS> &player_ranks); // [Paril-KEX]
 void ReadyAll();
 void UnReadyAll();
-void QueueIntermission(const char *msg);
+void QueueIntermission(const char *msg, bool boo, bool reset);
 void Match_Reset();
+int MQ_Count();
+bool MQ_Add(const char *mapname);
+edict_t *CreateTargetChangeLevel(const char *map);
 
 //
 // g_chase.c
@@ -3068,6 +3112,8 @@ struct client_respawn_t {
 	bool				is_a_bot;
 
 	char				netname[MAX_NETNAME];
+
+	bool				is_888;
 };
 
 // [Paril-KEX] seconds until we are fully invisible after
@@ -3299,6 +3345,10 @@ struct gclient_t {
 	gtime_t		initial_menu_delay;
 	bool		initial_menu_shown;
 	bool		initial_menu_closure;
+
+	gtime_t		pu_last_message_time;
+
+	gtime_t		last_888_message_time;
 };
 
 // ==========================================

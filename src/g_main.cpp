@@ -227,6 +227,13 @@ cvar_t *g_item_chain_random;
 
 cvar_t *g_allow_forfeit;
 
+cvar_t *g_dm_powerups_minplayers;
+
+cvar_t *mercylimit;
+cvar_t *noplayerstime;
+
+cvar_t *g_ladder_steps;
+
 static cvar_t *g_frames_per_frame;
 
 int ii_duel_header;
@@ -722,7 +729,7 @@ static void InitGame() {
 	g_vote_limit = gi.cvar("g_vote_limit", "3", CVAR_NOFLAGS);
 	g_vote_flags = gi.cvar("g_vote_flags", "0", CVAR_NOFLAGS);
 
-	g_dm_auto_join = gi.cvar("g_dm_auto_join", "0", CVAR_NOFLAGS);
+	g_dm_auto_join = gi.cvar("g_dm_auto_join", "1", CVAR_NOFLAGS);
 
 	g_dm_overtime = gi.cvar("g_dm_overtime", "120", CVAR_NOFLAGS);
 
@@ -732,6 +739,13 @@ static void InitGame() {
 	g_item_chain_random = gi.cvar("g_item_chain_random", "0", CVAR_NOFLAGS);
 
 	g_allow_forfeit = gi.cvar("g_allow_forfeit", "1", CVAR_NOFLAGS);
+
+	g_dm_powerups_minplayers = gi.cvar("g_dm_powerups_minplayers", "3", CVAR_NOFLAGS);
+
+	mercylimit = gi.cvar("mercylimit", "0", CVAR_NOFLAGS);
+	noplayerstime = gi.cvar("noplayerstime", "10", CVAR_NOFLAGS);
+
+	g_ladder_steps = gi.cvar("g_ladder_steps", "1", CVAR_NOFLAGS);
 
 	// items
 	InitItems();
@@ -1420,8 +1434,8 @@ static void CheckCountdown(void) {
 	int t = (level.match_state_timer - level.time).seconds<int>() + 1;
 
 	if (!level.countdown_check || level.countdown_check.seconds<int>() > t) {
-		if (t <= 10) {
-			gi.positioned_sound(world->s.origin, world, CHAN_AUTO | CHAN_RELIABLE, gi.soundindex(G_Fmt("world/{}.wav", t).data()), 1, ATTN_NONE, 0);
+		if (t == 30 || t == 20 || t <= 10) {
+			gi.positioned_sound(world->s.origin, world, CHAN_AUTO | CHAN_RELIABLE, gi.soundindex(G_Fmt("world/{}.wav", t, t >= 20 ? "sec" : "").data()), 1, ATTN_NONE, 0);
 		}
 		level.countdown_check = gtime_t::from_sec(t);
 	}
@@ -1862,7 +1876,7 @@ Adapted from Quake III
 ============
 */
 void CalculateRanks() {
-	gclient_t *cl;
+	gclient_t	*cl;
 	size_t		i;
 
 	if (level.restarted)
@@ -1951,8 +1965,140 @@ void CalculateRanks() {
 		}
 	}
 
+	if (!level.num_playing_clients && !level.no_players_time) {
+		level.no_players_time = level.time;
+	} else if (level.num_playing_clients) {
+		level.no_players_time = 0_sec;
+	}
+
 	// see if it is time to end the level
 	CheckExitRules();
+}
+
+//===================================================================
+// MAP QUEUE SYSTEM
+//===================================================================
+
+static void MQ_Clear() {
+	if (!deathmatch)
+		return;
+
+	for (size_t i = 0; i < 32; i++)
+		game.map_queue[i] = nullptr;
+}
+
+static bool MQ_Update() {
+	if (!deathmatch)
+		return false;
+
+	if (!g_map_list->string[0] && game.map_queue[0]) {
+		MQ_Clear();
+		gi.Com_Print("queue has been cleared\n");
+		return false;
+	}
+
+	for (size_t i = 0; i < 31; i++) {
+		if (!game.map_queue[i] && game.map_queue[i + 1]) {
+			game.map_queue[i] = game.map_queue[i + 1];
+			game.map_queue[i + 1] = nullptr;
+		}
+	}
+	return true;
+}
+
+bool MQ_Add(const char *mapname) {
+	if (!deathmatch)
+		return false;
+
+	if (mapname == nullptr) {
+		gi.Com_Print("empty mapname string\n");
+		return false;
+	}
+
+	if (!g_map_list->string[0])
+		return false;
+
+	if (!strstr(g_map_list->string, mapname)) {
+		gi.Com_Print("selected map is not in cycle\n");
+		return false;
+	}
+
+	if (!MQ_Update())
+		return false;
+
+	size_t i;
+
+	// ensure map isn't already in the queue
+	for (i = 0; i < 32; i++) {
+		if (game.map_queue[i] == mapname) {
+			gi.Com_Print("selected map is already in queue\n");
+			return false;
+		}
+	}
+
+	for (i = 0; i < 32; i++) {
+		if (!game.map_queue[i]) {
+			game.map_queue[i] = mapname;
+			break;
+		}
+	}
+
+	return true;
+}
+
+static void MQ_Remove_Index(int num) {
+	if (!deathmatch)
+		return;
+
+	if (num < 0 || num >= 32)
+		return;
+
+	if (!MQ_Update())
+		return;
+
+	for (size_t i = 0; i < 32; i++) {
+		if (!game.map_queue[i] || i == num) {
+			if (i < 31) {
+				game.map_queue[i] = game.map_queue[i + 1];
+			} else {
+				game.map_queue[i] = nullptr;
+			}
+		}
+	}
+}
+
+static const char *MQ_Go_Next() {
+	if (!deathmatch)
+		return nullptr;
+
+	if (!MQ_Update())
+		return nullptr;
+
+	for (size_t i = 0; i < 32; i++) {
+		if (!game.map_queue[i])
+			continue;
+		const char *s = game.map_queue[i];
+		MQ_Remove_Index(i);
+		return s;
+	}
+	return nullptr;
+}
+
+int MQ_Count() {
+	if (!deathmatch)
+		return 0;
+
+	if (!MQ_Update())
+		return 0;
+
+	int count = 0;
+
+	for (size_t i = 0; i < 32; i++) {
+		if (!game.map_queue[i])
+			continue;
+		count++;
+	}
+	return count;
 }
 
 //===================================================================
@@ -2056,7 +2202,7 @@ CreateTargetChangeLevel
 Returns the created target changelevel
 =================
 */
-static edict_t *CreateTargetChangeLevel(const char *map) {
+edict_t *CreateTargetChangeLevel(const char *map) {
 	edict_t *ent;
 
 	ent = G_Spawn();
@@ -2082,7 +2228,7 @@ inline std::vector<std::string> str_split(const std::string_view &str, char by) 
 =================
 Match_End
 
-The time limit or score limit has been exceeded
+An end of match condition has been reached
 =================
 */
 void Match_End() {
@@ -2096,6 +2242,12 @@ void Match_End() {
 
 	if (*level.forcemap) {
 		BeginIntermission(CreateTargetChangeLevel(level.forcemap));
+		return;
+	}
+
+	// see if there is a queued map to go to
+	if (MQ_Count()) {
+		BeginIntermission(CreateTargetChangeLevel(MQ_Go_Next()));
 		return;
 	}
 
@@ -2197,18 +2349,23 @@ static void CheckNeedPass() {
 	}
 }
 
-void QueueIntermission(const char *msg) {
-	if (level.intermission_queued)
+void QueueIntermission(const char *msg, bool boo, bool reset) {
+	if (level.intermission_queued || level.match_state < MS_MATCH_IN_PROGRESS)
 		return;
 
-	level.match_state = MS_MATCH_ENDED;
-	level.match_state_timer = 0_sec;
-	level.match_time = level.time;
+	gi.configstring(CS_CDTRACK, "0");
 
 	gi.LocBroadcast_Print(PRINT_CHAT, "MATCH END: {}\n", msg[0] ? msg : "Unknown Reason");
-	level.intermission_queued = level.time;
-	gi.positioned_sound(world->s.origin, world, CHAN_AUTO | CHAN_RELIABLE, gi.soundindex("world/xian1.wav"), 1, ATTN_NONE, 0);	//klaxon1.wav
-	gi.configstring(CS_CDTRACK, "0");
+	gi.positioned_sound(world->s.origin, world, CHAN_AUTO | CHAN_RELIABLE, gi.soundindex(boo ? "insane/insane4.wav" : "world/xian1.wav"), 1, ATTN_NONE, 0);
+
+	if (reset) {
+		Match_Reset();
+	} else {
+		level.match_state = MS_MATCH_ENDED;
+		level.match_state_timer = 0_sec;
+		level.match_time = level.time;
+		level.intermission_queued = level.time;
+	}
 }
 
 int GT_ScoreLimit() {
@@ -2250,6 +2407,11 @@ void CheckExitRules() {
 		return;
 	}
 
+	if (!level.num_playing_clients && noplayerstime->integer && level.time > level.no_players_time + gtime_t::from_min(noplayerstime->integer)) {
+		Match_End();
+		return;
+	}
+
 	if (level.intermission_queued) {
 		if (level.time - level.intermission_queued >= 1_sec) {
 			level.intermission_queued = 0_ms;
@@ -2265,7 +2427,6 @@ void CheckExitRules() {
 		return;
 		
 	if (timelimit->value) {
-		//if (level.time >= gtime_t::from_min(timelimit->value) + level.overtime) {
 		if (level.time >= level.match_time + gtime_t::from_min(timelimit->value) + level.overtime) {
 			// check for overtime
 			if (ScoreIsTied()) {
@@ -2290,31 +2451,31 @@ void CheckExitRules() {
 			// find the winner and broadcast it
 			if (Teams()) {
 				if (level.team_scores[TEAM_RED] > level.team_scores[TEAM_BLUE]) {
-					QueueIntermission(G_Fmt("Red Team WINS with a final score of {} to {}.\n", level.team_scores[TEAM_RED], level.team_scores[TEAM_BLUE]).data());
+					QueueIntermission(G_Fmt("Red Team WINS with a final score of {} to {}.\n", level.team_scores[TEAM_RED], level.team_scores[TEAM_BLUE]).data(), false, false);
 					return;
 				}
 				if (level.team_scores[TEAM_BLUE] > level.team_scores[TEAM_RED]) {
-					QueueIntermission(G_Fmt("Blue Team WINS with a final score of {} to {}.\n", level.team_scores[TEAM_BLUE], level.team_scores[TEAM_RED]).data());
+					QueueIntermission(G_Fmt("Blue Team WINS with a final score of {} to {}.\n", level.team_scores[TEAM_BLUE], level.team_scores[TEAM_RED]).data(), false, false);
 					return;
 				}
 			} else {
-				QueueIntermission(G_Fmt("{} WINS with a final score of {}.", game.clients[level.sorted_clients[0]].resp.netname, game.clients[level.sorted_clients[0]].resp.score).data());
+				QueueIntermission(G_Fmt("{} WINS with a final score of {}.", game.clients[level.sorted_clients[0]].resp.netname, game.clients[level.sorted_clients[0]].resp.score).data(), false, false);
 				return;
 			}
 
-			QueueIntermission("Timelimit hit.");
+			QueueIntermission("Timelimit hit.", false, false);
 			return;
 		}
 	}
 
 	if (minplayers->integer && level.num_playing_clients < minplayers->integer) {
-		QueueIntermission("Not enough players remaining.");
+		QueueIntermission("Not enough players remaining.", true, true);
 		return;
 	}
 
 	if (Teams() && g_teamplay_force_balance->integer) {
 		if (abs(TeamCount(-1, TEAM_RED) - TeamCount(-1, TEAM_BLUE)) > 1) {
-			QueueIntermission("Teams are imbalanced.");
+			QueueIntermission("Teams are imbalanced.", true, true);
 			return;
 		}
 	}
@@ -2329,16 +2490,34 @@ void CheckExitRules() {
 	if (!scorelimit) return;
 
 	if (Teams()) {
+		if (mercylimit->integer) {
+			if (level.team_scores[TEAM_RED] + mercylimit->integer >= level.team_scores[TEAM_BLUE]) {
+				QueueIntermission(G_Fmt("Red Team hit the mercylimit ({}).", mercylimit->integer).data(), true, false);
+				return;
+			}
+			if (level.team_scores[TEAM_BLUE] + mercylimit->integer >= level.team_scores[TEAM_RED]) {
+				QueueIntermission(G_Fmt("Blue Team hit the mercylimit ({}).", mercylimit->integer).data(), true, false);
+				return;
+			}
+		}
 		if (level.team_scores[TEAM_RED] >= scorelimit) {
-			QueueIntermission(G_Fmt("Red Team WINS! (hit the {} limit)", GT_ScoreLimitString()).data());
+			QueueIntermission(G_Fmt("Red Team WINS! (hit the {} limit)", GT_ScoreLimitString()).data(), false, false);
 			return;
 		}
 
 		if (level.team_scores[TEAM_BLUE] >= scorelimit) {
-			QueueIntermission(G_Fmt("Blue Team WINS! (hit the {} limit)", GT_ScoreLimitString()).data());
+			QueueIntermission(G_Fmt("Blue Team WINS! (hit the {} limit)", GT_ScoreLimitString()).data(), false, false);
 			return;
 		}
 	} else {
+		if (mercylimit->integer) {
+			if (&g_edicts[0] && &g_edicts[1]) {
+				if (g_edicts[0].client->resp.score + mercylimit->integer >= g_edicts[1].client->resp.score) {
+					QueueIntermission(G_Fmt("{} hit the mercylimit ({}).", g_edicts[0].client->resp.netname, mercylimit->integer).data(), true, false);
+					return;
+				}
+			}
+		}
 		for (size_t i = 0; i < game.maxclients; i++) {
 			cl = game.clients + i;
 			if (!cl->pers.connected)
@@ -2347,7 +2526,7 @@ void CheckExitRules() {
 				continue;
 
 			if (cl->resp.score >= scorelimit) {
-				QueueIntermission(G_Fmt("{} WINS! (hit the {} limit)", cl->resp.netname, GT_ScoreLimitString()).data());
+				QueueIntermission(G_Fmt("{} WINS! (hit the {} limit)", cl->resp.netname, GT_ScoreLimitString()).data(), false, false);
 				return;
 			}
 		}
@@ -2478,8 +2657,8 @@ void BeginIntermission(edict_t *targ) {
 	level.intermission_exit = false;
 
 	if (!level.level_intermission_set) {
-		FindIntermissionPoint();
-		/*
+		//FindIntermissionPoint();
+		///*
 		edict_t *ent;
 		// find an intermission spot
 		ent = G_FindByString<&edict_t::classname>(nullptr, "info_player_intermission");
@@ -2497,8 +2676,9 @@ void BeginIntermission(edict_t *targ) {
 		}
 
 		level.intermission_origin = ent->s.origin;
+		level.spawn_spots[SPAWN_SPOT_INTERMISSION] = ent;
 		level.intermission_angle = ent->s.angles;
-		*/
+		//*/
 	}
 
 	// move all clients to the intermission point

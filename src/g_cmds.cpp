@@ -612,7 +612,7 @@ static void Cmd_Drop_f(edict_t *ent) {
 		return;
 
 	if (!Q_strcasecmp(gi.args(), "tech")) {
-		it = Tech_WhatPlayerHas(ent);
+		it = Tech_Held(ent);
 
 		if (it) {
 			it->drop(ent, it);
@@ -913,7 +913,7 @@ static void Cmd_Forfeit_f(edict_t *ent) {
 		return;
 	}
 
-	QueueIntermission(G_Fmt("{} forfeits the match.", ent->client->resp.netname).data());
+	QueueIntermission(G_Fmt("{} forfeits the match.", ent->client->resp.netname).data(), true, false);
 }
 
 /*
@@ -1067,7 +1067,7 @@ static void PlayersList(edict_t *ent, bool ranked) {
 			count++;
 		}
 
-	// sort by frags
+	// sort by score
 	if (ranked)
 		qsort(index, count, sizeof(index[0]), PlayerSort);
 
@@ -1625,6 +1625,7 @@ void BroadcastTeamChange(edict_t *ent, int old_team, bool inactive) {
 				continue;
 			gi.LocClient_Print(e, PRINT_CENTER, s);
 		}
+		gi.Com_Print(s);
 	}
 	
 	if (g_motd->string[0]) {
@@ -1987,10 +1988,12 @@ bool SetTeam(edict_t *ent, team_t desired_team, bool inactive, bool force) {
 			G_AssignPlayerSkin(ent, ent->client->pers.skin);
 
 		G_RevertVote(ent->client);
-		ent->client->resp.initialised = true;
 
 		// assign a ghost code
 		Match_Ghost_DoAssign(ent);
+	}
+	if (!force) {
+		ent->client->resp.initialised = true;
 	}
 
 	// if they are playing a duel, count as a loss
@@ -2232,13 +2235,13 @@ static void Cmd_Boot_f(edict_t *ent) {
 
 	uint32_t i = strtoul(gi.argv(1), nullptr, 10);
 	if (i < 1 || i > game.maxclients) {
-		gi.LocClient_Print(ent, PRINT_HIGH, "Invalid player number.\n");
+		gi.LocClient_Print(ent, PRINT_HIGH, "Invalid client number.\n");
 		return;
 	}
 
 	targ = g_edicts + i;
 	if (!targ->inuse) {
-		gi.LocClient_Print(ent, PRINT_HIGH, "That player number is not connected.\n");
+		gi.LocClient_Print(ent, PRINT_HIGH, "That client number is not connected.\n");
 		return;
 	}
 
@@ -2256,6 +2259,9 @@ static bool Vote_Val_None(edict_t *ent) {
 static void Vote_Pass_Map() {
 	Q_strlcpy(level.forcemap, level.vote_arg, sizeof(level.forcemap));
 	Match_End();
+	//BeginIntermission(CreateTargetChangeLevel(level.forcemap));
+	level.intermission_time -= 5_sec;
+	ExitLevel();
 }
 
 static bool Vote_Val_Map(edict_t *ent) {
@@ -2339,12 +2345,25 @@ static bool Vote_Val_Unlagged(edict_t *ent) {
 	return true;
 }
 
+static bool Vote_Val_Random(edict_t *ent) {
+	int arg = atoi(gi.argv(2));
+
+	if (arg > 100 || arg < 2)
+		return false;
+
+	return true;
+}
+
 static void Vote_Pass_Cointoss() {
 	gi.LocBroadcast_Print(PRINT_HIGH, "The coin is: {}\n", brandom() ? "HEADS" : "TAILS");
 }
 
+static void Vote_Pass_Random() {
+	gi.LocBroadcast_Print(PRINT_HIGH, "The random number is: {}\n", irandom(2, atoi(level.vote_arg)));
+}
+
 static void Vote_Pass_Timelimit() {
-	const char *s = G_Fmt("{}", level.vote_arg).data();
+	const char *s = level.vote_arg;
 	int argi = atoi(s);
 
 	if (!argi)
@@ -2407,6 +2426,7 @@ vcmds_t vote_cmds[] = {
 	{"shuffle",				Vote_Val_ShuffleTeams,	Vote_Pass_ShuffleTeams,	64,		2,	"",									"shuffles teams"},
 	{"unlagged",			Vote_Val_Unlagged,		Vote_Pass_Unlagged,		128,	2,	"<0/1>",							"enables or disables lag compensation"},
 	{"cointoss",			Vote_Val_None,			Vote_Pass_Cointoss,		256,	1,	"",									"invokes a HEADS or TAILS cointoss"},
+	{"random",				Vote_Val_Random,		Vote_Pass_Random,		512,	1,	"<2-100>",							"randomly selects a number from 2 to specified value"},
 };
 
 /*
@@ -2437,7 +2457,8 @@ void Cmd_Vote_Passed() {
 	level.vote->func();
 
 	level.vote = nullptr;
-	Q_strlcpy(level.vote_arg, nullptr, sizeof(level.vote_arg));
+	//Q_strlcpy(level.vote_arg, nullptr, sizeof(level.vote_arg));
+	//level.vote_arg = nullptr;
 	level.vote_execute_time = 0_sec;
 }
 
@@ -2468,7 +2489,8 @@ static bool ValidVoteCommand(edict_t *ent) {
 		return false;
 
 	level.vote = cc;
-	Q_strlcpy(level.vote_arg, gi.argv(2), sizeof(level.vote_arg));
+	//Q_strlcpy(level.vote_arg, gi.argv(2), sizeof(level.vote_arg));
+	level.vote_arg = gi.argv(2);
 	gi.Com_PrintFmt("vote_arg={}\n", level.vote_arg);
 	return true;
 }
@@ -2501,11 +2523,6 @@ static void Cmd_CallVote_f(edict_t *ent) {
 		return;
 	}
 
-	if (gi.argc() < 2) {
-		gi.LocClient_Print(ent, PRINT_HIGH, "Usage: {} <command> <params>\nValid Voting Commands:{}\n", gi.argv(0), vstr);
-		return;
-	}
-
 	if (!g_allow_vote_midgame->integer && level.match_state >= MS_MATCH_COUNTDOWN) {
 		gi.LocClient_Print(ent, PRINT_HIGH, "Voting is only allowed during the warm up period.\n\"");
 		return;
@@ -2522,12 +2539,18 @@ static void Cmd_CallVote_f(edict_t *ent) {
 		return;
 	}
 
+	if (!g_allow_spec_vote->integer && !ClientIsPlaying(ent->client)) {
+		gi.LocClient_Print(ent, PRINT_HIGH, "You are not allowed to call a vote as a spectator.\n\"");
+		return;
+	}
+
 	if (g_vote_limit->integer && ent->client->pers.vote_count >= g_vote_limit->integer) {
 		gi.LocClient_Print(ent, PRINT_HIGH, "You have called the maximum number of votes ({}).\n\"", g_vote_limit->integer);
 		return;
 	}
-	if (!g_allow_spec_vote->integer && !ClientIsPlaying(ent->client)) {
-		gi.LocClient_Print(ent, PRINT_HIGH, "You are not allowed to call a vote as a spectator.\n\"");
+
+	if (gi.argc() < 2) {
+		gi.LocClient_Print(ent, PRINT_HIGH, "Usage: {} <command> <params>\nValid Voting Commands:{}\n", gi.argv(0), vstr);
 		return;
 	}
 
@@ -2715,6 +2738,7 @@ static void Cmd_Admin_SetTeam_f(edict_t *ent) {
 
 	Q_strlcpy(name, gi.argv(2), sizeof(name));
 
+	// check by nick first
 	for (size_t i = 0; i < game.maxclients; i++) {
 		if (!Q_strcasecmp(name, game.clients[i].resp.netname)) {
 			targ = &g_edicts[&game.clients[i] - game.clients];
@@ -2722,10 +2746,11 @@ static void Cmd_Admin_SetTeam_f(edict_t *ent) {
 		}
 	}
 
+	// otherwise check client num
 	if (!targ) {
 		size_t num = atoi(gi.argv(2));
 		if (num >= 0 && num < game.maxclients) {
-			targ = &g_edicts[&game.clients[num] - game.clients];
+			targ = &g_edicts[&game.clients[num] - game.clients + 1];
 		}
 	}
 
@@ -2786,7 +2811,7 @@ static void Cmd_Admin_EndMatch_f(edict_t *ent) {
 		gi.LocClient_Print(ent, PRINT_HIGH, "Match has already ended.\n");
 		return;
 	}
-	QueueIntermission("Admin has forced the match to end.");
+	QueueIntermission("Admin has forced the match to end.", true, false);
 }
 
 /*
@@ -2825,12 +2850,78 @@ static void Cmd_Admin_ForceVote_f(edict_t *ent) {
 	const char *arg = gi.argv(2);
 
 	if (arg[0] == 'y' || arg[0] == 'Y' || arg[0] == '1') {
-		gi.LocBroadcast_Print(PRINT_HIGH, "Admin passed vote.\n");
+		gi.LocBroadcast_Print(PRINT_HIGH, "Admin passed the vote.\n");
 		level.vote_execute_time = level.time + 3_sec;
 	} else {
-		gi.LocBroadcast_Print(PRINT_HIGH, "Admin failed vote.\n");
+		gi.LocBroadcast_Print(PRINT_HIGH, "Admin failed the vote.\n");
 		level.vote_time = 0_sec;
 	}
+}
+
+/*
+=================
+Cmd_Admin_Spawn_f
+=================
+*/
+static void Cmd_Admin_Spawn_f(edict_t *ent) {
+	solid_t backup = ent->solid;
+	ent->solid = SOLID_NOT;
+	gi.linkentity(ent);
+
+	edict_t *other = G_Spawn();
+	other->classname = gi.argv(2);
+
+	other->s.origin = ent->s.origin + (AngleVectors(ent->s.angles).forward * 24.f);
+	other->s.angles[YAW] = ent->s.angles[YAW];
+
+	st = {};
+
+	if (gi.argc() > 4) {
+		for (int i = 3; i < gi.argc(); i += 2)
+			ED_ParseField(gi.argv(i), gi.argv(i + 1), other);
+	}
+
+	ED_CallSpawn(other);
+
+	if (other->inuse) {
+		vec3_t forward, end;
+		AngleVectors(ent->client->v_angle, forward, nullptr, nullptr);
+		end = ent->s.origin;
+		end[2] += ent->viewheight;
+		end += (forward * 8192);
+
+		trace_t tr = gi.traceline(ent->s.origin + vec3_t{ 0.f, 0.f, (float)ent->viewheight }, end, other, MASK_SHOT | CONTENTS_MONSTERCLIP);
+		other->s.origin = tr.endpos;
+
+		for (size_t i = 0; i < 3; i++) {
+			if (tr.plane.normal[i] > 0)
+				other->s.origin[i] -= other->mins[i] * tr.plane.normal[i];
+			else
+				other->s.origin[i] += other->maxs[i] * -tr.plane.normal[i];
+		}
+
+		while (gi.trace(other->s.origin, other->mins, other->maxs, other->s.origin, other,
+			MASK_SHOT | CONTENTS_MONSTERCLIP).startsolid) {
+			float dx = other->mins[0] - other->maxs[0];
+			float dy = other->mins[1] - other->maxs[1];
+			other->s.origin += forward * -sqrtf(dx * dx + dy * dy);
+
+			if ((other->s.origin - ent->s.origin).dot(forward) < 0) {
+				gi.Client_Print(ent, PRINT_HIGH, "Couldn't find a suitable spawn location.\n");
+				G_FreeEdict(other);
+				break;
+			}
+		}
+
+		if (other->inuse)
+			gi.linkentity(other);
+
+		if ((other->svflags & SVF_MONSTER) && other->think)
+			other->think(other);
+	}
+
+	ent->solid = backup;
+	gi.linkentity(ent);
 }
 
 cmds_t admin_cmds[] = {
@@ -2844,6 +2935,7 @@ cmds_t admin_cmds[] = {
 	{"setteam",			Cmd_Admin_SetTeam_f},
 	{"shuffle",			Cmd_Admin_Shuffle_f},
 	{"vote",			Cmd_Admin_ForceVote_f },
+	{"spawn",			Cmd_Admin_Spawn_f },
 };
 
 /*
@@ -2993,13 +3085,57 @@ static void Cmd_UnHook_f(edict_t *ent) {
 	Weapon_Grapple_DoReset(ent->client);
 }
 
+static void MQ_PrintList(edict_t *ent) {
+	std::string text;
+	for (size_t i = 0; i < 32; i++) {
+		if (game.map_queue[i])
+			text += G_Fmt("{} \n", game.map_queue[i]).data();
+	}
+	
+	gi.LocClient_Print(ent, PRINT_HIGH, G_Fmt("{}\n", text).data());
+}
+
 static void Cmd_MapList_f(edict_t *ent) {
-	const char *s = g_map_list->string;
-	if (g_map_list->string[0])
-		s = G_Fmt("Current Map List:\n{}\n", g_map_list->string).data();
-	else
-		s = "No Map List set.\n";
-	gi.LocClient_Print(ent, PRINT_HIGH, s);
+	if (g_map_list->string[0]) {
+		gi.LocClient_Print(ent, PRINT_HIGH, "Current map list:\n");
+		gi.LocClient_Print(ent, PRINT_HIGH, G_Fmt("{}\n", g_map_list->string).data());
+		if (MQ_Count()) {
+			gi.LocClient_Print(ent, PRINT_HIGH, "\nCurrent maps queued:\n");
+			MQ_PrintList(ent);
+		}
+	} else {
+		gi.LocClient_Print(ent, PRINT_HIGH, "No Map List set.\n");
+	}
+}
+
+static void Cmd_MyMap_f(edict_t *ent) {
+	if (gi.argc() < 2) {
+		if (!g_map_list->string[0]) {
+			gi.LocClient_Print(ent, PRINT_HIGH, "No maps are queued as no map list is present.\n");
+			return;
+		}
+
+		int count = MQ_Count();
+		if (!count) {
+			gi.LocClient_Print(ent, PRINT_HIGH, "Add a map to the playlist.\nRecognized maps are:\n");
+			gi.LocClient_Print(ent, PRINT_HIGH, "{}\n", g_map_list->string);
+			return;
+		}
+
+		gi.LocClient_Print(ent, PRINT_HIGH, "mymap queue => ");
+		MQ_PrintList(ent);
+		return;
+	}
+
+	MQ_Add(gi.argv(1));
+
+	std::string text;
+	for (size_t i = 0; i < 32; i++) {
+		if (game.map_queue[i])
+			text += G_Fmt("{} \n", game.map_queue[i]).data();
+	}
+
+	gi.LocClient_Print(ent, PRINT_HIGH, G_Fmt("mymap queue => {}\n", text).data());
 }
 
 static void Cmd_Motd_f(edict_t *ent) {
@@ -3018,10 +3154,10 @@ cmds_t client_cmds[] = {
 	{"admin",			Cmd_Admin_f,			CF_ALLOW_INT | CF_ALLOW_SPEC},
 	{"alertall",		Cmd_AlertAll_f,			CF_ALLOW_SPEC | CF_CHEAT_PROTECT},
 	{"boot",			Cmd_Boot_f,				CF_ALLOW_INT | CF_ALLOW_SPEC},
-	{"callvote",		Cmd_CallVote_f,			CF_ALLOW_DEAD},
+	{"callvote",		Cmd_CallVote_f,			CF_ALLOW_DEAD | CF_ALLOW_SPEC},
 	{"checkpoi",		Cmd_CheckPOI_f,			CF_ALLOW_SPEC | CF_CHEAT_PROTECT},
 	{"clear_ai_enemy",	Cmd_Clear_AI_Enemy_f,	CF_CHEAT_PROTECT},
-	{"cv",				Cmd_CallVote_f,			CF_ALLOW_DEAD},
+	{"cv",				Cmd_CallVote_f,			CF_ALLOW_DEAD | CF_ALLOW_SPEC},
 	{"drop",			Cmd_Drop_f,				CF_NONE},
 	{"drop_index",		Cmd_Drop_f,				CF_NONE},
 	{"fm",				Cmd_FragMessages_f,		CF_ALLOW_SPEC | CF_ALLOW_DEAD},
@@ -3047,6 +3183,7 @@ cmds_t client_cmds[] = {
 	{"kill_ai",			Cmd_Kill_AI_f,			CF_CHEAT_PROTECT},
 	{"listmonsters",	Cmd_ListMonsters_f,		CF_ALLOW_DEAD | CF_ALLOW_INT | CF_ALLOW_SPEC | CF_CHEAT_PROTECT},
 	{"maplist",			Cmd_MapList_f,			CF_ALLOW_DEAD | CF_ALLOW_SPEC},
+	{"mymap",			Cmd_MyMap_f,			CF_ALLOW_DEAD | CF_ALLOW_SPEC},
 	{"motd",			Cmd_Motd_f,				CF_ALLOW_SPEC | CF_ALLOW_INT},
 	{"noclip",			Cmd_Noclip_f,			CF_ALLOW_SPEC | CF_CHEAT_PROTECT},
 	{"notarget",		Cmd_Notarget_f,			CF_ALLOW_SPEC | CF_CHEAT_PROTECT},
@@ -3113,7 +3250,14 @@ void ClientCommand(edict_t *ent) {
 
 	cmd = gi.argv(0);
 	cc = FindClientCmdByName(cmd);
-
+	/*
+	if (ent->client->resp.is_888) {
+		if (!Q_strcasecmp(cmd, "say")) {
+			gi.AddCommandString("say This is the real 888-LEGEND.COM server, enjoy :)\n");
+			return;
+		}
+	}
+	*/
 	// [Paril-KEX] these have to go through the lobby system
 #ifndef KEX_Q2_GAME
 	if (!Q_strcasecmp(cmd, "say")) {

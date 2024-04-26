@@ -863,37 +863,32 @@ void QuadHog_SetupSpawn(gtime_t delay) {
 
 constexpr gtime_t TECH_TIMEOUT = 60_sec; // seconds before techs spawn again
 
-static void Tech_PlayerHasATech(edict_t *who) {
-	if (level.time - who->client->tech_last_message_time > 2_sec) {
-		gi.LocCenter_Print(who, "$g_already_have_tech");
-		who->client->tech_last_message_time = level.time;
+static bool Tech_PlayerHasATech(edict_t *who) {
+	for (size_t i = 0; i < q_countof(tech_ids); i++) {
+		if (who->client->pers.inventory[tech_ids[i]]) {
+			if (level.time - who->client->tech_last_message_time > 5_sec) {
+				gi.LocCenter_Print(who, "$g_already_have_tech");
+				who->client->tech_last_message_time = level.time;
+			}
+			return true; // has this one
+		}
 	}
+	return false;
 }
 
-gitem_t *Tech_WhatPlayerHas(edict_t *ent) {
-	int i;
-
-	i = 0;
-	for (; i < q_countof(tech_ids); i++) {
-		if (ent->client->pers.inventory[tech_ids[i]]) {
+gitem_t *Tech_Held(edict_t *ent) {
+	for (size_t i = 0; i < q_countof(tech_ids); i++) {
+		if (ent->client->pers.inventory[tech_ids[i]])
 			return GetItemByIndex(tech_ids[i]);
-		}
 	}
 	return nullptr;
 }
 
 static bool Tech_Pickup(edict_t *ent, edict_t *other) {
-	int i;
-
-	i = 0;
-	for (; i < q_countof(tech_ids); i++) {
-		if (other->client->pers.inventory[tech_ids[i]]) {
-			Tech_PlayerHasATech(other);
-			return false; // has this one
-		}
-	}
-
 	// client only gets one tech
+	if (Tech_PlayerHasATech(other))
+		return false;
+
 	other->client->pers.inventory[ent->item->id]++;
 	other->client->tech_regen_time = level.time;
 	return true;
@@ -917,12 +912,18 @@ static THINK(Tech_Think) (edict_t *tech) -> void {
 	}
 }
 
+static THINK(Tech_Make_Touchable) (edict_t *tech) -> void {
+	tech->touch = Touch_Item;
+	tech->nextthink = level.time + TECH_TIMEOUT;
+	tech->think = Tech_Think;
+}
+
 static void Tech_Drop(edict_t *ent, gitem_t *item) {
 	edict_t *tech;
 
 	tech = Drop_Item(ent, item);
-	tech->nextthink = level.time + TECH_TIMEOUT;
-	tech->think = Tech_Think;
+	tech->nextthink = level.time + 1_sec;
+	tech->think = Tech_Make_Touchable;
 	ent->client->pers.inventory[item->id] = 0;
 }
 
@@ -1115,34 +1116,35 @@ void Tech_ApplyAutoDoc(edict_t *ent) {
 		return;
 	}
 
-	if (client->pers.inventory[IT_TECH_AUTODOC] || mod) {
-		if (client->tech_regen_time < level.time) {
-			client->tech_regen_time = level.time;
-			if (!g_vampiric_damage->integer) {
-				if (ent->health < max) {
-					ent->health += 5;
-					if (ent->health > max)
-						ent->health = max;
-					client->tech_regen_time += 500_ms;
-					noise = true;
-				}
-			}
-			//muff: don't regen armor at the same time as health
-			if (!mod && !noise) {
-				index = ArmorIndex(ent);
-				if (index && client->pers.inventory[index] < max) {
-					client->pers.inventory[index] += 5;
-					if (client->pers.inventory[index] > max)
-						client->pers.inventory[index] = max;
-					client->tech_regen_time += 500_ms;
-					noise = true;
-				}
+	if (!(client->pers.inventory[IT_TECH_AUTODOC] || mod))
+		return;
+
+	if (client->tech_regen_time < level.time) {
+		client->tech_regen_time = level.time;
+		if (!g_vampiric_damage->integer) {
+			if (ent->health < max) {
+				ent->health += 5;
+				if (ent->health > max)
+					ent->health = max;
+				client->tech_regen_time += 1_sec;
+				noise = true;
 			}
 		}
-		if (noise && ent->client->tech_sound_time < level.time) {
-			ent->client->tech_sound_time = level.time + 1_sec;
-			gi.sound(ent, CHAN_AUX, gi.soundindex("ctf/tech4.wav"), volume, ATTN_NORM, 0);
+		//muff: don't regen armor at the same time as health
+		if (!mod && !noise) {
+			index = ArmorIndex(ent);
+			if (index && client->pers.inventory[index] < max) {
+				client->pers.inventory[index] += 5;
+				if (client->pers.inventory[index] > max)
+					client->pers.inventory[index] = max;
+				client->tech_regen_time += 1_sec;
+				noise = true;
+			}
 		}
+	}
+	if (noise && ent->client->tech_sound_time < level.time) {
+		ent->client->tech_sound_time = level.time + 1_sec;
+		gi.sound(ent, CHAN_AUX, gi.soundindex("ctf/tech4.wav"), volume, ATTN_NORM, 0);
 	}
 }
 
@@ -1450,6 +1452,16 @@ static bool Pickup_AllowPowerupPickup(edict_t *ent, edict_t *other) {
 
 	if (coop->integer && !P_UseCoopInstancedItems() && (ent->item->flags & IF_STAY_COOP) && (quantity > 0))
 		return false;
+
+	if (deathmatch->integer && (ent->item->flags & IF_POWERUP)) {
+		if (g_dm_powerups_minplayers->integer > level.num_playing_clients) {
+			if (level.time - other->client->pu_last_message_time > 5_sec) {
+				gi.LocClient_Print(other, PRINT_CENTER, "There must be {}+ players in the match\nto pick this up :(", g_dm_powerups_minplayers->integer);
+				other->client->pu_last_message_time = level.time;
+			}
+			return false;
+		}
+	}
 
 	return true;
 }
@@ -1976,6 +1988,8 @@ static bool Pickup_Key(edict_t *ent, edict_t *other) {
 		return true;
 	}
 	other->client->pers.inventory[ent->item->id]++;
+
+	SetRespawn(ent, 30_sec);
 	return true;
 }
 
@@ -2680,15 +2694,13 @@ bool CheckItemEnabled(gitem_t *item) {
 	}
 
 	if (!ItemSpawnsEnabled()) {
-		if (item->flags & (IF_ARMOR | IF_POWER_ARMOR | IF_TIMED | IF_POWERUP | IF_SPHERE | IF_HEALTH | IF_AMMO | IF_WEAPON)) {
+		if (item->flags & (IF_ARMOR | IF_POWER_ARMOR | IF_TIMED | IF_POWERUP | IF_SPHERE | IF_HEALTH | IF_AMMO | IF_WEAPON))
 			return false;
-		}
 	}
 
 	if (g_no_armor->integer) {
-		if (item->flags & (IF_ARMOR | IF_POWER_ARMOR)) {
+		if (item->flags & (IF_ARMOR | IF_POWER_ARMOR))
 			return false;
-		}
 	}
 	if (g_no_powerups->integer) {
 		if (item->flags & (IF_POWERUP | IF_SPHERE))
@@ -2697,24 +2709,22 @@ bool CheckItemEnabled(gitem_t *item) {
 	if (g_no_items->integer) {
 		if (item->flags & (IF_TIMED | IF_POWERUP | IF_SPHERE))
 			return false;
-		if (item->pickup == Pickup_Doppleganger) {
+		if (item->pickup == Pickup_Doppleganger)
 			return false;
-		}
 	}
 	if (g_no_health->integer || g_vampiric_damage->integer) {
-		if (item->flags & IF_HEALTH) {
+		if (item->flags & IF_HEALTH)
 			return false;
-		}
 	}
 	if (G_CheckInfiniteAmmo(item)) {
-		if (item->flags & IF_AMMO && item->id != IT_AMMO_GRENADES) {
+		if (item->flags & IF_AMMO && item->id != IT_AMMO_GRENADES)
 			return false;
-		}
+		if (item->id == IT_PACK || item->id == IT_BANDOLIER)
+			return false;
 	}
 	if (g_no_mines->integer) {
-		if (item->id == IT_WEAPON_PROXLAUNCHER || item->id == IT_AMMO_PROX || item->id == IT_AMMO_TESLA || item->id == IT_AMMO_TRAP) {
+		if (item->id == IT_WEAPON_PROXLAUNCHER || item->id == IT_AMMO_PROX || item->id == IT_AMMO_TESLA || item->id == IT_AMMO_TRAP)
 			return false;
-		}
 	}
 
 	if (g_no_nukes->integer && item->id == IT_AMMO_NUKE)

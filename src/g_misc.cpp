@@ -468,7 +468,7 @@ TOUCH(point_combat_touch) (edict_t *self, edict_t *other, const trace_t &tr, boo
 
 void SP_point_combat(edict_t *self)
 {
-	if (deathmatch->integer)
+	if (deathmatch->integer && !ai_allow_dm_spawn->integer)
 	{
 		G_FreeEdict(self);
 		return;
@@ -1054,12 +1054,13 @@ static USE(func_explosive_spawn) (edict_t *self, edict_t *other, edict_t *activa
 
 void SP_func_explosive(edict_t *self)
 {
+	/*
 	if (deathmatch->integer)
 	{ // auto-remove for deathmatch
 		G_FreeEdict(self);
 		return;
 	}
-
+	*/
 	self->movetype = MOVETYPE_PUSH;
 
 	gi.modelindex("models/objects/debris1/tris.md2");
@@ -1200,12 +1201,13 @@ static THINK(barrel_start) (edict_t *self) -> void
 
 void SP_misc_explobox(edict_t *self)
 {
+	/*
 	if (deathmatch->integer)
 	{ // auto-remove for deathmatch
 		G_FreeEdict(self);
 		return;
 	}
-
+	*/
 	gi.modelindex("models/objects/debris1/tris.md2");
 	gi.modelindex("models/objects/debris2/tris.md2");
 	gi.modelindex("models/objects/debris3/tris.md2");
