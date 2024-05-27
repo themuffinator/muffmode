@@ -333,7 +333,7 @@ static void ClientObituary(edict_t *self, edict_t *inflictor, edict_t *attacker,
 		case MOD_TRAP:
 			base = "$g_mod_self_trap";
 			break;
-		case MOD_DOPPLE_EXPLODE:
+		case MOD_DOPPEL_EXPLODE:
 			base = "$g_mod_self_dopple_explode";
 			break;
 		default:
@@ -450,13 +450,13 @@ static void ClientObituary(edict_t *self, edict_t *inflictor, edict_t *attacker,
 		case MOD_TRACKER:
 			base = "$g_mod_kill_tracker";
 			break;
-		case MOD_DOPPLE_EXPLODE:
+		case MOD_DOPPEL_EXPLODE:
 			base = "$g_mod_kill_dopple_explode";
 			break;
-		case MOD_DOPPLE_VENGEANCE:
+		case MOD_DOPPEL_VENGEANCE:
 			base = "$g_mod_kill_dopple_vengeance";
 			break;
-		case MOD_DOPPLE_HUNTER:
+		case MOD_DOPPEL_HUNTER:
 			base = "$g_mod_kill_dopple_hunter";
 			break;
 		case MOD_GRAPPLE:
@@ -494,7 +494,7 @@ static void ClientObituary(edict_t *self, edict_t *inflictor, edict_t *attacker,
 						gi.LocBroadcast_Print(PRINT_CENTER, "{} is on a {} spree\nwith {} frags!", attacker->client->resp.netname, freeze->integer ? "freezing" : "fragging", attacker->client->resp.kill_count);
 					} else if (self->client->resp.kill_count >= 10) {
 						gi.LocBroadcast_Print(PRINT_CENTER, "{} put an end to {}'s\n{} spree!", attacker->client->resp.netname, self->client->resp.netname, freeze->integer ? "freezing" : "fragging");
-					} else if (Teams() || level.match_state != MS_MATCH_IN_PROGRESS) {
+					} else if (Teams() || level.match_state != MATCH_IN_PROGRESS) {
 						if (attacker->client->resp.fragmessage_state)
 							gi.LocClient_Print(attacker, PRINT_CENTER, "You {} {}", freeze->integer ? "froze" : "fragged", self->client->resp.netname);
 					} else {
@@ -707,11 +707,11 @@ static bool Match_CanScore() {
 		return false;
 
 	switch (level.match_state) {
-	case MS_WARMUP_DELAYED:
-	case MS_WARMUP_DEFAULT:
-	case MS_WARMUP_READYUP:
-	case MS_MATCH_COUNTDOWN:
-	case MS_MATCH_ENDED:
+	case MATCH_WARMUP_DELAYED:
+	case MATCH_WARMUP_DEFAULT:
+	case MATCH_WARMUP_READYUP:
+	case MATCH_COUNTDOWN:
+	case MATCH_ENDED:
 		return false;
 	}
 
@@ -755,7 +755,7 @@ DIE(player_die) (edict_t *self, edict_t *inflictor, edict_t *attacker, int damag
 			if (attacker->health > 0)
 				attacker->client->resp.kill_count++;
 
-			if (g_matchstats->integer) {
+			if (g_matchstats->integer && level.match_state == MATCH_IN_PROGRESS) {
 				attacker->client->mstats.total_kills++;
 				self->client->mstats.total_deaths++;
 			}
@@ -846,13 +846,13 @@ DIE(player_die) (edict_t *self, edict_t *inflictor, edict_t *attacker, int damag
 			// more meaty gibs for your dollar!
 			if (deathmatch->integer) {
 				if (self->health < -160)
-					ThrowGibs(self, damage, { { 4, "models/objects/gibs/sm_meat/tris.md2" } });
+					ThrowGibs(self, damage, { { 16, "models/objects/gibs/sm_meat/tris.md2", GIB_METALLIC } });
 				if (self->health < -120)
-					ThrowGibs(self, damage, { { 4, "models/objects/gibs/sm_meat/tris.md2" } });
+					ThrowGibs(self, damage, { { 12, "models/objects/gibs/sm_meat/tris.md2", GIB_METALLIC } });
 				if (self->health < -80)
-					ThrowGibs(self, damage, { { 4, "models/objects/gibs/sm_meat/tris.md2" } });
+					ThrowGibs(self, damage, { { 10, "models/objects/gibs/sm_meat/tris.md2", GIB_METALLIC } });
 			}
-			ThrowGibs(self, damage, { { 4, "models/objects/gibs/sm_meat/tris.md2" } });
+			ThrowGibs(self, damage, { { 8, "models/objects/gibs/sm_meat/tris.md2", GIB_METALLIC } });
 		}
 		self->flags &= ~FL_NOGIB;
 
@@ -905,7 +905,7 @@ DIE(player_die) (edict_t *self, edict_t *inflictor, edict_t *attacker, int damag
 
 			bool allPlayersDead = true;
 
-			for (auto player : active_players())
+			for (auto player : active_clients())
 				if (player->health > 0 || (!level.deadly_kill_box && g_coop_enable_lives->integer && player->client->pers.lives > 0)) {
 					allPlayersDead = false;
 					break;
@@ -915,7 +915,7 @@ DIE(player_die) (edict_t *self, edict_t *inflictor, edict_t *attacker, int damag
 			{
 				level.coop_level_restart_time = level.time + 5_sec;
 
-				for (auto player : active_players())
+				for (auto player : active_clients())
 					gi.LocCenter_Print(player, "$g_coop_lose");
 			}
 
@@ -1003,9 +1003,9 @@ void InitClientPersistant(edict_t *ent, gclient_t *client) {
 			client->pers.max_health = 200;
 			client->pers.inventory[IT_ARMOR_BODY] = 200;
 		} else if (coop->integer) {
-			for (auto player : active_players()) {
+			for (auto player : active_clients()) {
 				if (player == ent || !player->client->pers.spawned ||
-					!ClientIsPlaying(player->client) || player->movetype == MOVETYPE_NOCLIP)
+					!ClientIsPlaying(player->client) || player->movetype == MOVETYPE_NOCLIP || player->movetype == MOVETYPE_FREECAM)
 					continue;
 
 				client->pers.inventory = player->client->pers.inventory;
@@ -1019,9 +1019,9 @@ void InitClientPersistant(edict_t *ent, gclient_t *client) {
 		if (!taken_loadout) {
 			if (g_instagib->integer) {
 				client->pers.inventory[IT_WEAPON_RAILGUN] = 1;
-				client->pers.inventory[IT_AMMO_SLUGS] = 99;
+				client->pers.inventory[IT_AMMO_SLUGS] = AMMO_INFINITE;
 			} else if (g_nadefest->integer) {
-				client->pers.inventory[IT_AMMO_GRENADES] = 99;
+				client->pers.inventory[IT_AMMO_GRENADES] = AMMO_INFINITE;
 			} else if (clanarena->integer) {
 				client->pers.max_ammo.fill(50);
 				client->pers.max_ammo[AMMO_SHELLS] = 50;
@@ -1053,6 +1053,7 @@ void InitClientPersistant(edict_t *ent, gclient_t *client) {
 				client->pers.inventory[IT_WEAPON_HYPERBLASTER] = 1;
 				client->pers.inventory[IT_WEAPON_RAILGUN] = 1;
 			} else {
+
 				// fill with 50s, since it's our most common value
 				client->pers.max_ammo.fill(50);
 				client->pers.max_ammo[AMMO_BULLETS] = 200;
@@ -1065,6 +1066,30 @@ void InitClientPersistant(edict_t *ent, gclient_t *client) {
 				client->pers.max_ammo[AMMO_TESLA] = 5;
 
 				client->pers.inventory[IT_WEAPON_BLASTER] = 1;
+
+				if (deathmatch->integer) {
+					if (level.match_state != MATCH_IN_PROGRESS) {
+						for (size_t i = FIRST_WEAPON; i <= LAST_WEAPON; i++) {
+							if (level.weapon_count[i - FIRST_WEAPON]) {
+
+								if (!itemlist[i].ammo)
+									continue;
+
+								client->pers.inventory[i] = 1;
+
+								gitem_t *ammo = GetItemByIndex(itemlist[i].ammo);
+								if (ammo)
+									Add_Ammo(&g_edicts[client - game.clients + 1], ammo, InfiniteAmmoOn(ammo) ? AMMO_INFINITE : ammo->quantity * 2);
+
+								//gi.Com_PrintFmt("wp={} wc={} am={} q={}\n", i, level.weapon_count[i - FIRST_WEAPON], itemlist[i].ammo, InfiniteAmmoOn(ammo) ? AMMO_INFINITE : ammo->quantity * 2);
+							}
+						}
+					}
+					if (level.match_state < MATCH_IN_PROGRESS) {
+						// compass used for ready status toggling
+						client->pers.inventory[IT_COMPASS] = 1;
+					}
+				} else client->pers.inventory[IT_COMPASS] = 1;
 			}
 
 			if (*g_start_items->string)
@@ -1072,9 +1097,6 @@ void InitClientPersistant(edict_t *ent, gclient_t *client) {
 
 			if (level.start_items && *level.start_items)
 				Player_GiveStartItems(ent, level.start_items);
-
-			if (!deathmatch->integer)
-				client->pers.inventory[IT_COMPASS] = 1;
 
 			bool give_grapple = (!strcmp(g_allow_grapple->string, "auto")) ?
 				(ctf->integer ? !level.no_grapple : 0) :
@@ -1191,26 +1213,25 @@ void FetchClientEntData(edict_t *ent) {
 PlayersRangeFromSpot
 
 Returns the distance to the nearest player from the given spot
+muffmode: excludes current client
 ================
 */
-float PlayersRangeFromSpot(edict_t *spot) {
-	edict_t *player;
-	float	 bestplayerdistance;
-	vec3_t	 v;
-	float	 playerdistance;
+static float PlayersRangeFromSpot(edict_t *ent, edict_t *spot) {
+	float	bestplayerdistance;
+	vec3_t	v;
+	float	playerdistance;
 
 	bestplayerdistance = 9999999;
 
-	for (uint32_t n = 1; n <= game.maxclients; n++) {
-		player = &g_edicts[n];
-
-		if (!player->inuse)
+	for (auto ec : active_clients()) {
+		if (ec->health <= 0)
 			continue;
-
-		if (player->health <= 0)
-			continue;
-
-		v = spot->s.origin - player->s.origin;
+#if 0
+		if (ent != nullptr)
+			if (ec == ent)
+				continue;
+#endif
+		v = spot->s.origin - ec->s.origin;
 		playerdistance = v.length();
 
 		if (playerdistance < bestplayerdistance)
@@ -1220,12 +1241,12 @@ float PlayersRangeFromSpot(edict_t *spot) {
 	return bestplayerdistance;
 }
 
-bool SpawnPointClear(edict_t *spot) {
+static bool SpawnPointClear(edict_t *spot) {
 	vec3_t p = spot->s.origin + vec3_t{ 0, 0, 9.f };
 	return !gi.trace(p, PLAYER_MINS, PLAYER_MAXS, p, spot, CONTENTS_PLAYER | CONTENTS_MONSTER).startsolid;
 }
 
-select_spawn_result_t SelectDeathmatchSpawnPoint(vec3_t avoid_point, bool farthest, bool force_spawn, bool fallback_to_ctf_or_start, bool intermission) {
+select_spawn_result_t SelectDeathmatchSpawnPoint(edict_t *ent, vec3_t avoid_point, int mode, bool force_spawn, bool fallback_to_ctf_or_start, bool intermission, bool initial) {
 	float cv_dist = g_dm_respawn_point_min_dist->value;
 	struct spawn_point_t {
 		edict_t *point;
@@ -1244,13 +1265,13 @@ select_spawn_result_t SelectDeathmatchSpawnPoint(vec3_t avoid_point, bool farthe
 
 	if (intermission) {
 		while ((spot = G_FindByString<&edict_t::classname>(spot, "info_player_intermission")) != nullptr)
-			spawn_points.push_back({ spot, PlayersRangeFromSpot(spot) });
+			spawn_points.push_back({ spot, PlayersRangeFromSpot(ent, spot) });
 	}
 
 	if (spawn_points.size() == 0) {
 		spot = nullptr;
 		while ((spot = G_FindByString<&edict_t::classname>(spot, "info_player_deathmatch")) != nullptr)
-			spawn_points.push_back({ spot, PlayersRangeFromSpot(spot) });
+			spawn_points.push_back({ spot, PlayersRangeFromSpot(ent, spot) });
 
 		// no points
 		if (spawn_points.size() == 0) {
@@ -1258,17 +1279,17 @@ select_spawn_result_t SelectDeathmatchSpawnPoint(vec3_t avoid_point, bool farthe
 			if (fallback_to_ctf_or_start) {
 				spot = nullptr;
 				while ((spot = G_FindByString<&edict_t::classname>(spot, "info_player_team_red")) != nullptr)
-					spawn_points.push_back({ spot, PlayersRangeFromSpot(spot) });
+					spawn_points.push_back({ spot, PlayersRangeFromSpot(ent, spot) });
 				spot = nullptr;
 				while ((spot = G_FindByString<&edict_t::classname>(spot, "info_player_team_blue")) != nullptr)
-					spawn_points.push_back({ spot, PlayersRangeFromSpot(spot) });
+					spawn_points.push_back({ spot, PlayersRangeFromSpot(ent, spot) });
 
 				// we only have an info_player_start then
 				if (spawn_points.size() == 0) {
 					spot = G_FindByString<&edict_t::classname>(nullptr, "info_player_start");
 
 					if (spot)
-						spawn_points.push_back({ spot, PlayersRangeFromSpot(spot) });
+						spawn_points.push_back({ spot, PlayersRangeFromSpot(ent, spot) });
 
 					// map is malformed
 					if (spawn_points.size() == 0)
@@ -1290,57 +1311,70 @@ select_spawn_result_t SelectDeathmatchSpawnPoint(vec3_t avoid_point, bool farthe
 	// order by distances ascending (top of list has closest players to point)
 	std::sort(spawn_points.begin(), spawn_points.end(), [](const spawn_point_t &a, const spawn_point_t &b) { return a.dist < b.dist; });
 
-	// farthest spawn is simple
-	if (farthest) {
-		for (int32_t i = spawn_points.size() - 1; i >= 0; --i) {
-			//muff: avoid respawning at or close to last spawn point
-			if (avoid_point && cv_dist) {
-				vec3_t v = spawn_points[i].point->s.origin - avoid_point;
-				float d = v.length();
+	switch (mode) {
+	default:	// high random
+	case 1:		// farthest half
+		{
+			size_t margin = mode == 1 ? spawn_points.size() / 2 : 2;
 
-				if (d <= cv_dist) {
-					if (g_dm_respawn_point_min_dist_debug->integer)
-						gi.Com_PrintFmt("{}: avoiding spawn point\n", *spawn_points[i].point);
+			// for random, select a random point other than the two
+			// that are closest to the player if possible.
+			// shuffle the non-distance-related spawn points
+			std::shuffle(spawn_points.begin() + margin, spawn_points.end(), mt_rand);
+
+			// run down the list and pick the first one that we can use
+			for (auto it = spawn_points.begin() + margin; it != spawn_points.end(); ++it) {
+				auto spot = it->point;
+
+				if (avoid_point == spot->s.origin)
 					continue;
+				//muff: avoid respawning at or close to last spawn point
+				if (avoid_point && cv_dist) {
+					vec3_t v = spot->s.origin - avoid_point;
+					float d = v.length();
+
+					if (d <= cv_dist) {
+						if (g_dm_respawn_point_min_dist_debug->integer)
+							gi.Com_PrintFmt("{}: avoiding spawn point\n", *spot);
+						continue;
+					}
 				}
+				if (SpawnPointClear(spot))
+					return { spot, true };
 			}
-			if (SpawnPointClear(spawn_points[i].point))
-				return { spawn_points[i].point, true };
+
+			// none clear, so we have to pick one of the other two
+			if (SpawnPointClear(spawn_points[1].point))
+				return { spawn_points[1].point, true };
+			else if (SpawnPointClear(spawn_points[0].point))
+				return { spawn_points[0].point, true };
+
+			break;
 		}
+	case 2:		// farthest
+		{
+			size_t count = spawn_points.end() - spawn_points.begin();
+			size_t size = spawn_points.size();
+			//gi.Com_PrintFmt("count:{} size:{}\n", count, size);
+			for (int32_t i = spawn_points.size() - 1; i >= 0; --i) {
+				//muff: avoid respawning at or close to last spawn point
+				if (avoid_point && cv_dist) {
+					vec3_t v = spawn_points[i].point->s.origin - avoid_point;
+					float d = v.length();
 
-		// none clear
-	} else {
-		// for random, select a random point other than the two
-		// that are closest to the player if possible.
-		// shuffle the non-distance-related spawn points
-		std::shuffle(spawn_points.begin() + 2, spawn_points.end(), mt_rand);
-
-		// run down the list and pick the first one that we can use
-		for (auto it = spawn_points.begin() + 2; it != spawn_points.end(); ++it) {
-			auto spot = it->point;
-
-			if (avoid_point == spot->s.origin)
-				continue;
-			//muff: avoid respawning at or close to last spawn point
-			if (avoid_point && cv_dist) {
-				vec3_t v = spot->s.origin - avoid_point;
-				float d = v.length();
-
-				if (d <= cv_dist) {
-					if (g_dm_respawn_point_min_dist_debug->integer)
-						gi.Com_PrintFmt("{}: avoiding spawn point\n", *spot);
-					continue;
+					if (d <= cv_dist) {
+						if (g_dm_respawn_point_min_dist_debug->integer)
+							gi.Com_PrintFmt("{}: avoiding spawn point\n", *spawn_points[i].point);
+						continue;
+					}
 				}
-			}
-			if (SpawnPointClear(spot))
-				return { spot, true };
-		}
 
-		// none clear, so we have to pick one of the other two
-		if (SpawnPointClear(spawn_points[1].point))
-			return { spawn_points[1].point, true };
-		else if (SpawnPointClear(spawn_points[0].point))
-			return { spawn_points[0].point, true };
+				if (SpawnPointClear(spawn_points[i].point))
+					return { spawn_points[i].point, true };
+			}
+			// none clear
+			break;
+		}
 	}
 
 	if (force_spawn)
@@ -1359,7 +1393,7 @@ to other players
 */
 static edict_t *SelectCTFSpawnPoint(edict_t *ent, bool force_spawn) {
 	if (ent->client->resp.ctf_state) {
-		select_spawn_result_t result = SelectDeathmatchSpawnPoint(ent->client->spawn_origin, g_dm_spawn_farthest->integer, force_spawn, false, false);	// !ClientIsPlaying(ent->client));
+		select_spawn_result_t result = SelectDeathmatchSpawnPoint(ent, ent->client->spawn_origin, g_dm_spawn_farthest->integer, force_spawn, false, false, false);	// !ClientIsPlaying(ent->client));
 
 		if (result.any_valid)
 			return result.spot;
@@ -1376,7 +1410,7 @@ static edict_t *SelectCTFSpawnPoint(edict_t *ent, bool force_spawn) {
 		break;
 	default:
 	{
-		select_spawn_result_t result = SelectDeathmatchSpawnPoint(ent->client->spawn_origin, g_dm_spawn_farthest->integer, force_spawn, true, !ClientIsPlaying(ent->client));
+		select_spawn_result_t result = SelectDeathmatchSpawnPoint(ent, ent->client->spawn_origin, g_dm_spawn_farthest->integer, force_spawn, true, !ClientIsPlaying(ent->client), false);
 
 		if (result.any_valid)
 			return result.spot;
@@ -1395,7 +1429,7 @@ static edict_t *SelectCTFSpawnPoint(edict_t *ent, bool force_spawn) {
 		spawn_points.push_back(spot);
 
 	if (!spawn_points.size()) {
-		select_spawn_result_t result = SelectDeathmatchSpawnPoint(ent->client->spawn_origin, g_dm_spawn_farthest->integer, force_spawn, true, false);	// !ClientIsPlaying(ent->client));
+		select_spawn_result_t result = SelectDeathmatchSpawnPoint(ent, ent->client->spawn_origin, g_dm_spawn_farthest->integer, force_spawn, true, false, false);	// !ClientIsPlaying(ent->client));
 
 		if (!result.any_valid)
 			gi.Com_Error("can't find suitable CTF spawn point");
@@ -1415,9 +1449,7 @@ static edict_t *SelectCTFSpawnPoint(edict_t *ent, bool force_spawn) {
 	return nullptr;
 }
 
-//===============
-// ROGUE
-edict_t *SelectLavaCoopSpawnPoint(edict_t *ent) {
+static edict_t *SelectLavaCoopSpawnPoint(edict_t *ent) {
 	int		 index;
 	edict_t *spot = nullptr;
 	float	 lavatop;
@@ -1477,7 +1509,7 @@ edict_t *SelectLavaCoopSpawnPoint(edict_t *ent) {
 		if (spawnPoints[index]->s.origin[2] < lavatop)
 			continue;
 
-		if (PlayersRangeFromSpot(spawnPoints[index]) > 32) {
+		if (PlayersRangeFromSpot(ent, spawnPoints[index]) > 32) {
 			if (spawnPoints[index]->s.origin[2] < lowest) {
 				// save the last point
 				pointWithLeastLava = spawnPoints[index];
@@ -1488,8 +1520,6 @@ edict_t *SelectLavaCoopSpawnPoint(edict_t *ent) {
 
 	return pointWithLeastLava;
 }
-// ROGUE
-//===============
 
 // [Paril-KEX]
 static edict_t *SelectSingleSpawnPoint(edict_t *ent) {
@@ -1557,15 +1587,13 @@ static edict_t *G_UnsafeSpawnPosition(vec3_t spot, bool check_players) {
 	return nullptr;
 }
 
-edict_t *SelectCoopSpawnPoint(edict_t *ent, bool force_spawn, bool check_players) {
+static edict_t *SelectCoopSpawnPoint(edict_t *ent, bool force_spawn, bool check_players) {
 	edict_t *spot = nullptr;
 	const char *target;
 
-	// ROGUE
 	//  rogue hack, but not too gross...
 	if (!Q_strcasecmp(level.mapname, "rmine2"))
 		return SelectLavaCoopSpawnPoint(ent);
-	// ROGUE
 
 	// try the main spawn point first
 	spot = SelectSingleSpawnPoint(ent);
@@ -1716,7 +1744,7 @@ bool SelectSpawnPoint(edict_t *ent, vec3_t &origin, vec3_t &angles, bool force_s
 		if (Teams())
 			spot = SelectCTFSpawnPoint(ent, force_spawn);
 		else {
-			select_spawn_result_t result = SelectDeathmatchSpawnPoint(ent->client->spawn_origin, g_dm_spawn_farthest->integer, force_spawn, true, !ClientIsPlaying(ent->client));
+			select_spawn_result_t result = SelectDeathmatchSpawnPoint(ent, ent->client->spawn_origin, g_dm_spawn_farthest->integer, force_spawn, true, !ClientIsPlaying(ent->client), false);
 
 			if (!result.any_valid)
 				gi.Com_Error("No valid spawn points found.");
@@ -1801,17 +1829,16 @@ static edict_t *SelectSpectatorSpawnPoint(vec3_t origin, vec3_t angles) {
 //======================================================================
 
 void InitBodyQue() {
-	int		 i;
 	edict_t *ent;
 
 	level.body_que = 0;
-	for (i = 0; i < BODY_QUEUE_SIZE; i++) {
+	for (size_t i = 0; i < BODY_QUEUE_SIZE; i++) {
 		ent = G_Spawn();
 		ent->classname = "bodyque";
 	}
 }
 
-DIE(body_die) (edict_t *self, edict_t *inflictor, edict_t *attacker, int damage, const vec3_t &point, const mod_t &mod) -> void {
+static DIE(body_die) (edict_t *self, edict_t *inflictor, edict_t *attacker, int damage, const vec3_t &point, const mod_t &mod) -> void {
 	if (self->s.modelindex == MODELINDEX_PLAYER &&
 		self->health < self->gib_health) {
 		gi.sound(self, CHAN_BODY, gi.soundindex("misc/udeath.wav"), 1, ATTN_NORM, 0);
@@ -1920,6 +1947,9 @@ void G_PostRespawn(edict_t *self) {
 
 	self->client->respawn_min_time = 0_ms;
 	self->client->respawn_time = level.time;
+	
+	if (deathmatch->integer && g_dm_do_readyup->integer && level.match_state == MATCH_WARMUP_READYUP)
+		gi.LocClient_Print(self, PRINT_CENTER, G_Fmt("%bind:use compass:Use Compass to toggle your ready status.%{}", " ").data());
 }
 
 void ClientRespawn(edict_t *self) {
@@ -2146,28 +2176,12 @@ static bool InitPlayerTeam(edict_t *ent) {
 		return true;
 
 	if (ent->svflags & SVF_BOT || g_dm_force_join->integer || g_dm_auto_join->integer) {
-		//ent->client->resp.team = PickTeam(-1);
-		SetTeam(ent, PickTeam(-1), false, false);
-		/*
-		ent->svflags &= ~SVF_NOCLIENT;
-		ent->client->resp.ctf_state = 0;
-		ent->client->resp.inactive = false;
-		ent->client->resp.inactivity_time = 0_ms;
-		//SetTeam(ent, PickTeam(-1), false);
-
-		if (Teams() && ent->client->resp.team != TEAM_SPECTATOR) {
-			G_AssignPlayerSkin(ent, ent->client->pers.skin);
-		}
-
-		// assign a ghost code
-		Match_Ghost_DoAssign(ent);
-		ent->client->ps.stats[STAT_SHOW_STATUSBAR] = 1;
-		*/
+		SetTeam(ent, PickTeam(-1), false, false, false);
 		return true;
 	}
 
 	// otherwise start as spectator
-	ent->movetype = MOVETYPE_NOCLIP;
+	ent->movetype = MOVETYPE_FREECAM;
 	ent->solid = SOLID_NOT;
 	ent->svflags |= SVF_NOCLIENT;
 	ent->client->resp.team = TEAM_SPECTATOR;
@@ -2202,7 +2216,7 @@ static inline void PutClientOnSpawnPoint(edict_t *ent, const vec3_t &spawn_origi
 	client->ps.pmove.delta_angles = spawn_angles - client->resp.cmd_angles;
 
 	ent->s.angles = spawn_angles;
-	ent->s.angles[PITCH] /= 3;
+	//ent->s.angles[PITCH] /= 3;		//muff: why??
 
 	client->ps.viewangles = ent->s.angles;
 	client->v_angle = ent->s.angles;
@@ -2226,7 +2240,7 @@ void ClientSpawn(edict_t *ent) {
 	gclient_t			*client;
 	client_persistant_t saved;
 	client_respawn_t	resp;
-	client_match_stats_t mstats;
+	client_match_stats_t mstats = { 0 };
 
 	index = ent - g_edicts - 1;
 	client = ent->client;
@@ -2245,7 +2259,7 @@ void ClientSpawn(edict_t *ent) {
 	bool is_landmark = false;
 
 	//if (!ent->client->pers.connected || (ent->svflags & SVF_BOT))
-	if (ent->client->resp.team == TEAM_NONE)
+	if (!ent->client->resp.team)
 		InitPlayerTeam(ent);
 
 	if (!ClientIsPlaying(ent->client))
@@ -2273,26 +2287,7 @@ void ClientSpawn(edict_t *ent) {
 		}
 
 		// find a spot to place us
-		if (!level.respawn_intermission) {
-			// find an intermission spot
-			edict_t *pt = G_FindByString<&edict_t::classname>(nullptr, "info_player_intermission");
-			if (!pt) { // the map creator forgot to put in an intermission point...
-				pt = G_FindByString<&edict_t::classname>(nullptr, "info_player_start");
-				if (!pt)
-					pt = G_FindByString<&edict_t::classname>(nullptr, "info_player_deathmatch");
-			} else { // choose one of four spots
-				int32_t i = irandom(4);
-				while (i--) {
-					pt = G_FindByString<&edict_t::classname>(pt, "info_player_intermission");
-					if (!pt) // wrap around the list
-						pt = G_FindByString<&edict_t::classname>(pt, "info_player_intermission");
-				}
-			}
-
-			level.intermission_origin = pt->s.origin;
-			level.intermission_angle = pt->s.angles;
-			level.respawn_intermission = true;
-		}
+		SetIntermissionPoint();
 
 		ent->s.origin = level.intermission_origin;
 		ent->client->ps.pmove.origin = level.intermission_origin;
@@ -2303,7 +2298,7 @@ void ClientSpawn(edict_t *ent) {
 		client->ps.rdflags = RDF_NONE;
 		ent->deadflag = false;
 		ent->solid = SOLID_NOT;
-		ent->movetype = MOVETYPE_NOCLIP;
+		ent->movetype = MOVETYPE_FREECAM;
 		ent->s.modelindex = 0;
 		ent->svflags |= SVF_NOCLIENT;
 		gi.linkentity(ent);
@@ -2365,7 +2360,8 @@ void ClientSpawn(edict_t *ent) {
 	memset(client, 0, sizeof(*client));
 	client->pers = saved;
 	client->resp = resp;
-	client->mstats = mstats;
+	if (deathmatch->integer)
+		client->mstats = mstats;
 
 	// on a new, fresh spawn (always in DM, clear inventory
 	// or new spawns in SP/coop)
@@ -2458,10 +2454,10 @@ void ClientSpawn(edict_t *ent) {
 
 	// spawn as spectator
 	if (client->resp.team == TEAM_SPECTATOR) {
-		client->chase_target = nullptr;
+		FreeFollower(ent);
 
 		ent->client->resp.spectator_state = SPECTATOR_FREE;
-		ent->movetype = MOVETYPE_NOCLIP;
+		ent->movetype = MOVETYPE_FREECAM;
 		ent->solid = SOLID_NOT;
 		ent->svflags |= SVF_NOCLIENT;
 		ent->client->ps.gunindex = 0;
@@ -2518,7 +2514,7 @@ void ClientSpawn(edict_t *ent) {
 		client->newweapon = FindItemByClassname("weapon_rocketlauncher");
 	else
 		client->newweapon = client->pers.weapon;
-	ChangeWeapon(ent);
+	Change_Weapon(ent);
 
 	if (was_waiting_for_respawn)
 		G_PostRespawn(ent);
@@ -2605,8 +2601,8 @@ static void G_SetLevelEntry() {
 
 		// give all of the clients an extra life back
 		if (g_coop_enable_lives->integer)
-			for (size_t i = 0; i < game.maxclients; i++)
-				game.clients[i].pers.lives = min(g_coop_num_lives->integer + 1, game.clients[i].pers.lives + 1);
+			for (auto ec : active_clients())
+				ec->client->pers.lives = min(g_coop_num_lives->integer + 1, ec->client->pers.lives + 1);
 	}
 
 	// scan for all new maps we can go to, for secret levels
@@ -2668,6 +2664,9 @@ ClientIsPlaying
 bool ClientIsPlaying(gclient_t *cl) {
 	if (!cl) return false;
 
+	if (!deathmatch->integer)
+		return true;
+
 	return !(cl->resp.team == TEAM_NONE || cl->resp.team == TEAM_SPECTATOR);
 }
 
@@ -2728,7 +2727,7 @@ void ClientBegin(edict_t *ent) {
 		spawn_from_begin = false;
 
 		if (!ent->client->pers.ingame) {
-			BroadcastTeamChange(ent, -1, false);
+			BroadcastTeamChange(ent, -1, false, false);
 		}
 	}
 
@@ -2826,7 +2825,7 @@ Match_Ghost_DoAssign
 */
 void Match_Ghost_DoAssign(edict_t *ent) {
 	// assign a ghost code
-	if (level.match_state == MS_MATCH_IN_PROGRESS) {
+	if (level.match_state == MATCH_IN_PROGRESS) {
 		if (ent->client->resp.ghost)
 			ent->client->resp.ghost->code = 0;
 		ent->client->resp.ghost = nullptr;
@@ -2874,7 +2873,7 @@ void ClientUserinfoChanged(edict_t *ent, const char *userinfo) {
 	}
 
 	//  set player name field (used in id_state view)
-	gi.configstring(CONFIG_CTF_PLAYER_NAME + playernum, ent->client->pers.netname);
+	gi.configstring(CONFIG_CHASE_PLAYER_NAME + playernum, ent->client->pers.netname);
 
 	// [Kex] netname is used for a couple of other things, so we update this after those.
 	if (!(ent->svflags & SVF_BOT)) {
@@ -3111,7 +3110,6 @@ bool ClientConnect(edict_t *ent, char *userinfo, const char *social_id, bool is_
 
 		// force team join
 		ent->client->resp.team = deathmatch->integer ? TEAM_NONE : TEAM_FREE;
-		//ent->client->resp.spectator_state = deathmatch->integer ? SPECTATOR_FREE : SPECTATOR_NOT;
 		ent->client->resp.id_state = true;
 		ent->client->resp.timer_state = true;
 		ent->client->resp.fragmessage_state = true;
@@ -3181,8 +3179,6 @@ Will not be called between levels.
 ============
 */
 void ClientDisconnect(edict_t *ent) {
-	edict_t *other;
-
 	if (!ent->client)
 		return;
 
@@ -3207,12 +3203,8 @@ void ClientDisconnect(edict_t *ent) {
 		gi.multicast(ent->s.origin, MULTICAST_PVS, false);
 	}
 
-	// update chase cam if being followed
-	for (size_t i = 1; i <= game.maxclients; i++) {
-		other = g_edicts + i;
-		if (other->inuse && other->client->chase_target == ent)
-			SetTeam(other, TEAM_SPECTATOR, false, true);
-	}
+	// free any followers
+	FreeClientFollowers(ent);
 
 	G_RevertVote(ent->client);
 
@@ -3230,9 +3222,9 @@ void ClientDisconnect(edict_t *ent) {
 	if (deathmatch->integer) {
 		CalculateRanks();
 
-		for (auto player : active_players())
-			if (player->client->showscores)
-				player->client->menutime = level.time;
+		for (auto ec : active_clients())
+			if (ec->client->showscores)
+				ec->client->menutime = level.time;
 	}
 
 	if (ent->client->pers.connected)
@@ -3282,7 +3274,7 @@ static void P_FallingDamage(edict_t *ent, const pmove_t &pm) {
 	if (ent->s.modelindex != MODELINDEX_PLAYER)
 		return; // not in the player model
 
-	if (ent->movetype == MOVETYPE_NOCLIP)
+	if (ent->movetype == MOVETYPE_NOCLIP || ent->movetype == MOVETYPE_FREECAM)
 		return;
 
 	// never take falling damage if completely underwater
@@ -3406,7 +3398,7 @@ static bool ClientInactivityTimer(edict_t *ent) {
 	} else {
 		if (level.time > ent->client->resp.inactivity_time) {
 			gi.LocClient_Print(ent, PRINT_CENTER, "You have been removed from the match\ndue to inactivity.\n");
-			SetTeam(ent, TEAM_SPECTATOR, true, true);
+			SetTeam(ent, TEAM_SPECTATOR, true, true, false);
 			return false;
 		}
 		if (level.time > ent->client->resp.inactivity_time - gtime_t::from_sec(10) && !ent->client->resp.inactivity_warning) {
@@ -3463,21 +3455,31 @@ void ClientThink(edict_t *ent, usercmd_t *ucmd) {
 		}
 	}
 	
-	if (g_showhelp->integer && !ent->client->resp.showed_help && ent->client->resp.team_join_time) {
-		if (level.time >= ent->client->resp.team_join_time + 5_sec) {
-			if (g_quadhog->integer) {
-				gi.LocClient_Print(ent, PRINT_CENTER, "QUAD HOG\nFind the Quad Damage to become the Quad Hog!\nScore by fragging the Quad Hog or fragging while Quad Hog.");
-			} else if (g_vampiric_damage->integer) {
-				gi.LocClient_Print(ent, PRINT_CENTER, "VAMPIRIC DAMAGE\nSurvive by inflicting damage on your foes,\ntheir pain makes you stronger!");
-			} else if (g_frenzy->integer) {
-				gi.LocClient_Print(ent, PRINT_CENTER, "WEAPONS FRENZY\nWeapons fire faster, rockets move faster, ammo regenerates.");
-			} else if (g_nadefest->integer) {
-				gi.LocClient_Print(ent, PRINT_CENTER, "NADE FEST\nOnly grenades, nothing else!");
-			} else if (g_instagib->integer) {
-				gi.LocClient_Print(ent, PRINT_CENTER, "INSTAGIB\nA rail-y good time!");
+	if (ent->client->resp.team_join_time) {
+		gtime_t delay = 5_sec;
+		if (!ent->client->resp.showed_motd && g_showmotd->integer && g_motd->string[0] && *g_motd->string) {
+			if (level.time >= ent->client->resp.team_join_time + delay) {
+				gi.Client_Print(ent, PRINT_CENTER, g_motd->string);
+				ent->client->resp.showed_motd = true;
+				delay += 5_sec;
 			}
+		}
+		if (!ent->client->resp.showed_help && g_showhelp->integer) {
+			if (level.time >= ent->client->resp.team_join_time + delay) {
+				if (g_quadhog->integer) {
+					gi.LocClient_Print(ent, PRINT_CENTER, "QUAD HOG\nFind the Quad Damage to become the Quad Hog!\nScore by fragging the Quad Hog or fragging while Quad Hog.");
+				} else if (g_vampiric_damage->integer) {
+					gi.LocClient_Print(ent, PRINT_CENTER, "VAMPIRIC DAMAGE\nSurvive by inflicting damage on your foes,\ntheir pain makes you stronger!");
+				} else if (g_frenzy->integer) {
+					gi.LocClient_Print(ent, PRINT_CENTER, "WEAPONS FRENZY\nWeapons fire faster, rockets move faster, ammo regenerates.");
+				} else if (g_nadefest->integer) {
+					gi.LocClient_Print(ent, PRINT_CENTER, "NADE FEST\nOnly grenades, nothing else!");
+				} else if (g_instagib->integer) {
+					gi.LocClient_Print(ent, PRINT_CENTER, "INSTAGIB\nA rail-y good time!");
+				}
 
-			ent->client->resp.showed_help = true;
+				ent->client->resp.showed_help = true;
+			}
 		}
 	}
 
@@ -3509,19 +3511,19 @@ void ClientThink(edict_t *ent, usercmd_t *ucmd) {
 			client->ps.pmove.viewheight = ent->viewheight = 22;
 		else
 			client->ps.pmove.viewheight = ent->viewheight = 0;
-		ent->movetype = MOVETYPE_NOCLIP;
+		ent->movetype = MOVETYPE_FREECAM;
 		return;
 	}
 
-	if (ent->client->chase_target) {
+	if (ent->client->follow_target) {
 		client->resp.cmd_angles = ucmd->angles;
-		ent->movetype = MOVETYPE_NOCLIP;
+		ent->movetype = MOVETYPE_FREECAM;
 	} else {
 
 		// set up for pmove
 		memset(&pm, 0, sizeof(pm));
 
-		if (ent->movetype == MOVETYPE_NOCLIP) {
+		if (ent->movetype == MOVETYPE_FREECAM) {
 			if (ent->client->menu) {
 				client->ps.pmove.pm_type = PM_FREEZE;
 
@@ -3533,6 +3535,8 @@ void ClientThink(edict_t *ent, usercmd_t *ucmd) {
 				client->ps.pmove.pm_type = PM_SPECTATOR;
 			else
 				client->ps.pmove.pm_type = PM_NOCLIP;
+		} else if (ent->movetype == MOVETYPE_NOCLIP) {
+			client->ps.pmove.pm_type = PM_NOCLIP;
 		} else if (ent->s.modelindex != MODELINDEX_PLAYER)
 			client->ps.pmove.pm_type = PM_GIB;
 		else if (ent->deadflag)
@@ -3623,12 +3627,11 @@ void ClientThink(edict_t *ent, usercmd_t *ucmd) {
 			// PlayerNoise(ent, ent->s.origin, PNOISE_SELF);
 		}
 
-		// ROGUE sam raimi cam support
+		// sam raimi cam support
 		if (ent->flags & FL_SAM_RAIMI)
 			ent->viewheight = 8;
 		else
 			ent->viewheight = (int)pm.s.viewheight;
-		// ROGUE
 
 		ent->waterlevel = pm.waterlevel;
 		ent->watertype = pm.watertype;
@@ -3655,7 +3658,8 @@ void ClientThink(edict_t *ent, usercmd_t *ucmd) {
 
 		if (ent->movetype != MOVETYPE_NOCLIP) {
 			G_TouchTriggers(ent);
-			G_TouchProjectiles(ent, old_origin);
+			if (ent->movetype != MOVETYPE_FREECAM)
+				G_TouchProjectiles(ent, old_origin);
 		}
 
 		// touch other objects
@@ -3673,22 +3677,10 @@ void ClientThink(edict_t *ent, usercmd_t *ucmd) {
 		if (!ClientIsPlaying(client)) {
 			client->latched_buttons = BUTTON_NONE;
 
-			if (client->chase_target) {
-				client->chase_target = nullptr;
-				client->ps.pmove.pm_flags &= ~(PMF_NO_POSITIONAL_PREDICTION | PMF_NO_ANGULAR_PREDICTION);
-
-				ent->client->ps.kick_angles = {};
-				ent->client->ps.gunangles = {};
-				ent->client->ps.gunoffset = {};
-				ent->client->ps.gunindex = 0;
-				ent->client->ps.gunskin = 0;
-				ent->client->ps.gunframe = 0;
-				ent->client->ps.gunrate = 0;
-				ent->client->ps.screen_blend = {};
-				ent->client->ps.damage_blend = {};
-				ent->client->ps.rdflags = RDF_NONE;
+			if (client->follow_target) {
+				FreeFollower(ent);
 			} else
-				GetChaseTarget(ent);
+				GetFollowTarget(ent);
 		} else if (!ent->client->weapon_thunk) {
 			// we can only do this during a ready state and
 			// if enough time has passed from last fire
@@ -3708,10 +3700,10 @@ void ClientThink(edict_t *ent, usercmd_t *ucmd) {
 			if (ucmd->buttons & BUTTON_JUMP) {
 				if (!(client->ps.pmove.pm_flags & PMF_JUMP_HELD)) {
 					client->ps.pmove.pm_flags |= PMF_JUMP_HELD;
-					if (client->chase_target)
-						ChaseNext(ent);
+					if (client->follow_target)
+						FollowNext(ent);
 					else
-						GetChaseTarget(ent);
+						GetFollowTarget(ent);
 				}
 			} else
 				client->ps.pmove.pm_flags &= ~PMF_JUMP_HELD;
@@ -3719,11 +3711,9 @@ void ClientThink(edict_t *ent, usercmd_t *ucmd) {
 	}
 
 	// update chase cam if being followed
-	for (i = 1; i <= game.maxclients; i++) {
-		other = g_edicts + i;
-		if (other->inuse && other->client->chase_target == ent)
-			UpdateChaseCam(other);
-	}
+	for (auto ec : active_clients())
+		if (ec->client->follow_target == ent)
+			UpdateChaseCam(ec);
 }
 
 // active monsters
@@ -3857,7 +3847,7 @@ static inline bool G_FindRespawnSpot(edict_t *player, vec3_t &spot) {
 inline std::tuple<edict_t *, vec3_t> G_FindSquadRespawnTarget() {
 	bool monsters_searching_for_anybody = G_MonstersSearchingFor(nullptr);
 
-	for (auto player : active_players()) {
+	for (auto player : active_clients()) {
 		// no dead players
 		if (player->deadflag)
 			continue;
@@ -3944,7 +3934,7 @@ static bool G_CoopRespawn(edict_t *ent) {
 		if (g_coop_squad_respawn->integer) {
 			bool allDead = true;
 
-			for (auto player : active_players()) {
+			for (auto player : active_clients()) {
 				if (player->health > 0) {
 					allDead = false;
 					break;
@@ -4000,10 +3990,10 @@ static bool G_CoopRespawn(edict_t *ent) {
 			ent->svflags |= SVF_NOCLIENT;
 			ent->client->ps.damage_blend[3] = ent->client->ps.screen_blend[3] = 0;
 			ent->client->ps.rdflags = RDF_NONE;
-			ent->movetype = MOVETYPE_NOCLIP;
+			ent->movetype = MOVETYPE_FREECAM;
 			// TODO: check if anything else needs to be reset
 			gi.linkentity(ent);
-			GetChaseTarget(ent);
+			GetFollowTarget(ent);
 		}
 	}
 
@@ -4099,28 +4089,4 @@ void RemoveAttackingPainDaemons(edict_t *self) {
 
 	if (self->client)
 		self->client->tracker_pain_time = 0_ms;
-}
-
-
-/*
-================
-TeamConnectedCount
-
-Returns number of active players on a team
-================
-*/
-int TeamConnectedCount(int ignore_client_num, team_t team) {
-	size_t	i;
-	int		count = 0;
-
-	for (i = 0; i < game.maxclients; i++) {
-		if (i == ignore_client_num)
-			continue;
-		if (!game.clients[i].pers.connected)
-			continue;
-		if (game.clients[i].resp.team == team)
-			count++;
-	}
-
-	return count;
 }

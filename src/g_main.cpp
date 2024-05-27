@@ -39,6 +39,7 @@ cvar_t *ctf;
 cvar_t *teamplay;
 cvar_t *freeze;
 cvar_t *clanarena;
+
 cvar_t *coop;
 cvar_t *horde;
 
@@ -48,191 +49,155 @@ cvar_t *capturelimit;
 cvar_t *timelimit;
 cvar_t *roundlimit;
 cvar_t *roundtimelimit;
-cvar_t *g_quick_weapon_switch;
-cvar_t *g_instant_weapon_switch;
-cvar_t *password;
-cvar_t *spectator_password;
-cvar_t *needpass;
-static cvar_t *maxclients;
-cvar_t *maxspectators;
-static cvar_t *maxentities;
-cvar_t *g_select_empty;
-cvar_t *g_dedicated;
-
-cvar_t *filterban;
-
-cvar_t *g_maxvelocity;
-cvar_t *g_gravity;
-
-cvar_t *g_dm_force_join;
-cvar_t *g_teamplay_allow_team_pick;
-cvar_t *g_teamplay_force_balance;
-cvar_t *g_voting_percentage;
-
-cvar_t *g_skip_view_modifiers;
-
-cvar_t *g_rollspeed;
-cvar_t *g_rollangle;
-cvar_t *gun_x;
-cvar_t *gun_y;
-cvar_t *gun_z;
-
-cvar_t *run_pitch;
-cvar_t *run_roll;
-cvar_t *bob_up;
-cvar_t *bob_pitch;
-cvar_t *bob_roll;
-
-cvar_t *g_cheats;
-
-cvar_t *g_debug_monster_paths;
-cvar_t *g_debug_monster_kills;
-
-cvar_t *bot_debug_follow_actor;
-cvar_t *bot_debug_move_to_point;
-
-cvar_t *flood_msgs;
-cvar_t *flood_persecond;
-cvar_t *flood_waitdelay;
-
-cvar_t *g_stopspeed; // PGM	 (this was a define in g_phys.c)
-
-cvar_t *g_strict_saves;
-
-cvar_t *g_huntercam;
-cvar_t *g_dm_strong_mines;
-cvar_t *g_dm_random_items;
-
-cvar_t *g_instagib;
-cvar_t *g_instagib_splash;
-cvar_t *g_quadhog;
-cvar_t *g_nadefest;
-cvar_t *g_frenzy;
-cvar_t *g_coop_player_collision;
-cvar_t *g_coop_squad_respawn;
-cvar_t *g_coop_enable_lives;
-cvar_t *g_coop_num_lives;
-cvar_t *g_coop_instanced_items;
-cvar_t *g_allow_grapple;
-cvar_t *g_grapple_offhand;
-cvar_t *g_grapple_fly_speed;
-cvar_t *g_grapple_pull_speed;
-cvar_t *g_grapple_damage;
-cvar_t *g_coop_health_scaling;
-cvar_t *g_weapon_respawn_time;
-
-cvar_t *g_frag_messages;
-
-// dm"flags"
-cvar_t *g_no_health;
-cvar_t *g_no_items;
-cvar_t *g_no_powerups;
-cvar_t *g_dm_weapons_stay;
-cvar_t *g_dm_no_fall_damage;
-cvar_t *g_dm_no_self_damage;
-cvar_t *g_dm_instant_items;
-cvar_t *g_dm_same_level;
-cvar_t *g_friendly_fire;
-cvar_t *g_dm_force_respawn;
-cvar_t *g_dm_force_respawn_time;
-cvar_t *g_dm_respawn_delay_min;
-cvar_t *g_dm_spawn_farthest;
-cvar_t *g_no_armor;
-cvar_t *g_dm_allow_exit;
-cvar_t *g_infinite_ammo;
-cvar_t *g_dm_no_quad_drop;
-cvar_t *g_dm_no_quadfire_drop;
-cvar_t *g_dm_powerup_drop;
-cvar_t *g_no_mines;
-cvar_t *g_dm_no_stack_double;
-cvar_t *g_no_nukes;
-cvar_t *g_no_spheres;
-cvar_t *g_teamplay_armor_protect;
-cvar_t *g_allow_techs;
-cvar_t *g_dm_powerups_style;
-cvar_t *g_corpse_sink_time;
-cvar_t *g_start_items;
-cvar_t *g_map_list;
-cvar_t *g_map_list_shuffle;
-cvar_t *g_lag_compensation;
-cvar_t *g_dm_respawn_point_min_dist;
-cvar_t *g_dm_respawn_point_min_dist_debug;
-
-cvar_t *g_motd;
-
-cvar_t *g_inactivity;
-cvar_t *g_entity_override_load;
-cvar_t *g_entity_override_save;
-
-cvar_t *g_airaccelerate;
-cvar_t *g_knockback_scale;
-cvar_t *g_frozen_time;
-cvar_t *g_damage_scale;
-cvar_t *g_vampiric_damage;
-cvar_t *g_vampiric_health_max;
-cvar_t *g_disable_player_collision;
-cvar_t *ai_damage_scale;
-cvar_t *ai_model_scale;
-cvar_t *ai_allow_dm_spawn;
-cvar_t *ai_movement_disabled;
-
-cvar_t *minplayers;
-cvar_t *maxplayers;
-
-cvar_t *g_mover_speed_scale;
-cvar_t *g_mover_debug;
-
-cvar_t *g_warmup_countdown;
-cvar_t *g_warmup_ready_percentage;
-
-//ctf
-cvar_t *competition;
-cvar_t *g_match_lock;
-cvar_t *matchsetuptime;
-cvar_t *matchstarttime;
-cvar_t *admin_password;
-cvar_t *g_allow_admin;
-cvar_t *warn_unbalanced;
-//-ctf
-cvar_t *g_eyecam;
-cvar_t *g_teleporter_nofreeze;
-
-cvar_t *g_showhelp;
-
-cvar_t *g_matchstats;
-
-cvar_t *g_dm_spawnpads;
-
-cvar_t *g_expert;
-
-cvar_t *g_item_bobbing;
-cvar_t *g_weapon_force_central_projection;
-
-cvar_t *g_allow_custom_skins;
-
-cvar_t *g_allow_voting;
-cvar_t *g_allow_vote_midgame;
-cvar_t *g_allow_spec_vote;
-cvar_t *g_vote_limit;
-cvar_t *g_vote_flags;
-
-cvar_t *g_dm_auto_join;
-
-cvar_t *g_dm_overtime;
-
-cvar_t *g_dm_do_warmup;
-cvar_t *g_dm_do_readyup;
-
-cvar_t *g_item_chain_random;
-
-cvar_t *g_allow_forfeit;
-
-cvar_t *g_dm_powerups_minplayers;
-
 cvar_t *mercylimit;
 cvar_t *noplayerstime;
 
+cvar_t *password;
+cvar_t *spectator_password;
+cvar_t *admin_password;
+cvar_t *needpass;
+cvar_t *filterban;
+
+static cvar_t *maxclients;
+static cvar_t *maxentities;
+cvar_t *maxplayers;
+cvar_t *maxspectators;
+cvar_t *minplayers;
+
+cvar_t *ai_allow_dm_spawn;
+cvar_t *ai_damage_scale;
+cvar_t *ai_model_scale;
+cvar_t *ai_movement_disabled;
+cvar_t *bob_pitch;
+cvar_t *bob_roll;
+cvar_t *bob_up;
+cvar_t *bot_debug_follow_actor;
+cvar_t *bot_debug_move_to_point;
+cvar_t *flood_msgs;
+cvar_t *flood_persecond;
+cvar_t *flood_waitdelay;
+cvar_t *gun_x, *gun_y, *gun_z;
+cvar_t *run_pitch;
+cvar_t *run_roll;
+
+cvar_t *g_airaccelerate;
+cvar_t *g_allow_admin;
+cvar_t *g_allow_custom_skins;
+cvar_t *g_allow_forfeit;
+cvar_t *g_allow_grapple;
+cvar_t *g_allow_mymap;
+cvar_t *g_allow_spec_vote;
+cvar_t *g_allow_techs;
+cvar_t *g_allow_vote_midgame;
+cvar_t *g_allow_voting;
+cvar_t *g_cheats;
+cvar_t *g_coop_enable_lives;
+cvar_t *g_coop_health_scaling;
+cvar_t *g_coop_instanced_items;
+cvar_t *g_coop_num_lives;
+cvar_t *g_coop_player_collision;
+cvar_t *g_coop_squad_respawn;
+cvar_t *g_corpse_sink_time;
+cvar_t *g_damage_scale;
+cvar_t *g_debug_monster_kills;
+cvar_t *g_debug_monster_paths;
+cvar_t *g_dedicated;
+cvar_t *g_disable_player_collision;
+cvar_t *g_dm_allow_exit;
+cvar_t *g_dm_auto_join;
+cvar_t *g_dm_do_readyup;
+cvar_t *g_dm_do_warmup;
+cvar_t *g_dm_exec_level_cfg;
+cvar_t *g_dm_force_join;
+cvar_t *g_dm_force_respawn;
+cvar_t *g_dm_force_respawn_time;
+cvar_t *g_dm_instant_items;
+cvar_t *g_dm_intermission_shots;
+cvar_t *g_dm_no_fall_damage;
+cvar_t *g_dm_no_quad_drop;
+cvar_t *g_dm_no_quadfire_drop;
+cvar_t *g_dm_no_self_damage;
+cvar_t *g_dm_no_stack_double;
+cvar_t *g_dm_overtime;
+cvar_t *g_dm_powerup_drop;
+cvar_t *g_dm_powerups_minplayers;
+cvar_t *g_dm_powerups_style;
+cvar_t *g_dm_random_items;
+cvar_t *g_dm_respawn_delay_min;
+cvar_t *g_dm_respawn_point_min_dist;
+cvar_t *g_dm_respawn_point_min_dist_debug;
+cvar_t *g_dm_same_level;
+cvar_t *g_dm_spawn_farthest;
+cvar_t *g_dm_spawnpads;
+cvar_t *g_dm_strong_mines;
+cvar_t *g_dm_weapons_stay;
+cvar_t *g_entity_override_load;
+cvar_t *g_entity_override_save;
+cvar_t *g_expert;
+cvar_t *g_eyecam;
+cvar_t *g_fast_doors;
+cvar_t *g_frag_messages;
+cvar_t *g_frenzy;
+cvar_t *g_friendly_fire;
+cvar_t *g_frozen_time;
+cvar_t *g_grapple_damage;
+cvar_t *g_grapple_fly_speed;
+cvar_t *g_grapple_offhand;
+cvar_t *g_grapple_pull_speed;
+cvar_t *g_gravity;
+cvar_t *g_huntercam;
+cvar_t *g_inactivity;
+cvar_t *g_infinite_ammo;
+cvar_t *g_instagib;
+cvar_t *g_instagib_splash;
+cvar_t *g_instant_weapon_switch;
+cvar_t *g_item_bobbing;
+cvar_t *g_item_chain_random;
+cvar_t *g_knockback_scale;
 cvar_t *g_ladder_steps;
+cvar_t *g_lag_compensation;
+cvar_t *g_map_list;
+cvar_t *g_map_list_shuffle;
+cvar_t *g_map_pool;
+cvar_t *g_match_lock;
+cvar_t *g_matchstats;
+cvar_t *g_maxvelocity;
+cvar_t *g_motd;
+cvar_t *g_mover_debug;
+cvar_t *g_mover_speed_scale;
+cvar_t *g_nadefest;
+cvar_t *g_no_armor;
+cvar_t *g_no_health;
+cvar_t *g_no_items;
+cvar_t *g_no_mines;
+cvar_t *g_no_nukes;
+cvar_t *g_no_powerups;
+cvar_t *g_no_spheres;
+cvar_t *g_quadhog;
+cvar_t *g_quick_weapon_switch;
+cvar_t *g_rollangle;
+cvar_t *g_rollspeed;
+cvar_t *g_select_empty;
+cvar_t *g_showhelp;
+cvar_t *g_showmotd;
+cvar_t *g_skip_view_modifiers;
+cvar_t *g_start_items;
+cvar_t *g_stopspeed;
+cvar_t *g_strict_saves;
+cvar_t *g_teamplay_allow_team_pick;
+cvar_t *g_teamplay_armor_protect;
+cvar_t *g_teamplay_auto_balance;
+cvar_t *g_teamplay_force_balance;
+cvar_t *g_teamplay_item_drop_notice;
+cvar_t *g_teleporter_nofreeze;
+cvar_t *g_vampiric_damage;
+cvar_t *g_vampiric_health_max;
+cvar_t *g_vote_flags;
+cvar_t *g_vote_limit;
+cvar_t *g_warmup_countdown;
+cvar_t *g_warmup_ready_percentage;
+cvar_t *g_weapon_projection;
+cvar_t *g_weapon_respawn_time;
 
 static cvar_t *g_frames_per_frame;
 
@@ -258,7 +223,7 @@ char *WriteGameJson(bool autosave, size_t *out_size);
 void ReadGameJson(const char *jsonString);
 char *WriteLevelJson(bool transition, size_t *out_size);
 void ReadLevelJson(const char *jsonString);
-bool G_CanSave();
+bool CanSave();
 void ClientDisconnect(edict_t *ent);
 void ClientBegin(edict_t *ent);
 void ClientCommand(edict_t *ent);
@@ -272,7 +237,7 @@ static void Horde_MonsterSpawn(const char *classname) {
 	edict_t *spawn;
 	edict_t *point;
 
-	point = SelectDeathmatchSpawnPoint(vec3_origin, true, true, true, false).spot;
+	point = SelectDeathmatchSpawnPoint(nullptr, vec3_origin, true, true, true, false, false).spot;
 
 	spawn = G_Spawn();
 	spawn->classname = "monster_berserk";
@@ -311,7 +276,7 @@ void Horde_CreateWave() {
 		return;
 
 	edict_t *ent;
-	select_spawn_result_t result = SelectDeathmatchSpawnPoint(vec3_origin, true, true, true, false);
+	select_spawn_result_t result = SelectDeathmatchSpawnPoint(nullptr, vec3_origin, true, true, true, false, false);
 
 	gi.Com_Print("CREATEWAVE\n");
 	if (!result.any_valid) {
@@ -608,14 +573,14 @@ static void InitGame() {
 	roundlimit = gi.cvar("roundlimit", "8", CVAR_SERVERINFO);
 	roundtimelimit = gi.cvar("roundtimelimit", "2", CVAR_SERVERINFO);
 	capturelimit = gi.cvar("capturelimit", "0", CVAR_SERVERINFO);
-	g_quick_weapon_switch = gi.cvar("g_quick_weapon_switch", "1", CVAR_LATCH);
-	g_instant_weapon_switch = gi.cvar("g_instant_weapon_switch", "0", CVAR_LATCH);
+	mercylimit = gi.cvar("mercylimit", "0", CVAR_NOFLAGS);
+	noplayerstime = gi.cvar("noplayerstime", "10", CVAR_NOFLAGS);
+
 	password = gi.cvar("password", "", CVAR_USERINFO);
 	spectator_password = gi.cvar("spectator_password", "", CVAR_USERINFO);
+	admin_password = gi.cvar("admin_password", "", CVAR_NOFLAGS);
 	needpass = gi.cvar("needpass", "0", CVAR_SERVERINFO);
 	filterban = gi.cvar("filterban", "1", CVAR_NOFLAGS);
-
-	g_select_empty = gi.cvar("g_select_empty", "0", CVAR_ARCHIVE);
 
 	run_pitch = gi.cvar("run_pitch", "0.002", CVAR_NOFLAGS);
 	run_roll = gi.cvar("run_roll", "0.005", CVAR_NOFLAGS);
@@ -623,129 +588,102 @@ static void InitGame() {
 	bob_pitch = gi.cvar("bob_pitch", "0.002", CVAR_NOFLAGS);
 	bob_roll = gi.cvar("bob_roll", "0.002", CVAR_NOFLAGS);
 
-	// flood control
 	flood_msgs = gi.cvar("flood_msgs", "4", CVAR_NOFLAGS);
 	flood_persecond = gi.cvar("flood_persecond", "4", CVAR_NOFLAGS);
 	flood_waitdelay = gi.cvar("flood_waitdelay", "10", CVAR_NOFLAGS);
 
-	g_strict_saves = gi.cvar("g_strict_saves", "1", CVAR_NOFLAGS);
-
-	g_airaccelerate = gi.cvar("g_airaccelerate", "0", CVAR_NOFLAGS);
-
-	g_knockback_scale = gi.cvar("g_knockback_scale", "1.0", CVAR_NOFLAGS);
-	g_damage_scale = gi.cvar("g_damage_scale", "1", CVAR_NOFLAGS);
-	g_disable_player_collision = gi.cvar("g_disable_player_collision", "0", CVAR_NOFLAGS);
+	ai_allow_dm_spawn = gi.cvar("ai_allow_dm_spawn", "0", CVAR_NOFLAGS);
 	ai_damage_scale = gi.cvar("ai_damage_scale", "1", CVAR_NOFLAGS);
 	ai_model_scale = gi.cvar("ai_model_scale", "0", CVAR_NOFLAGS);
-	ai_allow_dm_spawn = gi.cvar("ai_allow_dm_spawn", "0", CVAR_NOFLAGS);
 	ai_movement_disabled = gi.cvar("ai_movement_disabled", "0", CVAR_NOFLAGS);
 
-	g_mover_speed_scale = gi.cvar("g_mover_speed_scale", "1.0f", CVAR_NOFLAGS);
-	g_mover_debug = gi.cvar("g_mover_debug", "0", CVAR_NOFLAGS);
-
-	g_warmup_countdown = gi.cvar("g_warmup_countdown", "10", CVAR_NOFLAGS);
-	g_warmup_ready_percentage = gi.cvar("g_warmup_ready_percentage", "0.51f", CVAR_NOFLAGS);
-
-	g_frames_per_frame = gi.cvar("g_frames_per_frame", "1", CVAR_NOFLAGS);
-
+	g_airaccelerate = gi.cvar("g_airaccelerate", "0", CVAR_NOFLAGS);
+	g_allow_admin = gi.cvar("g_allow_admin", "1", CVAR_NOFLAGS);
+	g_allow_custom_skins = gi.cvar("g_allow_custom_skins", "1", CVAR_NOFLAGS);
+	g_allow_forfeit = gi.cvar("g_allow_forfeit", "1", CVAR_NOFLAGS);
+	g_allow_mymap = gi.cvar("g_allow_mymap", "1", CVAR_NOFLAGS);
+	g_allow_spec_vote = gi.cvar("g_allow_spec_vote", "1", CVAR_NOFLAGS);
+	g_allow_techs = gi.cvar("g_allow_techs", "auto", CVAR_NOFLAGS);
+	g_allow_vote_midgame = gi.cvar("g_allow_vote_midgame", "0", CVAR_NOFLAGS);
+	g_allow_voting = gi.cvar("g_allow_voting", "0", CVAR_NOFLAGS);
 	g_coop_health_scaling = gi.cvar("g_coop_health_scaling", "0", CVAR_LATCH);
-	g_weapon_respawn_time = gi.cvar("g_weapon_respawn_time", "30", CVAR_NOFLAGS);
-
-	// dm "flags"
-	g_no_health = gi.cvar("g_no_health", "0", CVAR_NOFLAGS);
-	g_no_items = gi.cvar("g_no_items", "0", CVAR_NOFLAGS);
-	g_no_powerups = gi.cvar("g_no_powerups", "0", CVAR_NOFLAGS);
-	g_dm_weapons_stay = gi.cvar("g_dm_weapons_stay", "0", CVAR_NOFLAGS);
-	g_dm_no_fall_damage = gi.cvar("g_dm_no_fall_damage", "0", CVAR_NOFLAGS);
-	g_dm_no_self_damage = gi.cvar("g_dm_no_self_damage", "0", CVAR_NOFLAGS);
-	g_dm_instant_items = gi.cvar("g_dm_instant_items", "1", CVAR_NOFLAGS);
-	g_dm_same_level = gi.cvar("g_dm_same_level", "0", CVAR_NOFLAGS);
-	g_friendly_fire = gi.cvar("g_friendly_fire", "0", CVAR_NOFLAGS);
+	g_corpse_sink_time = gi.cvar("g_corpse_sink_time", "15", CVAR_NOFLAGS);
+	g_damage_scale = gi.cvar("g_damage_scale", "1", CVAR_NOFLAGS);
+	g_disable_player_collision = gi.cvar("g_disable_player_collision", "0", CVAR_NOFLAGS);
+	g_dm_allow_exit = gi.cvar("g_dm_allow_exit", "0", CVAR_NOFLAGS);
+	g_dm_auto_join = gi.cvar("g_dm_auto_join", "1", CVAR_NOFLAGS);
+	g_dm_do_readyup = gi.cvar("g_dm_do_readyup", "0", CVAR_NOFLAGS);
+	g_dm_do_warmup = gi.cvar("g_dm_do_warmup", "1", CVAR_NOFLAGS);
+	g_dm_exec_level_cfg = gi.cvar("g_dm_exec_level_cfg", "0", CVAR_NOFLAGS);
+	g_dm_force_join = gi.cvar("g_dm_force_join", "0", CVAR_NOFLAGS);
 	g_dm_force_respawn = gi.cvar("g_dm_force_respawn", "1", CVAR_NOFLAGS);
 	g_dm_force_respawn_time = gi.cvar("g_dm_force_respawn_time", "3", CVAR_NOFLAGS);
-	g_dm_respawn_delay_min = gi.cvar("g_dm_respawn_delay_min", "1", CVAR_NOFLAGS);
-	g_dm_spawn_farthest = gi.cvar("g_dm_spawn_farthest", "1", CVAR_NOFLAGS);
-	g_no_armor = gi.cvar("g_no_armor", "0", CVAR_NOFLAGS);
-	g_dm_allow_exit = gi.cvar("g_dm_allow_exit", "0", CVAR_NOFLAGS);
-	g_infinite_ammo = gi.cvar("g_infinite_ammo", "0", CVAR_LATCH);
+	g_dm_instant_items = gi.cvar("g_dm_instant_items", "1", CVAR_NOFLAGS);
+	g_dm_intermission_shots = gi.cvar("g_dm_intermission_shots", "0", CVAR_NOFLAGS);
+	g_dm_no_fall_damage = gi.cvar("g_dm_no_fall_damage", "0", CVAR_NOFLAGS);
 	g_dm_no_quad_drop = gi.cvar("g_dm_no_quad_drop", "0", CVAR_NOFLAGS);
 	g_dm_no_quadfire_drop = gi.cvar("g_dm_no_quadfire_drop", "0", CVAR_NOFLAGS);
-	g_dm_powerup_drop = gi.cvar("g_dm_powerup_drop", "1", CVAR_NOFLAGS);
-	g_no_mines = gi.cvar("g_no_mines", "0", CVAR_NOFLAGS);
+	g_dm_no_self_damage = gi.cvar("g_dm_no_self_damage", "0", CVAR_NOFLAGS);
 	g_dm_no_stack_double = gi.cvar("g_dm_no_stack_double", "0", CVAR_NOFLAGS);
-	g_no_nukes = gi.cvar("g_no_nukes", "0", CVAR_NOFLAGS);
-	g_no_spheres = gi.cvar("g_no_spheres", "0", CVAR_NOFLAGS);
-	g_dm_force_join = gi.cvar("g_dm_force_join", "0", CVAR_NOFLAGS);
-	g_teamplay_allow_team_pick = gi.cvar("g_teamplay_allow_team_pick", "0", CVAR_NOFLAGS);
-	g_teamplay_force_balance = gi.cvar("g_teamplay_force_balance", "0", CVAR_NOFLAGS);
-	g_teamplay_armor_protect = gi.cvar("g_teamplay_armor_protect", "0", CVAR_NOFLAGS);
-	g_allow_techs = gi.cvar("g_allow_techs", "auto", CVAR_NOFLAGS);
+	g_dm_overtime = gi.cvar("g_dm_overtime", "120", CVAR_NOFLAGS);
+	g_dm_powerup_drop = gi.cvar("g_dm_powerup_drop", "1", CVAR_NOFLAGS);
+	g_dm_powerups_minplayers = gi.cvar("g_dm_powerups_minplayers", "0", CVAR_NOFLAGS);
 	g_dm_powerups_style = gi.cvar("g_dm_powerups_style", "1", CVAR_NOFLAGS);
-
-	g_corpse_sink_time = gi.cvar("g_corpse_sink_time", "15", CVAR_NOFLAGS);
-
-	g_motd = gi.cvar("g_motd", "", CVAR_NOFLAGS);
-
+	g_dm_respawn_delay_min = gi.cvar("g_dm_respawn_delay_min", "1", CVAR_NOFLAGS);
 	g_dm_respawn_point_min_dist = gi.cvar("g_dm_respawn_point_min_dist", "256", CVAR_NOFLAGS);
 	g_dm_respawn_point_min_dist_debug = gi.cvar("g_dm_respawn_point_min_dist_debug", "0", CVAR_NOFLAGS);
-
-	g_start_items = gi.cvar("g_start_items", "", CVAR_LATCH);
-	g_map_list = gi.cvar("g_map_list", "", CVAR_NOFLAGS);
-	g_map_list_shuffle = gi.cvar("g_map_list_shuffle", "0", CVAR_NOFLAGS);
-	g_lag_compensation = gi.cvar("g_lag_compensation", "1", CVAR_NOFLAGS);
-
-	g_inactivity = gi.cvar("g_inactivity", "120", CVAR_NOFLAGS);
+	g_dm_same_level = gi.cvar("g_dm_same_level", "0", CVAR_NOFLAGS);
+	g_dm_spawn_farthest = gi.cvar("g_dm_spawn_farthest", "1", CVAR_NOFLAGS);
+	g_dm_spawnpads = gi.cvar("g_dm_spawnpads", "1", CVAR_NOFLAGS);
+	g_dm_weapons_stay = gi.cvar("g_dm_weapons_stay", "0", CVAR_NOFLAGS);
 	g_entity_override_load = gi.cvar("g_entity_override_load", "1", CVAR_NOFLAGS);
 	g_entity_override_save = gi.cvar("g_entity_override_save", "0", CVAR_NOFLAGS);
-
-	//ctf
-	competition = gi.cvar("competition", "0", CVAR_SERVERINFO);
-	g_match_lock = gi.cvar("g_match_lock", "0", CVAR_SERVERINFO);
-	matchsetuptime = gi.cvar("matchsetuptime", "10", CVAR_NOFLAGS);
-	matchstarttime = gi.cvar("matchstarttime", "20", CVAR_NOFLAGS);
-	admin_password = gi.cvar("admin_password", "", CVAR_NOFLAGS);
-	g_allow_admin = gi.cvar("g_allow_admin", "1", CVAR_NOFLAGS);
-	warn_unbalanced = gi.cvar("warn_unbalanced", "0", CVAR_NOFLAGS);
-	//-ctf
-	g_eyecam = gi.cvar("g_eyecam", "1", CVAR_NOFLAGS);
-	g_teleporter_nofreeze = gi.cvar("g_teleporter_nofreeze", "0", CVAR_NOFLAGS);
-
-	g_showhelp = gi.cvar("g_showhelp", "1", CVAR_NOFLAGS);
-
-	g_matchstats = gi.cvar("g_matchstats", "0", CVAR_NOFLAGS);
-
-	g_dm_spawnpads = gi.cvar("g_dm_spawnpads", "1", CVAR_NOFLAGS);
-
 	g_expert = gi.cvar("g_expert", "0", CVAR_NOFLAGS);
-
+	g_eyecam = gi.cvar("g_eyecam", "1", CVAR_NOFLAGS);
+	g_fast_doors = gi.cvar("g_fast_doors", "1", CVAR_NOFLAGS);
+	g_frames_per_frame = gi.cvar("g_frames_per_frame", "1", CVAR_NOFLAGS);
+	g_friendly_fire = gi.cvar("g_friendly_fire", "0", CVAR_NOFLAGS);
+	g_inactivity = gi.cvar("g_inactivity", "120", CVAR_NOFLAGS);
+	g_infinite_ammo = gi.cvar("g_infinite_ammo", "0", CVAR_LATCH);
+	g_instant_weapon_switch = gi.cvar("g_instant_weapon_switch", "0", CVAR_LATCH);
 	g_item_bobbing = gi.cvar("g_item_bobbing", "1", CVAR_NOFLAGS);
-	g_weapon_force_central_projection = gi.cvar("g_weapon_force_central_projection", "0", CVAR_NOFLAGS);
-
-	g_allow_custom_skins = gi.cvar("g_allow_custom_skins", "1", CVAR_NOFLAGS);
-
-	g_allow_voting = gi.cvar("g_allow_voting", "0", CVAR_NOFLAGS);
-	g_allow_vote_midgame = gi.cvar("g_allow_vote_midgame", "0", CVAR_NOFLAGS);
-	g_allow_spec_vote = gi.cvar("g_allow_spec_vote", "1", CVAR_NOFLAGS);
-	g_vote_limit = gi.cvar("g_vote_limit", "3", CVAR_NOFLAGS);
-	g_vote_flags = gi.cvar("g_vote_flags", "0", CVAR_NOFLAGS);
-
-	g_dm_auto_join = gi.cvar("g_dm_auto_join", "1", CVAR_NOFLAGS);
-
-	g_dm_overtime = gi.cvar("g_dm_overtime", "120", CVAR_NOFLAGS);
-
-	g_dm_do_warmup = gi.cvar("g_dm_do_warmup", "1", CVAR_NOFLAGS);
-	g_dm_do_readyup = gi.cvar("g_dm_do_readyup", "0", CVAR_NOFLAGS);
-
 	g_item_chain_random = gi.cvar("g_item_chain_random", "0", CVAR_NOFLAGS);
-
-	g_allow_forfeit = gi.cvar("g_allow_forfeit", "1", CVAR_NOFLAGS);
-
-	g_dm_powerups_minplayers = gi.cvar("g_dm_powerups_minplayers", "3", CVAR_NOFLAGS);
-
-	mercylimit = gi.cvar("mercylimit", "0", CVAR_NOFLAGS);
-	noplayerstime = gi.cvar("noplayerstime", "10", CVAR_NOFLAGS);
-
+	g_knockback_scale = gi.cvar("g_knockback_scale", "1.0", CVAR_NOFLAGS);
 	g_ladder_steps = gi.cvar("g_ladder_steps", "1", CVAR_NOFLAGS);
+	g_lag_compensation = gi.cvar("g_lag_compensation", "1", CVAR_NOFLAGS);
+	g_map_list = gi.cvar("g_map_list", "", CVAR_NOFLAGS);
+	g_map_list_shuffle = gi.cvar("g_map_list_shuffle", "1", CVAR_NOFLAGS);
+	g_map_pool = gi.cvar("g_map_pool", "", CVAR_NOFLAGS);
+	g_match_lock = gi.cvar("g_match_lock", "0", CVAR_SERVERINFO);
+	g_matchstats = gi.cvar("g_matchstats", "0", CVAR_NOFLAGS);
+	g_motd = gi.cvar("g_motd", "", CVAR_NOFLAGS);
+	g_mover_debug = gi.cvar("g_mover_debug", "0", CVAR_NOFLAGS);
+	g_mover_speed_scale = gi.cvar("g_mover_speed_scale", "1.0f", CVAR_NOFLAGS);
+	g_no_armor = gi.cvar("g_no_armor", "0", CVAR_NOFLAGS);
+	g_no_health = gi.cvar("g_no_health", "0", CVAR_NOFLAGS);
+	g_no_items = gi.cvar("g_no_items", "0", CVAR_NOFLAGS);
+	g_no_mines = gi.cvar("g_no_mines", "0", CVAR_NOFLAGS);
+	g_no_nukes = gi.cvar("g_no_nukes", "0", CVAR_NOFLAGS);
+	g_no_powerups = gi.cvar("g_no_powerups", "0", CVAR_NOFLAGS);
+	g_no_spheres = gi.cvar("g_no_spheres", "0", CVAR_NOFLAGS);
+	g_quick_weapon_switch = gi.cvar("g_quick_weapon_switch", "1", CVAR_LATCH);
+	g_select_empty = gi.cvar("g_select_empty", "0", CVAR_ARCHIVE);
+	g_showhelp = gi.cvar("g_showhelp", "1", CVAR_NOFLAGS);
+	g_showmotd = gi.cvar("g_showmotd", "1", CVAR_NOFLAGS);
+	g_start_items = gi.cvar("g_start_items", "", CVAR_LATCH);
+	g_strict_saves = gi.cvar("g_strict_saves", "1", CVAR_NOFLAGS);
+	g_teamplay_allow_team_pick = gi.cvar("g_teamplay_allow_team_pick", "0", CVAR_NOFLAGS);
+	g_teamplay_armor_protect = gi.cvar("g_teamplay_armor_protect", "0", CVAR_NOFLAGS);
+	g_teamplay_auto_balance = gi.cvar("g_teamplay_auto_balance", "1", CVAR_NOFLAGS);
+	g_teamplay_force_balance = gi.cvar("g_teamplay_force_balance", "0", CVAR_NOFLAGS);
+	g_teamplay_item_drop_notice = gi.cvar("g_teamplay_item_drop_notice", "1", CVAR_NOFLAGS);
+	g_teleporter_nofreeze = gi.cvar("g_teleporter_nofreeze", "0", CVAR_NOFLAGS);
+	g_vote_flags = gi.cvar("g_vote_flags", "0", CVAR_NOFLAGS);
+	g_vote_limit = gi.cvar("g_vote_limit", "3", CVAR_NOFLAGS);
+	g_warmup_countdown = gi.cvar("g_warmup_countdown", "10", CVAR_NOFLAGS);
+	g_warmup_ready_percentage = gi.cvar("g_warmup_ready_percentage", "0.51f", CVAR_NOFLAGS);
+	g_weapon_projection = gi.cvar("g_weapon_projection", "0", CVAR_NOFLAGS);
+	g_weapon_respawn_time = gi.cvar("g_weapon_respawn_time", "30", CVAR_NOFLAGS);
 
 	// items
 	InitItems();
@@ -771,7 +709,7 @@ static void InitGame() {
 
 	level.ready_to_exit = false;
 
-	level.match_state = MS_WARMUP_DELAYED;
+	level.match_state = MATCH_WARMUP_DELAYED;
 	level.match_state_timer = 0_sec;
 	level.match_time = level.time;
 
@@ -780,155 +718,16 @@ static void InitGame() {
 	level.locked[TEAM_RED] = false;
 	level.locked[TEAM_BLUE] = false;
 
+	*level.weapon_count = { 0 };
+
+	level.vote = nullptr;
+	level.vote_arg = '\n';
+
 	//Horde_InitFirstWave();
 	Horde_CreateWave();
 }
 
 //===================================================================
-
-#if 0
-bool Match_CheckRules() {
-	int		 t;
-	uint32_t i, j;
-	char	 text[64];
-	edict_t *ent;
-
-	if (level.voting_type != VOTING_NONE && level.voting_time <= level.time) {
-		gi.LocBroadcast_Print(PRINT_CHAT, "Voting timed out and has been cancelled.\n");
-		level.voting_type = VOTING_NONE;
-	}
-
-	if (level.match != MATCH_NONE) {
-		t = (level.match_time - level.time).seconds<int>();
-
-		// no team warnings in match mode
-		level.warnactive = 0;
-
-		if (t <= 0) { // time ended on something
-			switch (level.match) {
-			case MATCH_SETUP:
-				// go back to normal mode
-				if (competition->integer < 3) {
-					level.match = MATCH_NONE;
-					gi.cvar_set("competition", "1");
-					Match_Reset();
-				} else {
-					// reset the time
-					level.match_time = level.time + gtime_t::from_min(matchsetuptime->value);
-				}
-				return false;
-
-			case MATCH_PREGAME:
-				// match started!
-				Match_Start();
-				gi.positioned_sound(world->s.origin, world, CHAN_AUTO | CHAN_RELIABLE, gi.soundindex("misc/tele_up.wav"), 1, ATTN_NONE, 0);
-				return false;
-
-			case MATCH_GAME:
-				// match ended!
-				Match_End();
-				gi.positioned_sound(world->s.origin, world, CHAN_AUTO | CHAN_RELIABLE, gi.soundindex("misc/bigtele.wav"), 1, ATTN_NONE, 0);
-				return false;
-
-			default:
-				break;
-			}
-		}
-
-		if (t == level.lasttime)
-			return false;
-
-		level.lasttime = t;
-
-		switch (level.match) {
-		case MATCH_SETUP:
-			for (j = 0, i = 1; i <= game.maxclients; i++) {
-				ent = g_edicts + i;
-				if (!ent->inuse)
-					continue;
-				if (ClientIsPlaying(ent->client) &&
-					!ent->client->resp.ready)
-					j++;
-			}
-
-			if (competition->integer < 3)
-				G_FmtTo(text, "{:02}:{:02} SETUP: {} not ready", t / 60, t % 60, j);
-			else
-				G_FmtTo(text, "SETUP: {} not ready", j);
-
-			gi.configstring(CONFIG_MATCH_STATE, text);
-			break;
-
-		case MATCH_PREGAME:
-			G_FmtTo(text, "{:02}:{:02} UNTIL START", t / 60, t % 60);
-			gi.configstring(CONFIG_MATCH_STATE, text);
-
-			if (t <= 10 && !level.countdown) {
-				level.countdown = true;
-				gi.positioned_sound(world->s.origin, world, CHAN_AUTO | CHAN_RELIABLE, gi.soundindex("world/10_0.wav"), 1, ATTN_NONE, 0);
-			}
-			break;
-
-		case MATCH_GAME:
-			G_FmtTo(text, "{:02}:{:02} MATCH", t / 60, t % 60);
-			gi.configstring(CONFIG_MATCH_STATE, text);
-			if (t <= 10 && !level.countdown) {
-				level.countdown = true;
-				gi.positioned_sound(world->s.origin, world, CHAN_AUTO | CHAN_RELIABLE, gi.soundindex("world/10_0.wav"), 1, ATTN_NONE, 0);
-			}
-			break;
-
-		default:
-			break;
-		}
-		return false;
-	} else {
-		if (Teams()) {
-			int tally_red_score = 0, tally_blue_score = 0;
-
-			if (level.time == gtime_t::from_sec(level.lasttime))
-				return false;
-			level.lasttime = level.time.seconds<int>();
-			// this is only done in non-match (public) mode
-
-			if (warn_unbalanced->integer) {
-				// count up the team totals
-				for (i = 1; i <= game.maxclients; i++) {
-					ent = g_edicts + i;
-					if (!ent->inuse)
-						continue;
-					if (ent->client->resp.team == TEAM_RED)
-						tally_red_score++;
-					else if (ent->client->resp.team == TEAM_BLUE)
-						tally_blue_score++;
-				}
-
-				if (tally_red_score - tally_blue_score >= 2 && tally_blue_score >= 2) {
-					if (level.warnactive != TEAM_RED) {
-						level.warnactive = TEAM_RED;
-						gi.configstring(CONFIG_CTF_TEAMINFO, "WARNING: Red has too many players");
-					}
-				} else if (tally_blue_score - tally_red_score >= 2 && tally_red_score >= 2) {
-					if (level.warnactive != TEAM_BLUE) {
-						level.warnactive = TEAM_BLUE;
-						gi.configstring(CONFIG_CTF_TEAMINFO, "WARNING: Blue has too many players");
-					}
-				} else
-					level.warnactive = 0;
-			} else
-				level.warnactive = 0;
-		}
-	}
-
-	if (capturelimit->integer &&
-		(level.team_scores[TEAM_RED] >= capturelimit->integer ||
-			level.team_scores[TEAM_BLUE] >= capturelimit->integer)) {
-		gi.LocBroadcast_Print(PRINT_HIGH, "$g_capturelimit_hit");
-		return true;
-	}
-	return false;
-}
-#endif
 
 #if 0
 static void ClearBodyQue(void) {
@@ -943,79 +742,6 @@ static void ClearBodyQue(void) {
 	}
 }
 #endif
-/*
-static void G_WarmupEnd(void) {
-	gclient_t *client;
-	edict_t *ent;
-	int i, t;
-
-	// remove corpses
-	//ClearBodyQue();
-
-	// return flags
-	CTF_ResetFlags();
-
-	memset(level.team_scores, 0, sizeof(level.team_scores));
-
-	level.match_state_timer = 0_ms;
-	level.match_state = MS_NONE;
-	level.start_time = level.time;
-
-	Match_Reset();
-	
-	// respawn items, remove projectiles, etc.
-	ent = g_edicts + MAX_CLIENTS;
-	for (i = MAX_CLIENTS; i < MAX_ITEMS; i++, ent++) {
-
-		if (!ent->inuse)
-			continue;
-
-		if (ent->tag == TAG_DONTSPAWN) {
-			ent->nextthink = 0;
-			continue;
-		}
-
-		if (ent->s.eType == ET_ITEM && ent->item) {
-
-			// already processed in Team_ResetFlags()
-			if (ent->item->id == IT_FLAG_RED || ent->item->id == IT_FLAG_BLUE)
-				continue;
-
-			// remove dropped items
-			if (ent->spawnflags.has(SPAWNFLAG_ITEM_DROPPED)) {
-				ent->nextthink = level.time;
-				continue;
-			}
-
-			// respawn picked up items
-			t = SpawnTime(ent, true);
-			if (t != 0) {
-				ent->svflags &= ~SVF_NOCLIENT;
-				ent->solid = SOLID_TRIGGER;
-				gi.linkentity(ent);
-				ent->s.event = EV_ITEM_RESPAWN;
-			} else {
-				t = FRAMETIME;
-				if (ent->activator) {
-					ent->activator = NULL;
-					ent->think = SpawnItem;
-				}
-			}
-			if (ent->random) {
-				t += (crandom() * ent->random) * 1000;
-				if (t < FRAMETIME) {
-					t = FRAMETIME;
-				}
-			}
-			ent->nextthink = level.time + t;
-
-		} else if (ent->svflags == SVF_PROJECTILE) {
-			// remove all launched missiles
-			G_FreeEdict(ent);
-		}
-	}
-}
-*/
 
 /*
 ============
@@ -1029,47 +755,33 @@ static void Entities_Reset() {
 	size_t	i;
 
 	// reset the players
-	for (i = 1; i <= game.maxclients; i++) {
-		ent = g_edicts + i;
+	for (auto ec : active_clients()) {
+		ec->client->resp.ctf_state = 0;
+		ec->client->resp.ghost = nullptr;
+		ec->client->resp.score = 0;
 
-		if (!ent->inuse)
-			continue;
-
-		if (!ent->client)
-			continue;
-
-		if (!ent->client->pers.connected)
-			continue;
-
-		//G_SetPlayerScore(ent->client, 0);
-		ent->client->resp.ctf_state = 0;
-		ent->client->resp.ghost = nullptr;
-		ent->client->resp.score = 0;
-
-		//gi.LocCenter_Print(ent, "MATCH HAS STARTED!");
-
-		if (ClientIsPlaying(ent->client)) {
+		if (ClientIsPlaying(ec->client)) {
 			// make up a ghost code
-			Match_Ghost_Assign(ent);
-			Weapon_Grapple_DoReset(ent->client);
-			ent->svflags = SVF_NOCLIENT;
-			ent->flags &= ~FL_GODMODE;
+			Match_Ghost_Assign(ec);
+			Weapon_Grapple_DoReset(ec->client);
+			ec->svflags = SVF_NOCLIENT;
+			ec->flags &= ~FL_GODMODE;
 
-			ent->client->respawn_time = level.time;	// +random_time(1_sec, 4_sec);
-			ent->client->ps.pmove.pm_type = PM_DEAD;
-			ent->client->anim_priority = ANIM_DEATH;
-			ent->s.frame = FRAME_death308 - 1;
-			ent->client->anim_end = FRAME_death308;
-			ent->deadflag = true;
-			ent->movetype = MOVETYPE_NOCLIP;
-			ent->client->ps.gunindex = 0;
-			ent->client->ps.gunskin = 0;
-			gi.linkentity(ent);
+			ec->client->respawn_time = level.time;	// +random_time(1_sec, 4_sec);
+			ec->client->ps.pmove.pm_type = PM_DEAD;
+			ec->client->anim_priority = ANIM_DEATH;
+			ec->s.frame = FRAME_death308 - 1;
+			ec->client->anim_end = FRAME_death308;
+			ec->deadflag = true;
+			ec->movetype = MOVETYPE_NOCLIP;
+			ec->client->ps.gunindex = 0;
+			ec->client->ps.gunskin = 0;
+			gi.linkentity(ec);
 		}
 	}
 
 	CalculateRanks();
-
+	
 	// reset the level items
 	Tech_Reset();
 	CTF_ResetFlags();
@@ -1108,20 +820,52 @@ static void Entities_Reset() {
 		}
 	}
 
+	// reset item spawns and gibs/corpses, remove dropped items and projectiles
 	for (ent = g_edicts + 1, i = 1; i < globals.num_edicts; i++, ent++) {
-		if (ent->inuse && ent->item) {	//!ent->client) {
-			if (ent->solid == SOLID_NOT && /*ent->think == RespawnItem && */ent->nextthink >= level.time) {
-				// powerups don't spawn in for a while
-				if (g_dm_powerups_style->integer && (ent->item->flags & IF_POWERUP)) {
-					ent->svflags |= SVF_NOCLIENT;
-					ent->solid = SOLID_NOT;
+		if (!ent->inuse)
+			continue;
 
-					ent->nextthink = level.time + gtime_t::from_sec(irandom(30, 60));
-					ent->think = RespawnItem;
+		if (Q_strcasecmp(ent->classname, "bodyque") == 0 || Q_strcasecmp(ent->classname, "gib") == 0) {
+			ent->svflags = SVF_NOCLIENT;
+			ent->takedamage = false;
+			ent->solid = SOLID_NOT;
+			gi.unlinkentity(ent);
+		} else if ((ent->svflags & SVF_PROJECTILE) || (ent->clipmask & CONTENTS_PROJECTILECLIP)) {
+			G_FreeEdict(ent);
+		} else if (ent->item) {
+			// already processed in CTF_ResetFlags()
+			if (ent->item->id == IT_FLAG_RED || ent->item->id == IT_FLAG_BLUE)
+				continue;
+
+			if (ent->spawnflags.has(SPAWNFLAG_ITEM_DROPPED | SPAWNFLAG_ITEM_DROPPED_PLAYER)) {
+				//G_FreeEdict(ent);
+				ent->nextthink = level.time;
+			} else {
+				// powerups don't spawn in for a while
+				if (ent->item->flags & IF_POWERUP) {
+					if (g_quadhog->integer && ent->item->id == IT_POWERUP_QUAD) {
+						G_FreeEdict(ent);
+						QuadHog_SetupSpawn(5_sec);
+					} else if (g_dm_powerups_style->integer) {
+						ent->svflags |= SVF_NOCLIENT;
+						ent->solid = SOLID_NOT;
+
+						ent->nextthink = level.time + gtime_t::from_sec(irandom(30, 60));
+						ent->think = RespawnItem;
+					}
 					continue;
 				} else {
-					ent->nextthink = 0_ms;
-					RespawnItem(ent);
+					if (ent->svflags & (SVF_NOCLIENT | SVF_RESPAWNING) || ent->solid == SOLID_NOT) {
+						gtime_t t = 0_sec;
+						if (ent->random) {
+							t += gtime_t::from_ms((crandom() * ent->random) * 1000);
+							if (t < FRAME_TIME_MS) {
+								t = FRAME_TIME_MS;
+							}
+						}
+						ent->nextthink = level.time + t;
+						//RespawnItem(ent);
+					}
 				}
 			}
 		}
@@ -1145,18 +889,24 @@ void Match_Start() {
 	const char *s = G_TimeString(timelimit->value ? timelimit->value : 0 * 1000);
 	gi.configstring(CONFIG_MATCH_STATE, s);
 
-	level.match_state = MS_MATCH_IN_PROGRESS;
+	level.match_state = MATCH_IN_PROGRESS;
 	level.match_state_timer = level.time;
+	level.warmup_requisite = WARMUP_REQ_NONE;
+	level.warmup_notice_time = 0_sec;
 
 	level.team_scores[TEAM_RED] = level.team_scores[TEAM_BLUE] = 0;
 
 	memset(level.ghosts, 0, sizeof(level.ghosts));
 
 	Entities_Reset();
+	UnReadyAll();
 
 	gi.LocBroadcast_Print(PRINT_TTS, "The match has started!\n");
 	gi.LocBroadcast_Print(PRINT_CENTER, "FIGHT!");
 	gi.positioned_sound(world->s.origin, world, CHAN_AUTO | CHAN_RELIABLE, gi.soundindex("misc/tele_up.wav"), 1, ATTN_NONE, 0);
+
+	if (g_dm_exec_level_cfg->integer)
+		gi.AddCommandString(G_Fmt("exec {}\n", level.mapname).data());
 }
 
 /*
@@ -1165,17 +915,22 @@ Match_Reset
 ============
 */
 void Match_Reset() {
-
 	if (!g_dm_do_warmup->integer) {
 		Match_Start();
 		return;
 	}
 
 	Entities_Reset();
+	UnReadyAll();
 
 	level.match_time = level.time;
-	level.match_state = MS_WARMUP_DEFAULT;
+	level.match_state = MATCH_WARMUP_DEFAULT;
+	level.warmup_requisite = WARMUP_REQ_NONE;
+	level.warmup_notice_time = 0_sec;
 	level.match_state_timer = 0_sec;
+	level.intermission_queued = 0_sec;
+	level.intermission_exit = false;
+	level.intermission_time = 0_sec;
 
 	CalculateRanks();
 
@@ -1191,43 +946,39 @@ next queued player in the game and restart
 =============
 */
 static void Duel_AddPlayer(void) {
-	gclient_t	*client, *next_in_line;
+	gclient_t *next_in_line = nullptr;
 
 	if (level.num_playing_clients >= 2)
 		return;
 
 	// never change during intermission
-	if (level.match_state == MS_MATCH_ENDED || level.intermission_time || level.intermission_queued)
+	if (level.match_state == MATCH_ENDED || level.intermission_time || level.intermission_queued)
 		return;
 
-	next_in_line = nullptr;
-
-	for (size_t i = 0; i < game.maxclients; i++) {
-		client = &game.clients[i];
-		if (!client->pers.connected)
+	for (auto ec : active_clients()) {
+		if (ec->client->resp.team != TEAM_SPECTATOR)
 			continue;
 
-		if (client->resp.team != TEAM_SPECTATOR)
+		if (!ec->client->resp.duel_queued)
 			continue;
 
-		if (!client->resp.duel_queued)
+		if (ec->client->resp.spectator_client < 0)
 			continue;
 
-		if (client->resp.spectator_client < 0)
-			continue;
-
-		if (!next_in_line || client->resp.spectator_time > next_in_line->resp.spectator_time)
-			next_in_line = client;
+		if (!next_in_line || ec->client->resp.spectator_time > next_in_line->resp.spectator_time)
+			next_in_line = ec->client;
 	}
 
 	if (!next_in_line)
 		return;
 
 	level.match_state_timer = 0_sec;
-	level.match_state = MS_WARMUP_DEFAULT;
+	level.match_state = MATCH_WARMUP_DEFAULT;
+	level.warmup_requisite = WARMUP_REQ_NONE;
+	level.warmup_notice_time = 0_sec;
 
 	// set them to free-for-all team
-	SetTeam(&g_edicts[next_in_line - game.clients], TEAM_FREE, false, false);
+	SetTeam(&g_edicts[next_in_line - game.clients], TEAM_FREE, false, false, false);
 }
 
 /*
@@ -1251,7 +1002,7 @@ static void Duel_RemoveLoser(void) {
 	gi.Com_PrintFmt( "Duel: Moving the loser, {}, to spectator.\n", game.clients[client_num].resp.netname);
 
 	// make them a queued player
-	SetTeam(&g_edicts[client_num+1], TEAM_NONE, false, true);
+	SetTeam(&g_edicts[client_num+1], TEAM_NONE, false, true, false);
 }
 
 /*
@@ -1284,17 +1035,10 @@ ReadyAll
 =============
 */
 void ReadyAll() {
-	uint8_t i;
-	edict_t *e;
-
-	for (i = 1; i <= game.maxclients; i++) {
-		e = g_edicts + i;
-		if (!e->inuse)
+	for (auto ec : active_clients()) {
+		if (!ClientIsPlaying(ec->client))
 			continue;
-		if (!e->client)
-			continue;
-
-		e->client->resp.ready = true;
+		ec->client->resp.ready = true;
 	}
 }
 
@@ -1304,17 +1048,10 @@ UnReadyAll
 =============
 */
 void UnReadyAll() {
-	uint8_t i;
-	edict_t *e;
-
-	for (i = 1; i <= game.maxclients; i++) {
-		e = g_edicts + i;
-		if (!e->inuse)
+	for (auto ec : active_clients()) {
+		if (!ClientIsPlaying(ec->client))
 			continue;
-		if (!e->client)
-			continue;
-
-		e->client->resp.ready = false;
+		ec->client->resp.ready = false;
 	}
 }
 
@@ -1324,37 +1061,35 @@ CheckReady
 =============
 */
 static bool CheckReady() {
-	uint8_t i, count_total, count_ready;
-	edict_t *e;
-
 	if (!g_dm_do_readyup->integer)
 		return true;
 
-	count_total = count_ready = 0;
-	for (i = 1; i <= game.maxclients; i++) {
-		e = g_edicts + i;
-		if (!e->inuse)
-			continue;
-		if (!e->client)
-			continue;
-		if (!ClientIsPlaying(e->client))
-			continue;
-		if (e->svflags & SVF_BOT)
-			continue;
+	uint8_t count_ready, count_humans, count_bots;
 
-		count_total++;
+	count_ready = count_humans = count_bots = 0;
+	for (auto ec : active_clients()) {
+		if (!ClientIsPlaying(ec->client))
+			continue;
+		if (ec->svflags & SVF_BOT || ec->client->resp.is_a_bot) {
+			count_bots++;
+			continue;
+		}
 
-		if (e->client->resp.ready)
+		if (ec->client->resp.ready)
 			count_ready++;
+		count_humans++;
 	}
 
-	if (!count_ready || !count_total)
+	if ((count_humans + count_bots) < minplayers->integer)
 		return false;
 
-	if (duel->integer && count_ready == 2 && count_total == 2)
+	if (!count_humans && count_bots)
 		return true;
 
-	if (((float)count_ready / (float)count_total) * 100 >= g_warmup_ready_percentage->value * 100)
+	if (!count_ready || !count_humans)
+		return false;
+
+	if (((float)count_ready / (float)count_humans) * 100 >= g_warmup_ready_percentage->value * 100)
 		return true;
 	return false;
 }
@@ -1365,35 +1100,35 @@ Round_End
 =============
 */
 static void Round_End() {
-	level.round_state = MS_ROUND_NONE;
+	level.round_state = ROUND_NONE;
 	level.round_state_timer = level.time + 1_sec;
 }
 
 /*
 =============
-CheckRoundState
+CheckDMRoundState
 =============
 */
-static void CheckRoundState(void) {
+static void CheckDMRoundState(void) {
 	if (!clanarena->integer)
 		return;
 
-	if (level.match_state != MS_MATCH_IN_PROGRESS)
+	if (level.match_state != MATCH_IN_PROGRESS)
 		return;
 
 	// initiate round
-	if (level.round_state == MS_ROUND_NONE) {
+	if (level.round_state == ROUND_NONE) {
 		if (level.round_state_timer > level.time)
 			return;
-		level.round_state = MS_ROUND_COUNTDOWN;
+		level.round_state = ROUND_COUNTDOWN;
 		level.round_state_timer = level.time + 10_sec;
 		return;
 	}
 
 	// start round
-	if (level.round_state == MS_ROUND_COUNTDOWN) {
+	if (level.round_state == ROUND_COUNTDOWN) {
 		if (level.match_state_timer > level.round_state_timer) {
-			level.round_state = MS_ROUND_IN_PROGRESS;
+			level.round_state = ROUND_IN_PROGRESS;
 			level.round_state_timer = 0_sec;
 			level.round_number++;
 		} else {
@@ -1402,7 +1137,7 @@ static void CheckRoundState(void) {
 	}
 
 	// end round
-	if (level.round_state == MS_ROUND_IN_PROGRESS) {
+	if (level.round_state == ROUND_IN_PROGRESS) {
 		if (!level.num_living_red && level.num_eliminated_red && level.num_living_blue) {
 			G_AdjustTeamScore(TEAM_BLUE, 1);
 			gi.LocBroadcast_Print(PRINT_CENTER, "BLUE TEAM wins the round!\n");
@@ -1420,22 +1155,21 @@ static void CheckRoundState(void) {
 
 /*
 =============
-CheckCountdown
+CheckDMCountdown
 =============
 */
-static void CheckCountdown(void) {
-	if (level.match_state != MS_MATCH_COUNTDOWN) {
-		if (level.countdown_check) {
+static void CheckDMCountdown(void) {
+	if (level.match_state != MATCH_COUNTDOWN) {
+		if (level.countdown_check)
 			level.countdown_check = 0_sec;
-		}
 		return;
 	}
 
 	int t = (level.match_state_timer - level.time).seconds<int>() + 1;
 
 	if (!level.countdown_check || level.countdown_check.seconds<int>() > t) {
-		if (t == 30 || t == 20 || t <= 10) {
-			gi.positioned_sound(world->s.origin, world, CHAN_AUTO | CHAN_RELIABLE, gi.soundindex(G_Fmt("world/{}.wav", t, t >= 20 ? "sec" : "").data()), 1, ATTN_NONE, 0);
+		if (t == 40 || t == 30 || t == 20 || t <= 10) {
+			gi.positioned_sound(world->s.origin, world, CHAN_AUTO | CHAN_RELIABLE, gi.soundindex(G_Fmt("world/{}{}.wav", t, t >= 20 ? "sec" : "").data()), 1, ATTN_NONE, 0);
 		}
 		level.countdown_check = gtime_t::from_sec(t);
 	}
@@ -1443,16 +1177,36 @@ static void CheckCountdown(void) {
 
 /*
 =============
-CheckWarmupState
+CheckDMMatchEndWarning
+=============
+*/
+static void CheckDMMatchEndWarning(void) {
+	if (level.match_state != MATCH_IN_PROGRESS || !timelimit->integer) {
+		if (level.matchendwarn_check)
+			level.matchendwarn_check = 0_sec;
+		return;
+	}
+
+	int t = (level.match_time + gtime_t::from_min(timelimit->value) - level.time).seconds<int>();	// +1;
+
+	if (!level.matchendwarn_check || level.matchendwarn_check.seconds<int>() > t) {
+		if (t && (t == 30 || t == 20 || t <= 10)) {
+			gi.positioned_sound(world->s.origin, world, CHAN_AUTO | CHAN_RELIABLE, gi.soundindex(G_Fmt("world/{}{}.wav", t, t >= 20 ? "sec" : "").data()), 1, ATTN_NONE, 0);
+			if (t >= 10)
+				gi.LocBroadcast_Print(PRINT_HIGH, "{} second warning!\n", t);
+		}
+		level.matchendwarn_check = gtime_t::from_sec(t);
+	}
+}
+
+/*
+=============
+CheckDMWarmupState
 
 Once a frame, check for changes in match state during warmup
 =============
 */
-static void CheckWarmupState(void) {
-
-	if (!deathmatch->integer)
-		return;
-
+static void CheckDMWarmupState(void) {
 	if (!g_dm_do_warmup->integer) {
 		Match_Start();
 		return;
@@ -1461,158 +1215,104 @@ static void CheckWarmupState(void) {
 	// check because we run 3 game frames before calling Connect and/or ClientBegin
 	// for clients on a map_restart
 	if (!level.num_playing_clients) {
-		if (level.match_state != MS_WARMUP_DELAYED) {
-			level.match_state = MS_WARMUP_DELAYED;
+		if (level.match_state != MATCH_WARMUP_DELAYED) {
+			level.match_state = MATCH_WARMUP_DELAYED;
 			level.match_state_timer = level.time + 5_sec;
+			level.warmup_requisite = WARMUP_REQ_NONE;
+			level.warmup_notice_time = 0_sec;
 		}
 		return;
 	}
 
-	if (level.match_state == MS_WARMUP_DELAYED && level.match_state_timer > level.time)
+	if (level.match_state == MATCH_WARMUP_DELAYED && level.match_state_timer > level.time)
 		return;
 
-	if (duel->integer) {
+	bool not_enough = false;
+	bool teams_imba = false;
 
-		// pull in a queued spectator if needed
-		if (level.num_playing_clients < 2)
-			Duel_AddPlayer();
+	// duel: pull in a queued spectator if needed
+	if (duel->integer && level.num_playing_clients < 2)
+		Duel_AddPlayer();
 
-		// if we don't have two players, go back to "waiting for players"
-		if (level.num_playing_clients != 2) {
-			if (level.match_state <= MS_MATCH_COUNTDOWN) {
-				if (level.match_state == MS_WARMUP_READYUP)
-					UnReadyAll();
-				else if (level.match_state == MS_MATCH_COUNTDOWN)
-					gi.LocBroadcast_Print(PRINT_CENTER, "Countdown cancelled:\nnot enough players.\n");
-
-				if (level.match_state != MS_WARMUP_DEFAULT) {
-					level.match_state_timer = 0_sec;
-					level.match_state = MS_WARMUP_DEFAULT;
-				}
-				//G_LogPrintf("Warmup:\n");
-			}
-			return;
-		}
-
-		if (level.match_state > MS_MATCH_COUNTDOWN)
-			return;
-
-		// if the warmup is changed at the console, restart it
-		if (g_warmup_countdown->modified_count != level.warmup_modification_count) {
-			level.warmup_modification_count = g_warmup_countdown->modified_count;
-			level.match_state_timer = 0_sec;
-			level.match_state = MS_WARMUP_DEFAULT;
-		}
-
-		// if all players have arrived, let them ready up
-		if (level.match_state == MS_WARMUP_DEFAULT) {
-			level.match_state = MS_WARMUP_READYUP;
-			level.match_state_timer = 0_ms;
-			return;
-		}
-
-		// if both players are ready, let's start
-		if (level.match_state == MS_WARMUP_READYUP) {
-			if (CheckReady()) {
-				if (g_warmup_countdown->integer > 0) {
-					level.match_state_timer = level.time + gtime_t::from_sec(g_warmup_countdown->integer);
-					level.match_state = MS_MATCH_COUNTDOWN;
-					//gi.positioned_sound(world->s.origin, world, CHAN_AUTO | CHAN_RELIABLE, gi.soundindex("world/10_0.wav"), 1, ATTN_NONE, 0);
-
-					// announce it
-					if (&game.clients[level.sorted_clients[0]] && &game.clients[level.sorted_clients[1]])
-						gi.LocBroadcast_Print(PRINT_CENTER, "{} vs {}\nBegins in...", game.clients[level.sorted_clients[0]].resp.netname, game.clients[level.sorted_clients[1]].resp.netname);
-				} else {
-					level.match_state_timer = 0_ms;
-					level.match_state = MS_MATCH_IN_PROGRESS;
-				}
-			}
-			return;
-		}
-
-		// if the warmup time has counted down, start the match
-		if (level.match_state == MS_MATCH_COUNTDOWN && level.time.seconds() > level.match_state_timer.seconds()) {
-			Match_Start();
-			return;
-		}
-	} else {
-		bool not_enough = false;
-
-		if (Teams()) {
-			int counts[TEAM_NUM_TEAMS];
-			counts[TEAM_BLUE] = TeamConnectedCount(-1, TEAM_BLUE);
-			counts[TEAM_RED] = TeamConnectedCount(-1, TEAM_RED);
-
-			if (counts[TEAM_RED] < 1 || counts[TEAM_BLUE] < 1 || level.num_playing_clients < minplayers->integer) {
-				not_enough = true;
-			}
-		} else if (level.num_playing_clients < minplayers->integer) {
+	if (Teams()) {
+		if (g_teamplay_force_balance->integer && abs(level.num_playing_red - level.num_playing_blue) > 1) {
+			teams_imba = true;
+		} else if (level.num_playing_red < 1 || level.num_playing_blue < 1 || level.num_playing_clients < minplayers->integer) {
 			not_enough = true;
 		}
+	} else if (duel->integer) {
+		if (level.num_playing_clients != 2)
+			not_enough = true;
+	} else if (minplayers->integer && level.num_playing_clients < minplayers->integer) {
+		not_enough = true;
+	}
 
-		if (not_enough) {
-			if (level.match_state <= MS_MATCH_COUNTDOWN) {
-				if (level.match_state == MS_WARMUP_READYUP)
-					UnReadyAll();
-				else if (level.match_state == MS_MATCH_COUNTDOWN)
-					gi.LocBroadcast_Print(PRINT_CENTER, "Countdown cancelled:\nnot enough players.\n");
+	if (not_enough || teams_imba) {
+		if (level.match_state <= MATCH_COUNTDOWN) {
+			if (level.match_state == MATCH_WARMUP_READYUP)
+				UnReadyAll();
+			else if (level.match_state == MATCH_COUNTDOWN)
+				gi.LocBroadcast_Print(PRINT_CENTER, "Countdown cancelled: {}\n", teams_imba ? "teams are imbalanced" : "not enough players.");
 
-				if (level.match_state != MS_WARMUP_DEFAULT) {
-					level.match_state = MS_WARMUP_DEFAULT;
-					level.match_state_timer = 0_sec;
-					//G_LogPrintf("Warmup:\n");
-				}
+			if (level.match_state != MATCH_WARMUP_DEFAULT) {
+				level.match_state = MATCH_WARMUP_DEFAULT;
+				level.match_state_timer = 0_sec;
+				level.warmup_requisite = teams_imba ? WARMUP_REQ_BALANCE : WARMUP_REQ_MORE_PLAYERS;
+				level.warmup_notice_time = level.time;
+				//G_LogPrintf("Warmup:\n");
 			}
-			return; // still waiting for players
 		}
+		return; // still waiting for players
+	}
 
-		if (level.match_state == MS_WARMUP_DEFAULT) {
-			level.match_state = MS_WARMUP_READYUP;
-			level.match_state_timer = 0_sec;
-			//G_LogPrintf("Warmup:\n");
-			return;
-		}
+	if (level.match_state == MATCH_WARMUP_DEFAULT) {
+		level.match_state = MATCH_WARMUP_READYUP;
+		level.match_state_timer = 0_sec;
+		level.warmup_requisite = WARMUP_REQ_READYUP;
+		level.warmup_notice_time = level.time;
+		//G_LogPrintf("Warmup:\n");
+		return;
+	}
 
-		if (level.match_state > MS_MATCH_COUNTDOWN)
-			return;
+	if (level.match_state > MATCH_COUNTDOWN)
+		return;
 
-		// if the warmup is changed at the console, restart it
-		if (g_warmup_countdown->modified_count != level.warmup_modification_count) {
-			level.warmup_modification_count = g_warmup_countdown->modified_count;
-			level.match_state_timer = 0_sec;
-			level.match_state = MS_WARMUP_DEFAULT;
-		}
+	// if the warmup is changed at the console, restart it
+	if (g_warmup_countdown->modified_count != level.warmup_modification_count) {
+		level.warmup_modification_count = g_warmup_countdown->modified_count;
+		level.match_state_timer = 0_sec;
+		level.match_state = MATCH_WARMUP_DEFAULT;
+		level.warmup_requisite = WARMUP_REQ_NONE;
+		level.warmup_notice_time = 0_sec;
+		return;
+	}
 
-		// if enough players have arrived, let them ready up
-		if (level.match_state == MS_WARMUP_DEFAULT) {
-			level.match_state = MS_WARMUP_READYUP;
-			level.match_state_timer = 0_ms;
-			return;
-		}
+	// if sufficient number of players are ready, start countdown
+	if (level.match_state == MATCH_WARMUP_READYUP) {
+		if (CheckReady()) {
+			level.match_state = MATCH_COUNTDOWN;
+			level.warmup_requisite = WARMUP_REQ_NONE;
+			level.warmup_notice_time = 0_sec;
+			if (g_warmup_countdown->integer > 0) {
+				level.match_state_timer = level.time + gtime_t::from_sec(g_warmup_countdown->integer);
+				//gi.positioned_sound(world->s.origin, world, CHAN_AUTO | CHAN_RELIABLE, gi.soundindex("world/10_0.wav"), 1, ATTN_NONE, 0);
 
-		// if enough players are ready, start countdown
-		if (level.match_state == MS_WARMUP_READYUP) {
-			if (CheckReady()) {
-				if (g_warmup_countdown->integer > 0) {
-					level.match_state_timer = level.time + gtime_t::from_sec(g_warmup_countdown->integer);
-					level.match_state = MS_MATCH_COUNTDOWN;
-					//gi.positioned_sound(world->s.origin, world, CHAN_AUTO | CHAN_RELIABLE, gi.soundindex("world/10_0.wav"), 1, ATTN_NONE, 0);
-
-					// announce it
+				// announce it
+				if (duel->integer && &game.clients[level.sorted_clients[0]] && &game.clients[level.sorted_clients[1]])
+					gi.LocBroadcast_Print(PRINT_CENTER, "{} vs {}\nBegins in...", game.clients[level.sorted_clients[0]].resp.netname, game.clients[level.sorted_clients[1]].resp.netname);
+				else
 					gi.LocBroadcast_Print(PRINT_CENTER, "{}\nBegins in...", level.gametype_name);
-				} else {
-					level.match_state_timer = 0_ms;
-					level.match_state = MS_MATCH_COUNTDOWN;
-				}
+			} else {
+				level.match_state_timer = 0_ms;
 			}
-			return;
 		}
+		return;
+	}
 
-		// if the warmup time has counted down, start the match
-		if (level.match_state == MS_MATCH_COUNTDOWN && level.time.seconds() > level.match_state_timer.seconds()) {
-			Match_Start();
-			return;
-		}
+	// if the warmup time has counted down, start the match
+	if (level.match_state == MATCH_COUNTDOWN && level.time.seconds() > level.match_state_timer.seconds()) {
+		Match_Start();
+		return;
 	}
 }
 
@@ -1622,12 +1322,13 @@ CheckVote
 ==================
 */
 static void CheckVote(void) {
+	if (!deathmatch->integer)
+		return;
 
 	// vote has passed, execute
 	if (level.vote_execute_time) {
 		if (level.time > level.vote_execute_time) {
-			Cmd_Vote_Passed();
-			//gi.AddCommandString(G_Fmt("{} {}\n", level.vote->name, level.vote_arg).data());
+			Vote_Passed();
 		}
 		return;
 	}
@@ -1679,7 +1380,20 @@ void FindIntermissionPoint(void) {
 		SelectSpawnPoint(NULL, level.intermission_origin, level.intermission_angle, false, is_landmark);
 	} else {
 		level.intermission_origin = ent->s.origin;
-		level.intermission_angle = ent->s.angles;
+
+		// ugly hax!
+		if (!Q_strncasecmp(level.mapname, "campgrounds", 11)) {
+			gvec3_t v = { -320, -96, 503 };
+			if (ent->s.origin == v)
+				level.intermission_angle[PITCH] = -30;
+		} else if (!Q_strncasecmp(level.mapname, "rdm10", 5)) {
+			gvec3_t v = { -1256, -1672, -136 };
+			if (ent->s.origin == v)
+				level.intermission_angle = { 15, 135, 0 };
+		} else {
+			level.intermission_angle = ent->s.angles;
+		}
+
 		// if it has a target, look towards it
 		if (ent->target) {
 			target = G_PickTarget(ent->target);
@@ -1694,8 +1408,52 @@ void FindIntermissionPoint(void) {
 }
 
 /*
+==================
+SetIntermissionPoint
+==================
+*/
+void SetIntermissionPoint(void) {
+	if (level.level_intermission_set)
+		return;
+
+	//FindIntermissionPoint();
+
+	edict_t *ent;
+	// find an intermission spot
+	ent = G_FindByString<&edict_t::classname>(nullptr, "info_player_intermission");
+	if (!ent) { // the map creator forgot to put in an intermission point...
+		ent = G_FindByString<&edict_t::classname>(nullptr, "info_player_start");
+		if (!ent)
+			ent = G_FindByString<&edict_t::classname>(nullptr, "info_player_deathmatch");
+	} else { // choose one of four spots
+		int32_t i = irandom(4);
+		while (i--) {
+			ent = G_FindByString<&edict_t::classname>(ent, "info_player_intermission");
+			if (!ent) // wrap around the list
+				ent = G_FindByString<&edict_t::classname>(ent, "info_player_intermission");
+		}
+	}
+
+	level.intermission_origin = ent->s.origin;
+	level.spawn_spots[SPAWN_SPOT_INTERMISSION] = ent;
+	
+	// ugly hax!
+	if (!Q_strncasecmp(level.mapname, "campgrounds", 11)) {
+		gvec3_t v = { -320, -96, 503 };
+		if (ent->s.origin == v)
+			level.intermission_angle[PITCH] = -30;
+	} else if (!Q_strncasecmp(level.mapname, "rdm10", 5)) {
+		gvec3_t v = { -1256, -1672, -136 };
+		if (ent->s.origin == v)
+			level.intermission_angle = { 15, 135, 0 };
+	} else {
+		level.intermission_angle = ent->s.angles;
+	}
+}
+
+/*
 =================
-CheckIntermissionExit
+CheckDMIntermissionExit
 
 The level will stay at the intermission for a minimum of 5 seconds
 If all players wish to continue, the level will then exit.
@@ -1706,39 +1464,22 @@ Adapted from Quake III
 =================
 */
 
-static void CheckIntermissionExit(void) {
+static void CheckDMIntermissionExit(void) {
 	int			ready, not_ready;
-	gclient_t	*cl;
-	edict_t		*ent;
 
 	// see which players are ready
 	ready = not_ready = 0;
-	cl = game.clients;
-	ent = g_edicts + 1;
-	for (size_t i = 0; i < game.maxclients; i++, cl++, ent++) {
-		if (!ent->inuse)
-			continue;
-		if (!cl)
-			continue;
-		if (!cl->pers.connected)
-			continue;
-		if (!ClientIsPlaying(cl))
+	for (auto ec : active_clients()) {
+		if (!ClientIsPlaying(ec->client))
 			continue;
 
-		if (ent->client->resp.is_a_bot) {
-			cl->ready_to_exit = true;
-			//gi.Client_Print(&g_edicts[1], PRINT_HIGH, "THERE BE A BOT\n");
-			//continue;
-		}
+		if (ec->client->resp.is_a_bot)
+			ec->client->ready_to_exit = true;
 
-		if (cl->ready_to_exit) {
+		if (ec->client->ready_to_exit)
 			ready++;
-			//gi.Client_Print(&g_edicts[1], PRINT_HIGH, "READY\n");
-			//continue;
-		} else {
-			//gi.Client_Print(&g_edicts[1], PRINT_HIGH, "NOT READY\n");
+		else
 			not_ready++;
-		}
 	}
 
 	// vote in progress
@@ -1760,8 +1501,6 @@ static void CheckIntermissionExit(void) {
 
 	// if everyone wants to go, go now
 	if (!not_ready) {
-		//gi.Client_Print(&g_edicts[1], PRINT_HIGH, "EXIT THE DAMNED LEVEL\n");
-		//Match_End();
 		ExitLevel();
 		return;
 	}
@@ -1777,7 +1516,6 @@ static void CheckIntermissionExit(void) {
 	if (level.time < level.exit_time)
 		return;
 
-	//Match_End();
 	ExitLevel();
 }
 
@@ -1878,18 +1616,21 @@ Adapted from Quake III
 void CalculateRanks() {
 	gclient_t	*cl;
 	size_t		i;
-
+	
 	if (level.restarted)
 		return;
 
 	level.num_connected_clients = 0;
 	level.num_nonspectator_clients = 0;
 	level.num_playing_clients = 0;
-	level.num_human_clients = 0;
+	level.num_playing_human_clients = 0;
 	level.num_eliminated_red = 0;
 	level.num_eliminated_blue = 0;
 	level.num_living_red = 0;
 	level.num_living_blue = 0;
+	level.num_playing_red = 0;
+	level.num_playing_blue = 0;
+
 	for (i = 0; i < game.maxclients; i++) {
 		cl = &game.clients[i];
 		if (cl->pers.connected) {
@@ -1902,22 +1643,22 @@ void CalculateRanks() {
 				// decide if this should be auto-followed
 				if (cl->pers.connected) {
 					level.num_playing_clients++;
-					if (!(g_edicts[i].svflags & SVF_BOT)) {
-						level.num_human_clients++;
-					}
-					if (level.follow1 == -1) {
+					if (!(g_edicts[i].svflags & SVF_BOT))
+						level.num_playing_human_clients++;
+					if (level.follow1 == -1)
 						level.follow1 = i;
-					} else if (level.follow2 == -1) {
+					else if (level.follow2 == -1)
 						level.follow2 = i;
-					}
 
 					if (Teams()) {
 						if (cl->resp.team == TEAM_RED) {
+							level.num_playing_red++;
 							if (cl->pers.health > 0)
 								level.num_living_red++;
 							else
 								level.num_eliminated_red++;
 						} else {
+							level.num_playing_blue++;
 							if (cl->pers.health > 0)
 								level.num_living_blue++;
 							else
@@ -1970,9 +1711,11 @@ void CalculateRanks() {
 	} else if (level.num_playing_clients) {
 		level.no_players_time = 0_sec;
 	}
+	
+	level.warmup_notice_time = level.time;
 
 	// see if it is time to end the level
-	CheckExitRules();
+	CheckDMExitRules();
 }
 
 //===================================================================
@@ -1983,35 +1726,36 @@ static void MQ_Clear() {
 	if (!deathmatch)
 		return;
 
-	for (size_t i = 0; i < 32; i++)
-		game.map_queue[i] = nullptr;
+	game.mapqueue.clear();
 }
 
 static bool MQ_Update() {
 	if (!deathmatch)
 		return false;
 
-	if (!g_map_list->string[0] && game.map_queue[0]) {
+	if (!g_allow_mymap->integer)
+		return false;
+
+	if (!g_map_list->string[0] && game.mapqueue.size()) {
 		MQ_Clear();
-		gi.Com_Print("queue has been cleared\n");
+		gi.Broadcast_Print(PRINT_HIGH, "Map queue has been cleared.\n");
 		return false;
 	}
 
-	for (size_t i = 0; i < 31; i++) {
-		if (!game.map_queue[i] && game.map_queue[i + 1]) {
-			game.map_queue[i] = game.map_queue[i + 1];
-			game.map_queue[i + 1] = nullptr;
-		}
-	}
+	//TODO: remove empty elements?
+
 	return true;
 }
 
-bool MQ_Add(const char *mapname) {
+bool MQ_Add(edict_t *ent, const char *mapname) {
 	if (!deathmatch)
 		return false;
 
-	if (mapname == nullptr) {
-		gi.Com_Print("empty mapname string\n");
+	if (!g_allow_mymap->integer)
+		return false;
+
+	if (!mapname[0]) {
+		gi.Client_Print(ent, PRINT_HIGH, "Invalid map name.\n");
 		return false;
 	}
 
@@ -2019,52 +1763,33 @@ bool MQ_Add(const char *mapname) {
 		return false;
 
 	if (!strstr(g_map_list->string, mapname)) {
-		gi.Com_Print("selected map is not in cycle\n");
+		gi.Client_Print(ent, PRINT_HIGH, "Selected map is either invalid or not in cycle.\n");
 		return false;
 	}
 
 	if (!MQ_Update())
 		return false;
 
-	size_t i;
-
 	// ensure map isn't already in the queue
-	for (i = 0; i < 32; i++) {
-		if (game.map_queue[i] == mapname) {
-			gi.Com_Print("selected map is already in queue\n");
-			return false;
-		}
+	if (std::find(game.mapqueue.begin(), game.mapqueue.end(), mapname) != game.mapqueue.end()) {
+		gi.Client_Print(ent, PRINT_HIGH, "Selected map is already in queue.\n");
+		return false;
 	}
 
-	for (i = 0; i < 32; i++) {
-		if (!game.map_queue[i]) {
-			game.map_queue[i] = mapname;
-			break;
-		}
-	}
+	// add it!
+	game.mapqueue.push_back(mapname);
 
 	return true;
 }
 
-static void MQ_Remove_Index(int num) {
+static void MQ_Remove_Index(edict_t *ent, int num) {
 	if (!deathmatch)
-		return;
-
-	if (num < 0 || num >= 32)
 		return;
 
 	if (!MQ_Update())
 		return;
 
-	for (size_t i = 0; i < 32; i++) {
-		if (!game.map_queue[i] || i == num) {
-			if (i < 31) {
-				game.map_queue[i] = game.map_queue[i + 1];
-			} else {
-				game.map_queue[i] = nullptr;
-			}
-		}
-	}
+	game.mapqueue[num].clear();
 }
 
 static const char *MQ_Go_Next() {
@@ -2074,11 +1799,11 @@ static const char *MQ_Go_Next() {
 	if (!MQ_Update())
 		return nullptr;
 
-	for (size_t i = 0; i < 32; i++) {
-		if (!game.map_queue[i])
+	for (size_t i = 0; i < game.mapqueue.size(); i++) {
+		if (game.mapqueue[i].empty())
 			continue;
-		const char *s = game.map_queue[i];
-		MQ_Remove_Index(i);
+		const char *s = G_Fmt("{}", game.mapqueue[i]).data();
+		game.mapqueue.erase(game.mapqueue.begin() + i);
 		return s;
 	}
 	return nullptr;
@@ -2088,17 +1813,13 @@ int MQ_Count() {
 	if (!deathmatch)
 		return 0;
 
-	if (!MQ_Update())
+	if (!g_allow_mymap->integer)
 		return 0;
 
-	int count = 0;
-
-	for (size_t i = 0; i < 32; i++) {
-		if (!game.map_queue[i])
-			continue;
-		count++;
-	}
-	return count;
+	if (!MQ_Update())
+		return 0;
+	//gi.Com_PrintFmt("AAAAAAAAAAAAAAA size={}\n", game.mapqueue.size());
+	return game.mapqueue.size();
 }
 
 //===================================================================
@@ -2142,7 +1863,7 @@ Q2GAME_API game_export_t * GetGameAPI(game_import_t * import) {
 	globals.ReadGameJson = ReadGameJson;
 	globals.WriteLevelJson = WriteLevelJson;
 	globals.ReadLevelJson = ReadLevelJson;
-	globals.CanSave = G_CanSave;
+	globals.CanSave = CanSave;
 
 	globals.Pmove = Pmove;
 
@@ -2183,16 +1904,10 @@ ClientEndServerFrames
 =================
 */
 static void ClientEndServerFrames() {
-	edict_t *ent;
-
 	// calc the player views now that all pushing
 	// and damage has been added
-	for (size_t i = 0; i < game.maxclients; i++) {
-		ent = g_edicts + 1 + i;
-		if (!ent->inuse || !ent->client)
-			continue;
-		ClientEndServerFrame(ent);
-	}
+	for (auto ec : active_clients())
+		ClientEndServerFrame(ec);
 }
 
 /*
@@ -2233,6 +1948,15 @@ An end of match condition has been reached
 */
 void Match_End() {
 	edict_t *ent;
+
+	level.match_state = MATCH_ENDED;
+	level.match_state_timer = 0_sec;
+
+	// see if there is a queued map to go to
+	if (MQ_Count()) {
+		BeginIntermission(CreateTargetChangeLevel(MQ_Go_Next()));
+		return;
+	}
 	
 	// stay on same level flag
 	if (g_dm_same_level->integer) {
@@ -2242,12 +1966,6 @@ void Match_End() {
 
 	if (*level.forcemap) {
 		BeginIntermission(CreateTargetChangeLevel(level.forcemap));
-		return;
-	}
-
-	// see if there is a queued map to go to
-	if (MQ_Count()) {
-		BeginIntermission(CreateTargetChangeLevel(MQ_Go_Next()));
 		return;
 	}
 
@@ -2350,10 +2068,8 @@ static void CheckNeedPass() {
 }
 
 void QueueIntermission(const char *msg, bool boo, bool reset) {
-	if (level.intermission_queued || level.match_state < MS_MATCH_IN_PROGRESS)
+	if (level.intermission_queued || level.match_state < MATCH_IN_PROGRESS)
 		return;
-
-	gi.configstring(CS_CDTRACK, "0");
 
 	gi.LocBroadcast_Print(PRINT_CHAT, "MATCH END: {}\n", msg[0] ? msg : "Unknown Reason");
 	gi.positioned_sound(world->s.origin, world, CHAN_AUTO | CHAN_RELIABLE, gi.soundindex(boo ? "insane/insane4.wav" : "world/xian1.wav"), 1, ATTN_NONE, 0);
@@ -2361,10 +2077,12 @@ void QueueIntermission(const char *msg, bool boo, bool reset) {
 	if (reset) {
 		Match_Reset();
 	} else {
-		level.match_state = MS_MATCH_ENDED;
+		level.match_state = MATCH_ENDED;
 		level.match_state_timer = 0_sec;
 		level.match_time = level.time;
 		level.intermission_queued = level.time;
+
+		gi.configstring(CS_CDTRACK, "0");
 	}
 }
 
@@ -2386,24 +2104,19 @@ const char *GT_ScoreLimitString() {
 
 /*
 =================
-CheckExitRules
+CheckDMExitRules
 
 There will be a delay between the time the exit is qualified for
 and the time everyone is moved to the intermission spot, so you
 can see the last frag/capture.
 =================
 */
-void CheckExitRules() {
-	gclient_t	*cl;
-	int			scorelimit = 0;
-
-	if (!deathmatch->integer)
-		return;
+void CheckDMExitRules() {
 
 	// if at the intermission, wait for all non-bots to
 	// signal ready, then go to next level
 	if (level.intermission_time) {
-		CheckIntermissionExit();
+		CheckDMIntermissionExit();
 		return;
 	}
 
@@ -2420,31 +2133,52 @@ void CheckExitRules() {
 		return;
 	}
 
-	if (level.match_state < MS_MATCH_IN_PROGRESS)
+	if (level.match_state < MATCH_IN_PROGRESS)
 		return;
 	
 	if (level.time - level.match_time <= FRAME_TIME_MS)
 		return;
-		
+	
+	if (minplayers->integer > 0 && level.num_playing_clients < minplayers->integer) {
+		QueueIntermission("Not enough players remaining.", true, false);	// true);
+		return;
+	}
+	
+	if (Teams() && g_teamplay_force_balance->integer) {
+		if (abs(level.num_playing_red - level.num_playing_blue) > 1) {
+			if (g_teamplay_auto_balance->integer) {
+				TeamBalance();
+			} else {
+				QueueIntermission("Teams are imbalanced.", true, true);
+			}
+			return;
+		}
+	}
+	
 	if (timelimit->value) {
 		if (level.time >= level.match_time + gtime_t::from_min(timelimit->value) + level.overtime) {
 			// check for overtime
 			if (ScoreIsTied()) {
+				bool play = false;
+
 				if (duel->integer) {
 					if (g_dm_overtime->integer > 0) {
 						level.overtime += gtime_t::from_sec(g_dm_overtime->integer);
 						gi.LocBroadcast_Print(PRINT_CENTER, "Overtime!\n{} added", G_TimeString(g_dm_overtime->integer * 1000));
-						gi.positioned_sound(world->s.origin, world, CHAN_AUTO | CHAN_RELIABLE, gi.soundindex("world/klaxon2.wav"), 1, ATTN_NONE, 0);
+						play = true;
 						return;
 					}
 				} else {
 					if (!level.suddendeath) {
 						gi.LocBroadcast_Print(PRINT_CENTER, "Sudden Death!");
 						level.suddendeath = true;
-						gi.positioned_sound(world->s.origin, world, CHAN_AUTO | CHAN_RELIABLE, gi.soundindex("world/klaxon2.wav"), 1, ATTN_NONE, 0);
+						play = true;
 						return;
 					}
 				}
+
+				if (play)
+					gi.positioned_sound(world->s.origin, world, CHAN_AUTO | CHAN_RELIABLE, gi.soundindex("world/klaxon2.wav"), 1, ATTN_NONE, 0);
 				return;
 			}
 
@@ -2467,16 +2201,28 @@ void CheckExitRules() {
 			return;
 		}
 	}
+	
+	if (mercylimit->integer > 0) {
+		if (Teams()) {
+			if (level.team_scores[TEAM_RED] >= level.team_scores[TEAM_BLUE] + mercylimit->integer) {
+				QueueIntermission(G_Fmt("Red Team hit the mercylimit ({}).", mercylimit->integer).data(), true, false);
+				return;
+			}
+			if (level.team_scores[TEAM_BLUE] >= level.team_scores[TEAM_RED] + mercylimit->integer) {
+				QueueIntermission(G_Fmt("Blue Team hit the mercylimit ({}).", mercylimit->integer).data(), true, false);
+				return;
+			}
+		} else {
+			gclient_t *cl1, *cl2;
 
-	if (minplayers->integer && level.num_playing_clients < minplayers->integer) {
-		QueueIntermission("Not enough players remaining.", true, true);
-		return;
-	}
-
-	if (Teams() && g_teamplay_force_balance->integer) {
-		if (abs(TeamCount(-1, TEAM_RED) - TeamCount(-1, TEAM_BLUE)) > 1) {
-			QueueIntermission("Teams are imbalanced.", true, true);
-			return;
+			cl1 = &game.clients[level.sorted_clients[0]];
+			cl2 = &game.clients[level.sorted_clients[1]];
+			if (cl1 && cl2) {
+				if (cl1->resp.score >= cl2->resp.score + mercylimit->integer) {
+					QueueIntermission(G_Fmt("{} hit the mercylimit ({}).", cl1->resp.netname, mercylimit->integer).data(), true, false);
+					return;
+				}
+			}
 		}
 	}
 
@@ -2485,21 +2231,11 @@ void CheckExitRules() {
 		// always wait for sudden death
 		return;
 	}
-
-	scorelimit = GT_ScoreLimit();
+	
+	int	scorelimit = GT_ScoreLimit();
 	if (!scorelimit) return;
 
 	if (Teams()) {
-		if (mercylimit->integer) {
-			if (level.team_scores[TEAM_RED] + mercylimit->integer >= level.team_scores[TEAM_BLUE]) {
-				QueueIntermission(G_Fmt("Red Team hit the mercylimit ({}).", mercylimit->integer).data(), true, false);
-				return;
-			}
-			if (level.team_scores[TEAM_BLUE] + mercylimit->integer >= level.team_scores[TEAM_RED]) {
-				QueueIntermission(G_Fmt("Blue Team hit the mercylimit ({}).", mercylimit->integer).data(), true, false);
-				return;
-			}
-		}
 		if (level.team_scores[TEAM_RED] >= scorelimit) {
 			QueueIntermission(G_Fmt("Red Team WINS! (hit the {} limit)", GT_ScoreLimitString()).data(), false, false);
 			return;
@@ -2510,23 +2246,12 @@ void CheckExitRules() {
 			return;
 		}
 	} else {
-		if (mercylimit->integer) {
-			if (&g_edicts[0] && &g_edicts[1]) {
-				if (g_edicts[0].client->resp.score + mercylimit->integer >= g_edicts[1].client->resp.score) {
-					QueueIntermission(G_Fmt("{} hit the mercylimit ({}).", g_edicts[0].client->resp.netname, mercylimit->integer).data(), true, false);
-					return;
-				}
-			}
-		}
-		for (size_t i = 0; i < game.maxclients; i++) {
-			cl = game.clients + i;
-			if (!cl->pers.connected)
-				continue;
-			if (cl->resp.team != TEAM_FREE)
+		for (auto ec : active_clients()) {
+			if (ec->client->resp.team != TEAM_FREE)
 				continue;
 
-			if (cl->resp.score >= scorelimit) {
-				QueueIntermission(G_Fmt("{} WINS! (hit the {} limit)", cl->resp.netname, GT_ScoreLimitString()).data(), false, false);
+			if (ec->client->resp.score >= scorelimit) {
+				QueueIntermission(G_Fmt("{} WINS! (hit the {} limit)", ec->client->resp.netname, GT_ScoreLimitString()).data(), false, false);
 				return;
 			}
 		}
@@ -2534,8 +2259,8 @@ void CheckExitRules() {
 }
 
 static bool Match_NextMap() {
-	if (level.match_state == MS_MATCH_ENDED) {
-		level.match_state = MS_WARMUP_DELAYED;
+	if (level.match_state == MATCH_ENDED) {
+		level.match_state = MATCH_WARMUP_DELAYED;
 		Match_Reset();
 		return true;
 	}
@@ -2561,7 +2286,7 @@ void Teams_CalcRankings(std::array<uint32_t, MAX_CLIENTS> &player_ranks) {
 
 	team_t winning_team = (level.team_scores[TEAM_RED] > level.team_scores[TEAM_BLUE]) ? TEAM_RED : TEAM_BLUE;
 
-	for (auto player : active_players())
+	for (auto player : active_clients())
 		if (player->client->pers.spawned && ClientIsPlaying(player->client))
 			player_ranks[player->s.number - 1] = player->client->resp.team == winning_team ? 1 : 2;
 }
@@ -2572,8 +2297,6 @@ BeginIntermission
 =============
 */
 void BeginIntermission(edict_t *targ) {
-	edict_t *cl_ent;
-
 	if (level.intermission_time)
 		return; // already activated
 
@@ -2585,18 +2308,15 @@ void BeginIntermission(edict_t *targ) {
 	level.intermission_time = level.time;
 
 	// respawn any dead clients
-	for (size_t i = 0; i < game.maxclients; i++) {
-		cl_ent = g_edicts + 1 + i;
-		if (!cl_ent->inuse)
-			continue;
-		if (cl_ent->health <= 0) {
+	for (auto ec : active_clients()) {
+		if (ec->health <= 0) {
 			// give us our max health back since it will reset
 			// to pers.health; in instanced items we'd lose the items
 			// we touched so we always want to respawn with our max.
 			if (P_UseCoopInstancedItems())
-				cl_ent->client->pers.health = cl_ent->client->pers.max_health = cl_ent->max_health;
+				ec->client->pers.health = ec->client->pers.max_health = ec->max_health;
 
-			ClientRespawn(cl_ent);
+			ClientRespawn(ec);
 		}
 
 		//MoveClientToIntermission(client);
@@ -2616,14 +2336,11 @@ void BeginIntermission(edict_t *targ) {
 
 	if (strstr(level.changemap, "*")) {
 		if (coop->integer) {
-			for (size_t i = 0; i < game.maxclients; i++) {
-				cl_ent = g_edicts + 1 + i;
-				if (!cl_ent->inuse)
-					continue;
+			for (auto ec : active_clients()) {
 				// strip players of all keys between units
-				for (uint32_t n = 0; n < IT_TOTAL; n++)
+				for (uint8_t n = 0; n < IT_TOTAL; n++)
 					if (itemlist[n].flags & IF_KEY)
-						cl_ent->client->pers.inventory[n] = 0;
+						ec->client->pers.inventory[n] = 0;
 			}
 		}
 
@@ -2656,38 +2373,11 @@ void BeginIntermission(edict_t *targ) {
 
 	level.intermission_exit = false;
 
-	if (!level.level_intermission_set) {
-		//FindIntermissionPoint();
-		///*
-		edict_t *ent;
-		// find an intermission spot
-		ent = G_FindByString<&edict_t::classname>(nullptr, "info_player_intermission");
-		if (!ent) { // the map creator forgot to put in an intermission point...
-			ent = G_FindByString<&edict_t::classname>(nullptr, "info_player_start");
-			if (!ent)
-				ent = G_FindByString<&edict_t::classname>(nullptr, "info_player_deathmatch");
-		} else { // choose one of four spots
-			int32_t i = irandom(4);
-			while (i--) {
-				ent = G_FindByString<&edict_t::classname>(ent, "info_player_intermission");
-				if (!ent) // wrap around the list
-					ent = G_FindByString<&edict_t::classname>(ent, "info_player_intermission");
-			}
-		}
-
-		level.intermission_origin = ent->s.origin;
-		level.spawn_spots[SPAWN_SPOT_INTERMISSION] = ent;
-		level.intermission_angle = ent->s.angles;
-		//*/
-	}
+	SetIntermissionPoint();
 
 	// move all clients to the intermission point
-	for (size_t i = 0; i < game.maxclients; i++) {
-		cl_ent = g_edicts + 1 + i;
-		if (!cl_ent->inuse)
-			continue;
-		MoveClientToIntermission(cl_ent);
-	}
+	for (auto ec : active_clients())
+		MoveClientToIntermission(ec);
 }
 
 /*
@@ -2696,6 +2386,16 @@ ExitLevel
 =============
 */
 void ExitLevel() {
+	if (level.num_playing_human_clients > 0 && g_dm_intermission_shots->integer) {
+		struct tm *ltime;
+		time_t gmtime;
+
+		time(&gmtime);
+		ltime = localtime(&gmtime);
+
+		gi.AddCommandString(G_Fmt("screenshot {}{:02}{:02}-{:02}:{:02}-{}\n", 1900 + ltime->tm_year, ltime->tm_mon + 1, ltime->tm_mday, ltime->tm_hour, ltime->tm_min, level.mapname).data());
+	}
+
 	// [Paril-KEX] N64 fade
 	if (level.intermission_fade) {
 		level.intermission_fade_time = level.time + 1.3_sec;
@@ -2707,7 +2407,7 @@ void ExitLevel() {
 
 	// if we are running a duel, kick the loser to queue,
 	// which will automatically grab the next queued player and restart
-	if (duel->integer) {
+	if (deathmatch->integer && duel->integer) {
 		if (!level.restarted) {
 			Duel_RemoveLoser();
 			//trap_SendConsoleCommand(EXEC_APPEND, "map_restart 0\n");
@@ -2725,16 +2425,16 @@ void ExitLevel() {
 	if (level.intermission_clear) {
 		level.intermission_clear = false;
 
-		for (size_t i = 0; i < game.maxclients; i++) {
+		for (auto ec : active_clients()) {
 			// [Kex] Maintain user info to keep the player skin. 
 			char userinfo[MAX_INFO_STRING];
-			memcpy(userinfo, game.clients[i].pers.userinfo, sizeof(userinfo));
+			memcpy(userinfo, ec->client->pers.userinfo, sizeof(userinfo));
 
-			game.clients[i].pers = game.clients[i].resp.coop_respawn = {};
-			g_edicts[i + 1].health = 0; // this should trip the power armor, etc to reset as well
+			ec->client->pers = ec->client->resp.coop_respawn = {};
+			ec->health = 0; // this should trip the power armor, etc to reset as well
 
-			memcpy(game.clients[i].pers.userinfo, userinfo, sizeof(userinfo));
-			memcpy(game.clients[i].resp.coop_respawn.userinfo, userinfo, sizeof(userinfo));
+			memcpy(ec->client->pers.userinfo, userinfo, sizeof(userinfo));
+			memcpy(ec->client->resp.coop_respawn.userinfo, userinfo, sizeof(userinfo));
 		}
 	}
 
@@ -2744,13 +2444,10 @@ void ExitLevel() {
 
 		// give all players their lives back
 		if (g_coop_enable_lives->integer)
-			for (auto player : active_players())
+			for (auto player : active_clients())
 				player->client->pers.lives = g_coop_num_lives->integer + 1;
 	}
-	/*
-	if (Match_NextMap())
-		return;
-		*/
+
 	if (level.changemap == nullptr) {
 		gi.Com_Error("Got null changemap when trying to exit level. Was a trigger_changelevel configured correctly?");
 		return;
@@ -2768,6 +2465,56 @@ void ExitLevel() {
 		gi.AddCommandString(G_Fmt("gamemap \"{}\"\n", level.changemap).data());
 
 	level.changemap = nullptr;
+}
+
+/*
+=============
+CheckPowerups
+=============
+*/
+static int powerup_minplayers_mod_count = -1;
+static int numplayers_check = -1;
+
+static void CheckPowerups() {
+	bool docheck = false;
+
+	if (powerup_minplayers_mod_count != g_dm_powerups_minplayers->integer) {
+		powerup_minplayers_mod_count = g_dm_powerups_minplayers->integer;
+		docheck = true;
+	}
+
+	if (numplayers_check != level.num_playing_clients) {
+		numplayers_check = level.num_playing_clients;
+		docheck = true;
+	}
+
+	if (!docheck)
+		return;
+
+	bool	enable = !!(g_dm_powerups_minplayers->integer && (level.num_playing_clients >= g_dm_powerups_minplayers->integer));
+	edict_t	*ent = nullptr;
+	size_t	i;
+	for (ent = g_edicts + 1, i = 1; i < globals.num_edicts; i++, ent++) {
+		if (!ent->inuse || !ent->item)
+			continue;
+
+		if (!(ent->item->flags & IF_POWERUP))
+			continue;
+		/*
+		if (!(ent->svflags & SVF_NOCLIENT))
+			continue;
+		*/
+		if (g_quadhog->integer && ent->item->id == IT_POWERUP_QUAD)
+			return;
+
+		if (enable) {
+			ent->s.renderfx &= ~(RF_SHELL_RED | RF_SHELL_GREEN | RF_SHELL_BLUE);
+			ent->s.effects &= ~EF_COLOR_SHELL;
+		} else {
+			ent->s.renderfx |= (RF_SHELL_RED | RF_SHELL_GREEN | RF_SHELL_BLUE);
+			ent->s.effects |= EF_COLOR_SHELL;
+		}
+	}
 }
 
 /*
@@ -2813,11 +2560,30 @@ static void CheckCvars() {
 }
 
 static bool G_AnyDeadPlayersWithoutLives() {
-	for (auto player : active_players())
+	for (auto player : active_clients())
 		if (player->health <= 0 && !player->client->pers.lives)
 			return true;
 
 	return false;
+}
+
+/*
+================
+CheckDMEndFrame
+================
+*/
+static void CheckDMEndFrame() {
+	if (!deathmatch->integer)
+		return;
+
+	// see if it is time to do a match restart
+	CheckDMWarmupState();
+	CheckDMCountdown();
+	CheckDMMatchEndWarning();
+	CheckDMRoundState();
+
+	// see if it is time to end a deathmatch
+	CheckDMExitRules();
 }
 
 /*
@@ -2836,6 +2602,8 @@ static inline void G_RunFrame_(bool main_loop) {
 	// for tracking changes
 	CheckCvars();
 
+	CheckPowerups();
+
 	Bot_UpdateDebug();
 
 	level.time += FRAME_TIME_MS;
@@ -2844,7 +2612,7 @@ static inline void G_RunFrame_(bool main_loop) {
 		if (level.intermission_fade_time > level.time) {
 			float alpha = clamp(1.0f - (level.intermission_fade_time - level.time - 300_ms).seconds(), 0.f, 1.f);
 
-			for (auto player : active_players())
+			for (auto player : active_clients())
 				player->client->ps.screen_blend = { 0, 0, 0, alpha };
 		} else {
 			level.intermission_fade = level.intermission_fading = false;
@@ -2855,8 +2623,6 @@ static inline void G_RunFrame_(bool main_loop) {
 
 		return;
 	}
-
-	edict_t *ent;
 
 	// exit intermissions
 
@@ -2876,7 +2642,7 @@ static inline void G_RunFrame_(bool main_loop) {
 	// early since it may be set multiple times for different
 	// players
 	if (coop->integer && (g_coop_enable_lives->integer || g_coop_squad_respawn->integer)) {
-		for (auto player : active_players()) {
+		for (auto player : active_clients()) {
 			if (player->client->respawn_time >= level.time)
 				player->client->coop_respawn_state = COOP_RESPAWN_WAITING;
 			else if (g_coop_enable_lives->integer && player->health <= 0 && player->client->pers.lives == 0)
@@ -2892,7 +2658,7 @@ static inline void G_RunFrame_(bool main_loop) {
 	// treat each object in turn
 	// even the world gets a chance to think
 	//
-	ent = &g_edicts[0];
+	edict_t *ent = &g_edicts[0];
 	for (size_t i = 0; i < globals.num_edicts; i++, ent++) {
 		if (!ent->inuse) {
 			// defer removing client info so that disconnected, etc works
@@ -2941,15 +2707,7 @@ static inline void G_RunFrame_(bool main_loop) {
 		G_RunEntity(ent);
 	}
 
-	// see if it is time to do a match restart
-	CheckWarmupState();
-	CheckCountdown();
-
-	CheckRoundState();
-
-	// see if it is time to end a deathmatch
-	CheckExitRules();
-	//gi.Com_PrintFmt("intermission ---> {} {}\n", level.intermission_time ? "time" : "", level.intermission_queued ? "queued" : "");
+	CheckDMEndFrame();
 
 	// see if needpass needs updated
 	CheckNeedPass();
@@ -2960,15 +2718,15 @@ static inline void G_RunFrame_(bool main_loop) {
 		// back to empty
 		bool reset_coop_respawn = true;
 
-		for (auto player : active_players()) {
-			if (player->health >= 0) {
+		for (auto player : active_clients()) {
+			if (player->health > 0) {	//muff: changed from >= to >
 				reset_coop_respawn = false;
 				break;
 			}
 		}
 
 		if (reset_coop_respawn) {
-			for (auto player : active_players())
+			for (auto player : active_clients())
 				player->client->coop_respawn_state = COOP_RESPAWN_NONE;
 		}
 	}
@@ -2994,8 +2752,8 @@ static inline void G_RunFrame_(bool main_loop) {
 	level.in_frame = false;
 }
 
-static inline bool G_AnyPlayerSpawned() {
-	for (auto player : active_players())
+static inline bool G_AnyClientsSpawned() {
+	for (auto player : active_clients())
 		if (player->client && player->client->pers.spawned)
 			return true;
 
@@ -3003,7 +2761,7 @@ static inline bool G_AnyPlayerSpawned() {
 }
 
 void G_RunFrame(bool main_loop) {
-	if (main_loop && !G_AnyPlayerSpawned())
+	if (main_loop && !G_AnyClientsSpawned())
 		return;
 
 	for (size_t i = 0; i < g_frames_per_frame->integer; i++)
@@ -3011,7 +2769,7 @@ void G_RunFrame(bool main_loop) {
 
 	// match details.. only bother if there's at least 1 player in-game
 	// and not already end of game
-	if (G_AnyPlayerSpawned() && !level.intermission_time) {
+	if (G_AnyClientsSpawned() && !level.intermission_time) {
 		constexpr gtime_t MATCH_REPORT_TIME = 45_sec;
 
 		if (level.time - level.next_match_report > MATCH_REPORT_TIME) {
@@ -3033,7 +2791,7 @@ void G_PrepFrame() {
 	for (size_t i = 0; i < globals.num_edicts; i++)
 		g_edicts[i].s.event = EV_NONE;
 
-	for (auto player : active_players())
+	for (auto player : active_clients())
 		player->client->ps.stats[STAT_HIT_MARKER] = 0;
 
 	globals.server_flags &= ~SERVER_FLAG_INTERMISSION;

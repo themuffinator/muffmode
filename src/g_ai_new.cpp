@@ -11,8 +11,7 @@ bool face_wall(edict_t *self);
 
 // blocked_checkplat
 //	dist: how far they are trying to walk.
-bool blocked_checkplat(edict_t *self, float dist)
-{
+bool blocked_checkplat(edict_t *self, float dist) {
 	int		 playerPosition;
 	trace_t	 trace;
 	vec3_t	 pt1, pt2;
@@ -37,47 +36,37 @@ bool blocked_checkplat(edict_t *self, float dist)
 	plat = nullptr;
 
 	// see if we're already standing on a plat.
-	if (self->groundentity && self->groundentity != world)
-	{
+	if (self->groundentity && self->groundentity != world) {
 		if (!strncmp(self->groundentity->classname, "func_plat", 8))
 			plat = self->groundentity;
 	}
 
 	// if we're not, check to see if we'll step onto one with this move
-	if (!plat)
-	{
+	if (!plat) {
 		AngleVectors(self->s.angles, forward, nullptr, nullptr);
 		pt1 = self->s.origin + (forward * dist);
 		pt2 = pt1;
 		pt2[2] -= 384;
 
 		trace = gi.traceline(pt1, pt2, self, MASK_MONSTERSOLID);
-		if (trace.fraction < 1 && !trace.allsolid && !trace.startsolid)
-		{
-			if (!strncmp(trace.ent->classname, "func_plat", 8))
-			{
+		if (trace.fraction < 1 && !trace.allsolid && !trace.startsolid) {
+			if (!strncmp(trace.ent->classname, "func_plat", 8)) {
 				plat = trace.ent;
 			}
 		}
 	}
 
 	// if we've found a plat, trigger it.
-	if (plat && plat->use)
-	{
-		if (playerPosition == 1)
-		{
+	if (plat && plat->use) {
+		if (playerPosition == 1) {
 			if ((self->groundentity == plat && plat->moveinfo.state == STATE_BOTTOM) ||
-				(self->groundentity != plat && plat->moveinfo.state == STATE_TOP))
-			{
+				(self->groundentity != plat && plat->moveinfo.state == STATE_TOP)) {
 				plat->use(plat, self, self);
 				return true;
 			}
-		}
-		else if (playerPosition == -1)
-		{
+		} else if (playerPosition == -1) {
 			if ((self->groundentity == plat && plat->moveinfo.state == STATE_TOP) ||
-				(self->groundentity != plat && plat->moveinfo.state == STATE_BOTTOM))
-			{
+				(self->groundentity != plat && plat->moveinfo.state == STATE_BOTTOM)) {
 				plat->use(plat, self, self);
 				return true;
 			}
@@ -91,15 +80,13 @@ bool blocked_checkplat(edict_t *self, float dist)
 // JUMPING AIDS
 //*******************
 
-static inline void monster_jump_start(edict_t *self)
-{
+static inline void monster_jump_start(edict_t *self) {
 	monster_done_dodge(self);
 
 	self->monsterinfo.jump_time = level.time + 3_sec;
 }
 
-bool monster_jump_finished(edict_t *self)
-{
+bool monster_jump_finished(edict_t *self) {
 	// if we lost our forward velocity, give us more
 	vec3_t forward;
 
@@ -107,8 +94,7 @@ bool monster_jump_finished(edict_t *self)
 
 	vec3_t forward_velocity = self->velocity.scaled(forward);
 
-	if (forward_velocity.length() < 150.f)
-	{
+	if (forward_velocity.length() < 150.f) {
 		float z_velocity = self->velocity.z;
 		self->velocity = forward * 150.f;
 		self->velocity.z = z_velocity;
@@ -120,8 +106,7 @@ bool monster_jump_finished(edict_t *self)
 // blocked_checkjump
 //	dist: how far they are trying to walk.
 //  self->monsterinfo.drop_height/self->monsterinfo.jump_height: how far they'll ok a jump for. set to 0 to disable that direction.
-blocked_jump_result_t blocked_checkjump(edict_t *self, float dist)
-{
+blocked_jump_result_t blocked_checkjump(edict_t *self, float dist) {
 	// can't jump even if we physically can
 	if (!self->monsterinfo.can_jump)
 		return blocked_jump_result_t::NO_JUMP;
@@ -134,8 +119,7 @@ blocked_jump_result_t blocked_checkjump(edict_t *self, float dist)
 		return blocked_jump_result_t::NO_JUMP;
 
 	// if we're pathing, the nodes will ensure we can reach the destination.
-	if (self->monsterinfo.aiflags & AI_PATHING)
-	{
+	if (self->monsterinfo.aiflags & AI_PATHING) {
 		if (self->monsterinfo.nav_path.returnCode != PathReturnCode::TraversalPending)
 			return blocked_jump_result_t::NO_JUMP;
 
@@ -144,8 +128,7 @@ blocked_jump_result_t blocked_checkjump(edict_t *self, float dist)
 		if (self->ideal_yaw > 360)
 			self->ideal_yaw -= 360;
 
-		if (!FacingIdeal(self))
-		{
+		if (!FacingIdeal(self)) {
 			M_ChangeYaw(self);
 			return blocked_jump_result_t::JUMP_TURN;
 		}
@@ -165,17 +148,14 @@ blocked_jump_result_t blocked_checkjump(edict_t *self, float dist)
 
 	AngleVectors(self->s.angles, forward, nullptr, up);
 
-	if (self->monsterinfo.aiflags & AI_PATHING)
-	{
+	if (self->monsterinfo.aiflags & AI_PATHING) {
 		if (self->monsterinfo.nav_path.secondMovePoint[2] > (self->absmin[2] + STEPSIZE))
 			playerPosition = 1;
 		else if (self->monsterinfo.nav_path.secondMovePoint[2] < (self->absmin[2] - STEPSIZE))
 			playerPosition = -1;
 		else
 			playerPosition = 0;
-	}
-	else
-	{
+	} else {
 		if (self->enemy->absmin[2] > (self->absmin[2] + STEPSIZE))
 			playerPosition = 1;
 		else if (self->enemy->absmin[2] < (self->absmin[2] - STEPSIZE))
@@ -184,8 +164,7 @@ blocked_jump_result_t blocked_checkjump(edict_t *self, float dist)
 			playerPosition = 0;
 	}
 
-	if (playerPosition == -1 && self->monsterinfo.drop_height)
-	{
+	if (playerPosition == -1 && self->monsterinfo.drop_height) {
 		// check to make sure we can even get to the spot we're going to "fall" from
 		pt1 = self->s.origin + (forward * 48);
 		trace = gi.trace(self->s.origin, self->mins, self->maxs, pt1, self, MASK_MONSTERSOLID);
@@ -196,11 +175,9 @@ blocked_jump_result_t blocked_checkjump(edict_t *self, float dist)
 		pt2[2] = self->absmin[2] - self->monsterinfo.drop_height - 1;
 
 		trace = gi.traceline(pt1, pt2, self, MASK_MONSTERSOLID | MASK_WATER);
-		if (trace.fraction < 1 && !trace.allsolid && !trace.startsolid)
-		{
+		if (trace.fraction < 1 && !trace.allsolid && !trace.startsolid) {
 			// check how deep the water is
-			if (trace.contents & CONTENTS_WATER) 
-			{
+			if (trace.contents & CONTENTS_WATER) {
 				trace_t deep = gi.traceline(trace.endpos, pt2, self, MASK_MONSTERSOLID);
 
 				water_level_t waterlevel;
@@ -211,15 +188,11 @@ blocked_jump_result_t blocked_checkjump(edict_t *self, float dist)
 					return blocked_jump_result_t::NO_JUMP;
 			}
 
-			if ((self->absmin[2] - trace.endpos[2]) >= 24 && (trace.contents & (MASK_SOLID | CONTENTS_WATER)))
-			{
-				if (self->monsterinfo.aiflags & AI_PATHING)
-				{
+			if ((self->absmin[2] - trace.endpos[2]) >= 24 && (trace.contents & (MASK_SOLID | CONTENTS_WATER))) {
+				if (self->monsterinfo.aiflags & AI_PATHING) {
 					if ((self->monsterinfo.nav_path.secondMovePoint[2] - trace.endpos[2]) > 32)
 						return blocked_jump_result_t::NO_JUMP;
-				}
-				else
-				{
+				} else {
 					if ((self->enemy->absmin[2] - trace.endpos[2]) > 32)
 						return blocked_jump_result_t::NO_JUMP;
 
@@ -232,18 +205,14 @@ blocked_jump_result_t blocked_checkjump(edict_t *self, float dist)
 				return blocked_jump_result_t::JUMP_JUMP_DOWN;
 			}
 		}
-	}
-	else if (playerPosition == 1 && self->monsterinfo.jump_height)
-	{
+	} else if (playerPosition == 1 && self->monsterinfo.jump_height) {
 		pt1 = self->s.origin + (forward * 48);
 		pt2 = pt1;
 		pt1[2] = self->absmax[2] + self->monsterinfo.jump_height;
 
 		trace = gi.traceline(pt1, pt2, self, MASK_MONSTERSOLID | MASK_WATER);
-		if (trace.fraction < 1 && !trace.allsolid && !trace.startsolid)
-		{
-			if ((trace.endpos[2] - self->absmin[2]) <= self->monsterinfo.jump_height && (trace.contents & (MASK_SOLID | CONTENTS_WATER)))
-			{
+		if (trace.fraction < 1 && !trace.allsolid && !trace.startsolid) {
+			if ((trace.endpos[2] - self->absmin[2]) <= self->monsterinfo.jump_height && (trace.contents & (MASK_SOLID | CONTENTS_WATER))) {
 				face_wall(self);
 
 				monster_jump_start(self);
@@ -274,8 +243,7 @@ int		 num_hint_paths;
 // =============
 // hintpath_findstart - given any hintpath node, finds the start node
 // =============
-static edict_t *hintpath_findstart(edict_t *ent)
-{
+static edict_t *hintpath_findstart(edict_t *ent) {
 	edict_t *e;
 	edict_t *last;
 
@@ -283,20 +251,17 @@ static edict_t *hintpath_findstart(edict_t *ent)
 	{
 		last = world;
 		e = G_FindByString<&edict_t::targetname>(nullptr, ent->target);
-		while (e)
-		{
+		while (e) {
 			last = e;
 			if (!e->target)
 				break;
 			e = G_FindByString<&edict_t::targetname>(nullptr, e->target);
 		}
-	}
-	else // end point
+	} else // end point
 	{
 		last = world;
 		e = G_FindByString<&edict_t::target>(nullptr, ent->targetname);
-		while (e)
-		{
+		while (e) {
 			last = e;
 			if (!e->targetname)
 				break;
@@ -315,8 +280,7 @@ static edict_t *hintpath_findstart(edict_t *ent)
 // =============
 // hintpath_other_end - given one endpoint of a hintpath, returns the other end.
 // =============
-static edict_t *hintpath_other_end(edict_t *ent)
-{
+static edict_t *hintpath_other_end(edict_t *ent) {
 	edict_t *e;
 	edict_t *last;
 
@@ -324,20 +288,17 @@ static edict_t *hintpath_other_end(edict_t *ent)
 	{
 		last = world;
 		e = G_FindByString<&edict_t::targetname>(nullptr, ent->target);
-		while (e)
-		{
+		while (e) {
 			last = e;
 			if (!e->target)
 				break;
 			e = G_FindByString<&edict_t::targetname>(nullptr, e->target);
 		}
-	}
-	else // end point
+	} else // end point
 	{
 		last = world;
 		e = G_FindByString<&edict_t::target>(nullptr, ent->targetname);
-		while (e)
-		{
+		while (e) {
 			last = e;
 			if (!e->targetname)
 				break;
@@ -357,8 +318,7 @@ static edict_t *hintpath_other_end(edict_t *ent)
 // hintpath_go - starts a monster (self) moving towards the hintpath (point)
 //		disables all contrary AI flags.
 // =============
-static void hintpath_go(edict_t *self, edict_t *point)
-{
+static void hintpath_go(edict_t *self, edict_t *point) {
 	vec3_t dir;
 
 	dir = point->s.origin - self->s.origin;
@@ -376,18 +336,15 @@ static void hintpath_go(edict_t *self, edict_t *point)
 // =============
 // hintpath_stop - bails a monster out of following hint paths
 // =============
-void hintpath_stop(edict_t *self)
-{
+void hintpath_stop(edict_t *self) {
 	self->goalentity = nullptr;
 	self->movetarget = nullptr;
 	self->monsterinfo.last_hint_time = level.time;
 	self->monsterinfo.goal_hint = nullptr;
 	self->monsterinfo.aiflags &= ~AI_HINT_PATH;
-	if (has_valid_enemy(self))
-	{
+	if (has_valid_enemy(self)) {
 		// if we can see our target, go nuts
-		if (visible(self, self->enemy))
-		{
+		if (visible(self, self->enemy)) {
 			FoundTarget(self);
 			return;
 		}
@@ -411,8 +368,7 @@ void hintpath_stop(edict_t *self)
 //		and the monster's enemy. if only one person is visible from the endpoints,
 //		it will not go for it.
 // =============
-bool monsterlost_checkhint(edict_t *self)
-{
+bool monsterlost_checkhint(edict_t *self) {
 	edict_t *e, *monster_pathchain, *target_pathchain, *checkpoint = nullptr;
 	edict_t *closest;
 	float	 closest_range = 1000000;
@@ -440,21 +396,16 @@ bool monsterlost_checkhint(edict_t *self)
 
 	// find all the hint_paths.
 	// FIXME - can we not do this every time?
-	for (i = 0; i < num_hint_paths; i++)
-	{
+	for (i = 0; i < num_hint_paths; i++) {
 		e = hint_path_start[i];
-		while (e)
-		{
+		while (e) {
 			if (e->monster_hint_chain)
 				e->monster_hint_chain = nullptr;
 
-			if (monster_pathchain)
-			{
+			if (monster_pathchain) {
 				checkpoint->monster_hint_chain = e;
 				checkpoint = e;
-			}
-			else
-			{
+			} else {
 				monster_pathchain = e;
 				checkpoint = e;
 			}
@@ -465,21 +416,16 @@ bool monsterlost_checkhint(edict_t *self)
 	// filter them by distance and visibility to the monster
 	e = monster_pathchain;
 	checkpoint = nullptr;
-	while (e)
-	{
+	while (e) {
 		r = realrange(self, e);
 
-		if (r > 512)
-		{
-			if (checkpoint)
-			{
+		if (r > 512) {
+			if (checkpoint) {
 				checkpoint->monster_hint_chain = e->monster_hint_chain;
 				e->monster_hint_chain = nullptr;
 				e = checkpoint->monster_hint_chain;
 				continue;
-			}
-			else
-			{
+			} else {
 				// use checkpoint as temp pointer
 				checkpoint = e;
 				e = e->monster_hint_chain;
@@ -492,17 +438,13 @@ bool monsterlost_checkhint(edict_t *self)
 				continue;
 			}
 		}
-		if (!visible(self, e))
-		{
-			if (checkpoint)
-			{
+		if (!visible(self, e)) {
+			if (checkpoint) {
 				checkpoint->monster_hint_chain = e->monster_hint_chain;
 				e->monster_hint_chain = nullptr;
 				e = checkpoint->monster_hint_chain;
 				continue;
-			}
-			else
-			{
+			} else {
 				// use checkpoint as temp pointer
 				checkpoint = e;
 				e = e->monster_hint_chain;
@@ -534,8 +476,7 @@ bool monsterlost_checkhint(edict_t *self)
 
 	e = monster_pathchain;
 	checkpoint = nullptr;
-	while (e)
-	{
+	while (e) {
 		if ((e->hint_chain_id < 0) || (e->hint_chain_id > num_hint_paths))
 			return false;
 
@@ -549,22 +490,16 @@ bool monsterlost_checkhint(edict_t *self)
 	// validity (within range, visibility)
 	target_pathchain = nullptr;
 	checkpoint = nullptr;
-	for (i = 0; i < num_hint_paths; i++)
-	{
+	for (i = 0; i < num_hint_paths; i++) {
 		// if this hint chain is represented in the monster_hint_chain, add all of it's nodes to the target_pathchain
 		// for validity checking
-		if (hint_path_represented[i])
-		{
+		if (hint_path_represented[i]) {
 			e = hint_path_start[i];
-			while (e)
-			{
-				if (target_pathchain)
-				{
+			while (e) {
+				if (target_pathchain) {
 					checkpoint->target_hint_chain = e;
 					checkpoint = e;
-				}
-				else
-				{
+				} else {
 					target_pathchain = e;
 					checkpoint = e;
 				}
@@ -576,21 +511,16 @@ bool monsterlost_checkhint(edict_t *self)
 	// target_pathchain is a list of all of the hint_path nodes we need to check for validity relative to the target
 	e = target_pathchain;
 	checkpoint = nullptr;
-	while (e)
-	{
+	while (e) {
 		r = realrange(self->enemy, e);
 
-		if (r > 512)
-		{
-			if (checkpoint)
-			{
+		if (r > 512) {
+			if (checkpoint) {
 				checkpoint->target_hint_chain = e->target_hint_chain;
 				e->target_hint_chain = nullptr;
 				e = checkpoint->target_hint_chain;
 				continue;
-			}
-			else
-			{
+			} else {
 				// use checkpoint as temp pointer
 				checkpoint = e;
 				e = e->target_hint_chain;
@@ -601,17 +531,13 @@ bool monsterlost_checkhint(edict_t *self)
 				continue;
 			}
 		}
-		if (!visible(self->enemy, e))
-		{
-			if (checkpoint)
-			{
+		if (!visible(self->enemy, e)) {
+			if (checkpoint) {
 				checkpoint->target_hint_chain = e->target_hint_chain;
 				e->target_hint_chain = nullptr;
 				e = checkpoint->target_hint_chain;
 				continue;
-			}
-			else
-			{
+			} else {
 				// use checkpoint as temp pointer
 				checkpoint = e;
 				e = e->target_hint_chain;
@@ -651,8 +577,7 @@ bool monsterlost_checkhint(edict_t *self)
 
 	e = target_pathchain;
 	checkpoint = nullptr;
-	while (e)
-	{
+	while (e) {
 		if ((e->hint_chain_id < 0) || (e->hint_chain_id > num_hint_paths))
 			return false;
 
@@ -666,10 +591,8 @@ bool monsterlost_checkhint(edict_t *self)
 	//
 	closest = nullptr;
 	e = monster_pathchain;
-	while (e)
-	{
-		if (!(hint_path_represented[e->hint_chain_id]))
-		{
+	while (e) {
+		if (!(hint_path_represented[e->hint_chain_id])) {
 			checkpoint = e->monster_hint_chain;
 			e->monster_hint_chain = nullptr;
 			e = checkpoint;
@@ -692,10 +615,8 @@ bool monsterlost_checkhint(edict_t *self)
 	closest = nullptr;
 	closest_range = 10000000;
 	e = target_pathchain;
-	while (e)
-	{
-		if (start->hint_chain_id == e->hint_chain_id)
-		{
+	while (e) {
+		if (start->hint_chain_id == e->hint_chain_id) {
 			r = realrange(self, e);
 			if (r < closest_range)
 				closest = e;
@@ -721,32 +642,25 @@ bool monsterlost_checkhint(edict_t *self)
 // =============
 // hint_path_touch - someone's touched the hint_path
 // =============
-static TOUCH(hint_path_touch) (edict_t *self, edict_t *other, const trace_t &tr, bool other_touching_self) -> void
-{
+static TOUCH(hint_path_touch) (edict_t *self, edict_t *other, const trace_t &tr, bool other_touching_self) -> void {
 	edict_t *e, *goal, *next = nullptr;
 	//	int			chain;			 // direction - (-1) = upstream, (1) = downstream, (0) = done
 	bool goalFound = false;
 
 	// make sure we're the target of it's obsession
-	if (other->movetarget == self)
-	{
+	if (other->movetarget == self) {
 		goal = other->monsterinfo.goal_hint;
 
 		// if the monster is where he wants to be
-		if (goal == self)
-		{
+		if (goal == self) {
 			hintpath_stop(other);
 			return;
-		}
-		else
-		{
+		} else {
 			// if we aren't, figure out which way we want to go
 			e = hint_path_start[self->hint_chain_id];
-			while (e)
-			{
+			while (e) {
 				// if we get up to ourselves on the hint chain, we're going down it
-				if (e == self)
-				{
+				if (e == self) {
 					next = e->hint_chain;
 					break;
 				}
@@ -754,8 +668,7 @@ static TOUCH(hint_path_touch) (edict_t *self, edict_t *other, const trace_t &tr,
 					goalFound = true;
 				// if we get to where the next link on the chain is this hint_path and have found the goal on the way
 				// we're going upstream, so remember who the previous link is
-				if ((e->hint_chain == self) && goalFound)
-				{
+				if ((e->hint_chain == self) && goalFound) {
 					next = e;
 					break;
 				}
@@ -764,8 +677,7 @@ static TOUCH(hint_path_touch) (edict_t *self, edict_t *other, const trace_t &tr,
 		}
 
 		// if we couldn't find it, have the monster go back to normal hunting.
-		if (!next)
-		{
+		if (!next) {
 			hintpath_stop(other);
 			return;
 		}
@@ -787,16 +699,13 @@ END - set this flag on the endpoints of each hintpath.
 
 "wait" - set this if you want the monster to freeze when they touch this hintpath
 */
-void SP_hint_path(edict_t *self)
-{
-	if (deathmatch->integer)
-	{
+void SP_hint_path(edict_t *self) {
+	if (deathmatch->integer) {
 		G_FreeEdict(self);
 		return;
 	}
 
-	if (!self->targetname && !self->target)
-	{
+	if (!self->targetname && !self->target) {
 		gi.Com_PrintFmt("{}: unlinked\n", *self);
 		G_FreeEdict(self);
 		return;
@@ -813,8 +722,7 @@ void SP_hint_path(edict_t *self)
 // ============
 // InitHintPaths - Called by InitGame (g_save) to enable quick exits if valid
 // ============
-void InitHintPaths()
-{
+void InitHintPaths() {
 	edict_t *e, *current;
 	int		 i;
 
@@ -829,19 +737,15 @@ void InitHintPaths()
 
 	memset(hint_path_start, 0, MAX_HINT_CHAINS * sizeof(edict_t *));
 	num_hint_paths = 0;
-	while (e)
-	{
-		if (e->spawnflags.has(SPAWNFLAG_HINT_ENDPOINT))
-		{
+	while (e) {
+		if (e->spawnflags.has(SPAWNFLAG_HINT_ENDPOINT)) {
 			if (e->target) // start point
 			{
 				if (e->targetname) // this is a bad end, ignore it
 				{
 					gi.Com_PrintFmt("{}: marked as endpoint with both target ({}) and targetname ({})\n",
 						*e, e->target, e->targetname);
-				}
-				else
-				{
+				} else {
 					if (num_hint_paths >= MAX_HINT_CHAINS)
 						break;
 
@@ -852,22 +756,18 @@ void InitHintPaths()
 		e = G_FindByString<&edict_t::classname>(e, "hint_path");
 	}
 
-	for (i = 0; i < num_hint_paths; i++)
-	{
+	for (i = 0; i < num_hint_paths; i++) {
 		current = hint_path_start[i];
 		current->hint_chain_id = i;
 		e = G_FindByString<&edict_t::targetname>(nullptr, current->target);
-		if (G_FindByString<&edict_t::targetname>(e, current->target))
-		{
+		if (G_FindByString<&edict_t::targetname>(e, current->target)) {
 			gi.Com_PrintFmt("{}: Forked path detected for chain {}, target {}\n",
 				*current, num_hint_paths, current->target);
 			hint_path_start[i]->hint_chain = nullptr;
 			continue;
 		}
-		while (e)
-		{
-			if (e->hint_chain)
-			{
+		while (e) {
+			if (e->hint_chain) {
 				gi.Com_PrintFmt("{}: Circular path detected for chain {}, targetname {}\n",
 					*e, num_hint_paths, e->targetname);
 				hint_path_start[i]->hint_chain = nullptr;
@@ -879,8 +779,7 @@ void InitHintPaths()
 			if (!current->target)
 				break;
 			e = G_FindByString<&edict_t::targetname>(nullptr, current->target);
-			if (G_FindByString<&edict_t::targetname>(e, current->target))
-			{
+			if (G_FindByString<&edict_t::targetname>(e, current->target)) {
 				gi.Com_PrintFmt("{}: Forked path detected for chain {}, target {}\n",
 					*current, num_hint_paths, current->target);
 				hint_path_start[i]->hint_chain = nullptr;
@@ -898,8 +797,7 @@ void InitHintPaths()
 // use to see if opponent is behind you (not to side)
 // if it looks a lot like infront, well, there's a reason
 
-bool inback(edict_t *self, edict_t *other)
-{
+bool inback(edict_t *self, edict_t *other) {
 	vec3_t vec;
 	float  dot;
 	vec3_t forward;
@@ -911,8 +809,7 @@ bool inback(edict_t *self, edict_t *other)
 	return dot < -0.3f;
 }
 
-float realrange(edict_t *self, edict_t *other)
-{
+float realrange(edict_t *self, edict_t *other) {
 	vec3_t dir;
 
 	dir = self->s.origin - other->s.origin;
@@ -920,8 +817,7 @@ float realrange(edict_t *self, edict_t *other)
 	return dir.length();
 }
 
-bool face_wall(edict_t *self)
-{
+bool face_wall(edict_t *self) {
 	vec3_t	pt;
 	vec3_t	forward;
 	vec3_t	ang;
@@ -930,8 +826,7 @@ bool face_wall(edict_t *self)
 	AngleVectors(self->s.angles, forward, nullptr, nullptr);
 	pt = self->s.origin + (forward * 64);
 	tr = gi.traceline(self->s.origin, pt, self, MASK_MONSTERSOLID);
-	if (tr.fraction < 1 && !tr.allsolid && !tr.startsolid)
-	{
+	if (tr.fraction < 1 && !tr.allsolid && !tr.startsolid) {
 		ang = vectoangles(tr.plane.normal);
 		self->ideal_yaw = ang[YAW] + 180;
 		if (self->ideal_yaw > 360)
@@ -948,12 +843,9 @@ bool face_wall(edict_t *self)
 // Monster "Bad" Areas
 //
 
-static TOUCH(badarea_touch) (edict_t *ent, edict_t *other, const trace_t &tr, bool other_touching_self) -> void
-{
-}
+static TOUCH(badarea_touch) (edict_t *ent, edict_t *other, const trace_t &tr, bool other_touching_self) -> void {}
 
-edict_t *SpawnBadArea(const vec3_t &mins, const vec3_t &maxs, gtime_t lifespan, edict_t *owner)
-{
+edict_t *SpawnBadArea(const vec3_t &mins, const vec3_t &maxs, gtime_t lifespan, edict_t *owner) {
 	edict_t *badarea;
 	vec3_t	 origin;
 
@@ -971,25 +863,21 @@ edict_t *SpawnBadArea(const vec3_t &mins, const vec3_t &maxs, gtime_t lifespan, 
 	badarea->classname = "bad_area";
 	gi.linkentity(badarea);
 
-	if (lifespan)
-	{
+	if (lifespan) {
 		badarea->think = G_FreeEdict;
 		badarea->nextthink = level.time + lifespan;
 	}
-	if (owner)
-	{
+	if (owner) {
 		badarea->owner = owner;
 	}
 
 	return badarea;
 }
 
-static BoxEdictsResult_t CheckForBadArea_BoxFilter(edict_t *hit, void *data)
-{
-	edict_t *&result = (edict_t *&) data;
+static BoxEdictsResult_t CheckForBadArea_BoxFilter(edict_t *hit, void *data) {
+	edict_t *&result = (edict_t *&)data;
 
-	if (hit->touch == badarea_touch)
-	{
+	if (hit->touch == badarea_touch) {
 		result = hit;
 		return BoxEdictsResult_t::End;
 	}
@@ -1000,8 +888,7 @@ static BoxEdictsResult_t CheckForBadArea_BoxFilter(edict_t *hit, void *data)
 // CheckForBadArea
 //		This is a customized version of G_TouchTriggers that will check
 //		for bad area triggers and return them if they're touched.
-edict_t *CheckForBadArea(edict_t *ent)
-{
+edict_t *CheckForBadArea(edict_t *ent) {
 	vec3_t	 mins, maxs;
 
 	mins = ent->s.origin + ent->mins;
@@ -1016,8 +903,7 @@ edict_t *CheckForBadArea(edict_t *ent)
 
 constexpr float TESLA_DAMAGE_RADIUS = 128;
 
-bool MarkTeslaArea(edict_t *self, edict_t *tesla)
-{
+bool MarkTeslaArea(edict_t *self, edict_t *tesla) {
 	vec3_t	 mins, maxs;
 	edict_t *e;
 	edict_t *tail;
@@ -1031,8 +917,7 @@ bool MarkTeslaArea(edict_t *self, edict_t *tesla)
 	// make sure this tesla doesn't have a bad area around it already...
 	e = tesla->teamchain;
 	tail = tesla;
-	while (e)
-	{
+	while (e) {
 		tail = tail->teamchain;
 		if (!strcmp(e->classname, "bad_area"))
 			return false;
@@ -1041,8 +926,7 @@ bool MarkTeslaArea(edict_t *self, edict_t *tesla)
 	}
 
 	// see if we can grab the trigger directly
-	if (tesla->teamchain && tesla->teamchain->inuse)
-	{
+	if (tesla->teamchain && tesla->teamchain->inuse) {
 		edict_t *trigger;
 
 		trigger = tesla->teamchain;
@@ -1056,8 +940,7 @@ bool MarkTeslaArea(edict_t *self, edict_t *tesla)
 			area = SpawnBadArea(mins, maxs, tesla->nextthink, tesla);
 	}
 	// otherwise we just guess at how long it'll last.
-	else
-	{
+	else {
 
 		mins = { -TESLA_DAMAGE_RADIUS, -TESLA_DAMAGE_RADIUS, tesla->mins[2] };
 		maxs = { TESLA_DAMAGE_RADIUS, TESLA_DAMAGE_RADIUS, TESLA_DAMAGE_RADIUS };
@@ -1080,13 +963,11 @@ bool MarkTeslaArea(edict_t *self, edict_t *tesla)
 // offset is how much time to miss by
 // aimdir is the resulting aim direction (pass in nullptr if you don't want it)
 // aimpoint is the resulting aimpoint (pass in nullptr if don't want it)
-void PredictAim(edict_t *self, edict_t *target, const vec3_t &start, float bolt_speed, bool eye_height, float offset, vec3_t *aimdir, vec3_t *aimpoint)
-{
+void PredictAim(edict_t *self, edict_t *target, const vec3_t &start, float bolt_speed, bool eye_height, float offset, vec3_t *aimdir, vec3_t *aimpoint) {
 	vec3_t dir, vec;
 	float  dist, time;
 
-	if (!target || !target->inuse)
-	{
+	if (!target || !target->inuse) {
 		*aimdir = {};
 		return;
 	}
@@ -1099,8 +980,7 @@ void PredictAim(edict_t *self, edict_t *target, const vec3_t &start, float bolt_
 	// [Paril-KEX] if our current attempt is blocked, try the opposite one
 	trace_t tr = gi.traceline(start, start + dir, self, MASK_PROJECTILE);
 
-	if (tr.ent != target)
-	{
+	if (tr.ent != target) {
 		eye_height = !eye_height;
 		dir = target->s.origin - start;
 		if (eye_height)
@@ -1118,8 +998,7 @@ void PredictAim(edict_t *self, edict_t *target, const vec3_t &start, float bolt_
 	// went backwards...
 	if (dir.normalized().dot((vec - start).normalized()) < 0)
 		vec = target->s.origin;
-	else
-	{
+	else {
 		// if the shot is going to impact a nearby wall from our prediction, just fire it straight.	
 		if (gi.traceline(start, vec, nullptr, MASK_SOLID).fraction < 0.9f)
 			vec = target->s.origin;
@@ -1137,8 +1016,7 @@ void PredictAim(edict_t *self, edict_t *target, const vec3_t &start, float bolt_
 
 // [Paril-KEX] find a pitch that will at some point land on or near the player.
 // very approximate. aim will be adjusted to the correct aim vector.
-bool M_CalculatePitchToFire(edict_t *self, const vec3_t &target, const vec3_t &start, vec3_t &aim, float speed, float time_remaining, bool mortar, bool destroy_on_touch)
-{
+bool M_CalculatePitchToFire(edict_t *self, const vec3_t &target, const vec3_t &start, vec3_t &aim, float speed, float time_remaining, bool mortar, bool destroy_on_touch) {
 	constexpr float pitches[] = { -80.f, -70.f, -60.f, -50.f, -40.f, -30.f, -20.f, -10.f, -5.f };
 	float best_pitch = 0.f;
 	float best_dist = std::numeric_limits<float>::infinity();
@@ -1146,8 +1024,7 @@ bool M_CalculatePitchToFire(edict_t *self, const vec3_t &target, const vec3_t &s
 	constexpr float sim_time = 0.1f;
 	vec3_t pitched_aim = vectoangles(aim);
 
-	for (auto &pitch : pitches)
-	{
+	for (auto &pitch : pitches) {
 		if (mortar && pitch >= -30.f)
 			break;
 
@@ -1159,17 +1036,15 @@ bool M_CalculatePitchToFire(edict_t *self, const vec3_t &target, const vec3_t &s
 
 		float t = time_remaining;
 
-		while (t > 0.f)
-		{
-			velocity += vec3_t{ 0, 0, -1 } * level.gravity * sim_time;
+		while (t > 0.f) {
+			velocity += vec3_t{ 0, 0, -1 } *level.gravity * sim_time;
 
 			vec3_t end = origin + (velocity * sim_time);
 			trace_t tr = gi.traceline(origin, end, nullptr, MASK_SHOT);
 
 			origin = tr.endpos;
 
-			if (tr.fraction < 1.0f)
-			{
+			if (tr.fraction < 1.0f) {
 				if (tr.surface->flags & SURF_SKY)
 					break;
 
@@ -1178,8 +1053,7 @@ bool M_CalculatePitchToFire(edict_t *self, const vec3_t &target, const vec3_t &s
 
 				float dist = (origin - target).lengthSquared();
 
-				if (tr.ent == self->enemy || tr.ent->client || (tr.plane.normal.z >= 0.7f && dist < (128.f * 128.f) && dist < best_dist))
-				{
+				if (tr.ent == self->enemy || tr.ent->client || (tr.plane.normal.z >= 0.7f && dist < (128.f * 128.f) && dist < best_dist)) {
 					best_pitch = pitch;
 					best_dist = dist;
 				}
@@ -1192,8 +1066,7 @@ bool M_CalculatePitchToFire(edict_t *self, const vec3_t &target, const vec3_t &s
 		}
 	}
 
-	if (!isinf(best_dist))
-	{
+	if (!isinf(best_dist)) {
 		pitched_aim[PITCH] = best_pitch;
 		aim = AngleVectors(pitched_aim).forward;
 		return true;
@@ -1202,8 +1075,7 @@ bool M_CalculatePitchToFire(edict_t *self, const vec3_t &target, const vec3_t &s
 	return false;
 }
 
-bool below(edict_t *self, edict_t *other)
-{
+bool below(edict_t *self, edict_t *other) {
 	vec3_t vec;
 	float  dot;
 	vec3_t down;
@@ -1218,8 +1090,7 @@ bool below(edict_t *self, edict_t *other)
 	return false;
 }
 
-void drawbbox(edict_t *self)
-{
+void drawbbox(edict_t *self) {
 	int lines[4][3] = {
 		{ 1, 2, 4 },
 		{ 1, 2, 7 },
@@ -1238,12 +1109,9 @@ void drawbbox(edict_t *self)
 	coords[0] = self->absmin;
 	coords[1] = self->absmax;
 
-	for (i = 0; i <= 1; i++)
-	{
-		for (j = 0; j <= 1; j++)
-		{
-			for (k = 0; k <= 1; k++)
-			{
+	for (i = 0; i <= 1; i++) {
+		for (j = 0; j <= 1; j++) {
+			for (k = 0; k <= 1; k++) {
 				pt[4 * i + 2 * j + k][0] = coords[i][0];
 				pt[4 * i + 2 * j + k][1] = coords[j][1];
 				pt[4 * i + 2 * j + k][2] = coords[k][2];
@@ -1251,10 +1119,8 @@ void drawbbox(edict_t *self)
 		}
 	}
 
-	for (i = 0; i <= 3; i++)
-	{
-		for (j = 0; j <= 2; j++)
-		{
+	for (i = 0; i <= 3; i++) {
+		for (j = 0; j <= 2; j++) {
 			gi.WriteByte(svc_temp_entity);
 			gi.WriteByte(TE_DEBUGTRAIL);
 			gi.WritePosition(pt[starts[i]]);
@@ -1289,8 +1155,7 @@ void drawbbox(edict_t *self)
 }
 
 // [Paril-KEX] returns true if the skill check passes
-static inline bool G_SkillCheck(const std::initializer_list<float> &skills)
-{
+static inline bool G_SkillCheck(const std::initializer_list<float> &skills) {
 	if (skills.size() < skill->integer)
 		return true;
 
@@ -1301,8 +1166,7 @@ static inline bool G_SkillCheck(const std::initializer_list<float> &skills)
 //
 // New dodge code
 //
-MONSTERINFO_DODGE(M_MonsterDodge) (edict_t *self, edict_t *attacker, gtime_t eta, trace_t *tr, bool gravity) -> void
-{
+MONSTERINFO_DODGE(M_MonsterDodge) (edict_t *self, edict_t *attacker, gtime_t eta, trace_t *tr, bool gravity) -> void {
 	float r = frandom();
 	float height;
 	bool  ducker = false, dodger = false;
@@ -1319,8 +1183,7 @@ MONSTERINFO_DODGE(M_MonsterDodge) (edict_t *self, edict_t *attacker, gtime_t eta
 	if ((!ducker) && (!dodger))
 		return;
 
-	if (!self->enemy)
-	{
+	if (!self->enemy) {
 		self->enemy = attacker;
 		FoundTarget(self);
 	}
@@ -1334,35 +1197,27 @@ MONSTERINFO_DODGE(M_MonsterDodge) (edict_t *self, edict_t *attacker, gtime_t eta
 	if (r > 0.50f)
 		return;
 
-	if (ducker && tr)
-	{
+	if (ducker && tr) {
 		height = self->absmax[2] - 32 - 1; // the -1 is because the absmax is s.origin + maxs + 1
 
 		if ((!dodger) && ((tr->endpos[2] <= height) || (self->monsterinfo.aiflags & AI_DUCKED)))
 			return;
-	}
-	else
+	} else
 		height = self->absmax[2];
 
-	if (dodger)
-	{
+	if (dodger) {
 		// if we're already dodging, just finish the sequence, i.e. don't do anything else
 		if (self->monsterinfo.aiflags & AI_DODGING)
 			return;
 
 		// if we're ducking already, or the shot is at our knees
-		if ((!ducker || !tr || tr->endpos[2] <= height) || (self->monsterinfo.aiflags & AI_DUCKED))
-		{
+		if ((!ducker || !tr || tr->endpos[2] <= height) || (self->monsterinfo.aiflags & AI_DUCKED)) {
 			// on Easy & Normal, don't sidestep as often (25% on Easy, 50% on Normal)
-			if (!G_SkillCheck({ 0.25f, 0.50f, 1.0f, 1.0f }))
-			{
+			if (!G_SkillCheck({ 0.25f, 0.50f, 1.0f, 1.0f })) {
 				self->monsterinfo.dodge_time = level.time + random_time(0.8_sec, 1.4_sec);
 				return;
-			}
-			else
-			{
-				if (tr)
-				{
+			} else {
+				if (tr) {
 					vec3_t right, diff;
 
 					AngleVectors(self->s.angles, nullptr, right, nullptr);
@@ -1372,13 +1227,11 @@ MONSTERINFO_DODGE(M_MonsterDodge) (edict_t *self, edict_t *attacker, gtime_t eta
 						self->monsterinfo.lefty = false;
 					else
 						self->monsterinfo.lefty = true;
-				}
-				else
+				} else
 					self->monsterinfo.lefty = brandom();
 
 				// call the monster specific code here
-				if (self->monsterinfo.sidestep(self))
-				{
+				if (self->monsterinfo.sidestep(self)) {
 					// if we are currently ducked, unduck
 					if ((ducker) && (self->monsterinfo.aiflags & AI_DUCKED))
 						self->monsterinfo.unduck(self);
@@ -1395,15 +1248,13 @@ MONSTERINFO_DODGE(M_MonsterDodge) (edict_t *self, edict_t *attacker, gtime_t eta
 
 	// [Paril-KEX] we don't need to duck until projectiles are going to hit us very
 	// soon.
-	if (ducker && tr && eta < 0.5_sec)
-	{
+	if (ducker && tr && eta < 0.5_sec) {
 		if (self->monsterinfo.next_duck_time > level.time)
 			return;
 
 		monster_done_dodge(self);
 
-		if (self->monsterinfo.duck(self, eta))
-		{
+		if (self->monsterinfo.duck(self, eta)) {
 			// if duck didn't set us yet, do it now
 			if (self->monsterinfo.duck_wait_time < level.time)
 				self->monsterinfo.duck_wait_time = level.time + eta;
@@ -1421,8 +1272,7 @@ MONSTERINFO_DODGE(M_MonsterDodge) (edict_t *self, edict_t *attacker, gtime_t eta
 	}
 }
 
-void monster_duck_down(edict_t *self)
-{
+void monster_duck_down(edict_t *self) {
 	self->monsterinfo.aiflags |= AI_DUCKED;
 
 	self->maxs[2] = self->monsterinfo.base_height - 32;
@@ -1431,16 +1281,14 @@ void monster_duck_down(edict_t *self)
 	gi.linkentity(self);
 }
 
-void monster_duck_hold(edict_t *self)
-{
+void monster_duck_hold(edict_t *self) {
 	if (level.time >= self->monsterinfo.duck_wait_time)
 		self->monsterinfo.aiflags &= ~AI_HOLD_FRAME;
 	else
 		self->monsterinfo.aiflags |= AI_HOLD_FRAME;
 }
 
-MONSTERINFO_UNDUCK(monster_duck_up) (edict_t *self) -> void
-{
+MONSTERINFO_UNDUCK(monster_duck_up) (edict_t *self) -> void {
 	if (!(self->monsterinfo.aiflags & AI_DUCKED))
 		return;
 
@@ -1455,8 +1303,7 @@ MONSTERINFO_UNDUCK(monster_duck_up) (edict_t *self) -> void
 
 //=========================
 //=========================
-bool has_valid_enemy(edict_t *self)
-{
+bool has_valid_enemy(edict_t *self) {
 	if (!self->enemy)
 		return false;
 
@@ -1469,14 +1316,12 @@ bool has_valid_enemy(edict_t *self)
 	return true;
 }
 
-void TargetTesla(edict_t *self, edict_t *tesla)
-{
+void TargetTesla(edict_t *self, edict_t *tesla) {
 	if ((!self) || (!tesla))
 		return;
 
 	// PMM - medic bails on healing things
-	if (self->monsterinfo.aiflags & AI_MEDIC)
-	{
+	if (self->monsterinfo.aiflags & AI_MEDIC) {
 		if (self->enemy)
 			cleanupHealTarget(self->enemy);
 		self->monsterinfo.aiflags &= ~AI_MEDIC;
@@ -1486,18 +1331,15 @@ void TargetTesla(edict_t *self, edict_t *tesla)
 	if (self->enemy && self->enemy->client)
 		self->monsterinfo.last_player_enemy = self->enemy;
 
-	if (self->enemy != tesla)
-	{
+	if (self->enemy != tesla) {
 		self->oldenemy = self->enemy;
 		self->enemy = tesla;
-		if (self->monsterinfo.attack)
-		{
+		if (self->monsterinfo.attack) {
 			if (self->health <= 0)
 				return;
 
 			self->monsterinfo.attack(self);
-		}
-		else
+		} else
 			FoundTarget(self);
 	}
 }
@@ -1505,28 +1347,19 @@ void TargetTesla(edict_t *self, edict_t *tesla)
 // this returns a randomly selected coop player who is visible to self
 // returns nullptr if bad
 
-edict_t *PickCoopTarget(edict_t *self)
-{
+edict_t *PickCoopTarget(edict_t *self) {
 	edict_t **targets;
 	int		 num_targets = 0, targetID;
-	edict_t *ent;
 
 	// if we're not in coop, this is a noop
 	if (!coop->integer)
 		return nullptr;
 
-	targets = (edict_t **) alloca(sizeof(edict_t *) * game.maxclients);
+	targets = (edict_t **)alloca(sizeof(edict_t *) * game.maxclients);
 
-	for (uint32_t player = 1; player <= game.maxclients; player++)
-	{
-		ent = &g_edicts[player];
-		if (!ent->inuse)
-			continue;
-		if (!ent->client)
-			continue;
-		if (visible(self, ent))
-			targets[num_targets++] = ent;
-	}
+	for (auto ec : active_clients())
+		if (visible(self, ec))
+			targets[num_targets++] = ec;
 
 	if (!num_targets)
 		return nullptr;
@@ -1538,51 +1371,27 @@ edict_t *PickCoopTarget(edict_t *self)
 }
 
 // only meant to be used in coop
-int CountPlayers()
-{
-	edict_t *ent;
-	int		 count = 0;
-
+int CountPlayers() {
 	// if we're not in coop, this is a noop
 	if (!coop->integer)
 		return 1;
 
-	for (uint32_t player = 1; player <= game.maxclients; player++)
-	{
-		ent = &g_edicts[player];
-		if (!ent->inuse)
-			continue;
-		if (!ent->client)
-			continue;
+	int count = 0;
+	for (auto ac : active_clients())
 		count++;
-	}
-	/*
-		ent = g_edicts+1; // skip the worldspawn
-		while (ent)
-		{
-			if ((ent->client) && (ent->inuse))
-			{
-				ent++;
-				count++;
-			}
-			else
-				ent = nullptr;
-		}
-	*/
+
 	return count;
 }
 
-static THINK(BossExplode_think) (edict_t *self) -> void
-{
+static THINK(BossExplode_think) (edict_t *self) -> void {
 	// owner gone or changed
-	if (!self->owner->inuse || self->owner->s.modelindex != self->style || self->count != self->owner->spawn_count)
-	{
+	if (!self->owner->inuse || self->owner->s.modelindex != self->style || self->count != self->owner->spawn_count) {
 		G_FreeEdict(self);
 		return;
 	}
 
 	vec3_t org = self->owner->s.origin + self->owner->mins;
-	
+
 	org.x += frandom() * self->owner->size.x;
 	org.y += frandom() * self->owner->size.y;
 	org.z += frandom() * self->owner->size.z;
@@ -1597,8 +1406,7 @@ static THINK(BossExplode_think) (edict_t *self) -> void
 	self->nextthink = level.time + random_time(50_ms, 200_ms);
 }
 
-void BossExplode(edict_t *self)
-{
+void BossExplode(edict_t *self) {
 	// no blowy on deady
 	if (self->spawnflags.has(SPAWNFLAG_MONSTER_DEAD))
 		return;

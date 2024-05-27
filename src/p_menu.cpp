@@ -8,7 +8,7 @@ P_Menu_Dirty
 ============
 */
 void P_Menu_Dirty() {
-	for (auto player : active_players())
+	for (auto player : active_clients())
 		if (player->client->menu) {
 			player->client->menudirty = true;
 			player->client->menutime = level.time;
@@ -83,7 +83,9 @@ void P_Menu_Close(edict_t *ent) {
 	gi.TagFree(hnd);
 	ent->client->menu = nullptr;
 	ent->client->showscores = false;
-	ent->client->ps.stats[STAT_SHOW_STATUSBAR] = ent->client->resp.team == TEAM_SPECTATOR ? (ent->client->chase_target ? 1 : 0) : 1;
+
+	edict_t *e = ent->client->follow_target ? ent->client->follow_target : ent;
+	ent->client->ps.stats[STAT_SHOW_STATUSBAR] = e->client->resp.team == TEAM_SPECTATOR ? 0 : 1;
 }
 
 // only use on pmenu's that have been called with P_Menu_Open

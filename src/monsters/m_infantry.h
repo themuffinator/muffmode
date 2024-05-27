@@ -213,7 +213,6 @@ enum
 	FRAME_attak206,
 	FRAME_attak207,
 	FRAME_attak208,
-	// ROGUE
 	FRAME_jump01,
 	FRAME_jump02,
 	FRAME_jump03,
@@ -224,7 +223,6 @@ enum
 	FRAME_jump08,
 	FRAME_jump09,
 	FRAME_jump10,
-	// ROGUE
 	// [Paril-KEX] old attack, for demos
 	FRAME_attak301,
 	FRAME_attak302,

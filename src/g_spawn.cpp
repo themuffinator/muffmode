@@ -1117,14 +1117,9 @@ void PrecacheInventoryItems() {
 	if (deathmatch->integer)
 		return;
 
-	for (size_t i = 0; i < game.maxclients; i++) {
-		gclient_t *cl = g_edicts[i + 1].client;
-
-		if (!cl)
-			continue;
-
+	for (auto ce : active_clients()) {
 		for (item_id_t id = IT_NULL; id != IT_TOTAL; id = static_cast<item_id_t>(id + 1))
-			if (cl->pers.inventory[id])
+			if (ce->client->pers.inventory[id])
 				PrecacheItem(GetItemByIndex(id));
 	}
 }
@@ -1591,22 +1586,15 @@ void SpawnEntities(const char *mapname, const char *entities, const char *spawnp
 
 	G_FindTeams();
 
-	if (competition->integer > 1) {
-		level.match = MATCH_SETUP;
-		level.match_time = level.time + gtime_t::from_min(matchsetuptime->value);
-	}
-
 	QuadHog_SetupSpawn(5_sec);
 	Tech_SetupSpawn();
 
-	// ROGUE
 	if (deathmatch->integer) {
 		if (g_dm_random_items->integer)
 			PrecacheForRandomRespawn();
 	} else {
 		InitHintPaths(); // if there aren't hintpaths on this map, enable quick aborts
 	}
-	// ROGUE
 
 	G_LocateSpawnSpots();
 
@@ -1869,9 +1857,9 @@ void SP_worldspawn(edict_t *ent) {
 		game.help1changed = game.help2changed = 0;
 		*game.helpmessage1 = *game.helpmessage2 = '\0';
 
-		for (size_t i = 0; i < game.maxclients; i++) {
-			game.clients[i].pers.game_help1changed = game.clients[i].pers.game_help2changed = 0;
-			game.clients[i].resp.coop_respawn.game_help1changed = game.clients[i].resp.coop_respawn.game_help2changed = 0;
+		for (auto ec : active_clients()) {
+			ec->client->pers.game_help1changed = ec->client->pers.game_help2changed = 0;
+			ec->client->resp.coop_respawn.game_help1changed = ec->client->resp.coop_respawn.game_help2changed = 0;
 		}
 	}
 

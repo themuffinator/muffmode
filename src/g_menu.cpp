@@ -37,14 +37,12 @@ static void G_Menu_SetLevelName(menu_t *p) {
 void G_Menu_ReturnToMain(edict_t *ent, menu_hnd_t *p);
 
 struct admin_settings_t {
-	int	 matchlen;
-	int	 matchsetuplen;
-	int	 matchstartlen;
+	int	 timelimit;
 	bool weaponsstay;
 	bool instantitems;
 	bool pu_drop;
 	bool instantweap;
-	bool g_match_lock;
+	bool match_lock;
 };
 
 void G_Menu_Admin_UpdateSettings(edict_t *ent, menu_hnd_t *setmenu);
@@ -53,36 +51,11 @@ void G_Menu_Admin(edict_t *ent, menu_hnd_t *p);
 static void G_Menu_Admin_SettingsApply(edict_t *ent, menu_hnd_t *p) {
 	admin_settings_t *settings = (admin_settings_t *)p->arg;
 
-	if (settings->matchlen != timelimit->integer) {
-		gi.LocBroadcast_Print(PRINT_HIGH, "{} changed the match length to {} minutes.\n",
-			ent->client->resp.netname, settings->matchlen);
-		if (level.match == MATCH_GAME) {
-			// in the middle of a match, change it on the fly
-			level.match_time = (level.match_time - gtime_t::from_min(timelimit->integer)) + gtime_t::from_min(settings->matchlen);
-		}
-		;
-		gi.cvar_set("timelimit", G_Fmt("{}", settings->matchlen).data());
-	}
+	if (settings->timelimit != timelimit->integer) {
+		gi.LocBroadcast_Print(PRINT_HIGH, "{} changed the timelimit to {} minutes.\n",
+			ent->client->resp.netname, settings->timelimit);
 
-	if (settings->matchsetuplen != matchsetuptime->value) {
-		gi.LocBroadcast_Print(PRINT_HIGH, "{} changed the match setup time to {} minutes.\n",
-			ent->client->resp.netname, settings->matchsetuplen);
-		if (level.match == MATCH_SETUP) {
-			// in the middle of a match, change it on the fly
-			level.match_time = (level.match_time - gtime_t::from_min(matchsetuptime->value)) + gtime_t::from_min(settings->matchsetuplen);
-		}
-		;
-		gi.cvar_set("matchsetuptime", G_Fmt("{}", settings->matchsetuplen).data());
-	}
-
-	if (settings->matchstartlen != matchstarttime->value) {
-		gi.LocBroadcast_Print(PRINT_HIGH, "{} changed the match start time to {} seconds.\n",
-			ent->client->resp.netname, settings->matchstartlen);
-		if (level.match == MATCH_PREGAME) {
-			// in the middle of a match, change it on the fly
-			level.match_time = (level.match_time - gtime_t::from_sec(matchstarttime->value)) + gtime_t::from_sec(settings->matchstartlen);
-		}
-		gi.cvar_set("matchstarttime", G_Fmt("{}", settings->matchstartlen).data());
+		gi.cvar_set("timelimit", G_Fmt("{}", settings->timelimit).data());
 	}
 
 	if (settings->weaponsstay != !!g_dm_weapons_stay->integer) {
@@ -109,10 +82,10 @@ static void G_Menu_Admin_SettingsApply(edict_t *ent, menu_hnd_t *p) {
 		gi.cvar_set("g_instant_weapon_switch", settings->instantweap ? "1" : "0");
 	}
 
-	if (settings->g_match_lock != !!g_match_lock->integer) {
+	if (settings->match_lock != !!g_match_lock->integer) {
 		gi.LocBroadcast_Print(PRINT_HIGH, "{} turned {} match lock.\n",
-			ent->client->resp.netname, settings->g_match_lock ? "on" : "off");
-		gi.cvar_set("g_match_lock", settings->g_match_lock ? "1" : "0");
+			ent->client->resp.netname, settings->match_lock ? "on" : "off");
+		gi.cvar_set("g_match_lock", settings->match_lock ? "1" : "0");
 	}
 
 	P_Menu_Close(ent);
@@ -127,9 +100,9 @@ static void G_Menu_Admin_SettingsCancel(edict_t *ent, menu_hnd_t *p) {
 static void G_Menu_Admin_ChangeMatchLen(edict_t *ent, menu_hnd_t *p) {
 	admin_settings_t *settings = (admin_settings_t *)p->arg;
 
-	settings->matchlen = (settings->matchlen % 60) + 5;
-	if (settings->matchlen < 5)
-		settings->matchlen = 5;
+	settings->timelimit = (settings->timelimit % 60) + 5;
+	if (settings->timelimit < 5)
+		settings->timelimit = 5;
 
 	G_Menu_Admin_UpdateSettings(ent, p);
 }
@@ -137,19 +110,11 @@ static void G_Menu_Admin_ChangeMatchLen(edict_t *ent, menu_hnd_t *p) {
 static void G_Menu_Admin_ChangeMatchSetupLen(edict_t *ent, menu_hnd_t *p) {
 	admin_settings_t *settings = (admin_settings_t *)p->arg;
 
-	settings->matchsetuplen = (settings->matchsetuplen % 60) + 5;
-	if (settings->matchsetuplen < 5)
-		settings->matchsetuplen = 5;
-
 	G_Menu_Admin_UpdateSettings(ent, p);
 }
 
 static void G_Menu_Admin_ChangeMatchStartLen(edict_t *ent, menu_hnd_t *p) {
 	admin_settings_t *settings = (admin_settings_t *)p->arg;
-
-	settings->matchstartlen = (settings->matchstartlen % 600) + 10;
-	if (settings->matchstartlen < 20)
-		settings->matchstartlen = 20;
 
 	G_Menu_Admin_UpdateSettings(ent, p);
 }
@@ -185,7 +150,7 @@ static void G_Menu_Admin_ChangeInstantWeap(edict_t *ent, menu_hnd_t *p) {
 static void G_Menu_Admin_ChangeMatchLock(edict_t *ent, menu_hnd_t *p) {
 	admin_settings_t *settings = (admin_settings_t *)p->arg;
 
-	settings->g_match_lock = !settings->g_match_lock;
+	settings->match_lock = !settings->match_lock;
 	G_Menu_Admin_UpdateSettings(ent, p);
 }
 
@@ -193,13 +158,7 @@ void G_Menu_Admin_UpdateSettings(edict_t *ent, menu_hnd_t *setmenu) {
 	int				  i = 2;
 	admin_settings_t *settings = (admin_settings_t *)setmenu->arg;
 
-	P_Menu_UpdateEntry(setmenu->entries + i, G_Fmt("time limit: {:2} mins", settings->matchlen).data(), MENU_ALIGN_LEFT, G_Menu_Admin_ChangeMatchLen);
-	i++;
-
-	P_Menu_UpdateEntry(setmenu->entries + i, G_Fmt("match setup len: {:2} mins", settings->matchsetuplen).data(), MENU_ALIGN_LEFT, G_Menu_Admin_ChangeMatchSetupLen);
-	i++;
-
-	P_Menu_UpdateEntry(setmenu->entries + i, G_Fmt("match start len: {:2} secs", settings->matchstartlen).data(), MENU_ALIGN_LEFT, G_Menu_Admin_ChangeMatchStartLen);
+	P_Menu_UpdateEntry(setmenu->entries + i, G_Fmt("time limit: {:2} mins", settings->timelimit).data(), MENU_ALIGN_LEFT, G_Menu_Admin_ChangeMatchLen);
 	i++;
 
 	P_Menu_UpdateEntry(setmenu->entries + i, G_Fmt("weapons stay: {}", settings->weaponsstay ? "Yes" : "No").data(), MENU_ALIGN_LEFT, G_Menu_Admin_ChangeWeapStay);
@@ -214,7 +173,7 @@ void G_Menu_Admin_UpdateSettings(edict_t *ent, menu_hnd_t *setmenu) {
 	P_Menu_UpdateEntry(setmenu->entries + i, G_Fmt("instant weapon switch: {}", settings->instantweap ? "Yes" : "No").data(), MENU_ALIGN_LEFT, G_Menu_Admin_ChangeInstantWeap);
 	i++;
 
-	P_Menu_UpdateEntry(setmenu->entries + i, G_Fmt("match lock: {}", settings->g_match_lock ? "Yes" : "No").data(), MENU_ALIGN_LEFT, G_Menu_Admin_ChangeMatchLock);
+	P_Menu_UpdateEntry(setmenu->entries + i, G_Fmt("match lock: {}", settings->match_lock ? "Yes" : "No").data(), MENU_ALIGN_LEFT, G_Menu_Admin_ChangeMatchLock);
 	i++;
 
 	P_Menu_Update(ent);
@@ -223,14 +182,14 @@ void G_Menu_Admin_UpdateSettings(edict_t *ent, menu_hnd_t *setmenu) {
 const menu_t def_setmenu[] = {
 	{ "*Settings Menu", MENU_ALIGN_CENTER, nullptr },
 	{ "", MENU_ALIGN_LEFT, nullptr },
-	{ "", MENU_ALIGN_LEFT, nullptr }, // int matchlen;
-	{ "", MENU_ALIGN_LEFT, nullptr }, // int matchsetuplen;
-	{ "", MENU_ALIGN_LEFT, nullptr }, // int matchstartlen;
+	{ "", MENU_ALIGN_LEFT, nullptr }, // int timelimit;
 	{ "", MENU_ALIGN_LEFT, nullptr }, // bool weaponsstay;
 	{ "", MENU_ALIGN_LEFT, nullptr }, // bool instantitems;
 	{ "", MENU_ALIGN_LEFT, nullptr }, // bool pu_drop;
 	{ "", MENU_ALIGN_LEFT, nullptr }, // bool instantweap;
 	{ "", MENU_ALIGN_LEFT, nullptr }, // bool g_match_lock;
+	{ "", MENU_ALIGN_LEFT, nullptr },
+	{ "", MENU_ALIGN_LEFT, nullptr },
 	{ "", MENU_ALIGN_LEFT, nullptr },
 	{ "", MENU_ALIGN_LEFT, nullptr },
 	{ "", MENU_ALIGN_LEFT, nullptr },
@@ -249,14 +208,12 @@ static void G_Menu_Admin_Settings(edict_t *ent, menu_hnd_t *p) {
 
 	settings = (admin_settings_t *)gi.TagMalloc(sizeof(*settings), TAG_LEVEL);
 
-	settings->matchlen = timelimit->integer;
-	settings->matchsetuplen = matchsetuptime->integer;
-	settings->matchstartlen = matchstarttime->integer;
+	settings->timelimit = timelimit->integer;
 	settings->weaponsstay = g_dm_weapons_stay->integer;
 	settings->instantitems = g_dm_instant_items->integer;
-	settings->pu_drop = g_dm_powerup_drop->integer;
+	settings->pu_drop = !!g_dm_powerup_drop->integer;
 	settings->instantweap = g_instant_weapon_switch->integer != 0;
-	settings->g_match_lock = g_match_lock->integer != 0;
+	settings->match_lock = g_match_lock->integer != 0;
 
 	menu = P_Menu_Open(ent, def_setmenu, -1, sizeof(def_setmenu) / sizeof(menu_t), settings, nullptr);
 	G_Menu_Admin_UpdateSettings(ent, menu);
@@ -265,55 +222,19 @@ static void G_Menu_Admin_Settings(edict_t *ent, menu_hnd_t *p) {
 static void G_Menu_Admin_MatchSet(edict_t *ent, menu_hnd_t *p) {
 	P_Menu_Close(ent);
 
-	if (level.match == MATCH_SETUP) {
+	if (level.match_state <= MATCH_COUNTDOWN) {
 		gi.LocBroadcast_Print(PRINT_CHAT, "Match has been forced to start.\n");
-		level.match = MATCH_PREGAME;
-		level.match_time = level.time + gtime_t::from_sec(matchstarttime->value);
-		gi.positioned_sound(world->s.origin, world, CHAN_AUTO | CHAN_RELIABLE, gi.soundindex("misc/talk1.wav"), 1, ATTN_NONE, 0);
-		level.countdown = false;
-	} else if (level.match == MATCH_GAME) {
+		Match_Start();
+	} else if (level.match_state == MATCH_IN_PROGRESS) {
 		gi.LocBroadcast_Print(PRINT_CHAT, "Match has been forced to terminate.\n");
-		level.match = MATCH_SETUP;
-		level.match_time = level.time + gtime_t::from_min(matchsetuptime->value);
 		Match_Reset();
 	}
-}
-
-static void G_Menu_Admin_MatchMode(edict_t *ent, menu_hnd_t *p) {
-	P_Menu_Close(ent);
-
-	if (level.match != MATCH_SETUP) {
-		if (competition->integer < 3)
-			gi.cvar_set("competition", "2");
-		level.match = MATCH_SETUP;
-		Match_Reset();
-	}
-}
-
-static void G_Menu_Admin_Reset(edict_t *ent, menu_hnd_t *p) {
-	P_Menu_Close(ent);
-
-	// go back to normal mode
-	gi.LocBroadcast_Print(PRINT_CHAT, "Match mode has been terminated, reseting to normal game.\n");
-	level.match = MATCH_NONE;
-	gi.cvar_set("competition", "1");
-	Match_Reset();
 }
 
 static void G_Menu_Admin_Cancel(edict_t *ent, menu_hnd_t *p) {
 	P_Menu_Close(ent);
 }
-#if 0
-menu_t adminmenu[] = {
-	{ "*Administration Menu", MENU_ALIGN_CENTER, nullptr },
-	{ "", MENU_ALIGN_CENTER, nullptr }, // blank
-	{ "Settings", MENU_ALIGN_LEFT, G_Menu_Admin_Settings },
-	{ "", MENU_ALIGN_LEFT, nullptr },
-	{ "", MENU_ALIGN_LEFT, nullptr },
-	{ "Cancel", MENU_ALIGN_LEFT, G_Menu_Admin_Cancel },
-	{ "", MENU_ALIGN_CENTER, nullptr },
-};
-#endif
+
 menu_t adminmenu[] = {
 	{ "*Administration Menu", MENU_ALIGN_CENTER, nullptr },
 	{ "", MENU_ALIGN_LEFT, nullptr },
@@ -340,17 +261,14 @@ void G_Menu_Admin(edict_t *ent, menu_hnd_t *p) {
 	adminmenu[3].SelectFunc = nullptr;
 	adminmenu[4].text[0] = '\0';
 	adminmenu[4].SelectFunc = nullptr;
-	if (level.match == MATCH_SETUP) {
+
+	if (level.match_state <= MATCH_COUNTDOWN) {
 		Q_strlcpy(adminmenu[3].text, "Force start match", sizeof(adminmenu[3].text));
 		adminmenu[3].SelectFunc = G_Menu_Admin_MatchSet;
-		Q_strlcpy(adminmenu[4].text, "Reset to pickup mode", sizeof(adminmenu[4].text));
-		adminmenu[4].SelectFunc = G_Menu_Admin_Reset;
-	} else if (level.match == MATCH_GAME || level.match == MATCH_PREGAME) {
-		Q_strlcpy(adminmenu[3].text, "Cancel match", sizeof(adminmenu[3].text));
+
+	} else if (level.match_state == MATCH_IN_PROGRESS) {
+		Q_strlcpy(adminmenu[3].text, "Reset match", sizeof(adminmenu[3].text));
 		adminmenu[3].SelectFunc = G_Menu_Admin_MatchSet;
-	} else if (level.match == MATCH_NONE && competition->integer) {
-		Q_strlcpy(adminmenu[3].text, "Switch to match mode", sizeof(adminmenu[3].text));
-		adminmenu[3].SelectFunc = G_Menu_Admin_MatchMode;
 	}
 
 	P_Menu_Close(ent);
@@ -520,22 +438,22 @@ void G_Menu_Vote_Open(edict_t *ent) {
 /*-----------------------------------------------------------------------*/
 
 static void G_Menu_Join_Team_Free(edict_t *ent, menu_hnd_t *p) {
-	SetTeam(ent, TEAM_FREE, false, false);
+	SetTeam(ent, TEAM_FREE, false, false, false);
 }
 
 static void G_Menu_Join_Team_Red(edict_t *ent, menu_hnd_t *p) {
-	SetTeam(ent, !g_teamplay_allow_team_pick->integer ? PickTeam(-1) : TEAM_RED, false, false);
+	SetTeam(ent, !g_teamplay_allow_team_pick->integer ? PickTeam(-1) : TEAM_RED, false, false, false);
 }
 
 static void G_Menu_Join_Team_Blue(edict_t *ent, menu_hnd_t *p) {
 	if (!g_teamplay_allow_team_pick->integer)
 		return;
 
-	SetTeam(ent, TEAM_BLUE, false, false);
+	SetTeam(ent, TEAM_BLUE, false, false, false);
 }
 
 static void G_Menu_Join_Team_Spec(edict_t *ent, menu_hnd_t *p) {
-	SetTeam(ent, TEAM_SPECTATOR, false, false);
+	SetTeam(ent, TEAM_SPECTATOR, false, false, false);
 }
 
 void G_Menu_ReturnToMain(edict_t *ent, menu_hnd_t *p);
@@ -675,26 +593,15 @@ static void G_Menu_NoChaseCamUpdate(edict_t *ent) {
 }
 
 void G_Menu_ChaseCam(edict_t *ent, menu_hnd_t *p) {
-	edict_t *e;
+	SetTeam(ent, TEAM_SPECTATOR, false, false, false);
 
-	SetTeam(ent, TEAM_SPECTATOR, false, false);
-
-	if (ent->client->chase_target) {
-		ent->client->chase_target = nullptr;
-		ent->client->ps.pmove.pm_flags &= ~(PMF_NO_POSITIONAL_PREDICTION | PMF_NO_ANGULAR_PREDICTION);
+	if (ent->client->follow_target) {
+		FreeFollower(ent);
 		P_Menu_Close(ent);
 		return;
 	}
 
-	for (uint32_t i = 1; i <= game.maxclients; i++) {
-		e = g_edicts + i;
-		if (e->inuse && e->solid != SOLID_NOT) {
-			ent->client->chase_target = e;
-			P_Menu_Close(ent);
-			ent->client->update_chase = true;
-			return;
-		}
-	}
+	GetFollowTarget(ent);
 
 	P_Menu_Close(ent);
 	P_Menu_Open(ent, nochasemenu, -1, sizeof(nochasemenu) / sizeof(menu_t), nullptr, G_Menu_NoChaseCamUpdate);
@@ -974,17 +881,22 @@ static void G_Menu_Join_Update(edict_t *ent) {
 	int		pmax = maxplayers->integer;
 	uint8_t	num_red = 0, num_blue = 0, num_free = 0, num_queue = 0;
 
-	for (size_t i = 0; i < game.maxclients; i++) {
-		if (!g_edicts[i + 1].inuse)
-			continue;
-		if (game.clients[i].resp.team == TEAM_FREE)
-			num_free++;
-		else if (game.clients[i].resp.team == TEAM_RED)
-			num_red++;
-		else if (game.clients[i].resp.team == TEAM_BLUE)
-			num_blue++;
-		else if (duel->integer && game.clients[i].resp.team == TEAM_SPECTATOR && game.clients[i].resp.duel_queued)
+	for (auto ec : active_clients()) {
+		if (duel->integer && ec->client->resp.team == TEAM_SPECTATOR && ec->client->resp.duel_queued) {
 			num_queue++;
+		} else {
+			switch (ec->client->resp.team) {
+			case TEAM_FREE:
+				num_free++;
+				break;
+			case TEAM_RED:
+				num_red++;
+				break;
+			case TEAM_BLUE:
+				num_blue++;
+				break;
+			}
+		}
 	}
 
 	if (pmax < 1) pmax = 1;
@@ -1000,14 +912,14 @@ static void G_Menu_Join_Update(edict_t *ent) {
 			entries[jmenu_teams_join_red].SelectFunc = G_Menu_Join_Team_Red;
 			entries[jmenu_teams_join_blue].SelectFunc = nullptr;
 		} else {
-			if (level.locked[TEAM_RED]) {
+			if (level.locked[TEAM_RED] || level.match_state == MATCH_IN_PROGRESS && g_match_lock->integer) {
 				Q_strlcpy(entries[jmenu_teams_join_red].text, "Red Team is LOCKED", sizeof(entries[jmenu_teams_join_red].text));
 				entries[jmenu_teams_join_red].SelectFunc = nullptr;
 			} else {
 				Q_strlcpy(entries[jmenu_teams_join_red].text, G_Fmt("Join Red Team ({}/{})", num_red, floor(pmax / 2)).data(), sizeof(entries[jmenu_teams_join_red].text));
 				entries[jmenu_teams_join_red].SelectFunc = G_Menu_Join_Team_Red;
 			}
-			if (level.locked[TEAM_BLUE]) {
+			if (level.locked[TEAM_BLUE] || level.match_state == MATCH_IN_PROGRESS && g_match_lock->integer) {
 				Q_strlcpy(entries[jmenu_teams_join_blue].text, "Blue Team is LOCKED", sizeof(entries[jmenu_teams_join_blue].text));
 				entries[jmenu_teams_join_blue].SelectFunc = nullptr;
 			} else {
@@ -1017,7 +929,7 @@ static void G_Menu_Join_Update(edict_t *ent) {
 
 		}
 	} else {
-		if (level.locked[TEAM_FREE]) {
+		if (level.locked[TEAM_FREE] || level.match_state == MATCH_IN_PROGRESS && g_match_lock->integer) {
 			Q_strlcpy(entries[jmenu_free_join].text, "Match is LOCKED", sizeof(entries[jmenu_free_join].text));
 			entries[jmenu_free_join].SelectFunc = nullptr;
 		} else if (duel->integer && level.num_playing_clients == 2) {
@@ -1053,7 +965,7 @@ static void G_Menu_Join_Update(edict_t *ent) {
 	}
 
 	int index = Teams() ? jmenu_teams_chase : jmenu_free_chase;
-	if (ent->client->chase_target)
+	if (ent->client->follow_target)
 		Q_strlcpy(entries[index].text, "$g_pc_leave_chase_camera", sizeof(entries[index].text));
 	else
 		Q_strlcpy(entries[index].text, "$g_pc_chase_camera", sizeof(entries[index].text));
@@ -1064,20 +976,22 @@ static void G_Menu_Join_Update(edict_t *ent) {
 
 	G_Menu_SetGamemodName(entries + jmenu_gamemod);
 
-	switch (level.match) {
+	switch (level.match_state) {
 	case MATCH_NONE:
 		entries[jmenu_match].text[0] = '\0';
 		break;
 
-	case MATCH_SETUP:
-		Q_strlcpy(entries[jmenu_match].text, "*MATCH SETUP IN PROGRESS", sizeof(entries[jmenu_match].text));
+	case MATCH_WARMUP_DELAYED:
+	case MATCH_WARMUP_DEFAULT:
+	case MATCH_WARMUP_READYUP:
+		Q_strlcpy(entries[jmenu_match].text, "*MATCH WARMUP", sizeof(entries[jmenu_match].text));
 		break;
 
-	case MATCH_PREGAME:
-		Q_strlcpy(entries[jmenu_match].text, "*MATCH STARTING", sizeof(entries[jmenu_match].text));
+	case MATCH_COUNTDOWN:
+		Q_strlcpy(entries[jmenu_match].text, "*MATCH IS STARTING", sizeof(entries[jmenu_match].text));
 		break;
 
-	case MATCH_GAME:
+	case MATCH_IN_PROGRESS:
 		Q_strlcpy(entries[jmenu_match].text, "*MATCH IN PROGRESS", sizeof(entries[jmenu_match].text));
 		break;
 
@@ -1103,15 +1017,16 @@ void G_Menu_Join_Open(edict_t *ent) {
 		team_t team = TEAM_SPECTATOR;
 		uint8_t num_red = 0, num_blue = 0;
 
-		for (size_t i = 0; i < game.maxclients; i++) {
-			if (!g_edicts[i + 1].inuse)
-				continue;
-			if (game.clients[i].resp.team == TEAM_RED)
+		for (auto ec : active_clients()) {
+			switch (ec->client->resp.team) {
+			case TEAM_RED:
 				num_red++;
-			else if (game.clients[i].resp.team == TEAM_BLUE)
+				break;
+			case TEAM_BLUE:
 				num_blue++;
+				break;
+			}
 		}
-
 
 		if (num_red > num_blue)
 			team = TEAM_RED;

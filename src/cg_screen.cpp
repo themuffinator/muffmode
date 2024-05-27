@@ -704,7 +704,7 @@ static void CG_ExecuteLayoutString(const char *s, vrect_t hud_vrect, vrect_t hud
 	int			w, h;
 	int			hx, hy;
 	int			value;
-	const char	*token;
+	const char *token;
 	int			width;
 	int			index;
 
@@ -826,6 +826,7 @@ static void CG_ExecuteLayoutString(const char *s, vrect_t hud_vrect, vrect_t hud
 			if (!skip_depth) {
 				ping = atoi(token);
 
+				cgi.SCR_SetAltTypeface(ui_acc_alttypeface->integer && true);
 				if (!scr_usekfont->integer)
 					CG_DrawString(x + 32 * scale, y, scale, cgi.CL_GetClientName(value));
 				else
@@ -842,6 +843,7 @@ static void CG_ExecuteLayoutString(const char *s, vrect_t hud_vrect, vrect_t hud
 					CG_DrawString(x + 73 * scale + 32 * scale, y + 10 * scale, scale, G_Fmt("{}", ping).data());
 				else
 					cgi.SCR_DrawFontString(G_Fmt("{}", ping).data(), x + 107 * scale, y + (10 - font_y_offset) * scale, scale, rgba_white, true, text_align_t::LEFT);
+				cgi.SCR_SetAltTypeface(false);
 			}
 			continue;
 		}
@@ -878,11 +880,13 @@ static void CG_ExecuteLayoutString(const char *s, vrect_t hud_vrect, vrect_t hud
 
 			if (!skip_depth) {
 
+				cgi.SCR_SetAltTypeface(ui_acc_alttypeface->integer && true);
 				cgi.SCR_DrawFontString(G_Fmt("{}", score).data(), x, y - (font_y_offset * scale), scale, value == playernum ? alt_color : rgba_white, true, text_align_t::LEFT);
 				x += 3 * 9 * scale;
 				cgi.SCR_DrawFontString(G_Fmt("{}", ping).data(), x, y - (font_y_offset * scale), scale, value == playernum ? alt_color : rgba_white, true, text_align_t::LEFT);
 				x += 3 * 9 * scale;
 				cgi.SCR_DrawFontString(cgi.CL_GetClientName(value), x, y - (font_y_offset * scale), scale, value == playernum ? alt_color : rgba_white, true, text_align_t::LEFT);
+				cgi.SCR_SetAltTypeface(false);
 
 				if (*token) {
 					cgi.Draw_GetPicSize(&w, &h, token);
@@ -1019,8 +1023,11 @@ static void CG_ExecuteLayoutString(const char *s, vrect_t hud_vrect, vrect_t hud
 					cgi.Com_Error("Bad stat_string index");
 				if (!scr_usekfont->integer)
 					CG_DrawString(x, y, scale, cgi.get_configstring(index));
-				else
+				else {
+					cgi.SCR_SetAltTypeface(ui_acc_alttypeface->integer && true);
 					cgi.SCR_DrawFontString(cgi.get_configstring(index), x, y - (font_y_offset * scale), scale, rgba_white, true, text_align_t::LEFT);
+					cgi.SCR_SetAltTypeface(false);
+				}
 			}
 			continue;
 		}
@@ -1042,16 +1049,22 @@ static void CG_ExecuteLayoutString(const char *s, vrect_t hud_vrect, vrect_t hud
 					cgi.Com_Error("Bad stat_string index");
 				if (!scr_usekfont->integer)
 					CG_DrawString(x, y, scale, cgi.get_configstring(index));
-				else
+				else {
+					cgi.SCR_SetAltTypeface(ui_acc_alttypeface->integer && true);
 					cgi.SCR_DrawFontString(cgi.get_configstring(index), x, y - (font_y_offset * scale), scale, alt_color, true, text_align_t::LEFT);
+					cgi.SCR_SetAltTypeface(false);
+				}
 			}
 			continue;
 		}
 
 		if (!strcmp(token, "cstring")) {
 			token = COM_Parse(&s);
-			if (!skip_depth)
+			if (!skip_depth) {
+				cgi.SCR_SetAltTypeface(ui_acc_alttypeface->integer && true);
 				CG_DrawHUDString(token, x, y, hx * 2 * scale, 0, scale);
+				cgi.SCR_SetAltTypeface(false);
+			}
 			continue;
 		}
 
@@ -1060,16 +1073,22 @@ static void CG_ExecuteLayoutString(const char *s, vrect_t hud_vrect, vrect_t hud
 			if (!skip_depth) {
 				if (!scr_usekfont->integer)
 					CG_DrawString(x, y, scale, token);
-				else
+				else {
+					cgi.SCR_SetAltTypeface(ui_acc_alttypeface->integer && true);
 					cgi.SCR_DrawFontString(token, x, y - (font_y_offset * scale), scale, rgba_white, true, text_align_t::LEFT);
+					cgi.SCR_SetAltTypeface(false);
+				}
 			}
 			continue;
 		}
 
 		if (!strcmp(token, "cstring2")) {
 			token = COM_Parse(&s);
-			if (!skip_depth)
+			if (!skip_depth) {
+				cgi.SCR_SetAltTypeface(ui_acc_alttypeface->integer && true);
 				CG_DrawHUDString(token, x, y, hx * 2 * scale, 0x80, scale);
+				cgi.SCR_SetAltTypeface(false);
+			}
 			continue;
 		}
 
@@ -1078,8 +1097,11 @@ static void CG_ExecuteLayoutString(const char *s, vrect_t hud_vrect, vrect_t hud
 			if (!skip_depth) {
 				if (!scr_usekfont->integer)
 					CG_DrawString(x, y, scale, token, true);
-				else
+				else {
+					cgi.SCR_SetAltTypeface(ui_acc_alttypeface->integer && true);
 					cgi.SCR_DrawFontString(token, x, y - (font_y_offset * scale), scale, alt_color, true, text_align_t::LEFT);
+					cgi.SCR_SetAltTypeface(false);
+				}
 			}
 			continue;
 		}
@@ -1143,8 +1165,11 @@ static void CG_ExecuteLayoutString(const char *s, vrect_t hud_vrect, vrect_t hud
 					cgi.Com_Error("Bad stat_string index");
 				if (!scr_usekfont->integer)
 					CG_DrawString(x, y, scale, cgi.Localize(cgi.get_configstring(index), nullptr, 0));
-				else
+				else {
+					cgi.SCR_SetAltTypeface(ui_acc_alttypeface->integer && true);
 					cgi.SCR_DrawFontString(cgi.Localize(cgi.get_configstring(index), nullptr, 0), x, y - (font_y_offset * scale), scale, rgba_white, true, text_align_t::LEFT);
+					cgi.SCR_SetAltTypeface(false);
+				}
 			}
 			continue;
 		}
@@ -1167,8 +1192,10 @@ static void CG_ExecuteLayoutString(const char *s, vrect_t hud_vrect, vrect_t hud
 				if (!scr_usekfont->integer)
 					CG_DrawString(x - (strlen(s) * CONCHAR_WIDTH * scale), y, scale, s);
 				else {
+					cgi.SCR_SetAltTypeface(ui_acc_alttypeface->integer && true);
 					vec2_t size = cgi.SCR_MeasureFontString(s, scale);
 					cgi.SCR_DrawFontString(s, x - size.x, y - (font_y_offset * scale), scale, rgba_white, true, text_align_t::LEFT);
+					cgi.SCR_SetAltTypeface(false);
 				}
 			}
 			continue;
@@ -1188,7 +1215,9 @@ static void CG_ExecuteLayoutString(const char *s, vrect_t hud_vrect, vrect_t hud
 
 				if (index < 0 || index >= MAX_CONFIGSTRINGS)
 					cgi.Com_Error("Bad stat_string index");
+				cgi.SCR_SetAltTypeface(ui_acc_alttypeface->integer && true);
 				CG_DrawHUDString(cgi.Localize(cgi.get_configstring(index), nullptr, 0), x, y, hx * 2 * scale, 0, scale);
+				cgi.SCR_SetAltTypeface(false);
 			}
 			continue;
 		}
@@ -1207,7 +1236,9 @@ static void CG_ExecuteLayoutString(const char *s, vrect_t hud_vrect, vrect_t hud
 
 				if (index < 0 || index >= MAX_CONFIGSTRINGS)
 					cgi.Com_Error("Bad stat_string index");
+				cgi.SCR_SetAltTypeface(ui_acc_alttypeface->integer && true);
 				CG_DrawHUDString(cgi.Localize(cgi.get_configstring(index), nullptr, 0), x, y, hx * 2 * scale, 0x80, scale);
+				cgi.SCR_SetAltTypeface(false);
 			}
 			continue;
 		}
@@ -1232,8 +1263,11 @@ static void CG_ExecuteLayoutString(const char *s, vrect_t hud_vrect, vrect_t hud
 				arg_buffers[i] = arg_tokens[1 + i];
 			}
 
-			if (!skip_depth)
+			if (!skip_depth) {
+				cgi.SCR_SetAltTypeface(ui_acc_alttypeface->integer && true);
 				CG_DrawHUDString(cgi.Localize(arg_tokens[0], arg_buffers, num_args), x, y, hx * 2 * scale, 0, scale);
+				cgi.SCR_SetAltTypeface(false);
+			}
 			continue;
 		}
 
@@ -1257,8 +1291,11 @@ static void CG_ExecuteLayoutString(const char *s, vrect_t hud_vrect, vrect_t hud
 			if (!skip_depth) {
 				if (!scr_usekfont->integer)
 					CG_DrawString(x, y, scale, cgi.Localize(arg_tokens[0], arg_buffers, num_args));
-				else
+				else {
+					cgi.SCR_SetAltTypeface(ui_acc_alttypeface->integer && true);
 					cgi.SCR_DrawFontString(cgi.Localize(arg_tokens[0], arg_buffers, num_args), x, y - (font_y_offset * scale), scale, rgba_white, true, text_align_t::LEFT);
+					cgi.SCR_SetAltTypeface(false);
+				}
 			}
 			continue;
 		}
@@ -1280,8 +1317,11 @@ static void CG_ExecuteLayoutString(const char *s, vrect_t hud_vrect, vrect_t hud
 				arg_buffers[i] = arg_tokens[1 + i];
 			}
 
-			if (!skip_depth)
+			if (!skip_depth) {
+				cgi.SCR_SetAltTypeface(ui_acc_alttypeface->integer && true);
 				CG_DrawHUDString(cgi.Localize(arg_tokens[0], arg_buffers, num_args), x, y, hx * 2 * scale, 0x80, scale);
+				cgi.SCR_SetAltTypeface(false);
+			}
 			continue;
 		}
 
@@ -1314,8 +1354,11 @@ static void CG_ExecuteLayoutString(const char *s, vrect_t hud_vrect, vrect_t hud
 
 				if (!scr_usekfont->integer)
 					CG_DrawString(x - xOffs, y, scale, locStr, green);
-				else
+				else {
+					cgi.SCR_SetAltTypeface(ui_acc_alttypeface->integer && true);
 					cgi.SCR_DrawFontString(locStr, x - xOffs, y - (font_y_offset * scale), scale, green ? alt_color : rgba_white, true, text_align_t::LEFT);
+					cgi.SCR_SetAltTypeface(false);
+				}
 			}
 			continue;
 		}
@@ -1340,8 +1383,11 @@ static void CG_ExecuteLayoutString(const char *s, vrect_t hud_vrect, vrect_t hud
 				int xOffs = scr_usekfont->integer ? cgi.SCR_MeasureFontString(locStr, scale).x : (strlen(locStr) * CONCHAR_WIDTH * scale);
 				if (!scr_usekfont->integer)
 					CG_DrawString(x - xOffs, y, scale, locStr, green);
-				else
+				else {
+					cgi.SCR_SetAltTypeface(ui_acc_alttypeface->integer && true);
 					cgi.SCR_DrawFontString(locStr, x - xOffs, y - (font_y_offset * scale), scale, green ? alt_color : rgba_white, true, text_align_t::LEFT);
+					cgi.SCR_SetAltTypeface(false);
+				}
 			}
 		}
 
@@ -1452,8 +1498,11 @@ static void CG_ExecuteLayoutString(const char *s, vrect_t hud_vrect, vrect_t hud
 
 				if (!scr_usekfont->integer)
 					CG_DrawString(x, y, scale, cgi.CL_GetClientName(index));
-				else
+				else {
+					cgi.SCR_SetAltTypeface(ui_acc_alttypeface->integer && true);
 					cgi.SCR_DrawFontString(cgi.CL_GetClientName(index), x, y - (font_y_offset * scale), scale, rgba_white, true, align);
+					cgi.SCR_SetAltTypeface(false);
+				}
 			}
 			continue;
 		}
@@ -1464,9 +1513,9 @@ static void CG_ExecuteLayoutString(const char *s, vrect_t hud_vrect, vrect_t hud
 
 			const byte *stat = reinterpret_cast<const byte *>(&ps->stats[STAT_HEALTH_BARS]);
 			const char *name = cgi.Localize(cgi.get_configstring(CONFIG_HEALTH_BAR_NAME), nullptr, 0);
-
+			cgi.SCR_SetAltTypeface(ui_acc_alttypeface->integer && true);
 			CG_DrawHUDString(name, (hud_vrect.x + hud_vrect.width / 2 + -160) * scale, y, (320 / 2) * 2 * scale, 0, scale);
-
+			cgi.SCR_SetAltTypeface(false);
 			float bar_width = ((hud_vrect.width * scale) - (hud_safe.x * 2)) * 0.50f;
 			float bar_height = 4 * scale;
 
@@ -1493,7 +1542,7 @@ static void CG_ExecuteLayoutString(const char *s, vrect_t hud_vrect, vrect_t hud
 		}
 
 		if (!strcmp(token, "story")) {
-			const char *story_str = cgi.get_configstring(CONFIG_STORY);
+			const char *story_str = cgi.get_configstring(CONFIG_STORY_SCORELIMIT);
 
 			if (!*story_str)
 				continue;
@@ -1503,7 +1552,9 @@ static void CG_ExecuteLayoutString(const char *s, vrect_t hud_vrect, vrect_t hud
 			float centerx = ((hud_vrect.x + (hud_vrect.width * 0.5f)) * scale);
 			float centery = ((hud_vrect.y + (hud_vrect.height * 0.5f)) * scale) - (size.y * 0.5f);
 
+			cgi.SCR_SetAltTypeface(ui_acc_alttypeface->integer && true);
 			cgi.SCR_DrawFontString(localized, centerx, centery, scale, rgba_white, true, text_align_t::CENTER);
+			cgi.SCR_SetAltTypeface(false);
 		}
 	}
 

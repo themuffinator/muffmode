@@ -130,24 +130,20 @@ void G_PrintActivationMessage(edict_t *ent, edict_t *activator, bool coop_global
 }
 
 void BroadcastSpectatorMessage(const char *msg) {
-	edict_t *ent;
-
-	for (size_t i = 0; i < game.maxclients; i++) {
-		ent = g_edicts + i;
-
-		if (!ent->inuse)
+	for (auto ce : active_clients()) {
+		if (ce->client->resp.team != TEAM_SPECTATOR)
 			continue;
 
-		if (!ent->client)
+		gi.LocClient_Print(ce, PRINT_HIGH, msg);
+	}
+}
+
+void BroadcastTeamMessage(team_t team, const char *msg) {
+	for (auto ce : active_clients()) {
+		if (ce->client->resp.team != team)
 			continue;
 
-		if (!ent->client->pers.connected)
-			continue;
-
-		if (ent->client->resp.team != TEAM_SPECTATOR)
-			continue;
-
-		gi.LocClient_Print(ent, PRINT_HIGH, msg);
+		gi.LocClient_Print(ce, PRINT_HIGH, msg);
 	}
 }
 
@@ -416,6 +412,10 @@ void G_TouchTriggers(edict_t *ent) {
 			continue;
 		if (!hit->touch)
 			continue;
+		if (ent->movetype == MOVETYPE_FREECAM)
+			if (!strstr(hit->classname, "teleport"))
+				continue;
+
 		hit->touch(hit, ent, null_trace, true);
 	}
 }
@@ -482,8 +482,8 @@ BoxEdictsResult_t KillBox_BoxFilter(edict_t *hit, void *) {
 }
 
 bool KillBox(edict_t *ent, bool from_spawning, mod_id_t mod, bool bsp_clipping) {
-	// don't telefrag as spectator...
-	if (ent->movetype == MOVETYPE_NOCLIP)
+	// don't telefrag as spectator or noclip player...
+	if (ent->movetype == MOVETYPE_NOCLIP || ent->movetype == MOVETYPE_FREECAM)
 		return true;
 
 	contents_t mask = CONTENTS_MONSTER | CONTENTS_PLAYER;
@@ -532,7 +532,7 @@ bool KillBox(edict_t *ent, bool from_spawning, mod_id_t mod, bool bsp_clipping) 
 
 /*--------------------------------------------------------------------------*/
 
-const char *Teams_TeamName(int team) {
+const char *Teams_TeamName(team_t team) {
 	switch (team) {
 	case TEAM_RED:
 		return "RED";
@@ -546,7 +546,7 @@ const char *Teams_TeamName(int team) {
 	return "NONE";
 }
 
-const char *Teams_OtherTeamName(int team) {
+const char *Teams_OtherTeamName(team_t team) {
 	switch (team) {
 	case TEAM_RED:
 		return "BLUE";
@@ -608,7 +608,7 @@ G_AdjustPlayerScore
 void G_AdjustPlayerScore(gclient_t *cl, int32_t offset, bool adjust_team, int32_t team_offset) {
 	if (!cl) return;
 
-	if (level.match_state != MS_MATCH_IN_PROGRESS)
+	if (level.match_state != MATCH_IN_PROGRESS)
 		return;
 
 	if (level.intermission_queued)
@@ -633,7 +633,7 @@ void Horde_AdjustPlayerScore(gclient_t *cl, int32_t offset) {
 	if (!horde->integer) return;
 	if (!cl) return;
 
-	if (level.match_state != MS_MATCH_IN_PROGRESS)
+	if (level.match_state != MATCH_IN_PROGRESS)
 		return;
 
 	gi.Com_PrintFmt("monster kill score = {}\n", offset);
@@ -648,7 +648,7 @@ G_SetPlayerScore
 void G_SetPlayerScore(gclient_t *cl, int32_t value) {
 	if (!cl) return;
 
-	if (level.match_state != MS_MATCH_IN_PROGRESS)
+	if (level.match_state != MATCH_IN_PROGRESS)
 		return;
 
 	if (level.intermission_queued)
@@ -664,9 +664,9 @@ void G_SetPlayerScore(gclient_t *cl, int32_t value) {
 G_AdjustTeamScore
 ===================
 */
-void G_AdjustTeamScore(int team, int32_t offset) {
+void G_AdjustTeamScore(team_t team, int32_t offset) {
 
-	if (level.match_state != MS_MATCH_IN_PROGRESS)
+	if (level.match_state != MATCH_IN_PROGRESS)
 		return;
 
 	if (level.intermission_queued)
@@ -676,6 +676,7 @@ void G_AdjustTeamScore(int team, int32_t offset) {
 		level.team_scores[TEAM_RED] += offset;
 	else if (team == TEAM_BLUE)
 		level.team_scores[TEAM_BLUE] += offset;
+	else return;
 	CalculateRanks();
 }
 
@@ -685,9 +686,9 @@ void G_AdjustTeamScore(int team, int32_t offset) {
 G_SetTeamScore
 ===================
 */
-void G_SetTeamScore(int team, int32_t value) {
+void G_SetTeamScore(team_t team, int32_t value) {
 
-	if (level.match_state != MS_MATCH_IN_PROGRESS)
+	if (level.match_state != MATCH_IN_PROGRESS)
 		return;
 
 	if (level.intermission_queued)
@@ -697,6 +698,7 @@ void G_SetTeamScore(int team, int32_t value) {
 		level.team_scores[TEAM_RED] = value;
 	else if (team == TEAM_BLUE)
 		level.team_scores[TEAM_BLUE] = value;
+	else return;
 	CalculateRanks();
 }
 
@@ -811,6 +813,9 @@ const char *G_TimeString(const int64_t msec) {
 	int ms = abs(msec);
 	int hours, mins, seconds;
 
+	if (level.intermission_queued || level.intermission_time)
+		return "MATCH END";
+
 	seconds = ms / 1000;
 	mins = seconds / 60;
 	seconds -= mins * 60;
@@ -830,6 +835,9 @@ G_TimeStringMs
 */
 const char *G_TimeStringMs(const int64_t msec) {
 	int hours, mins, seconds, ms = msec;
+
+	if (level.intermission_queued || level.intermission_time)
+		return "MATCH END";
 
 	seconds = ms / 1000;
 	ms -= seconds * 1000;
@@ -860,4 +868,15 @@ team_t StringToTeamNum(const char *in) {
 			return TEAM_FREE;
 	}
 	return TEAM_NONE;
+}
+
+bool InAMatch() {
+	if (!deathmatch->integer)
+		return false;
+	if (level.intermission_queued)
+		return false;
+	if (level.match_state == MATCH_IN_PROGRESS)
+		return true;
+
+	return false;
 }

@@ -35,8 +35,7 @@ static cached_soundindex sound_taunt2;
 static cached_soundindex sound_taunt3;
 static cached_soundindex sound_hit;
 
-void makron_taunt(edict_t *self)
-{
+static void makron_taunt(edict_t *self) {
 	float r;
 
 	r = frandom();
@@ -116,8 +115,7 @@ mframe_t makron_frames_stand[] = {
 };
 MMOVE_T(makron_move_stand) = { FRAME_stand201, FRAME_stand260, makron_frames_stand, nullptr };
 
-MONSTERINFO_STAND(makron_stand) (edict_t *self) -> void
-{
+MONSTERINFO_STAND(makron_stand) (edict_t *self) -> void {
 	M_SetAnimation(self, &makron_move_stand);
 }
 
@@ -135,33 +133,27 @@ mframe_t makron_frames_run[] = {
 };
 MMOVE_T(makron_move_run) = { FRAME_walk204, FRAME_walk213, makron_frames_run, nullptr };
 
-void makron_hit(edict_t *self)
-{
+static void makron_hit(edict_t *self) {
 	gi.sound(self, CHAN_AUTO, sound_hit, 1, ATTN_NONE, 0);
 }
 
-void makron_popup(edict_t *self)
-{
+static void makron_popup(edict_t *self) {
 	gi.sound(self, CHAN_BODY, sound_popup, 1, ATTN_NONE, 0);
 }
 
-void makron_step_left(edict_t *self)
-{
+void makron_step_left(edict_t *self) {
 	gi.sound(self, CHAN_BODY, sound_step_left, 1, ATTN_NORM, 0);
 }
 
-void makron_step_right(edict_t *self)
-{
+void makron_step_right(edict_t *self) {
 	gi.sound(self, CHAN_BODY, sound_step_right, 1, ATTN_NORM, 0);
 }
 
-void makron_brainsplorch(edict_t *self)
-{
+static void makron_brainsplorch(edict_t *self) {
 	gi.sound(self, CHAN_VOICE, sound_brainsplorch, 1, ATTN_NORM, 0);
 }
 
-void makron_prerailgun(edict_t *self)
-{
+static void makron_prerailgun(edict_t *self) {
 	gi.sound(self, CHAN_WEAPON, sound_prerailgun, 1, ATTN_NORM, 0);
 }
 
@@ -179,13 +171,11 @@ mframe_t makron_frames_walk[] = {
 };
 MMOVE_T(makron_move_walk) = { FRAME_walk204, FRAME_walk213, makron_frames_run, nullptr };
 
-MONSTERINFO_WALK(makron_walk) (edict_t *self) -> void
-{
+MONSTERINFO_WALK(makron_walk) (edict_t *self) -> void {
 	M_SetAnimation(self, &makron_move_walk);
 }
 
-MONSTERINFO_RUN(makron_run) (edict_t *self) -> void
-{
+MONSTERINFO_RUN(makron_run) (edict_t *self) -> void {
 	if (self->monsterinfo.aiflags & AI_STAND_GROUND)
 		M_SetAnimation(self, &makron_move_stand);
 	else
@@ -245,19 +235,17 @@ Makron Torso. This needs to be spawned in
 ---
 */
 
-THINK(makron_torso_think) (edict_t *self) -> void
-{
+static THINK(makron_torso_think) (edict_t *self) -> void {
 	if (++self->s.frame >= 365)
 		self->s.frame = 346;
-	
+
 	self->nextthink = level.time + 10_hz;
 
 	if (self->s.angles[PITCH] > 0)
 		self->s.angles[PITCH] = max(0.f, self->s.angles[PITCH] - 15);
 }
 
-void makron_torso(edict_t *ent)
-{
+static void makron_torso(edict_t *ent) {
 	ent->s.frame = 346;
 	ent->s.modelindex = gi.modelindex("models/monsters/boss3/rider/tris.md2");
 	ent->s.skinnum = 1;
@@ -276,8 +264,7 @@ void makron_torso(edict_t *ent)
 	gi.linkentity(ent);
 }
 
-void makron_spawn_torso(edict_t *self)
-{
+static void makron_spawn_torso(edict_t *self) {
 	edict_t *tempent = ThrowGib(self, "models/monsters/boss3/rider/tris.md2", 0, GIB_NONE, self->s.scale);
 	tempent->s.origin = self->s.origin;
 	tempent->s.angles = self->s.angles;
@@ -402,8 +389,7 @@ mframe_t makron_frames_sight[] = {
 };
 MMOVE_T(makron_move_sight) = { FRAME_active01, FRAME_active13, makron_frames_sight, makron_run };
 
-void makronBFG(edict_t *self)
-{
+void makronBFG(edict_t *self) {
 	vec3_t forward, right;
 	vec3_t start;
 	vec3_t dir;
@@ -482,14 +468,12 @@ mframe_t makron_frames_attack5[] = {
 };
 MMOVE_T(makron_move_attack5) = { FRAME_attak501, FRAME_attak516, makron_frames_attack5, makron_run };
 
-void MakronSaveloc(edict_t *self)
-{
+void MakronSaveloc(edict_t *self) {
 	self->pos1 = self->enemy->s.origin; // save for aiming the shot
 	self->pos1[2] += self->enemy->viewheight;
 };
 
-void MakronRailgun(edict_t *self)
-{
+void MakronRailgun(edict_t *self) {
 	vec3_t start;
 	vec3_t dir;
 	vec3_t forward, right;
@@ -504,28 +488,24 @@ void MakronRailgun(edict_t *self)
 	monster_fire_railgun(self, start, dir, 50, 100, MZ2_MAKRON_RAILGUN_1);
 }
 
-void MakronHyperblaster(edict_t *self)
-{
-	vec3_t dir;
+void MakronHyperblaster(edict_t *self) {
+	vec3_t dir = { 0, 0, 0 };
 	vec3_t vec;
 	vec3_t start;
 	vec3_t forward, right;
 
-	monster_muzzleflash_id_t flash_number = (monster_muzzleflash_id_t) (MZ2_MAKRON_BLASTER_1 + (self->s.frame - FRAME_attak405));
+	monster_muzzleflash_id_t flash_number = (monster_muzzleflash_id_t)(MZ2_MAKRON_BLASTER_1 + (self->s.frame - FRAME_attak405));
 
 	AngleVectors(self->s.angles, forward, right, nullptr);
 	start = M_ProjectFlashSource(self, monster_flash_offset[flash_number], forward, right);
 
-	if (self->enemy)
-	{
+	if (self->enemy) {
 		vec = self->enemy->s.origin;
 		vec[2] += self->enemy->viewheight;
 		vec -= start;
 		vec = vectoangles(vec);
 		dir[0] = vec[0];
-	}
-	else
-	{
+	} else {
 		dir[0] = 0;
 	}
 	if (self->s.frame <= FRAME_attak413)
@@ -539,8 +519,7 @@ void MakronHyperblaster(edict_t *self)
 	monster_fire_blaster(self, start, forward, 15, 1000, flash_number, EF_BLASTER);
 }
 
-PAIN(makron_pain) (edict_t *self, edict_t *other, float kick, int damage, const mod_t &mod) -> void
-{
+static PAIN(makron_pain) (edict_t *self, edict_t *other, float kick, int damage, const mod_t &mod) -> void {
 	if (self->monsterinfo.active_move == &makron_move_sight)
 		return;
 
@@ -560,26 +539,20 @@ PAIN(makron_pain) (edict_t *self, edict_t *other, float kick, int damage, const 
 		gi.sound(self, CHAN_VOICE, sound_pain4, 1, ATTN_NONE, 0);
 	else if (damage <= 110)
 		gi.sound(self, CHAN_VOICE, sound_pain5, 1, ATTN_NONE, 0);
-	else
-	{
-		if (damage <= 150)
-		{
-			if (frandom() <= 0.45f)
-			{
+	else {
+		if (damage <= 150) {
+			if (frandom() <= 0.45f) {
 				do_pain6 = true;
 				gi.sound(self, CHAN_VOICE, sound_pain6, 1, ATTN_NONE, 0);
 			}
-		}
-		else
-		{
-			if (frandom() <= 0.35f)
-			{
+		} else {
+			if (frandom() <= 0.35f) {
 				do_pain6 = true;
 				gi.sound(self, CHAN_VOICE, sound_pain6, 1, ATTN_NONE, 0);
 			}
 		}
 	}
-	
+
 	if (!M_ShouldReactToPain(self, mod))
 		return; // no pain anims in nightmare
 
@@ -591,21 +564,18 @@ PAIN(makron_pain) (edict_t *self, edict_t *other, float kick, int damage, const 
 		M_SetAnimation(self, &makron_move_pain6);
 }
 
-MONSTERINFO_SETSKIN(makron_setskin) (edict_t *self) -> void
-{
+MONSTERINFO_SETSKIN(makron_setskin) (edict_t *self) -> void {
 	if (self->health < (self->max_health / 2))
 		self->s.skinnum = 1;
 	else
 		self->s.skinnum = 0;
 }
 
-MONSTERINFO_SIGHT(makron_sight) (edict_t *self, edict_t *other) -> void
-{
+MONSTERINFO_SIGHT(makron_sight) (edict_t *self, edict_t *other) -> void {
 	M_SetAnimation(self, &makron_move_sight);
 }
 
-MONSTERINFO_ATTACK(makron_attack) (edict_t *self) -> void
-{
+MONSTERINFO_ATTACK(makron_attack) (edict_t *self) -> void {
 	float r;
 
 	r = frandom();
@@ -622,8 +592,7 @@ MONSTERINFO_ATTACK(makron_attack) (edict_t *self) -> void
 // death
 //
 
-void makron_dead(edict_t *self)
-{
+void makron_dead(edict_t *self) {
 	self->mins = { -60, -60, 0 };
 	self->maxs = { 60, 60, 24 };
 	self->movetype = MOVETYPE_TOSS;
@@ -632,19 +601,17 @@ void makron_dead(edict_t *self)
 	monster_dead(self);
 }
 
-DIE(makron_die) (edict_t *self, edict_t *inflictor, edict_t *attacker, int damage, const vec3_t &point, const mod_t &mod) -> void
-{
+static DIE(makron_die) (edict_t *self, edict_t *inflictor, edict_t *attacker, int damage, const vec3_t &point, const mod_t &mod) -> void {
 	self->s.sound = 0;
 
 	// check for gib
-	if (M_CheckGib(self, mod))
-	{
+	if (M_CheckGib(self, mod)) {
 		gi.sound(self, CHAN_VOICE, gi.soundindex("misc/udeath.wav"), 1, ATTN_NORM, 0);
 		ThrowGibs(self, damage, {
 			{ "models/objects/gibs/sm_meat/tris.md2" },
 			{ 4, "models/objects/gibs/sm_metal/tris.md2", GIB_METALLIC },
 			{ "models/objects/gibs/gear/tris.md2", GIB_METALLIC | GIB_HEAD }
-		});
+			});
 		self->deadflag = true;
 		return;
 	}
@@ -667,8 +634,7 @@ DIE(makron_die) (edict_t *self, edict_t *inflictor, edict_t *attacker, int damag
 }
 
 // [Paril-KEX] use generic function
-MONSTERINFO_CHECKATTACK(Makron_CheckAttack) (edict_t *self) -> bool
-{
+MONSTERINFO_CHECKATTACK(Makron_CheckAttack) (edict_t *self) -> bool {
 	return M_CheckAttack_Base(self, 0.4f, 0.8f, 0.4f, 0.2f, 0.0f, 0.f);
 }
 
@@ -676,8 +642,7 @@ MONSTERINFO_CHECKATTACK(Makron_CheckAttack) (edict_t *self) -> bool
 // monster_makron
 //
 
-void MakronPrecache()
-{
+void MakronPrecache() {
 	sound_pain4.assign("makron/pain3.wav");
 	sound_pain5.assign("makron/pain2.wav");
 	sound_pain6.assign("makron/pain1.wav");
@@ -696,12 +661,11 @@ void MakronPrecache()
 	gi.modelindex("models/monsters/boss3/rider/tris.md2");
 }
 
-/*QUAKED monster_makron (1 .5 0) (-30 -30 0) (30 30 90) Ambush Trigger_Spawn Sight
+/*QUAKED monster_makron (1 .5 0) (-30 -30 0) (30 30 90) AMBUSH TRIGGER_SPAWN SIGHT
  */
-void SP_monster_makron(edict_t *self)
-{
-	if ( !M_AllowSpawn( self ) ) {
-		G_FreeEdict( self );
+void SP_monster_makron(edict_t *self) {
+	if (!M_AllowSpawn(self)) {
+		G_FreeEdict(self);
 		return;
 	}
 
@@ -737,9 +701,7 @@ void SP_monster_makron(edict_t *self)
 
 	walkmonster_start(self);
 
-	// PMM
 	self->monsterinfo.aiflags |= AI_IGNORE_SHOTS;
-	// pmm
 }
 
 /*
@@ -748,8 +710,7 @@ MakronSpawn
 
 =================
 */
-THINK(MakronSpawn) (edict_t *self) -> void
-{
+static THINK(MakronSpawn) (edict_t *self) -> void {
 	vec3_t	 vec;
 	edict_t *player;
 
@@ -784,8 +745,7 @@ MakronToss
 Jorg is just about dead, so set up to launch Makron out
 =================
 */
-void MakronToss(edict_t *self)
-{
+void MakronToss(edict_t *self) {
 	edict_t *ent = G_Spawn();
 	ent->classname = "monster_makron";
 	ent->target = self->target;

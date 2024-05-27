@@ -23,8 +23,7 @@ static cached_soundindex sound_pain3;
 static cached_soundindex sound_death;
 static cached_soundindex sound_search1;
 
-MONSTERINFO_SEARCH(boss2_search) (edict_t *self) -> void
-{
+MONSTERINFO_SEARCH(boss2_search) (edict_t *self) -> void {
 	if (frandom() < 0.5f)
 		gi.sound(self, CHAN_VOICE, sound_search1, 1, ATTN_NONE, 0);
 }
@@ -36,8 +35,7 @@ void boss2_reattack_mg(edict_t *self);
 
 constexpr int32_t BOSS2_ROCKET_SPEED = 750;
 
-void Boss2PredictiveRocket(edict_t *self)
-{
+static void Boss2PredictiveRocket(edict_t *self) {
 	vec3_t forward, right;
 	vec3_t start;
 	vec3_t dir;
@@ -65,17 +63,14 @@ void Boss2PredictiveRocket(edict_t *self)
 	monster_fire_rocket(self, start, dir, 50, BOSS2_ROCKET_SPEED, MZ2_BOSS2_ROCKET_4);
 }
 
-void Boss2Rocket(edict_t *self)
-{
+static void Boss2Rocket(edict_t *self) {
 	vec3_t forward, right;
 	vec3_t start;
 	vec3_t dir;
 	vec3_t vec;
 
-	if (self->enemy)
-	{
-		if (self->enemy->client && frandom() < 0.9f)
-		{
+	if (self->enemy) {
+		if (self->enemy->client && frandom() < 0.9f) {
 			Boss2PredictiveRocket(self);
 			return;
 		}
@@ -122,8 +117,7 @@ void Boss2Rocket(edict_t *self)
 	monster_fire_rocket(self, start, dir, 50, 500, MZ2_BOSS2_ROCKET_4);
 }
 
-void Boss2Rocket64(edict_t *self)
-{
+static void Boss2Rocket64(edict_t *self) {
 	vec3_t forward, right;
 	vec3_t start;
 	vec3_t dir;
@@ -138,30 +132,26 @@ void Boss2Rocket64(edict_t *self)
 	start[2] += 10.f * scale;
 	start -= right * 2.f * scale;
 	start -= right * ((self->count++ % 4) * 8.f * scale);
-	
-	if (self->enemy && self->enemy->client && frandom() < 0.9f)
-	{
+
+	if (self->enemy && self->enemy->client && frandom() < 0.9f) {
 		// 1
 		dir = self->enemy->s.origin - start;
 		dist = dir.length();
 		time = dist / BOSS2_ROCKET_SPEED;
 		vec = self->enemy->s.origin + (self->enemy->velocity * (time - 0.3f));
-	}
-	else
-	{
+	} else {
 		// 1
 		vec = self->enemy->s.origin;
 		vec[2] -= 15;
 	}
-	
+
 	dir = vec - start;
 	dir.normalize();
 
 	monster_fire_rocket(self, start, dir, 35, BOSS2_ROCKET_SPEED, MZ2_BOSS2_ROCKET_1);
 }
 
-void boss2_firebullet_right(edict_t *self)
-{
+static void boss2_firebullet_right(edict_t *self) {
 	vec3_t forward, right, start;
 	AngleVectors(self->s.angles, forward, right, nullptr);
 	start = M_ProjectFlashSource(self, monster_flash_offset[MZ2_BOSS2_MACHINEGUN_R1], forward, right);
@@ -169,8 +159,7 @@ void boss2_firebullet_right(edict_t *self)
 	monster_fire_bullet(self, start, forward, 6, 4, DEFAULT_BULLET_HSPREAD * 3, DEFAULT_BULLET_VSPREAD, MZ2_BOSS2_MACHINEGUN_R1);
 }
 
-void boss2_firebullet_left(edict_t *self)
-{
+static void boss2_firebullet_left(edict_t *self) {
 	vec3_t forward, right, start;
 	AngleVectors(self->s.angles, forward, right, nullptr);
 	start = M_ProjectFlashSource(self, monster_flash_offset[MZ2_BOSS2_MACHINEGUN_L1], forward, right);
@@ -178,8 +167,7 @@ void boss2_firebullet_left(edict_t *self)
 	monster_fire_bullet(self, start, forward, 6, 4, DEFAULT_BULLET_HSPREAD * 3, DEFAULT_BULLET_VSPREAD, MZ2_BOSS2_MACHINEGUN_L1);
 }
 
-void Boss2MachineGun(edict_t *self)
-{
+static void Boss2MachineGun(edict_t *self) {
 	boss2_firebullet_left(self);
 	boss2_firebullet_right(self);
 }
@@ -282,8 +270,7 @@ mframe_t boss2_frames_attack_mg[] = {
 MMOVE_T(boss2_move_attack_mg) = { FRAME_attack10, FRAME_attack15, boss2_frames_attack_mg, nullptr };
 
 // [Paril-KEX]
-void Boss2HyperBlaster(edict_t *self)
-{
+static void Boss2HyperBlaster(edict_t *self) {
 	vec3_t forward, right, target;
 	vec3_t start;
 	monster_muzzleflash_id_t id = (self->s.frame & 1) ? MZ2_BOSS2_MACHINEGUN_L2 : MZ2_BOSS2_MACHINEGUN_R2;
@@ -396,8 +383,7 @@ mframe_t boss2_frames_pain_light[] = {
 };
 MMOVE_T(boss2_move_pain_light) = { FRAME_pain20, FRAME_pain23, boss2_frames_pain_light, boss2_run };
 
-static void boss2_shrink(edict_t *self)
-{
+static void boss2_shrink(edict_t *self) {
 	self->maxs.z = 50.f;
 	gi.linkentity(self);
 }
@@ -455,26 +441,22 @@ mframe_t boss2_frames_death[] = {
 };
 MMOVE_T(boss2_move_death) = { FRAME_death2, FRAME_death50, boss2_frames_death, boss2_dead };
 
-MONSTERINFO_STAND(boss2_stand) (edict_t *self) -> void
-{
+MONSTERINFO_STAND(boss2_stand) (edict_t *self) -> void {
 	M_SetAnimation(self, &boss2_move_stand);
 }
 
-MONSTERINFO_RUN(boss2_run) (edict_t *self) -> void
-{
+MONSTERINFO_RUN(boss2_run) (edict_t *self) -> void {
 	if (self->monsterinfo.aiflags & AI_STAND_GROUND)
 		M_SetAnimation(self, &boss2_move_stand);
 	else
 		M_SetAnimation(self, &boss2_move_run);
 }
 
-MONSTERINFO_WALK(boss2_walk) (edict_t *self) -> void
-{
+MONSTERINFO_WALK(boss2_walk) (edict_t *self) -> void {
 	M_SetAnimation(self, &boss2_move_walk);
 }
 
-MONSTERINFO_ATTACK(boss2_attack) (edict_t *self) -> void
-{
+MONSTERINFO_ATTACK(boss2_attack) (edict_t *self) -> void {
 	vec3_t vec;
 	float  range;
 
@@ -487,21 +469,18 @@ MONSTERINFO_ATTACK(boss2_attack) (edict_t *self) -> void
 		M_SetAnimation(self, self->spawnflags.has(SPAWNFLAG_BOSS2_N64) ? &boss2_move_attack_rocket2 : &boss2_move_attack_rocket);
 }
 
-void boss2_attack_mg(edict_t *self)
-{
+void boss2_attack_mg(edict_t *self) {
 	M_SetAnimation(self, self->spawnflags.has(SPAWNFLAG_BOSS2_N64) ? &boss2_move_attack_hb : &boss2_move_attack_mg);
 }
 
-void boss2_reattack_mg(edict_t *self)
-{
+void boss2_reattack_mg(edict_t *self) {
 	if (infront(self, self->enemy) && frandom() <= 0.7f)
 		boss2_attack_mg(self);
 	else
 		M_SetAnimation(self, &boss2_move_attack_post_mg);
 }
 
-PAIN(boss2_pain) (edict_t *self, edict_t *other, float kick, int damage, const mod_t &mod) -> void
-{
+static PAIN(boss2_pain) (edict_t *self, edict_t *other, float kick, int damage, const mod_t &mod) -> void {
 	if (level.time < self->pain_debounce_time)
 		return;
 
@@ -514,7 +493,7 @@ PAIN(boss2_pain) (edict_t *self, edict_t *other, float kick, int damage, const m
 		gi.sound(self, CHAN_VOICE, sound_pain1, 1, ATTN_NONE, 0);
 	else
 		gi.sound(self, CHAN_VOICE, sound_pain2, 1, ATTN_NONE, 0);
-	
+
 	if (!M_ShouldReactToPain(self, mod))
 		return; // no pain anims in nightmare
 
@@ -526,16 +505,14 @@ PAIN(boss2_pain) (edict_t *self, edict_t *other, float kick, int damage, const m
 		M_SetAnimation(self, &boss2_move_pain_heavy);
 }
 
-MONSTERINFO_SETSKIN(boss2_setskin) (edict_t *self) -> void
-{
+MONSTERINFO_SETSKIN(boss2_setskin) (edict_t *self) -> void {
 	if (self->health < (self->max_health / 2))
 		self->s.skinnum = 1;
 	else
 		self->s.skinnum = 0;
 }
 
-static void boss2_gib(edict_t *self)
-{
+static void boss2_gib(edict_t *self) {
 	gi.WriteByte(svc_temp_entity);
 	gi.WriteByte(TE_EXPLOSION1_BIG);
 	gi.WritePosition(self->s.origin);
@@ -563,14 +540,12 @@ static void boss2_gib(edict_t *self)
 		{ "models/monsters/boss2/gibs/larm.md2", 1.35f, GIB_SKINNED | GIB_UPRIGHT },
 		{ "models/monsters/boss2/gibs/rarm.md2", 1.35f, GIB_SKINNED | GIB_UPRIGHT },
 		{ "models/monsters/boss2/gibs/head.md2", GIB_SKINNED | GIB_METALLIC | GIB_HEAD }
-	});
+		});
 }
 
-void boss2_dead(edict_t *self)
-{
+void boss2_dead(edict_t *self) {
 	// no blowy on deady
-	if (self->spawnflags.has(SPAWNFLAG_MONSTER_DEAD))
-	{
+	if (self->spawnflags.has(SPAWNFLAG_MONSTER_DEAD)) {
 		self->deadflag = false;
 		self->takedamage = true;
 		return;
@@ -579,13 +554,10 @@ void boss2_dead(edict_t *self)
 	boss2_gib(self);
 }
 
-DIE(boss2_die) (edict_t *self, edict_t *inflictor, edict_t *attacker, int damage, const vec3_t &point, const mod_t &mod) -> void
-{
-	if (self->spawnflags.has(SPAWNFLAG_MONSTER_DEAD))
-	{
+static DIE(boss2_die) (edict_t *self, edict_t *inflictor, edict_t *attacker, int damage, const vec3_t &point, const mod_t &mod) -> void {
+	if (self->spawnflags.has(SPAWNFLAG_MONSTER_DEAD)) {
 		// check for gib
-		if (M_CheckGib(self, mod))
-		{
+		if (M_CheckGib(self, mod)) {
 			boss2_gib(self);
 			self->deadflag = true;
 			return;
@@ -593,9 +565,7 @@ DIE(boss2_die) (edict_t *self, edict_t *inflictor, edict_t *attacker, int damage
 
 		if (self->deadflag)
 			return;
-	}
-	else
-	{
+	} else {
 		gi.sound(self, CHAN_VOICE, sound_death, 1, ATTN_NONE, 0);
 		self->deadflag = true;
 		self->takedamage = false;
@@ -608,17 +578,15 @@ DIE(boss2_die) (edict_t *self, edict_t *inflictor, edict_t *attacker, int damage
 }
 
 // [Paril-KEX] use generic function
-MONSTERINFO_CHECKATTACK(Boss2_CheckAttack) (edict_t *self) -> bool
-{
+MONSTERINFO_CHECKATTACK(Boss2_CheckAttack) (edict_t *self) -> bool {
 	return M_CheckAttack_Base(self, 0.4f, 0.8f, 0.8f, 0.8f, 0.f, 0.f);
 }
 
-/*QUAKED monster_boss2 (1 .5 0) (-56 -56 0) (56 56 80) Ambush Trigger_Spawn Sight Hyperblaster
+/*QUAKED monster_boss2 (1 .5 0) (-56 -56 0) (56 56 80) AMBUSH TRIGGER_SPAWN SIGHT HYPERBLASTER
  */
-void SP_monster_boss2(edict_t *self)
-{
-	if ( !M_AllowSpawn( self ) ) {
-		G_FreeEdict( self );
+void SP_monster_boss2(edict_t *self) {
+	if (!M_AllowSpawn(self)) {
+		G_FreeEdict(self);
 		return;
 	}
 
@@ -640,7 +608,7 @@ void SP_monster_boss2(edict_t *self)
 	self->movetype = MOVETYPE_STEP;
 	self->solid = SOLID_BBOX;
 	self->s.modelindex = gi.modelindex("models/monsters/boss2/tris.md2");
-	
+
 	gi.modelindex("models/monsters/boss2/gibs/chaingun.md2");
 	gi.modelindex("models/monsters/boss2/gibs/chest.md2");
 	gi.modelindex("models/monsters/boss2/gibs/cpu.md2");

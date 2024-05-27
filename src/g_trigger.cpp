@@ -263,45 +263,34 @@ static USE(trigger_key_use) (edict_t *self, edict_t *other, edict_t *activator) 
 
 	gi.sound(activator, CHAN_AUTO, gi.soundindex("misc/keyuse.wav"), 1, ATTN_NORM, 0);
 	if (coop->integer) {
-		edict_t *ent;
-
 		if (self->item->id == IT_KEY_POWER_CUBE || self->item->id == IT_KEY_EXPLOSIVE_CHARGES) {
 			int cube;
 
 			for (cube = 0; cube < 8; cube++)
 				if (activator->client->pers.power_cubes & (1 << cube))
 					break;
-			for (uint32_t player = 1; player <= game.maxclients; player++) {
-				ent = &g_edicts[player];
-				if (!ent->inuse)
-					continue;
-				if (!ent->client)
-					continue;
-				if (ent->client->pers.power_cubes & (1 << cube)) {
-					ent->client->pers.inventory[index]--;
-					ent->client->pers.power_cubes &= ~(1 << cube);
+
+			for (auto ce : active_clients()) {
+				if (ce->client->pers.power_cubes & (1 << cube)) {
+					ce->client->pers.inventory[index]--;
+					ce->client->pers.power_cubes &= ~(1 << cube);
 
 					// [Paril-KEX] don't allow respawning players to keep
 					// used keys
 					if (!P_UseCoopInstancedItems()) {
-						ent->client->resp.coop_respawn.inventory[index] = 0;
-						ent->client->resp.coop_respawn.power_cubes &= ~(1 << cube);
+						ce->client->resp.coop_respawn.inventory[index] = 0;
+						ce->client->resp.coop_respawn.power_cubes &= ~(1 << cube);
 					}
 				}
 			}
 		} else {
-			for (uint32_t player = 1; player <= game.maxclients; player++) {
-				ent = &g_edicts[player];
-				if (!ent->inuse)
-					continue;
-				if (!ent->client)
-					continue;
-				ent->client->pers.inventory[index] = 0;
+			for (auto ce : active_clients()) {
+				ce->client->pers.inventory[index] = 0;
 
 				// [Paril-KEX] don't allow respawning players to keep
 				// used keys
 				if (!P_UseCoopInstancedItems())
-					ent->client->resp.coop_respawn.inventory[index] = 0;
+					ce->client->resp.coop_respawn.inventory[index] = 0;
 			}
 		}
 	} else {
@@ -455,6 +444,7 @@ constexpr spawnflags_t SPAWNFLAG_PUSH_CLIP = 0x10_spawnflag;
 static cached_soundindex windsound;
 
 static TOUCH(trigger_push_touch) (edict_t *self, edict_t *other, const trace_t &tr, bool other_touching_self) -> void {
+
 	if (self->spawnflags.has(SPAWNFLAG_PUSH_CLIP)) {
 		trace_t clip = gi.clip(self, other->s.origin, other->mins, other->maxs, other->s.origin, G_GetClipMask(other));
 
@@ -717,6 +707,7 @@ static USE(trigger_gravity_use) (edict_t *self, edict_t *other, edict_t *activat
 }
 
 static TOUCH(trigger_gravity_touch) (edict_t *self, edict_t *other, const trace_t &tr, bool other_touching_self) -> void {
+
 	if (self->spawnflags.has(SPAWNFLAG_GRAVITY_CLIPPED)) {
 		trace_t clip = gi.clip(self, other->s.origin, other->mins, other->maxs, other->s.origin, G_GetClipMask(other));
 
@@ -1096,7 +1087,7 @@ The same as a trigger_relay.
 constexpr spawnflags_t SPAWNFLAG_COOP_RELAY_AUTO_FIRE = 1_spawnflag;
 
 static inline bool trigger_coop_relay_filter(edict_t *player) {
-	return (player->health <= 0 || player->deadflag || player->movetype == MOVETYPE_NOCLIP ||
+	return (player->health <= 0 || player->deadflag || player->movetype == MOVETYPE_NOCLIP || player->movetype == MOVETYPE_FREECAM ||
 		!ClientIsPlaying(player->client) || player->s.modelindex != MODELINDEX_PLAYER);
 }
 
@@ -1133,7 +1124,7 @@ static THINK(trigger_coop_relay_think) (edict_t *self) -> void {
 	std::array<edict_t *, MAX_SPLIT_PLAYERS> players;
 	size_t num_active = 0;
 
-	for (auto player : active_players())
+	for (auto player : active_clients())
 		if (!trigger_coop_relay_filter(player))
 			num_active++;
 
@@ -1151,7 +1142,7 @@ static THINK(trigger_coop_relay_think) (edict_t *self) -> void {
 		for (size_t i = 0; i < n; i++)
 			gi.LocCenter_Print(players[i], self->message);
 
-		for (auto player : active_players())
+		for (auto player : active_clients())
 			if (std::find(players.begin(), players.end(), player) == players.end())
 				gi.LocCenter_Print(player, self->map);
 
@@ -1199,7 +1190,7 @@ void SP_info_teleport_destination(edict_t *self) {}
 // constexpr uint32_t SPAWNFLAG_TELEPORT_CTF_ONLY		= 4;
 constexpr spawnflags_t SPAWNFLAG_TELEPORT_START_ON = 8_spawnflag;
 
-/*QUAKED trigger_teleport (.5 .5 .5) ? player_only silent ctf_only start_on
+/*QUAKED trigger_teleport (.5 .5 .5) ? PLAYER_ONLY SILENT CTF_ONLY START_ON
 Any object touching this will be transported to the corresponding
 info_teleport_destination entity. You must set the "target" field,
 and create an object with a "targetname" field that matches.
@@ -1227,10 +1218,12 @@ static TOUCH(trigger_teleport_touch) (edict_t *self, edict_t *other, const trace
 		return;
 	}
 
-	gi.WriteByte(svc_temp_entity);
-	gi.WriteByte(TE_TELEPORT_EFFECT);
-	gi.WritePosition(other->s.origin);
-	gi.multicast(other->s.origin, MULTICAST_PVS, false);
+	if (other->movetype != MOVETYPE_FREECAM) {
+		gi.WriteByte(svc_temp_entity);
+		gi.WriteByte(TE_TELEPORT_EFFECT);
+		gi.WritePosition(other->s.origin);
+		gi.multicast(other->s.origin, MULTICAST_PVS, false);
+	}
 
 	other->s.origin = dest->s.origin;
 	other->s.old_origin = dest->s.origin;

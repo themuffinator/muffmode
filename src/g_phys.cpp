@@ -27,13 +27,11 @@ void G_Physics_NewToss(edict_t *ent); // PGM
 
 // [Paril-KEX] fetch the clipmask for this entity; certain modifiers
 // affect the clipping behavior of objects.
-contents_t G_GetClipMask(edict_t *ent)
-{
+contents_t G_GetClipMask(edict_t *ent) {
 	contents_t mask = ent->clipmask;
 
 	// default masks
-	if (!mask)
-	{
+	if (!mask) {
 		if (ent->svflags & SVF_MONSTER)
 			mask = MASK_MONSTERSOLID;
 		else if (ent->svflags & SVF_PROJECTILE)
@@ -41,7 +39,7 @@ contents_t G_GetClipMask(edict_t *ent)
 		else
 			mask = MASK_SHOT & ~CONTENTS_DEADMONSTER;
 	}
-	
+
 	// non-solid objects (items, etc) shouldn't try to clip
 	// against players/monsters
 	if (ent->solid == SOLID_NOT || ent->solid == SOLID_TRIGGER)
@@ -61,8 +59,7 @@ G_TestEntityPosition
 
 ============
 */
-static edict_t *G_TestEntityPosition(edict_t *ent)
-{
+static edict_t *G_TestEntityPosition(edict_t *ent) {
 	trace_t	   trace;
 
 	trace = gi.trace(ent->s.origin, ent->mins, ent->maxs, ent->s.origin, ent, G_GetClipMask(ent));
@@ -78,8 +75,7 @@ static edict_t *G_TestEntityPosition(edict_t *ent)
 G_CheckVelocity
 ================
 */
-void G_CheckVelocity(edict_t *ent)
-{
+void G_CheckVelocity(edict_t *ent) {
 	//
 	// bound velocity
 	//
@@ -96,8 +92,7 @@ G_RunThink
 Runs thinking code for this frame if necessary
 =============
 */
-bool G_RunThink(edict_t *ent)
-{
+bool G_RunThink(edict_t *ent) {
 	gtime_t thinktime = ent->nextthink;
 	if (thinktime <= 0_ms)
 		return true;
@@ -119,8 +114,7 @@ G_Impact
 Two entities have touched, so run their touch functions
 ==================
 */
-void G_Impact(edict_t *e1, const trace_t &trace)
-{
+void G_Impact(edict_t *e1, const trace_t &trace) {
 	edict_t *e2 = trace.ent;
 
 	if (e1->touch && (e1->solid != SOLID_NOT || (e1->flags & FL_ALWAYS_TOUCH)))
@@ -137,22 +131,18 @@ G_FlyMove
 The basic solid body movement clip that slides along multiple planes
 ============
 */
-void G_FlyMove(edict_t *ent, float time, contents_t mask)
-{
+void G_FlyMove(edict_t *ent, float time, contents_t mask) {
 	ent->groundentity = nullptr;
 
 	touch_list_t touch;
-	PM_StepSlideMove_Generic(ent->s.origin, ent->velocity, time, ent->mins, ent->maxs, touch, false, [&](const vec3_t &start, const vec3_t &mins, const vec3_t &maxs, const vec3_t &end)
-	{
+	PM_StepSlideMove_Generic(ent->s.origin, ent->velocity, time, ent->mins, ent->maxs, touch, false, [&](const vec3_t &start, const vec3_t &mins, const vec3_t &maxs, const vec3_t &end) {
 		return gi.trace(start, mins, maxs, end, ent, mask);
-	});
+		});
 
-	for (size_t i = 0; i < touch.num; i++)
-	{
+	for (size_t i = 0; i < touch.num; i++) {
 		auto &trace = touch.traces[i];
 
-		if (trace.plane.normal[2] > 0.7f)
-		{
+		if (trace.plane.normal[2] > 0.7f) {
 			ent->groundentity = trace.ent;
 			ent->groundentity_linkcount = trace.ent->linkcount;
 		}
@@ -163,8 +153,7 @@ void G_FlyMove(edict_t *ent, float time, contents_t mask)
 		G_Impact(ent, trace);
 
 		// impact func requested velocity kill
-		if (ent->flags & FL_KILL_VELOCITY)
-		{
+		if (ent->flags & FL_KILL_VELOCITY) {
 			ent->flags &= ~FL_KILL_VELOCITY;
 			ent->velocity = {};
 		}
@@ -177,8 +166,7 @@ G_AddGravity
 
 ============
 */
-void G_AddGravity(edict_t *ent)
-{
+void G_AddGravity(edict_t *ent) {
 	ent->velocity += ent->gravityVector * (ent->gravity * level.gravity * gi.frame_time_s);
 }
 
@@ -197,23 +185,20 @@ G_PushEntity
 Does not change the entities velocity at all
 ============
 */
-static trace_t G_PushEntity(edict_t *ent, const vec3_t &push)
-{
+static trace_t G_PushEntity(edict_t *ent, const vec3_t &push) {
 	vec3_t start = ent->s.origin;
 	vec3_t end = start + push;
 
 	trace_t trace = gi.trace(start, ent->mins, ent->maxs, end, ent, G_GetClipMask(ent));
-	
+
 	ent->s.origin = trace.endpos + (trace.plane.normal * .5f);
 	gi.linkentity(ent);
 
-	if (trace.fraction != 1.0f || trace.startsolid)
-	{
+	if (trace.fraction != 1.0f || trace.startsolid) {
 		G_Impact(ent, trace);
 
 		// if the pushed entity went away and the pusher is still there
-		if (!trace.ent->inuse && ent->inuse)
-		{
+		if (!trace.ent->inuse && ent->inuse) {
 			// move the pusher back and try again
 			ent->s.origin = start;
 			gi.linkentity(ent);
@@ -230,8 +215,7 @@ static trace_t G_PushEntity(edict_t *ent, const vec3_t &push)
 	return trace;
 }
 
-struct pushed_t
-{
+struct pushed_t {
 	edict_t *ent;
 	vec3_t	 origin;
 	vec3_t	 angles;
@@ -251,9 +235,8 @@ Objects need to be moved back on a failed push,
 otherwise riders would continue to slide.
 ============
 */
-static bool G_Push(edict_t *pusher, vec3_t &move, vec3_t &amove)
-{
-	edict_t	*check, *block = nullptr;
+static bool G_Push(edict_t *pusher, vec3_t &move, vec3_t &amove) {
+	edict_t *check, *block = nullptr;
 	vec3_t	  mins, maxs;
 	pushed_t *p;
 	vec3_t	  org, org2, move2, forward, right, up;
@@ -280,20 +263,18 @@ static bool G_Push(edict_t *pusher, vec3_t &move, vec3_t &amove)
 
 	// see if any solid entities are inside the final position
 	check = g_edicts + 1;
-	for (uint32_t e = 1; e < globals.num_edicts; e++, check++)
-	{
+	for (uint32_t e = 1; e < globals.num_edicts; e++, check++) {
 		if (!check->inuse)
 			continue;
 		if (check->movetype == MOVETYPE_PUSH || check->movetype == MOVETYPE_STOP || check->movetype == MOVETYPE_NONE ||
-			check->movetype == MOVETYPE_NOCLIP)
+			check->movetype == MOVETYPE_NOCLIP || check->movetype == MOVETYPE_FREECAM)
 			continue;
 
 		if (!check->linked)
 			continue; // not linked in anywhere
 
 		// if the entity is standing on the pusher, it will definitely be moved
-		if (check->groundentity != pusher)
-		{
+		if (check->groundentity != pusher) {
 			// see if the ent needs to be tested
 			if (check->absmin[0] >= maxs[0] || check->absmin[1] >= maxs[1] || check->absmin[2] >= maxs[2] ||
 				check->absmax[0] <= mins[0] || check->absmax[1] <= mins[1] || check->absmax[2] <= mins[2])
@@ -304,8 +285,7 @@ static bool G_Push(edict_t *pusher, vec3_t &move, vec3_t &amove)
 				continue;
 		}
 
-		if ((pusher->movetype == MOVETYPE_PUSH) || (check->groundentity == pusher))
-		{
+		if ((pusher->movetype == MOVETYPE_PUSH) || (check->groundentity == pusher)) {
 			// move this entity
 			pushed_p->ent = check;
 			pushed_p->origin = check->s.origin;
@@ -313,21 +293,19 @@ static bool G_Push(edict_t *pusher, vec3_t &move, vec3_t &amove)
 			pushed_p->rotated = !!amove[YAW];
 			if (pushed_p->rotated)
 				pushed_p->yaw =
-					pusher->client ? (float) pusher->client->ps.pmove.delta_angles[YAW] : pusher->s.angles[YAW];
+				pusher->client ? (float)pusher->client->ps.pmove.delta_angles[YAW] : pusher->s.angles[YAW];
 			pushed_p++;
 
 			vec3_t old_position = check->s.origin;
 
 			// try moving the contacted entity
 			check->s.origin += move;
-			if (check->client)
-			{
+			if (check->client) {
 				// Paril: disabled because in vanilla delta_angles are never
 				// lerped. delta_angles can probably be lerped as long as event
 				// isn't EV_PLAYER_TELEPORT or a new RDF flag is set
 				// check->client->ps.pmove.delta_angles[YAW] += amove[YAW];
-			}
-			else
+			} else
 				check->s.angles[YAW] += amove[YAW];
 
 			// figure movement due to the pusher's amove
@@ -346,14 +324,12 @@ static bool G_Push(edict_t *pusher, vec3_t &move, vec3_t &amove)
 
 			// [Paril-KEX] this is a bit of a hack; allow dead player skulls
 			// to be a blocker because otherwise elevators/doors get stuck
-			if (block && check->client && !check->takedamage)
-			{
+			if (block && check->client && !check->takedamage) {
 				check->s.origin = old_position;
 				block = nullptr;
 			}
 
-			if (!block)
-			{ // pushed ok
+			if (!block) { // pushed ok
 				gi.linkentity(check);
 				// impact?
 				continue;
@@ -363,8 +339,7 @@ static bool G_Push(edict_t *pusher, vec3_t &move, vec3_t &amove)
 			// this is only relevent for riding entities, not pushed
 			check->s.origin = old_position;
 			block = G_TestEntityPosition(check);
-			if (!block)
-			{
+			if (!block) {
 				pushed_p--;
 				continue;
 			}
@@ -376,16 +351,14 @@ static bool G_Push(edict_t *pusher, vec3_t &move, vec3_t &amove)
 		// move back any entities we already moved
 		// go backwards, so if the same entity was pushed
 		// twice, it goes back to the original position
-		for (p = pushed_p - 1; p >= pushed; p--)
-		{
+		for (p = pushed_p - 1; p >= pushed; p--) {
 			p->ent->s.origin = p->origin;
 			p->ent->s.angles = p->angles;
-			if (p->rotated)
-			{
+			if (p->rotated) {
 				//if (p->ent->client)
 				//	p->ent->client->ps.pmove.delta_angles[YAW] = p->yaw;
 				//else
-					p->ent->s.angles[YAW] = p->yaw;
+				p->ent->s.angles[YAW] = p->yaw;
 			}
 			gi.linkentity(p->ent);
 		}
@@ -408,8 +381,7 @@ Bmodel objects don't interact with each other, but
 push all box objects
 ================
 */
-static void G_Physics_Pusher(edict_t *ent)
-{
+static void G_Physics_Pusher(edict_t *ent) {
 	vec3_t	 move, amove;
 	edict_t *part;
 
@@ -422,11 +394,9 @@ static void G_Physics_Pusher(edict_t *ent)
 	// if the move is blocked, all moved objects will be backed out
 retry:
 	pushed_p = pushed;
-	for (part = ent; part; part = part->teamchain)
-	{
+	for (part = ent; part; part = part->teamchain) {
 		if (part->velocity[0] || part->velocity[1] || part->velocity[2] || part->avelocity[0] || part->avelocity[1] ||
-			part->avelocity[2])
-		{ // object is moving
+			part->avelocity[2]) { // object is moving
 			move = part->velocity * gi.frame_time_s;
 			amove = part->avelocity * gi.frame_time_s;
 
@@ -437,21 +407,19 @@ retry:
 	if (pushed_p > &pushed[MAX_EDICTS])
 		gi.Com_Error("pushed_p > &pushed[MAX_EDICTS], memory corrupted");
 
-	if (part)
-	{
+	if (part) {
 		// if the pusher has a "blocked" function, call it
 		// otherwise, just stay in place until the obstacle is gone
-		if (part->moveinfo.blocked)
-			part->moveinfo.blocked(part, obstacle);
+		if (part->moveinfo.blocked) {
+			if (obstacle->inuse && obstacle->movetype != MOVETYPE_FREECAM && obstacle->movetype != MOVETYPE_NOCLIP)
+				part->moveinfo.blocked(part, obstacle);
+		}
 
 		if (!obstacle->inuse)
 			goto retry;
-	}
-	else
-	{
+	} else {
 		// the move succeeded, so call all think functions
-		for (part = ent; part; part = part->teamchain)
-		{
+		for (part = ent; part; part = part->teamchain) {
 			// prevent entities that are on trains that have gone away from thinking!
 			if (part->inuse)
 				G_RunThink(part);
@@ -468,8 +436,7 @@ G_Physics_None
 Non moving objects can only think
 =============
 */
-static void G_Physics_None(edict_t *ent)
-{
+static void G_Physics_None(edict_t *ent) {
 	// regular thinking
 	G_RunThink(ent);
 }
@@ -481,8 +448,7 @@ G_Physics_Noclip
 A moving object that doesn't obey physics
 =============
 */
-static void G_Physics_Noclip(edict_t *ent)
-{
+static void G_Physics_Noclip(edict_t *ent) {
 	// regular thinking
 	if (!G_RunThink(ent) || !ent->inuse)
 		return;
@@ -508,8 +474,7 @@ G_Physics_Toss
 Toss, bounce, and fly movement.  When onground, do nothing.
 =============
 */
-static void G_Physics_Toss(edict_t *ent)
-{
+static void G_Physics_Toss(edict_t *ent) {
 	trace_t	 trace;
 	vec3_t	 move;
 	float	 backoff;
@@ -539,8 +504,7 @@ static void G_Physics_Toss(edict_t *ent)
 	// if onground, return without moving
 	if (ent->groundentity && ent->gravity > 0.0f) // PGM - gravity hack
 	{
-		if (ent->svflags & SVF_MONSTER)
-		{
+		if (ent->svflags & SVF_MONSTER) {
 			M_CatagorizePosition(ent, ent->s.origin, ent->waterlevel, ent->watertype);
 			M_WorldEffects(ent);
 		}
@@ -563,8 +527,7 @@ static void G_Physics_Toss(edict_t *ent)
 	int num_tries = 5;
 	float time_left = gi.frame_time_s;
 
-	while (time_left)
-	{
+	while (time_left) {
 		if (num_tries == 0)
 			break;
 
@@ -579,8 +542,7 @@ static void G_Physics_Toss(edict_t *ent)
 			break;
 		// [Paril-KEX] don't build up velocity if we're stuck.
 		// just assume that the object we hit is our ground.
-		else if (trace.allsolid)
-		{
+		else if (trace.allsolid) {
 			ent->groundentity = trace.ent;
 			ent->groundentity_linkcount = trace.ent->linkcount;
 			ent->velocity = {};
@@ -592,8 +554,7 @@ static void G_Physics_Toss(edict_t *ent)
 
 		if (ent->movetype == MOVETYPE_TOSS)
 			ent->velocity = SlideClipVelocity(ent->velocity, trace.plane.normal, 0.5f);
-		else
-		{
+		else {
 			if (ent->movetype == MOVETYPE_WALLBOUNCE)
 				backoff = 2.0f;
 			else
@@ -606,15 +567,11 @@ static void G_Physics_Toss(edict_t *ent)
 			ent->s.angles = vectoangles(ent->velocity);
 
 		// stop if on ground
-		else
-		{
-			if (trace.plane.normal[2] > 0.7f)
-			{
+		else {
+			if (trace.plane.normal[2] > 0.7f) {
 				if ((ent->movetype == MOVETYPE_TOSS && ent->velocity.length() < 60.f) ||
-					(ent->movetype != MOVETYPE_TOSS && ent->velocity.scaled(trace.plane.normal).length() < 60.f))
-				{
-					if (!(ent->flags & FL_NO_STANDING) || trace.ent->solid == SOLID_BSP)
-					{
+					(ent->movetype != MOVETYPE_TOSS && ent->velocity.scaled(trace.plane.normal).length() < 60.f)) {
+					if (!(ent->flags & FL_NO_STANDING) || trace.ent->solid == SOLID_BSP) {
 						ent->groundentity = trace.ent;
 						ent->groundentity_linkcount = trace.ent->linkcount;
 					}
@@ -624,8 +581,7 @@ static void G_Physics_Toss(edict_t *ent)
 				}
 
 				// friction for tossing stuff (gibs, etc)
-				if (ent->movetype == MOVETYPE_TOSS)
-				{
+				if (ent->movetype == MOVETYPE_TOSS) {
 					ent->velocity *= 0.75f;
 					ent->avelocity *= 0.75f;
 				}
@@ -647,13 +603,10 @@ static void G_Physics_Toss(edict_t *ent)
 	else
 		ent->waterlevel = WATER_NONE;
 
-	if (ent->svflags & SVF_MONSTER)
-	{
+	if (ent->svflags & SVF_MONSTER) {
 		M_CatagorizePosition(ent, ent->s.origin, ent->waterlevel, ent->watertype);
 		M_WorldEffects(ent);
-	}
-	else
-	{
+	} else {
 		if (!wasinwater && isinwater)
 			gi.positioned_sound(old_origin, g_edicts, CHAN_AUTO, gi.soundindex("misc/h2ohit1.wav"), 1, 1, 0);
 		else if (wasinwater && !isinwater)
@@ -666,8 +619,7 @@ static void G_Physics_Toss(edict_t *ent)
 		ent->velocity = { crandom_open() * 300, crandom_open() * 300, 300.f + (crandom_open() * 300.f) };
 
 	// move teamslaves
-	for (slave = ent->teamchain; slave; slave = slave->teamchain)
-	{
+	for (slave = ent->teamchain; slave; slave = slave->teamchain) {
 		slave->s.origin = ent->s.origin;
 		gi.linkentity(slave);
 	}
@@ -801,24 +753,19 @@ will fall if the floor is pulled out from under them.
 =============
 */
 
-void G_AddRotationalFriction(edict_t *ent)
-{
+void G_AddRotationalFriction(edict_t *ent) {
 	int	  n;
 	float adjustment;
 
 	ent->s.angles += (ent->avelocity * gi.frame_time_s);
 	adjustment = gi.frame_time_s * g_stopspeed->value * g_friction;
 
-	for (n = 0; n < 3; n++)
-	{
-		if (ent->avelocity[n] > 0)
-		{
+	for (n = 0; n < 3; n++) {
+		if (ent->avelocity[n] > 0) {
 			ent->avelocity[n] -= adjustment;
 			if (ent->avelocity[n] < 0)
 				ent->avelocity[n] = 0;
-		}
-		else
-		{
+		} else {
 			ent->avelocity[n] += adjustment;
 			if (ent->avelocity[n] > 0)
 				ent->avelocity[n] = 0;
@@ -826,14 +773,13 @@ void G_AddRotationalFriction(edict_t *ent)
 	}
 }
 
-static void G_Physics_Step(edict_t *ent)
-{
+static void G_Physics_Step(edict_t *ent) {
 	bool	   wasonground;
 	bool	   hitsound = false;
-	float	  *vel;
+	float *vel;
 	float	   speed, newspeed, control;
 	float	   friction;
-	edict_t	*groundentity;
+	edict_t *groundentity;
 	contents_t mask = G_GetClipMask(ent);
 
 	// airborne monsters should always check for ground
@@ -861,8 +807,7 @@ static void G_Physics_Step(edict_t *ent)
 	//   swimming monsters who are in the water
 	if (!wasonground)
 		if (!(ent->flags & FL_FLY))
-			if (!((ent->flags & FL_SWIM) && (ent->waterlevel > WATER_WAIST)))
-			{
+			if (!((ent->flags & FL_SWIM) && (ent->waterlevel > WATER_WAIST))) {
 				if (ent->velocity[2] < level.gravity * -0.1f)
 					hitsound = true;
 				if (ent->waterlevel != WATER_UNDER)
@@ -870,8 +815,7 @@ static void G_Physics_Step(edict_t *ent)
 			}
 
 	// friction for flying monsters that have been given vertical velocity
-	if ((ent->flags & FL_FLY) && (ent->velocity[2] != 0) && !(ent->monsterinfo.aiflags & AI_ALTERNATE_FLY))
-	{
+	if ((ent->flags & FL_FLY) && (ent->velocity[2] != 0) && !(ent->monsterinfo.aiflags & AI_ALTERNATE_FLY)) {
 		speed = fabsf(ent->velocity[2]);
 		control = speed < g_stopspeed->value ? g_stopspeed->value : speed;
 		friction = g_friction / 3;
@@ -883,26 +827,22 @@ static void G_Physics_Step(edict_t *ent)
 	}
 
 	// friction for flying monsters that have been given vertical velocity
-	if ((ent->flags & FL_SWIM) && (ent->velocity[2] != 0) && !(ent->monsterinfo.aiflags & AI_ALTERNATE_FLY))
-	{
+	if ((ent->flags & FL_SWIM) && (ent->velocity[2] != 0) && !(ent->monsterinfo.aiflags & AI_ALTERNATE_FLY)) {
 		speed = fabsf(ent->velocity[2]);
 		control = speed < g_stopspeed->value ? g_stopspeed->value : speed;
-		newspeed = speed - (gi.frame_time_s * control * g_waterfriction * (float) ent->waterlevel);
+		newspeed = speed - (gi.frame_time_s * control * g_waterfriction * (float)ent->waterlevel);
 		if (newspeed < 0)
 			newspeed = 0;
 		newspeed /= speed;
 		ent->velocity[2] *= newspeed;
 	}
 
-	if (ent->velocity[2] || ent->velocity[1] || ent->velocity[0])
-	{
+	if (ent->velocity[2] || ent->velocity[1] || ent->velocity[0]) {
 		// apply friction
-		if ((wasonground || (ent->flags & (FL_SWIM | FL_FLY))) && !(ent->monsterinfo.aiflags & AI_ALTERNATE_FLY))
-		{
+		if ((wasonground || (ent->flags & (FL_SWIM | FL_FLY))) && !(ent->monsterinfo.aiflags & AI_ALTERNATE_FLY)) {
 			vel = &ent->velocity.x;
 			speed = sqrtf(vel[0] * vel[0] + vel[1] * vel[1]);
-			if (speed)
-			{
+			if (speed) {
 				friction = g_friction;
 
 				// Paril: lower friction for dead monsters
@@ -953,15 +893,13 @@ static void G_Physics_Step(edict_t *ent)
 
 	if (!ent->inuse) // PGM g_touchtrigger free problem
 		return;
-	
-	if (ent->svflags & SVF_MONSTER)
-	{
+
+	if (ent->svflags & SVF_MONSTER) {
 		M_CatagorizePosition(ent, ent->s.origin, ent->waterlevel, ent->watertype);
 		M_WorldEffects(ent);
 
 		// [Paril-KEX] last minute hack to fix Stalker upside down gravity
-		if (wasonground != !!ent->groundentity)
-		{
+		if (wasonground != !!ent->groundentity) {
 			if (ent->monsterinfo.physics_change)
 				ent->monsterinfo.physics_change(ent);
 		}
@@ -972,12 +910,10 @@ static void G_Physics_Step(edict_t *ent)
 }
 
 // [Paril-KEX]
-static inline void G_RunBmodelAnimation(edict_t *ent)
-{
+static inline void G_RunBmodelAnimation(edict_t *ent) {
 	auto &anim = ent->bmodel_anim;
 
-	if (anim.currently_alternate != anim.alternate)
-	{
+	if (anim.currently_alternate != anim.alternate) {
 		anim.currently_alternate = anim.alternate;
 		anim.next_tick = 0_ms;
 	}
@@ -990,12 +926,11 @@ static inline void G_RunBmodelAnimation(edict_t *ent)
 	anim.next_tick = level.time + gtime_t::from_ms(speed);
 
 	const auto &style = anim.alternate ? anim.alt_style : anim.style;
-	
+
 	const auto &start = anim.alternate ? anim.alt_start : anim.start;
 	const auto &end = anim.alternate ? anim.alt_end : anim.end;
 
-	switch (style)
-	{
+	switch (style) {
 	case BMODEL_ANIM_FORWARDS:
 		if (end >= start)
 			ent->s.frame++;
@@ -1015,15 +950,12 @@ static inline void G_RunBmodelAnimation(edict_t *ent)
 
 	const auto &nowrap = anim.alternate ? anim.alt_nowrap : anim.nowrap;
 
-	if (nowrap)
-	{
+	if (nowrap) {
 		if (end >= start)
 			ent->s.frame = clamp(ent->s.frame, start, end);
 		else
 			ent->s.frame = clamp(ent->s.frame, end, start);
-	}
-	else
-	{
+	} else {
 		if (ent->s.frame < start)
 			ent->s.frame = end;
 		else if (ent->s.frame > end)
@@ -1039,14 +971,12 @@ G_RunEntity
 
 ================
 */
-void G_RunEntity(edict_t *ent)
-{
+void G_RunEntity(edict_t *ent) {
 	trace_t trace;
 	vec3_t	previous_origin;
 	bool	has_previous_origin = false;
 
-	if (ent->movetype == MOVETYPE_STEP)
-	{
+	if (ent->movetype == MOVETYPE_STEP) {
 		previous_origin = ent->s.origin;
 		has_previous_origin = true;
 	}
@@ -1059,8 +989,7 @@ void G_RunEntity(edict_t *ent)
 	if (ent->bmodel_anim.enabled)
 		G_RunBmodelAnimation(ent);
 
-	switch ((int) ent->movetype)
-	{
+	switch ((int)ent->movetype) {
 	case MOVETYPE_PUSH:
 	case MOVETYPE_STOP:
 		G_Physics_Pusher(ent);
@@ -1069,6 +998,7 @@ void G_RunEntity(edict_t *ent)
 		G_Physics_None(ent);
 		break;
 	case MOVETYPE_NOCLIP:
+	case MOVETYPE_FREECAM:
 		G_Physics_Noclip(ent);
 		break;
 	case MOVETYPE_STEP:
@@ -1085,14 +1015,12 @@ void G_RunEntity(edict_t *ent)
 		G_Physics_NewToss(ent);
 		break;
 	default:
-		gi.Com_ErrorFmt("G_Physics: bad movetype {}", (int32_t) ent->movetype);
+		gi.Com_ErrorFmt("G_Physics: bad movetype {}", (int32_t)ent->movetype);
 	}
 
-	if (has_previous_origin && ent->movetype == MOVETYPE_STEP)
-	{
+	if (has_previous_origin && ent->movetype == MOVETYPE_STEP) {
 		// if we moved, check and fix origin if needed
-		if (ent->s.origin != previous_origin)
-		{
+		if (ent->s.origin != previous_origin) {
 			trace = gi.trace(ent->s.origin, ent->mins, ent->maxs, previous_origin, ent, G_GetClipMask(ent));
 			if (trace.allsolid || trace.startsolid)
 				ent->s.origin = previous_origin;

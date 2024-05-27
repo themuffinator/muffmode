@@ -24,7 +24,7 @@ void SP_target_temp_entity(edict_t *ent) {
 
 //==========================================================
 
-/*QUAKED target_speaker (1 0 0) (-8 -8 -8) (8 8 8) looped-on looped-off reliable
+/*QUAKED target_speaker (1 0 0) (-8 -8 -8) (8 8 8) LOOPED-ON LOOPED-OFF RELIABLE
 "noise"		wav file to play
 "attenuation"
 -1 = none, send to whole level
@@ -130,7 +130,7 @@ static USE(Use_Target_Help) (edict_t *ent, edict_t *other, edict_t *activator) -
 	}
 }
 
-/*QUAKED target_help (1 0 1) (-16 -16 -24) (16 16 24) help1 setpoi
+/*QUAKED target_help (1 0 1) (-16 -16 -24) (16 16 24) HELP1 SETPOI
 When fired, the "message" key becomes the current personal computer string, and the message light will be set on all clients status bars.
 */
 void SP_target_help(edict_t *ent) {
@@ -289,7 +289,7 @@ static USE(use_target_goal) (edict_t *ent, edict_t *other, edict_t *activator) -
 		level.goal_num++;
 		game.help1changed++;
 
-		for (auto player : active_players())
+		for (auto player : active_clients())
 			G_PlayerNotifyGoal(player);
 	}
 
@@ -561,7 +561,7 @@ void SP_target_blaster(edict_t *self) {
 
 //==========================================================
 
-/*QUAKED target_crosslevel_trigger (.5 .5 .5) (-8 -8 -8) (8 8 8) trigger1 trigger2 trigger3 trigger4 trigger5 trigger6 trigger7 trigger8
+/*QUAKED target_crosslevel_trigger (.5 .5 .5) (-8 -8 -8) (8 8 8) TRIGGER1 TRIGGER2 TRIGGER3 TRIGGER4 TRIGGER5 TRIGGER6 TRIGGER7 TRIGGER8
 Once this trigger is touched/used, any trigger_crosslevel_target with the same trigger number is automatically used when a level is started within the same unit.  It is OK to check multiple triggers.  Message, delay, target, and killtarget also work.
 */
 static USE(trigger_crosslevel_trigger_use) (edict_t *self, edict_t *other, edict_t *activator) -> void {
@@ -574,7 +574,7 @@ void SP_target_crosslevel_trigger(edict_t *self) {
 	self->use = trigger_crosslevel_trigger_use;
 }
 
-/*QUAKED target_crosslevel_target (.5 .5 .5) (-8 -8 -8) (8 8 8) trigger1 trigger2 trigger3 trigger4 trigger5 trigger6 trigger7 trigger8 - - - - - - - - trigger9 trigger10 trigger11 trigger12 trigger13 trigger14 trigger15 trigger16
+/*QUAKED target_crosslevel_target (.5 .5 .5) (-8 -8 -8) (8 8 8) TRIGGER1 TRIGGER2 TRIGGER3 TRIGGER4 TRIGGER5 TRIGGER6 TRIGGER7 TRIGGER8 - - - - - - - - TRIGGER9 TRIGGER10 TRIGGER11 TRIGGER12 TRIGGER13 TRIGGER14 TRIGGER15 TRIGGER16
 Triggered by a trigger_crosslevel elsewhere within a unit.  If multiple triggers are checked, all must be true.  Delay, target and
 killtarget also work.
 
@@ -626,10 +626,7 @@ struct laser_pierce_t : pierce_args_t {
 		}
 
 		// if we hit something that's not a monster or player or is immune to lasers, we're done
-		// ROGUE
-		if (!(tr.ent->svflags & SVF_MONSTER) && (!tr.ent->client) && !(tr.ent->flags & FL_DAMAGEABLE))
-			// ROGUE
-		{
+		if (!(tr.ent->svflags & SVF_MONSTER) && (!tr.ent->client) && !(tr.ent->flags & FL_DAMAGEABLE)) {
 			if (self->spawnflags.has(SPAWNFLAG_LASER_ZAP)) {
 				self->spawnflags &= ~SPAWNFLAG_LASER_ZAP;
 				gi.WriteByte(svc_temp_entity);
@@ -1015,12 +1012,8 @@ static THINK(update_target_camera) (edict_t *self) -> void {
 
 	// only allow skipping after 2 seconds
 	if ((self->hackflags & HACKFLAG_SKIPPABLE) && level.time > 2_sec) {
-		for (size_t i = 0; i < game.maxclients; i++) {
-			edict_t *client = g_edicts + 1 + i;
-			if (!client->inuse || !client->client->pers.connected)
-				continue;
-
-			if (client->client->buttons & BUTTON_ANY) {
+		for (auto ce : active_clients()) {
+			if (ce->client->buttons & BUTTON_ANY) {
 				do_skip = true;
 				break;
 			}
@@ -1069,14 +1062,8 @@ static THINK(update_target_camera) (edict_t *self) -> void {
 			level.spawn_spots[SPAWN_SPOT_INTERMISSION]->s.origin += delta;
 
 			// move all clients to the intermission point
-			for (size_t i = 0; i < game.maxclients; i++) {
-				edict_t *client = g_edicts + 1 + i;
-				if (!client->inuse) {
-					continue;
-				}
-
-				MoveClientToIntermission(client);
-			}
+			for (auto ce : active_clients())
+				MoveClientToIntermission(ce);
 		}
 	} else {
 		if (self->killtarget) {
@@ -1172,24 +1159,19 @@ static USE(use_target_camera) (edict_t *self, edict_t *other, edict_t *activator
 	level.spawn_spots[SPAWN_SPOT_INTERMISSION] = self;
 
 	// move all clients to the intermission point
-	for (size_t i = 0; i < game.maxclients; i++) {
-		edict_t *client = g_edicts + 1 + i;
-		if (!client->inuse) {
-			continue;
-		}
-
+	for (auto ce : active_clients()) {
 		// respawn any dead clients
-		if (client->health <= 0) {
+		if (ce->health <= 0) {
 			// give us our max health back since it will reset
 			// to pers.health; in instanced items we'd lose the items
 			// we touched so we always want to respawn with our max.
 			if (P_UseCoopInstancedItems())
-				client->client->pers.health = client->client->pers.max_health = client->max_health;
+				ce->client->pers.health = ce->client->pers.max_health = ce->max_health;
 
-			ClientRespawn(client);
+			ClientRespawn(ce);
 		}
 
-		MoveClientToIntermission(client);
+		MoveClientToIntermission(ce);
 	}
 
 	self->activator = activator;
@@ -1767,7 +1749,7 @@ void SP_target_sky(edict_t *self) {
 
 //==========================================================
 
-/*QUAKED target_crossunit_trigger (.5 .5 .5) (-8 -8 -8) (8 8 8) trigger1 trigger2 trigger3 trigger4 trigger5 trigger6 trigger7 trigger8
+/*QUAKED target_crossunit_trigger (.5 .5 .5) (-8 -8 -8) (8 8 8) TRIGGER1 TRIGGER2 TRIGGER3 TRIGGER4 TRIGGER5 TRIGGER6 TRIGGER7 TRIGGER8
 Once this trigger is touched/used, any trigger_crossunit_target with the same trigger number is automatically used when a level is started within the same unit.  It is OK to check multiple triggers.  Message, delay, target, and killtarget also work.
 */
 static USE(trigger_crossunit_trigger_use) (edict_t *self, edict_t *other, edict_t *activator) -> void {
@@ -1785,9 +1767,9 @@ void SP_target_crossunit_trigger(edict_t *self) {
 	self->use = trigger_crossunit_trigger_use;
 }
 
-/*QUAKED target_crossunit_target (.5 .5 .5) (-8 -8 -8) (8 8 8) trigger1 trigger2 trigger3 trigger4 trigger5 trigger6 trigger7 trigger8 - - - - - - - - trigger9 trigger10 trigger11 trigger12 trigger13 trigger14 trigger15 trigger16
-Triggered by a trigger_crossunit elsewhere within a unit.  If multiple triggers are checked, all must be true.  Delay, target and
-killtarget also work.
+/*QUAKED target_crossunit_target (.5 .5 .5) (-8 -8 -8) (8 8 8) TRIGGER1 TRIGGER2 TRIGGER3 TRIGGER4 TRIGGER5 TRIGGER6 TRIGGER7 TRIGGER8 - - - - - - - - TRIGGER9 TRIGGER10 TRIGGER11 TRIGGER12 TRIGGER13 TRIGGER14 TRIGGER15 TRIGGER16
+Triggered by a trigger_crossunit elsewhere within a unit.
+If multiple triggers are checked, all must be true. Delay, target and killtarget also work.
 
 "delay"		delay before using targets if the trigger has been activated (default 1)
 */
@@ -1839,7 +1821,7 @@ static USE(use_target_story) (edict_t *self, edict_t *other, edict_t *activator)
 	else
 		level.story_active = false;
 
-	gi.configstring(CONFIG_STORY, self->message ? self->message : "");
+	gi.configstring(CONFIG_STORY_SCORELIMIT, self->message ? self->message : "");
 }
 
 void SP_target_story(edict_t *self) {
@@ -1946,24 +1928,24 @@ void SP_target_mal_laser(edict_t *self) {
 /*QUAKED target_steam (1 0 0) (-8 -8 -8) (8 8 8)
 Creates a steam effect (particles w/ velocity in a line).
 
-  speed = velocity of particles (default 50)
-  count = number of particles (default 32)
-  sounds = color of particles (default 8 for steam)
-	 the color range is from this color to this color + 6
-  wait = seconds to run before stopping (overrides default
-	 value derived from func_timer)
+speed = velocity of particles (default 50)
+count = number of particles (default 32)
+sounds = color of particles (default 8 for steam)
+	the color range is from this color to this color + 6
+wait = seconds to run before stopping (overrides default
+	value derived from func_timer)
 
-  best way to use this is to tie it to a func_timer that "pokes"
-  it every second (or however long you set the wait time, above)
+best way to use this is to tie it to a func_timer that "pokes"
+it every second (or however long you set the wait time, above)
 
-  note that the width of the base is proportional to the speed
-  good colors to use:
-  6-9 - varying whites (darker to brighter)
-  224 - sparks
-  176 - blue water
-  80  - brown water
-  208 - slime
-  232 - blood
+note that the width of the base is proportional to the speed
+good colors to use:
+6-9 - varying whites (darker to brighter)
+224 - sparks
+176 - blue water
+80  - brown water
+208 - slime
+232 - blood
 */
 
 static USE(use_target_steam) (edict_t *self, edict_t *other, edict_t *activator) -> void {
@@ -2127,9 +2109,8 @@ void SP_target_anger(edict_t *self) {
 // ***********************************
 
 USE(target_killplayers_use) (edict_t *self, edict_t *other, edict_t *activator) -> void {
+	edict_t *ent;
 	level.deadly_kill_box = true;
-
-	edict_t *ent, *player;
 
 	// kill any visible monsters
 	for (ent = g_edicts; ent < &g_edicts[globals.num_edicts]; ent++) {
@@ -2140,12 +2121,8 @@ USE(target_killplayers_use) (edict_t *self, edict_t *other, edict_t *activator) 
 		if (!ent->takedamage)
 			continue;
 
-		for (size_t i = 0; i < game.maxclients; i++) {
-			player = &g_edicts[1 + i];
-			if (!player->inuse)
-				continue;
-
-			if (gi.inPVS(player->s.origin, ent->s.origin, false)) {
+		for (auto ce : active_clients()) {
+			if (gi.inPVS(ce->s.origin, ent->s.origin, false)) {
 				T_Damage(ent, self, self, vec3_origin, ent->s.origin, vec3_origin,
 					ent->health, 0, DAMAGE_NO_PROTECTION, MOD_TELEFRAG);
 				break;
@@ -2154,14 +2131,8 @@ USE(target_killplayers_use) (edict_t *self, edict_t *other, edict_t *activator) 
 	}
 
 	// kill the players
-	for (size_t i = 0; i < game.maxclients; i++) {
-		player = &g_edicts[1 + i];
-		if (!player->inuse)
-			continue;
-
-		// nail it
-		T_Damage(player, self, self, vec3_origin, self->s.origin, vec3_origin, 100000, 0, DAMAGE_NO_PROTECTION, MOD_TELEFRAG);
-	}
+	for (auto ce : active_clients())
+		T_Damage(ce, self, self, vec3_origin, self->s.origin, vec3_origin, 100000, 0, DAMAGE_NO_PROTECTION, MOD_TELEFRAG);
 
 	level.deadly_kill_box = false;
 }

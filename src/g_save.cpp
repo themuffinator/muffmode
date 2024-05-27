@@ -641,10 +641,8 @@ FIELD_AUTO(body_que),
 
 FIELD_AUTO(power_cubes),
 
-// ROGUE
 FIELD_AUTO(disguise_violator),
 FIELD_AUTO(disguise_violation_time),
-// ROGUE
 
 FIELD_AUTO(coop_level_restart_time),
 FIELD_LEVEL_STRING(goals),
@@ -2385,7 +2383,7 @@ void ReadLevelJson(const char *jsonString) {
 }
 
 // [Paril-KEX]
-bool G_CanSave() {
+bool CanSave() {
 	if (game.maxclients == 1 && g_edicts[1].health <= 0) {
 		gi.LocClient_Print(&g_edicts[1], PRINT_CENTER, "$g_no_save_dead");
 		return false;

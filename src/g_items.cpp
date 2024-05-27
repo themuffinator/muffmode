@@ -2,7 +2,7 @@
 // Licensed under the GNU General Public License 2.0.
 #include "g_local.h"
 #include "bots/bot_includes.h"
-#include "monsters/m_player.h"	//doppleganger
+#include "monsters/m_player.h"	//doppelganger
 
 bool Pickup_Weapon(edict_t *ent, edict_t *other);
 void Use_Weapon(edict_t *ent, gitem_t *inv);
@@ -15,11 +15,11 @@ void Weapon_Machinegun(edict_t *ent);
 void Weapon_Chaingun(edict_t *ent);
 void Weapon_HyperBlaster(edict_t *ent);
 void Weapon_RocketLauncher(edict_t *ent);
-void Weapon_Grenade(edict_t *ent);
+void Weapon_HandGrenade(edict_t *ent);
 void Weapon_GrenadeLauncher(edict_t *ent);
 void Weapon_Railgun(edict_t *ent);
 void Weapon_BFG(edict_t *ent);
-void Weapon_Ionripper(edict_t *ent);
+void Weapon_IonRipper(edict_t *ent);
 void Weapon_Phalanx(edict_t *ent);
 void Weapon_Trap(edict_t *ent);
 void Weapon_ChainFist(edict_t *ent);
@@ -41,12 +41,12 @@ void	   Use_Protection(edict_t *ent, gitem_t *item);
 static gtime_t protection_drop_timeout_hack;
 
 // ***************************
-//  DOPPLEGANGER
+//  DOPPELGANGER
 // ***************************
 
 edict_t *Sphere_Spawn(edict_t *owner, spawnflags_t spawnflags);
 
-static DIE(doppleganger_die) (edict_t *self, edict_t *inflictor, edict_t *attacker, int damage, const vec3_t &point, const mod_t &mod) -> void {
+static DIE(doppelganger_die) (edict_t *self, edict_t *inflictor, edict_t *attacker, int damage, const vec3_t &point, const mod_t &mod) -> void {
 	edict_t *sphere;
 	float	 dist;
 	vec3_t	 dir;
@@ -57,10 +57,10 @@ static DIE(doppleganger_die) (edict_t *self, edict_t *inflictor, edict_t *attack
 
 		if (dist > 80.f) {
 			if (dist > 768) {
-				sphere = Sphere_Spawn(self, SPHERE_HUNTER | SPHERE_DOPPLEGANGER);
+				sphere = Sphere_Spawn(self, SF_SPHERE_HUNTER | SF_DOPPELGANGER);
 				sphere->pain(sphere, attacker, 0, 0, mod);
 			} else {
-				sphere = Sphere_Spawn(self, SPHERE_VENGEANCE | SPHERE_DOPPLEGANGER);
+				sphere = Sphere_Spawn(self, SF_SPHERE_VENGEANCE | SF_DOPPELGANGER);
 				sphere->pain(sphere, attacker, 0, 0, mod);
 			}
 		}
@@ -69,19 +69,19 @@ static DIE(doppleganger_die) (edict_t *self, edict_t *inflictor, edict_t *attack
 	self->takedamage = DAMAGE_NONE;
 
 	// [Paril-KEX]
-	T_RadiusDamage(self, self->teammaster, 160.f, self, 140.f, DAMAGE_NONE, MOD_DOPPLE_EXPLODE);
+	T_RadiusDamage(self, self->teammaster, 160.f, self, 140.f, DAMAGE_NONE, MOD_DOPPEL_EXPLODE);
 
 	if (self->teamchain)
 		BecomeExplosion1(self->teamchain);
 	BecomeExplosion1(self);
 }
 
-static PAIN(doppleganger_pain) (edict_t *self, edict_t *other, float kick, int damage, const mod_t &mod) -> void {
+static PAIN(doppelganger_pain) (edict_t *self, edict_t *other, float kick, int damage, const mod_t &mod) -> void {
 	self->enemy = other;
 }
 
-static THINK(doppleganger_timeout) (edict_t *self) -> void {
-	doppleganger_die(self, self, self, 9999, self->s.origin, MOD_UNKNOWN);
+static THINK(doppelganger_timeout) (edict_t *self) -> void {
+	doppelganger_die(self, self, self, 9999, self->s.origin, MOD_UNKNOWN);
 }
 
 static THINK(body_think) (edict_t *self) -> void {
@@ -109,7 +109,7 @@ static THINK(body_think) (edict_t *self) -> void {
 	self->nextthink = level.time + FRAME_TIME_MS;
 }
 
-void fire_doppleganger(edict_t *ent, const vec3_t &start, const vec3_t &aimdir) {
+void fire_doppelganger(edict_t *ent, const vec3_t &start, const vec3_t &aimdir) {
 	edict_t *base;
 	edict_t *body;
 	vec3_t	 dir;
@@ -134,13 +134,13 @@ void fire_doppleganger(edict_t *ent, const vec3_t &start, const vec3_t &aimdir) 
 	base->flags |= (FL_DAMAGEABLE | FL_TRAP);
 	base->takedamage = true;
 	base->health = 30;
-	base->pain = doppleganger_pain;
-	base->die = doppleganger_die;
+	base->pain = doppelganger_pain;
+	base->die = doppelganger_die;
 
 	base->nextthink = level.time + 30_sec;
-	base->think = doppleganger_timeout;
+	base->think = doppelganger_timeout;
 
-	base->classname = "doppleganger";
+	base->classname = "doppelganger";
 
 	gi.linkentity(base);
 
@@ -169,10 +169,10 @@ void fire_doppleganger(edict_t *ent, const vec3_t &start, const vec3_t &aimdir) 
 
 //======================================================================
 
-constexpr gtime_t DEFENDER_LIFESPAN = 30_sec;
-constexpr gtime_t HUNTER_LIFESPAN = 30_sec;
-constexpr gtime_t VENGEANCE_LIFESPAN = 30_sec;
-constexpr gtime_t MINIMUM_FLY_TIME = 15_sec;
+constexpr gtime_t DEFENDER_LIFESPAN		= 30_sec;
+constexpr gtime_t HUNTER_LIFESPAN		= 30_sec;
+constexpr gtime_t VENGEANCE_LIFESPAN	= 30_sec;
+constexpr gtime_t MINIMUM_FLY_TIME		= 15_sec;
 
 void LookAtKiller(edict_t *self, edict_t *inflictor, edict_t *attacker);
 
@@ -186,7 +186,7 @@ void hunter_touch(edict_t *self, edict_t *other, const trace_t &tr, bool other_t
 // =================
 // =================
 static THINK(sphere_think_explode) (edict_t *self) -> void {
-	if (self->owner && self->owner->client && !(self->spawnflags & SPHERE_DOPPLEGANGER)) {
+	if (self->owner && self->owner->client && !(self->spawnflags & SF_DOPPELGANGER)) {
 		self->owner->client->owned_sphere = nullptr;
 	}
 	BecomeExplosion1(self);
@@ -325,7 +325,7 @@ static void sphere_fire(edict_t *self, edict_t *enemy) {
 }
 
 static void sphere_touch(edict_t *self, edict_t *other, const trace_t &tr, mod_t mod) {
-	if (self->spawnflags.has(SPHERE_DOPPLEGANGER)) {
+	if (self->spawnflags.has(SF_DOPPELGANGER)) {
 		if (other == self->teammaster)
 			return;
 
@@ -358,15 +358,14 @@ static void sphere_touch(edict_t *self, edict_t *other, const trace_t &tr, mod_t
 }
 
 TOUCH(vengeance_touch) (edict_t *self, edict_t *other, const trace_t &tr, bool other_touching_self) -> void {
-	if (self->spawnflags.has(SPHERE_DOPPLEGANGER))
-		sphere_touch(self, other, tr, MOD_DOPPLE_VENGEANCE);
+	if (self->spawnflags.has(SF_DOPPELGANGER))
+		sphere_touch(self, other, tr, MOD_DOPPEL_VENGEANCE);
 	else
 		sphere_touch(self, other, tr, MOD_VENGEANCE_SPHERE);
 }
 
 TOUCH(hunter_touch) (edict_t *self, edict_t *other, const trace_t &tr, bool other_touching_self) -> void {
 	edict_t *owner;
-
 	// don't blow up if you hit the world.... sheesh.
 	if (other == world)
 		return;
@@ -381,8 +380,8 @@ TOUCH(hunter_touch) (edict_t *self, edict_t *other, const trace_t &tr, bool othe
 		}
 	}
 
-	if (self->spawnflags.has(SPHERE_DOPPLEGANGER))
-		sphere_touch(self, other, tr, MOD_DOPPLE_HUNTER);
+	if (self->spawnflags.has(SF_DOPPELGANGER))
+		sphere_touch(self, other, tr, MOD_DOPPEL_HUNTER);
 	else
 		sphere_touch(self, other, tr, MOD_HUNTER_SPHERE);
 }
@@ -435,14 +434,14 @@ static PAIN(hunter_pain) (edict_t *self, edict_t *other, float kick, int damage,
 
 	owner = self->owner;
 
-	if (!(self->spawnflags & SPHERE_DOPPLEGANGER)) {
+	if (!(self->spawnflags & SF_DOPPELGANGER)) {
 		if (owner && (owner->health > 0))
 			return;
 
 		if (other == owner)
 			return;
 	} else {
-		// if fired by a doppleganger, set it to 10 second timeout
+		// if fired by a doppelganger, set it to 10 second timeout
 		self->wait = (level.time + MINIMUM_FLY_TIME).seconds();
 	}
 
@@ -453,8 +452,8 @@ static PAIN(hunter_pain) (edict_t *self, edict_t *other, float kick, int damage,
 	self->enemy = other;
 
 	// if we're not owned by a player, no sam raimi
-	// if we're spawned by a doppleganger, no sam raimi
-	if (self->spawnflags.has(SPHERE_DOPPLEGANGER) || !(owner && owner->client))
+	// if we're spawned by a doppelganger, no sam raimi
+	if (self->spawnflags.has(SF_DOPPELGANGER) || !(owner && owner->client))
 		return;
 
 	// sam raimi cam is disabled if FORCE_RESPAWN is set.
@@ -506,7 +505,7 @@ static PAIN(vengeance_pain) (edict_t *self, edict_t *other, float kick, int dama
 	if (self->enemy)
 		return;
 
-	if (!(self->spawnflags & SPHERE_DOPPLEGANGER)) {
+	if (!(self->spawnflags & SF_DOPPELGANGER)) {
 		if (self->owner && self->owner->health >= 25)
 			return;
 
@@ -570,14 +569,14 @@ static THINK(hunter_think) (edict_t *self) -> void {
 
 	edict_t *owner = self->owner;
 
-	if (!owner && !(self->spawnflags & SPHERE_DOPPLEGANGER)) {
+	if (!owner && !(self->spawnflags & SF_DOPPELGANGER)) {
 		G_FreeEdict(self);
 		return;
 	}
 
 	if (owner)
 		self->ideal_yaw = owner->s.angles[YAW];
-	else if (self->enemy) // fired by doppleganger
+	else if (self->enemy) // fired by doppelganger
 	{
 		vec3_t dir = self->enemy->s.origin - self->s.origin;
 		self->ideal_yaw = vectoyaw(dir);
@@ -622,7 +621,7 @@ static THINK(vengeance_think) (edict_t *self) -> void {
 		return;
 	}
 
-	if (!(self->owner) && !(self->spawnflags & SPHERE_DOPPLEGANGER)) {
+	if (!(self->owner) && !(self->spawnflags & SF_DOPPELGANGER)) {
 		G_FreeEdict(self);
 		return;
 	}
@@ -649,7 +648,7 @@ edict_t *Sphere_Spawn(edict_t *owner, spawnflags_t spawnflags) {
 	sphere->s.renderfx = RF_FULLBRIGHT | RF_IR_VISIBLE;
 	sphere->movetype = MOVETYPE_FLYMISSILE;
 
-	if (spawnflags.has(SPHERE_DOPPLEGANGER))
+	if (spawnflags.has(SF_DOPPELGANGER))
 		sphere->teammaster = owner->teammaster;
 	else
 		sphere->owner = owner;
@@ -660,8 +659,8 @@ edict_t *Sphere_Spawn(edict_t *owner, spawnflags_t spawnflags) {
 	sphere->spawnflags = spawnflags; // need this for the HUD to recognize sphere
 	sphere->takedamage = false;
 
-	switch ((spawnflags & SPHERE_TYPE).value) {
-	case SPHERE_DEFENDER.value:
+	switch ((spawnflags & SF_SPHERE_TYPE).value) {
+	case SF_SPHERE_DEFENDER.value:
 		sphere->s.modelindex = gi.modelindex("models/items/defender/tris.md2");
 		sphere->s.modelindex2 = gi.modelindex("models/items/shell/tris.md2");
 		sphere->s.sound = gi.soundindex("spheres/d_idle.wav");
@@ -670,7 +669,7 @@ edict_t *Sphere_Spawn(edict_t *owner, spawnflags_t spawnflags) {
 		sphere->die = sphere_explode;
 		sphere->think = defender_think;
 		break;
-	case SPHERE_HUNTER.value:
+	case SF_SPHERE_HUNTER.value:
 		sphere->s.modelindex = gi.modelindex("models/items/hunter/tris.md2");
 		sphere->s.sound = gi.soundindex("spheres/h_idle.wav");
 		sphere->wait = (level.time + HUNTER_LIFESPAN).seconds();
@@ -678,7 +677,7 @@ edict_t *Sphere_Spawn(edict_t *owner, spawnflags_t spawnflags) {
 		sphere->die = sphere_if_idle_die;
 		sphere->think = hunter_think;
 		break;
-	case SPHERE_VENGEANCE.value:
+	case SF_SPHERE_VENGEANCE.value:
 		sphere->s.modelindex = gi.modelindex("models/items/vengnce/tris.md2");
 		sphere->s.sound = gi.soundindex("spheres/v_idle.wav");
 		sphere->wait = (level.time + VENGEANCE_LIFESPAN).seconds();
@@ -729,28 +728,28 @@ static void Own_Sphere(edict_t *self, edict_t *sphere) {
 void Defender_Launch(edict_t *self) {
 	edict_t *sphere;
 
-	sphere = Sphere_Spawn(self, SPHERE_DEFENDER);
+	sphere = Sphere_Spawn(self, SF_SPHERE_DEFENDER);
 	Own_Sphere(self, sphere);
 }
 
 void Hunter_Launch(edict_t *self) {
 	edict_t *sphere;
 
-	sphere = Sphere_Spawn(self, SPHERE_HUNTER);
+	sphere = Sphere_Spawn(self, SF_SPHERE_HUNTER);
 	Own_Sphere(self, sphere);
 }
 
 void Vengeance_Launch(edict_t *self) {
 	edict_t *sphere;
 
-	sphere = Sphere_Spawn(self, SPHERE_VENGEANCE);
+	sphere = Sphere_Spawn(self, SF_SPHERE_VENGEANCE);
 	Own_Sphere(self, sphere);
 }
 
 //======================================================================
 
 static edict_t *QuadHog_FindSpawn() {
-	return SelectDeathmatchSpawnPoint(vec3_origin, false, true, true, false).spot;
+	return SelectDeathmatchSpawnPoint(nullptr, vec3_origin, false, true, true, false, true).spot;
 }
 
 static void QuadHod_ClearAll() {
@@ -863,15 +862,13 @@ void QuadHog_SetupSpawn(gtime_t delay) {
 
 constexpr gtime_t TECH_TIMEOUT = 60_sec; // seconds before techs spawn again
 
-static bool Tech_PlayerHasATech(edict_t *who) {
-	for (size_t i = 0; i < q_countof(tech_ids); i++) {
-		if (who->client->pers.inventory[tech_ids[i]]) {
-			if (level.time - who->client->tech_last_message_time > 5_sec) {
-				gi.LocCenter_Print(who, "$g_already_have_tech");
-				who->client->tech_last_message_time = level.time;
-			}
-			return true; // has this one
+static bool Tech_PlayerHasATech(edict_t *ent) {
+	if (Tech_Held(ent) != nullptr) {
+		if (level.time - ent->client->tech_last_message_time > 5_sec) {
+			gi.LocCenter_Print(ent, "$g_already_have_tech");
+			ent->client->tech_last_message_time = level.time;
 		}
+		return true; // has this one
 	}
 	return false;
 }
@@ -897,7 +894,7 @@ static bool Tech_Pickup(edict_t *ent, edict_t *other) {
 static void Tech_Spawn(gitem_t *item, edict_t *spot);
 
 static edict_t *FindTechSpawn() {
-	return SelectDeathmatchSpawnPoint(vec3_origin, false, true, true, false).spot;
+	return SelectDeathmatchSpawnPoint(nullptr, vec3_origin, false, true, true, false, true).spot;
 }
 
 static THINK(Tech_Think) (edict_t *tech) -> void {
@@ -1009,10 +1006,10 @@ static THINK(Tech_SpawnAll) (edict_t *ent) -> void {
 }
 
 void Tech_SetupSpawn() {
-	edict_t *ent;
-
 	if (!AllowTechs())
 		return;
+
+	edict_t *ent;
 
 	ent = G_Spawn();
 	ent->nextthink = level.time + 2_sec;
@@ -1028,7 +1025,8 @@ void Tech_Reset() {
 			if (ent->item && (ent->item->flags & IF_TECH))
 				G_FreeEdict(ent);
 	}
-	Tech_SpawnAll(nullptr);
+	Tech_SetupSpawn();
+	//Tech_SpawnAll(nullptr);
 }
 
 int Tech_ApplyDisruptorShield(edict_t *ent, int dmg) {
@@ -1095,55 +1093,55 @@ void Tech_ApplyTimeAccelSound(edict_t *ent) {
 
 void Tech_ApplyAutoDoc(edict_t *ent) {
 	bool		noise = false;
-	gclient_t *client;
+	gclient_t	*cl;
 	int			index;
 	float		volume = 1.0;
 	bool		mod = g_instagib->integer || g_nadefest->integer ? true : false;
-	int			max = mod ? 100 : 150;
+	int			max = g_vampiric_damage->integer ? ceil(g_vampiric_health_max->integer/2) : mod ? 100 : 150;
 
-	client = ent->client;
-	if (!client)
+	cl = ent->client;
+	if (!cl)
 		return;
 
 	if (ent->health <= 0)
 		return;
 
-	if (ent->client->silencer_shots)
+	if (cl->silencer_shots)
 		volume = 0.2f;
 
-	if (mod && !client->tech_regen_time) {
-		client->tech_regen_time = level.time;
+	if (mod && !cl->tech_regen_time) {
+		cl->tech_regen_time = level.time;
 		return;
 	}
 
-	if (!(client->pers.inventory[IT_TECH_AUTODOC] || mod))
+	if (!(cl->pers.inventory[IT_TECH_AUTODOC] || mod))
 		return;
 
-	if (client->tech_regen_time < level.time) {
-		client->tech_regen_time = level.time;
+	if (cl->tech_regen_time < level.time) {
+		cl->tech_regen_time = level.time;
 		if (!g_vampiric_damage->integer) {
 			if (ent->health < max) {
 				ent->health += 5;
 				if (ent->health > max)
 					ent->health = max;
-				client->tech_regen_time += 1_sec;
+				cl->tech_regen_time += 1_sec;
 				noise = true;
 			}
 		}
 		//muff: don't regen armor at the same time as health
 		if (!mod && !noise) {
 			index = ArmorIndex(ent);
-			if (index && client->pers.inventory[index] < max) {
-				client->pers.inventory[index] += 5;
-				if (client->pers.inventory[index] > max)
-					client->pers.inventory[index] = max;
-				client->tech_regen_time += 1_sec;
+			if (index && cl->pers.inventory[index] < max) {
+				cl->pers.inventory[index] += g_vampiric_damage->integer ? 10 : 5;
+				if (cl->pers.inventory[index] > max)
+					cl->pers.inventory[index] = max;
+				cl->tech_regen_time += 1_sec;
 				noise = true;
 			}
 		}
 	}
-	if (noise && ent->client->tech_sound_time < level.time) {
-		ent->client->tech_sound_time = level.time + 1_sec;
+	if (noise && cl->tech_sound_time < level.time) {
+		cl->tech_sound_time = level.time + 1_sec;
 		gi.sound(ent, CHAN_AUX, gi.soundindex("ctf/tech4.wav"), volume, ATTN_NORM, 0);
 	}
 }
@@ -1378,7 +1376,9 @@ THINK(RespawnItem) (edict_t *ent) -> void {
 	gi.linkentity(ent);
 
 	// send an effect
-	ent->s.event = EV_ITEM_RESPAWN;
+	// don't do this at match start
+	if (level.time > level.match_time + 100_ms)
+		ent->s.event = EV_ITEM_RESPAWN;
 
 	if (g_dm_random_items->integer) {
 		item_id_t new_item = DoRandomRespawn(ent);
@@ -1425,7 +1425,14 @@ void SetRespawn(edict_t *ent, gtime_t delay, bool hide_self) {
 		gi.linkentity(ent);
 	}
 
-	ent->nextthink = level.time + delay;
+	gtime_t t = 0_sec;
+	if (ent->random) {
+		t += gtime_t::from_ms((crandom() * ent->random) * 1000);
+		if (t < FRAME_TIME_MS) {
+			t = FRAME_TIME_MS;
+		}
+	}
+	ent->nextthink = level.time + delay + t;
 	ent->think = RespawnItem;
 }
 
@@ -1453,7 +1460,10 @@ static bool Pickup_AllowPowerupPickup(edict_t *ent, edict_t *other) {
 	if (coop->integer && !P_UseCoopInstancedItems() && (ent->item->flags & IF_STAY_COOP) && (quantity > 0))
 		return false;
 
-	if (deathmatch->integer && (ent->item->flags & IF_POWERUP)) {
+	if (deathmatch->integer) {
+		if (g_quadhog->integer && ent->item->id == IT_POWERUP_QUAD)
+			return true;
+
 		if (g_dm_powerups_minplayers->integer > level.num_playing_clients) {
 			if (level.time - other->client->pu_last_message_time > 5_sec) {
 				gi.LocClient_Print(other, PRINT_CENTER, "There must be {}+ players in the match\nto pick this up :(", g_dm_powerups_minplayers->integer);
@@ -1505,8 +1515,9 @@ static bool Pickup_Powerup(edict_t *ent, edict_t *other) {
 	}
 
 	if (g_quadhog->integer && ent->item->id == IT_POWERUP_QUAD) {
-		ent->think = nullptr;
-		ent->nextthink = 0_ms;
+		//ent->think = nullptr;
+		//ent->nextthink = 0_ms;
+		G_FreeEdict(ent);
 	}
 
 	if (deathmatch->integer && g_dm_powerups_style->integer && !ent->spawnflags.has(SPAWNFLAG_ITEM_DROPPED | SPAWNFLAG_ITEM_DROPPED_PLAYER))
@@ -1518,8 +1529,21 @@ static bool Pickup_Powerup(edict_t *ent, edict_t *other) {
 	return true;
 }
 
+static bool Pickup_AllowTimedItemPickup(edict_t *ent, edict_t *other) {
+	int quantity = other->client->pers.inventory[ent->item->id];
+	if ((skill->integer == 0 && quantity >= 3) ||
+		(skill->integer == 1 && quantity >= 2) ||
+		(skill->integer >= 2 && quantity >= 1))
+		return false;
+
+	if (coop->integer && !P_UseCoopInstancedItems() && (ent->item->flags & IF_STAY_COOP) && (quantity > 0))
+		return false;
+
+	return true;
+}
+
 static bool Pickup_TimedItem(edict_t *ent, edict_t *other) {
-	if (!Pickup_AllowPowerupPickup(ent, other))
+	if (!Pickup_AllowTimedItemPickup(ent, other))
 		return false;
 
 	other->client->pers.inventory[ent->item->id]++;
@@ -1640,7 +1664,7 @@ static bool Pickup_Nuke(edict_t *ent, edict_t *other) {
 
 //======================================================================
 
-static void Use_Doppleganger(edict_t *ent, gitem_t *item) {
+static void Use_Doppelganger(edict_t *ent, gitem_t *item) {
 	vec3_t forward, right;
 	vec3_t createPt, spawnPt;
 	vec3_t ang;
@@ -1659,17 +1683,17 @@ static void Use_Doppleganger(edict_t *ent, gitem_t *item) {
 	ent->client->pers.inventory[item->id]--;
 
 	SpawnGrow_Spawn(spawnPt, 24.f, 48.f);
-	fire_doppleganger(ent, spawnPt, forward);
+	fire_doppelganger(ent, spawnPt, forward);
 }
 
-static bool Pickup_Doppleganger(edict_t *ent, edict_t *other) {
+static bool Pickup_Doppelganger(edict_t *ent, edict_t *other) {
 	int quantity;
 
 	if (!deathmatch->integer)
 		return false;
 
 	quantity = other->client->pers.inventory[ent->item->id];
-	if (quantity >= 1) // FIXME - apply max to dopplegangers
+	if (quantity >= 1) // FIXME - apply max to doppelgangers
 		return false;
 
 	other->client->pers.inventory[ent->item->id]++;
@@ -1701,7 +1725,7 @@ static void Drop_General(edict_t *ent, gitem_t *item) {
 	dropped->svflags &= ~SVF_INSTANCED;
 	ent->client->pers.inventory[item->id]--;
 
-	if (item->flags & (IF_TIMED | IF_POWERUP | IF_SPHERE)) {
+	if (item->flags & IF_POWERUP) {
 		switch (item->id) {
 		case IT_POWERUP_QUAD:
 			ent->client->pu_time_quad = 0_ms;
@@ -1715,9 +1739,6 @@ static void Drop_General(edict_t *ent, gitem_t *item) {
 		case IT_POWERUP_INVISIBILITY:
 			ent->client->pu_time_invisibility = 0_ms;
 			break;
-		case IT_POWERUP_DOUBLE:
-			ent->client->pu_time_double = 0_ms;
-			break;
 		case IT_POWERUP_SILENCER:
 			ent->client->silencer_shots = 0;
 			break;
@@ -1726,6 +1747,9 @@ static void Drop_General(edict_t *ent, gitem_t *item) {
 			break;
 		case IT_POWERUP_ENVIROSUIT:
 			ent->client->pu_time_enviro = 0_ms;
+			break;
+		case IT_POWERUP_DOUBLE:
+			ent->client->pu_time_double = 0_ms;
 			break;
 		}
 	}
@@ -1782,7 +1806,7 @@ void G_CheckPowerArmor(edict_t *ent) {
 	}
 }
 
-inline bool G_AddAmmoAndCap(edict_t *other, item_id_t item, int32_t max, int32_t quantity) {
+static inline bool G_AddAmmoAndCap(edict_t *other, item_id_t item, int32_t max, int32_t quantity) {
 	if (other->client->pers.inventory[item] >= max)
 		return false;
 
@@ -1791,16 +1815,15 @@ inline bool G_AddAmmoAndCap(edict_t *other, item_id_t item, int32_t max, int32_t
 		other->client->pers.inventory[item] = max;
 
 	G_CheckPowerArmor(other);
-
 	return true;
 }
 
-inline bool G_AddAmmoAndCapQuantity(edict_t *other, ammo_t ammo) {
+static inline bool G_AddAmmoAndCapQuantity(edict_t *other, ammo_t ammo) {
 	gitem_t *item = GetItemByAmmo(ammo);
 	return G_AddAmmoAndCap(other, item->id, other->client->pers.max_ammo[ammo], item->quantity);
 }
 
-inline void G_AdjustAmmoCap(edict_t *other, ammo_t ammo, int16_t new_max) {
+static inline void G_AdjustAmmoCap(edict_t *other, ammo_t ammo, int16_t new_max) {
 	other->client->pers.max_ammo[ammo] = max(other->client->pers.max_ammo[ammo], new_max);
 }
 
@@ -1815,6 +1838,7 @@ static bool Pickup_Bandolier(edict_t *ent, edict_t *other) {
 
 	G_AddAmmoAndCapQuantity(other, AMMO_BULLETS);
 	G_AddAmmoAndCapQuantity(other, AMMO_SHELLS);
+	G_AddAmmoAndCapQuantity(other, AMMO_FLECHETTES);
 
 	SetRespawn(ent, gtime_t::from_sec(ent->item->quantity));
 
@@ -2042,9 +2066,9 @@ static bool Pickup_Ammo(edict_t *ent, edict_t *other) {
 	int	 count;
 	bool weapon;
 
-	weapon = (ent->item->flags & IF_WEAPON);
-	if (weapon && G_CheckInfiniteAmmo(ent->item))
-		count = 1000;
+	weapon = !!(ent->item->flags & IF_WEAPON);
+	if (weapon && InfiniteAmmoOn(ent->item))
+		count = AMMO_INFINITE;
 	else if (ent->count)
 		count = ent->count;
 	else
@@ -2064,7 +2088,7 @@ static bool Pickup_Ammo(edict_t *ent, edict_t *other) {
 
 static void Drop_Ammo(edict_t *ent, gitem_t *item) {
 	// [Paril-KEX]
-	if (G_CheckInfiniteAmmo(item))
+	if (InfiniteAmmoOn(item))
 		return;
 
 	item_id_t index = item->id;
@@ -2305,7 +2329,7 @@ static void Drop_PowerArmor(edict_t *ent, gitem_t *item) {
 
 bool Entity_IsVisibleToPlayer(edict_t *ent, edict_t *player) {
 	// Q2Eaks make eyecam chase target invisible, but keep other client visible
-	if (g_eyecam->integer && player->client->chase_target && ent == player->client->chase_target)
+	if (g_eyecam->integer && player->client->follow_target && ent == player->client->follow_target)
 		return false;
 	else if (ent->client)
 		return true;
@@ -2335,7 +2359,7 @@ TOUCH(Touch_Item) (edict_t *ent, edict_t *other, const trace_t &tr, bool other_t
 	}
 
 	// can't pickup during match countdown
-	if (level.match_state == MS_MATCH_COUNTDOWN)
+	if (level.match_state == MATCH_COUNTDOWN)
 		return;
 
 	taken = ent->item->pickup(ent, other);
@@ -2673,7 +2697,7 @@ bool CheckItemEnabled(gitem_t *item) {
 	cvar_t *cv;
 
 	if (!deathmatch->integer) {
-		if (item->pickup == Pickup_Doppleganger || item->pickup == Pickup_Nuke) {
+		if (item->pickup == Pickup_Doppelganger || item->pickup == Pickup_Nuke) {
 			return false;
 		}
 		if ((item->use == Use_Vengeance) || (item->use == Use_Hunter)) {
@@ -2698,26 +2722,24 @@ bool CheckItemEnabled(gitem_t *item) {
 			return false;
 	}
 
-	if (g_no_armor->integer) {
-		if (item->flags & (IF_ARMOR | IF_POWER_ARMOR))
+	if (g_no_armor->integer && item->flags & (IF_ARMOR | IF_POWER_ARMOR))
 			return false;
-	}
-	if (g_no_powerups->integer) {
-		if (item->flags & (IF_POWERUP | IF_SPHERE))
+
+	if (g_no_powerups->integer && item->flags & IF_POWERUP)
 			return false;
-	}
+
 	if (g_no_items->integer) {
 		if (item->flags & (IF_TIMED | IF_POWERUP | IF_SPHERE))
 			return false;
-		if (item->pickup == Pickup_Doppleganger)
+		if (item->pickup == Pickup_Doppelganger)
 			return false;
 	}
 	if (g_no_health->integer || g_vampiric_damage->integer) {
 		if (item->flags & IF_HEALTH)
 			return false;
 	}
-	if (G_CheckInfiniteAmmo(item)) {
-		if (item->flags & IF_AMMO && item->id != IT_AMMO_GRENADES)
+	if (InfiniteAmmoOn(item)) {
+		if (item->flags & IF_AMMO && item->id != IT_AMMO_GRENADES && item->id != IT_AMMO_TRAP && item->id != IT_AMMO_TESLA)
 			return false;
 		if (item->id == IT_PACK || item->id == IT_BANDOLIER)
 			return false;
@@ -2756,7 +2778,7 @@ gitem_t *CheckItemReplacements(gitem_t *item) {
 		return out ? out : item;
 	}
 
-	if (G_CheckInfiniteAmmo(item)) {
+	if (InfiniteAmmoOn(item)) {
 		// [Paril-KEX] some item swappage 
 		// BFG too strong in Infinite Ammo mode
 		if (item->id == IT_WEAPON_BFG)
@@ -2889,6 +2911,20 @@ bool SpawnItem(edict_t *ent, gitem_t *item) {
 	if (item->id == IT_FLAG_RED || item->id == IT_FLAG_BLUE)
 		ent->think = CTF_FlagSetup;
 
+	if (item->flags & IF_WEAPON && item->id >= FIRST_WEAPON)
+		level.weapon_count[item->id - FIRST_WEAPON]++;
+
+	if (item->flags & IF_POWERUP) {
+		bool enable = !!(g_dm_powerups_minplayers->integer && (level.num_playing_clients >= g_dm_powerups_minplayers->integer));
+		if (enable) {
+			ent->s.renderfx &= ~(RF_SHELL_RED | RF_SHELL_GREEN | RF_SHELL_BLUE);
+			ent->s.effects &= ~EF_COLOR_SHELL;
+		} else {
+			ent->s.renderfx |= (RF_SHELL_RED | RF_SHELL_GREEN | RF_SHELL_BLUE);
+			ent->s.effects |= EF_COLOR_SHELL;
+		}
+	}
+
 	if (!g_item_bobbing->integer)
 		ent->s.effects &= ~EF_BOB;
 
@@ -2913,8 +2949,17 @@ static THINK(DelayPowerup_Think) (edict_t *ent) -> void {
 	// send an effect
 	ent->s.event = EV_ITEM_RESPAWN;
 
+	bool enable = !!(g_dm_powerups_minplayers->integer && (level.num_playing_clients >= g_dm_powerups_minplayers->integer));
+	if (enable) {
+		ent->s.renderfx &= ~(RF_SHELL_RED | RF_SHELL_GREEN | RF_SHELL_BLUE);
+		ent->s.effects &= ~EF_COLOR_SHELL;
+	} else {
+		ent->s.renderfx |= (RF_SHELL_RED | RF_SHELL_GREEN | RF_SHELL_BLUE);
+		ent->s.effects |= EF_COLOR_SHELL;
+	}
+
 	if (g_dm_powerups_style->integer && deathmatch->integer) {
-		if (ent->item->flags & (IF_TIMED | IF_POWERUP | IF_SPHERE)) {
+		if (ent->item->flags & IF_POWERUP) {
 			gi.LocBroadcast_Print(PRINT_HIGH, "{} has spawned!\n", ent->item->pickup_name);
 
 			gi.sound(ent, CHAN_RELIABLE | CHAN_NO_PHS_ADD | CHAN_AUX, gi.soundindex("misc/alarm.wav"), 1, ATTN_NONE, 0);
@@ -2982,6 +3027,10 @@ void Compass_Update(edict_t *ent, bool first) {
 }
 
 static void Use_Compass(edict_t *ent, gitem_t *inv) {
+	if (deathmatch->integer) {
+		Cmd_ReadyUp_f(ent);
+		return;
+	}
 	if (!level.valid_poi) {
 		gi.LocClient_Print(ent, PRINT_HIGH, "$no_valid_poi");
 		return;
@@ -3458,7 +3507,7 @@ model="models/weapons/g_shotg/tris.md2"
 		/* pickup */ Pickup_Ammo,
 		/* use */ Use_Weapon,
 		/* drop */ Drop_Ammo,
-		/* weaponthink */ Weapon_Grenade,
+		/* weaponthink */ Weapon_HandGrenade,
 		/* pickup_sound */ "misc/am_pkup.wav",
 		/* world_model */ "models/items/ammo/grenades/medium/tris.md2",
 		/* world_model_flags */ EF_NONE,
@@ -3593,32 +3642,32 @@ model="models/weapons/g_launch/tris.md2"
 		/* precaches */ "weapons/grenlf1a.wav weapons/grenlr1b.wav weapons/grenlb1b.wav weapons/proxwarn.wav weapons/proxopen.wav",
 	},
 
-	/*QUAKED weapon_rocketlauncher (.3 .3 1) (-16 -16 -16) (16 16 16)
-	*/
-		{
-			/* id */ IT_WEAPON_RLAUNCHER,
-			/* classname */ "weapon_rocketlauncher",
-			/* pickup */ Pickup_Weapon,
-			/* use */ Use_Weapon,
-			/* drop */ Drop_Weapon,
-			/* weaponthink */ Weapon_RocketLauncher,
-			/* pickup_sound */ "misc/w_pkup.wav",
-			/* world_model */ "models/weapons/g_rocket/tris.md2",
-			/* world_model_flags */ EF_ROTATE | EF_BOB,
-			/* view_model */ "models/weapons/v_rocket/tris.md2",
-			/* icon */ "w_rlauncher",
-			/* use_name */  "Rocket Launcher",
-			/* pickup_name */  "$item_rocket_launcher",
-			/* pickup_name_definite */ "$item_rocket_launcher_def",
-			/* quantity */ 1,
-			/* ammo */ IT_AMMO_ROCKETS,
-			/* chain */ IT_NULL,
-			/* flags */ IF_WEAPON | IF_STAY_COOP,
-			/* vwep_model */ "#w_rlauncher.md2",
-			/* armor_info */ nullptr,
-			/* tag */ 0,
-			/* precaches */ "models/objects/rocket/tris.md2 weapons/rockfly.wav weapons/rocklf1a.wav weapons/rocklr1b.wav models/objects/debris2/tris.md2"
-		},
+/*QUAKED weapon_rocketlauncher (.3 .3 1) (-16 -16 -16) (16 16 16)
+*/
+	{
+		/* id */ IT_WEAPON_RLAUNCHER,
+		/* classname */ "weapon_rocketlauncher",
+		/* pickup */ Pickup_Weapon,
+		/* use */ Use_Weapon,
+		/* drop */ Drop_Weapon,
+		/* weaponthink */ Weapon_RocketLauncher,
+		/* pickup_sound */ "misc/w_pkup.wav",
+		/* world_model */ "models/weapons/g_rocket/tris.md2",
+		/* world_model_flags */ EF_ROTATE | EF_BOB,
+		/* view_model */ "models/weapons/v_rocket/tris.md2",
+		/* icon */ "w_rlauncher",
+		/* use_name */  "Rocket Launcher",
+		/* pickup_name */  "$item_rocket_launcher",
+		/* pickup_name_definite */ "$item_rocket_launcher_def",
+		/* quantity */ 1,
+		/* ammo */ IT_AMMO_ROCKETS,
+		/* chain */ IT_NULL,
+		/* flags */ IF_WEAPON | IF_STAY_COOP,
+		/* vwep_model */ "#w_rlauncher.md2",
+		/* armor_info */ nullptr,
+		/* tag */ 0,
+		/* precaches */ "models/objects/rocket/tris.md2 weapons/rockfly.wav weapons/rocklf1a.wav weapons/rocklr1b.wav models/objects/debris2/tris.md2"
+	},
 
 /*QUAKED weapon_hyperblaster (.3 .3 1) (-16 -16 -16) (16 16 16)
 */
@@ -3657,7 +3706,7 @@ model="models/weapons/g_launch/tris.md2"
 		/* pickup */ Pickup_Weapon,
 		/* use */ Use_Weapon,
 		/* drop */ Drop_Weapon,
-		/* weaponthink */ Weapon_Ionripper,
+		/* weaponthink */ Weapon_IonRipper,
 		/* pickup_sound */ "misc/w_pkup.wav",
 		/* world_model */ "models/weapons/g_boom/tris.md2",
 		/* world_model_flags */ EF_ROTATE | EF_BOB,
@@ -4478,7 +4527,7 @@ model="models/items/ddamage/tris.md2"
 model="models/items/vengnce/tris.md2"
 */
 	{
-		/* id */ IT_SPHERE_VENGEANCE,
+		/* id */ IT_POWERUP_SPHERE_VENGEANCE,
 		/* classname */ "item_sphere_vengeance",
 		/* pickup */ Pickup_Sphere,
 		/* use */ Use_Vengeance,
@@ -4506,7 +4555,7 @@ model="models/items/vengnce/tris.md2"
 model="models/items/hunter/tris.md2"
 */
 	{
-		/* id */ IT_SPHERE_HUNTER,
+		/* id */ IT_POWERUP_SPHERE_HUNTER,
 		/* classname */ "item_sphere_hunter",
 		/* pickup */ Pickup_Sphere,
 		/* use */ Use_Hunter,
@@ -4534,7 +4583,7 @@ model="models/items/hunter/tris.md2"
 model="models/items/defender/tris.md2"
 */
 	{
-		/* id */ IT_SPHERE_DEFENDER,
+		/* id */ IT_POWERUP_SPHERE_DEFENDER,
 		/* classname */ "item_sphere_defender",
 		/* pickup */ Pickup_Sphere,
 		/* use */ Use_Defender,
@@ -4564,8 +4613,8 @@ model="models/items/dopple/tris.md2"
 	{
 		/* id */ IT_DOPPELGANGER,
 		/* classname */ "item_doppleganger",
-		/* pickup */ Pickup_Doppleganger,
-		/* use */ Use_Doppleganger,
+		/* pickup */ Pickup_Doppelganger,
+		/* use */ Use_Doppelganger,
 		/* drop */ Drop_General,
 		/* weaponthink */ nullptr,
 		/* pickup_sound */ "items/pkup.wav",
@@ -5171,7 +5220,7 @@ model="players/male/flag2.md2"
 		/* flags */ IF_TECH | IF_POWERUP_WHEEL,
 		/* vwep_model */ nullptr,
 		/* armor_info */ nullptr,
-		/* tag */ TECH_DISRUPTOR_SHIELD,
+		/* tag */ POWERUP_TECH_DISRUPTOR_SHIELD,
 		/* precaches */ "ctf/tech1.wav"
 	},
 
@@ -5197,7 +5246,7 @@ model="players/male/flag2.md2"
 		/* flags */ IF_TECH | IF_POWERUP_WHEEL,
 		/* vwep_model */ nullptr,
 		/* armor_info */ nullptr,
-		/* tag */ TECH_POWER_AMP,
+		/* tag */ POWERUP_TECH_POWER_AMP,
 		/* precaches */ "ctf/tech2.wav ctf/tech2x.wav"
 	},
 
@@ -5223,7 +5272,7 @@ model="players/male/flag2.md2"
 		/* flags */ IF_TECH | IF_POWERUP_WHEEL,
 		/* vwep_model */ nullptr,
 		/* armor_info */ nullptr,
-		/* tag */ TECH_TIME_ACCEL,
+		/* tag */ POWERUP_TECH_TIME_ACCEL,
 		/* precaches */ "ctf/tech3.wav"
 	},
 
@@ -5249,7 +5298,7 @@ model="players/male/flag2.md2"
 		/* flags */ IF_TECH | IF_POWERUP_WHEEL,
 		/* vwep_model */ nullptr,
 		/* armor_info */ nullptr,
-		/* tag */ TECH_AUTODOC,
+		/* tag */ POWERUP_TECH_AUTODOC,
 		/* precaches */ "ctf/tech4.wav"
 	},
 	

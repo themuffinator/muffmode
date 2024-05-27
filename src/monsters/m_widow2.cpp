@@ -77,21 +77,16 @@ constexpr vec3_t offsets[] = {
 	{ 17.37f, 1.21f, 68.72f },
 };
 
-void showme(edict_t *self);
-
-void pauseme(edict_t *self)
-{
+static void pauseme(edict_t *self) {
 	self->monsterinfo.aiflags |= AI_HOLD_FRAME;
 }
 
-MONSTERINFO_SEARCH(widow2_search) (edict_t *self) -> void
-{
+MONSTERINFO_SEARCH(widow2_search) (edict_t *self) -> void {
 	if (frandom() < 0.5f)
 		gi.sound(self, CHAN_VOICE, sound_search1, 1, ATTN_NONE, 0);
 }
 
-void Widow2Beam(edict_t *self)
-{
+static void Widow2Beam(edict_t *self) {
 	vec3_t					 forward, right, target;
 	vec3_t					 start, targ_angles, vec;
 	monster_muzzleflash_id_t flashnum;
@@ -101,8 +96,7 @@ void Widow2Beam(edict_t *self)
 
 	AngleVectors(self->s.angles, forward, right, nullptr);
 
-	if ((self->s.frame >= FRAME_fireb05) && (self->s.frame <= FRAME_fireb09))
-	{
+	if ((self->s.frame >= FRAME_fireb05) && (self->s.frame <= FRAME_fireb09)) {
 		// regular beam attack
 		Widow2SaveBeamTarget(self);
 		flashnum = static_cast<monster_muzzleflash_id_t>(MZ2_WIDOW2_BEAMER_1 + self->s.frame - FRAME_fireb05);
@@ -112,9 +106,7 @@ void Widow2Beam(edict_t *self)
 		forward = target - start;
 		forward.normalize();
 		monster_fire_heatbeam(self, start, forward, vec3_origin, 10, 50, flashnum);
-	}
-	else if ((self->s.frame >= FRAME_spawn04) && (self->s.frame <= FRAME_spawn14))
-	{
+	} else if ((self->s.frame >= FRAME_spawn04) && (self->s.frame <= FRAME_spawn14)) {
 		// sweep
 		flashnum = static_cast<monster_muzzleflash_id_t>(MZ2_WIDOW2_BEAM_SWEEP_1 + self->s.frame - FRAME_spawn04);
 		start = G_ProjectSource(self->s.origin, monster_flash_offset[flashnum], forward, right);
@@ -128,9 +120,7 @@ void Widow2Beam(edict_t *self)
 
 		AngleVectors(vec, forward, nullptr, nullptr);
 		monster_fire_heatbeam(self, start, forward, vec3_origin, 10, 50, flashnum);
-	}
-	else
-	{
+	} else {
 		Widow2SaveBeamTarget(self);
 		start = G_ProjectSource(self->s.origin, monster_flash_offset[MZ2_WIDOW2_BEAMER_1], forward, right);
 
@@ -144,22 +134,19 @@ void Widow2Beam(edict_t *self)
 	}
 }
 
-void Widow2Spawn(edict_t *self)
-{
+static void Widow2Spawn(edict_t *self) {
 	vec3_t	 f, r, u, offset, startpoint, spawnpoint;
 	edict_t *ent, *designated_enemy;
 	int		 i;
 
 	AngleVectors(self->s.angles, f, r, u);
 
-	for (i = 0; i < 2; i++)
-	{
+	for (i = 0; i < 2; i++) {
 		offset = spawnpoints[i];
 
 		startpoint = G_ProjectSource2(self->s.origin, offset, f, r, u);
 
-		if (FindSpawnPoint(startpoint, stalker_mins, stalker_maxs, spawnpoint, 64))
-		{
+		if (FindSpawnPoint(startpoint, stalker_mins, stalker_maxs, spawnpoint, 64)) {
 			ent = CreateGroundMonster(spawnpoint, self->s.angles, stalker_mins, stalker_maxs, "monster_stalker", 256);
 
 			if (!ent)
@@ -173,29 +160,22 @@ void Widow2Spawn(edict_t *self)
 
 			ent->monsterinfo.aiflags |= AI_SPAWNED_WIDOW | AI_DO_NOT_COUNT | AI_IGNORE_SHOTS;
 
-			if (!coop->integer)
-			{
+			if (!coop->integer) {
 				designated_enemy = self->enemy;
-			}
-			else
-			{
+			} else {
 				designated_enemy = PickCoopTarget(ent);
-				if (designated_enemy)
-				{
+				if (designated_enemy) {
 					// try to avoid using my enemy
-					if (designated_enemy == self->enemy)
-					{
+					if (designated_enemy == self->enemy) {
 						designated_enemy = PickCoopTarget(ent);
 						if (!designated_enemy)
 							designated_enemy = self->enemy;
 					}
-				}
-				else
+				} else
 					designated_enemy = self->enemy;
 			}
 
-			if ((designated_enemy->inuse) && (designated_enemy->health > 0))
-			{
+			if ((designated_enemy->inuse) && (designated_enemy->health > 0)) {
 				ent->enemy = designated_enemy;
 				FoundTarget(ent);
 				ent->monsterinfo.attack(ent);
@@ -204,26 +184,22 @@ void Widow2Spawn(edict_t *self)
 	}
 }
 
-void widow2_spawn_check(edict_t *self)
-{
+void widow2_spawn_check(edict_t *self) {
 	Widow2Beam(self);
 	Widow2Spawn(self);
 }
 
-void widow2_ready_spawn(edict_t *self)
-{
+static void widow2_ready_spawn(edict_t *self) {
 	vec3_t f, r, u, offset, startpoint, spawnpoint;
 	int	   i;
 
 	Widow2Beam(self);
 	AngleVectors(self->s.angles, f, r, u);
 
-	for (i = 0; i < 2; i++)
-	{
+	for (i = 0; i < 2; i++) {
 		offset = spawnpoints[i];
 		startpoint = G_ProjectSource2(self->s.origin, offset, f, r, u);
-		if (FindSpawnPoint(startpoint, stalker_mins, stalker_maxs, spawnpoint, 64))
-		{
+		if (FindSpawnPoint(startpoint, stalker_mins, stalker_maxs, spawnpoint, 64)) {
 			float radius = (stalker_maxs - stalker_mins).length() * 0.5f;
 
 			SpawnGrow_Spawn(spawnpoint + (stalker_mins + stalker_maxs), radius, radius * 2.f);
@@ -231,8 +207,7 @@ void widow2_ready_spawn(edict_t *self)
 	}
 }
 
-void widow2_step(edict_t *self)
-{
+static void widow2_step(edict_t *self) {
 	gi.sound(self, CHAN_BODY, gi.soundindex("widow/bwstep1.wav"), 1, ATTN_NORM, 0);
 }
 
@@ -291,8 +266,7 @@ mframe_t widow2_frames_attack_post_beam[] = {
 };
 MMOVE_T(widow2_move_attack_post_beam) = { FRAME_fireb06, FRAME_fireb07, widow2_frames_attack_post_beam, widow2_run };
 
-void WidowDisrupt(edict_t *self)
-{
+static void WidowDisrupt(edict_t *self) {
 	vec3_t start;
 	vec3_t dir;
 	vec3_t forward, right;
@@ -304,16 +278,13 @@ void WidowDisrupt(edict_t *self)
 	dir = self->pos1 - self->enemy->s.origin;
 	len = dir.length();
 
-	if (len < 30)
-	{
+	if (len < 30) {
 		// calc direction to where we targeted
 		dir = self->pos1 - start;
 		dir.normalize();
 
 		monster_fire_disruptor(self, start, dir, 20, 500, self->enemy, MZ2_WIDOW_DISRUPTOR);
-	}
-	else
-	{
+	} else {
 		PredictAim(self, self->enemy, start, 1200, true, 0, &dir, nullptr);
 		monster_fire_disruptor(self, start, dir, 20, 1200, nullptr, MZ2_WIDOW_DISRUPTOR);
 	}
@@ -321,19 +292,15 @@ void WidowDisrupt(edict_t *self)
 	widow2_step(self);
 }
 
-void Widow2SaveDisruptLoc(edict_t *self)
-{
-	if (self->enemy && self->enemy->inuse)
-	{
+static void Widow2SaveDisruptLoc(edict_t *self) {
+	if (self->enemy && self->enemy->inuse) {
 		self->pos1 = self->enemy->s.origin; // save for aiming the shot
 		self->pos1[2] += self->enemy->viewheight;
-	}
-	else
+	} else
 		self->pos1 = {};
 }
 
-void widow2_disrupt_reattack(edict_t *self)
-{
+static void widow2_disrupt_reattack(edict_t *self) {
 	float luck = frandom();
 
 	if (luck < (0.25f + (skill->integer * 0.15f)))
@@ -351,28 +318,22 @@ mframe_t widow2_frames_attack_disrupt[] = {
 };
 MMOVE_T(widow2_move_attack_disrupt) = { FRAME_firea01, FRAME_firea07, widow2_frames_attack_disrupt, widow2_run };
 
-void Widow2SaveBeamTarget(edict_t *self)
-{
-	if (self->enemy && self->enemy->inuse)
-	{
+void Widow2SaveBeamTarget(edict_t *self) {
+	if (self->enemy && self->enemy->inuse) {
 		self->pos2 = self->pos1;
 		self->pos1 = self->enemy->s.origin; // save for aiming the shot
-	}
-	else
-	{
+	} else {
 		self->pos1 = {};
 		self->pos2 = {};
 	}
 }
 
-void Widow2BeamTargetRemove(edict_t *self)
-{
+static void Widow2BeamTargetRemove(edict_t *self) {
 	self->pos1 = {};
 	self->pos2 = {};
 }
 
-void Widow2StartSweep(edict_t *self)
-{
+static void Widow2StartSweep(edict_t *self) {
 	Widow2SaveBeamTarget(self);
 }
 
@@ -398,8 +359,7 @@ mframe_t widow2_frames_spawn[] = {
 };
 MMOVE_T(widow2_move_spawn) = { FRAME_spawn01, FRAME_spawn18, widow2_frames_spawn, nullptr };
 
-static bool widow2_tongue_attack_ok(const vec3_t &start, const vec3_t &end, float range)
-{
+static bool widow2_tongue_attack_ok(const vec3_t &start, const vec3_t &end, float range) {
 	vec3_t dir, angles;
 
 	// check for max distance
@@ -417,8 +377,7 @@ static bool widow2_tongue_attack_ok(const vec3_t &start, const vec3_t &end, floa
 	return true;
 }
 
-void Widow2Tongue(edict_t *self)
-{
+static void Widow2Tongue(edict_t *self) {
 	vec3_t	f, r, u;
 	vec3_t	start, end, dir;
 	trace_t tr;
@@ -426,11 +385,9 @@ void Widow2Tongue(edict_t *self)
 	AngleVectors(self->s.angles, f, r, u);
 	start = G_ProjectSource2(self->s.origin, offsets[self->s.frame - FRAME_tongs01], f, r, u);
 	end = self->enemy->s.origin;
-	if (!widow2_tongue_attack_ok(start, end, 256))
-	{
+	if (!widow2_tongue_attack_ok(start, end, 256)) {
 		end[2] = self->enemy->s.origin[2] + self->enemy->maxs[2] - 8;
-		if (!widow2_tongue_attack_ok(start, end, 256))
-		{
+		if (!widow2_tongue_attack_ok(start, end, 256)) {
 			end[2] = self->enemy->s.origin[2] + self->enemy->mins[2] + 8;
 			if (!widow2_tongue_attack_ok(start, end, 256))
 				return;
@@ -455,14 +412,12 @@ void Widow2Tongue(edict_t *self)
 	T_Damage(self->enemy, self, self, dir, self->enemy->s.origin, vec3_origin, 2, 0, DAMAGE_NO_KNOCKBACK, MOD_UNKNOWN);
 }
 
-void Widow2TonguePull(edict_t *self)
-{
+static void Widow2TonguePull(edict_t *self) {
 	vec3_t vec;
 	vec3_t f, r, u;
 	vec3_t start, end;
 
-	if ((!self->enemy) || (!self->enemy->inuse))
-	{
+	if ((!self->enemy) || (!self->enemy->inuse)) {
 		self->monsterinfo.run(self);
 		return;
 	}
@@ -474,8 +429,7 @@ void Widow2TonguePull(edict_t *self)
 	if (!widow2_tongue_attack_ok(start, end, 256))
 		return;
 
-	if (self->enemy->groundentity)
-	{
+	if (self->enemy->groundentity) {
 		self->enemy->s.origin[2] += 1;
 		self->enemy->groundentity = nullptr;
 		// interesting, you don't have to relink the player
@@ -483,25 +437,20 @@ void Widow2TonguePull(edict_t *self)
 
 	vec = self->s.origin - self->enemy->s.origin;
 
-	if (self->enemy->client)
-	{
+	if (self->enemy->client) {
 		vec.normalize();
 		self->enemy->velocity += (vec * 1000);
-	}
-	else
-	{
+	} else {
 		self->enemy->ideal_yaw = vectoyaw(vec);
 		M_ChangeYaw(self->enemy);
 		self->enemy->velocity = f * 1000;
 	}
 }
 
-void Widow2Crunch(edict_t *self)
-{
+static void Widow2Crunch(edict_t *self) {
 	vec3_t aim;
 
-	if ((!self->enemy) || (!self->enemy->inuse))
-	{
+	if ((!self->enemy) || (!self->enemy->inuse)) {
 		self->monsterinfo.run(self);
 		return;
 	}
@@ -518,8 +467,7 @@ void Widow2Crunch(edict_t *self)
 		fire_hit(self, aim, irandom(20, 26), 250);
 }
 
-void Widow2Toss(edict_t *self)
-{
+static void Widow2Toss(edict_t *self) {
 	self->timestamp = level.time + 3_sec;
 }
 
@@ -637,15 +585,12 @@ mframe_t widow2_frames_really_dead[] = {
 };
 MMOVE_T(widow2_move_really_dead) = { FRAME_dthsrh16, FRAME_dthsrh22, widow2_frames_really_dead, nullptr };
 
-void widow2_start_searching(edict_t *self)
-{
+void widow2_start_searching(edict_t *self) {
 	self->count = 0;
 }
 
-void widow2_keep_searching(edict_t *self)
-{
-	if (self->count <= 2)
-	{
+void widow2_keep_searching(edict_t *self) {
+	if (self->count <= 2) {
 		M_SetAnimation(self, &widow2_move_dead);
 		self->s.frame = FRAME_dthsrh01;
 		self->count++;
@@ -655,8 +600,7 @@ void widow2_keep_searching(edict_t *self)
 	M_SetAnimation(self, &widow2_move_really_dead);
 }
 
-void widow2_finaldeath(edict_t *self)
-{
+void widow2_finaldeath(edict_t *self) {
 	self->mins = { -70, -70, 0 };
 	self->maxs = { 70, 70, 80 };
 	self->movetype = MOVETYPE_TOSS;
@@ -665,13 +609,11 @@ void widow2_finaldeath(edict_t *self)
 	gi.linkentity(self);
 }
 
-MONSTERINFO_STAND(widow2_stand) (edict_t *self) -> void
-{
+MONSTERINFO_STAND(widow2_stand) (edict_t *self) -> void {
 	M_SetAnimation(self, &widow2_move_stand);
 }
 
-MONSTERINFO_RUN(widow2_run) (edict_t *self) -> void
-{
+MONSTERINFO_RUN(widow2_run) (edict_t *self) -> void {
 	self->monsterinfo.aiflags &= ~AI_HOLD_FRAME;
 
 	if (self->monsterinfo.aiflags & AI_STAND_GROUND)
@@ -680,28 +622,24 @@ MONSTERINFO_RUN(widow2_run) (edict_t *self) -> void
 		M_SetAnimation(self, &widow2_move_run);
 }
 
-MONSTERINFO_WALK(widow2_walk) (edict_t *self) -> void
-{
+MONSTERINFO_WALK(widow2_walk) (edict_t *self) -> void {
 	M_SetAnimation(self, &widow2_move_walk);
 }
 
 void widow2_attack(edict_t *self);
 
-MONSTERINFO_MELEE(widow2_melee) (edict_t *self) -> void
-{
+MONSTERINFO_MELEE(widow2_melee) (edict_t *self) -> void {
 	if (self->timestamp >= level.time)
 		widow2_attack(self);
 	else
 		M_SetAnimation(self, &widow2_move_tongs);
 }
 
-MONSTERINFO_ATTACK(widow2_attack) (edict_t *self) -> void
-{
+MONSTERINFO_ATTACK(widow2_attack) (edict_t *self) -> void {
 	float luck;
 	bool  blocked = false;
 
-	if (self->monsterinfo.aiflags & AI_BLOCKED)
-	{
+	if (self->monsterinfo.aiflags & AI_BLOCKED) {
 		blocked = true;
 		self->monsterinfo.aiflags &= ~AI_BLOCKED;
 	}
@@ -712,21 +650,17 @@ MONSTERINFO_ATTACK(widow2_attack) (edict_t *self) -> void
 	float real_enemy_range = realrange(self, self->enemy);
 
 	// melee attack
-	if (self->timestamp < level.time)
-	{
-		if (real_enemy_range < 300)
-		{
+	if (self->timestamp < level.time) {
+		if (real_enemy_range < 300) {
 			vec3_t f, r, u;
 			AngleVectors(self->s.angles, f, r, u);
 			vec3_t spot1 = G_ProjectSource2(self->s.origin, offsets[0], f, r, u);
 			vec3_t spot2 = self->enemy->s.origin;
-			if (widow2_tongue_attack_ok(spot1, spot2, 256))
-			{
+			if (widow2_tongue_attack_ok(spot1, spot2, 256)) {
 				// melee attack ok
 
 				// be nice in easy mode
-				if (skill->integer != 0 || irandom(4))
-				{
+				if (skill->integer != 0 || irandom(4)) {
 					M_SetAnimation(self, &widow2_move_tongs);
 					return;
 				}
@@ -734,12 +668,10 @@ MONSTERINFO_ATTACK(widow2_attack) (edict_t *self) -> void
 		}
 	}
 
-	if (self->bad_area)
-	{
+	if (self->bad_area) {
 		if ((frandom() < 0.75f) || (level.time < self->monsterinfo.attack_finished))
 			M_SetAnimation(self, &widow2_move_attack_pre_beam);
-		else
-		{
+		else {
 			M_SetAnimation(self, &widow2_move_attack_disrupt);
 		}
 		return;
@@ -748,77 +680,59 @@ MONSTERINFO_ATTACK(widow2_attack) (edict_t *self) -> void
 	WidowCalcSlots(self);
 
 	// if we can't see the target, spawn stuff
-	if ((self->monsterinfo.attack_state == AS_BLIND) && (M_SlotsLeft(self) >= 2))
-	{
+	if ((self->monsterinfo.attack_state == AS_BLIND) && (M_SlotsLeft(self) >= 2)) {
 		M_SetAnimation(self, &widow2_move_spawn);
 		return;
 	}
 
 	// accept bias towards spawning
-	if (blocked && (M_SlotsLeft(self) >= 2))
-	{
+	if (blocked && (M_SlotsLeft(self) >= 2)) {
 		M_SetAnimation(self, &widow2_move_spawn);
 		return;
 	}
 
-	if (real_enemy_range < 600)
-	{
+	if (real_enemy_range < 600) {
 		luck = frandom();
-		if (M_SlotsLeft(self) >= 2)
-		{
+		if (M_SlotsLeft(self) >= 2) {
 			if (luck <= 0.40f)
 				M_SetAnimation(self, &widow2_move_attack_pre_beam);
-			else if ((luck <= 0.7f) && !(level.time < self->monsterinfo.attack_finished))
-			{
+			else if ((luck <= 0.7f) && !(level.time < self->monsterinfo.attack_finished)) {
 				M_SetAnimation(self, &widow2_move_attack_disrupt);
-			}
-			else
+			} else
 				M_SetAnimation(self, &widow2_move_spawn);
-		}
-		else
-		{
+		} else {
 			if ((luck <= 0.50f) || (level.time < self->monsterinfo.attack_finished))
 				M_SetAnimation(self, &widow2_move_attack_pre_beam);
-			else
-			{
+			else {
 				M_SetAnimation(self, &widow2_move_attack_disrupt);
 			}
 		}
-	}
-	else
-	{
+	} else {
 		luck = frandom();
-		if (M_SlotsLeft(self) >= 2)
-		{
+		if (M_SlotsLeft(self) >= 2) {
 			if (luck < 0.3f)
 				M_SetAnimation(self, &widow2_move_attack_pre_beam);
 			else if ((luck < 0.65f) || (level.time < self->monsterinfo.attack_finished))
 				M_SetAnimation(self, &widow2_move_spawn);
-			else
-			{
+			else {
 				M_SetAnimation(self, &widow2_move_attack_disrupt);
 			}
-		}
-		else
-		{
+		} else {
 			if ((luck < 0.45f) || (level.time < self->monsterinfo.attack_finished))
 				M_SetAnimation(self, &widow2_move_attack_pre_beam);
-			else
-			{
+			else {
 				M_SetAnimation(self, &widow2_move_attack_disrupt);
 			}
 		}
 	}
 }
 
-void widow2_attack_beam(edict_t *self)
-{
+void widow2_attack_beam(edict_t *self) {
 	M_SetAnimation(self, &widow2_move_attack_beam);
 	widow2_step(self);
 }
 
-void widow2_reattack_beam(edict_t *self)
-{
+void widow2_reattack_beam(edict_t *self) {
 	self->monsterinfo.aiflags &= ~AI_MANUAL_STEERING;
 
 	if (infront(self, self->enemy))
@@ -833,8 +747,7 @@ void widow2_reattack_beam(edict_t *self)
 		M_SetAnimation(self, &widow2_move_attack_post_beam);
 }
 
-PAIN(widow2_pain) (edict_t *self, edict_t *other, float kick, int damage, const mod_t &mod) -> void
-{
+static PAIN(widow2_pain) (edict_t *self, edict_t *other, float kick, int damage, const mod_t &mod) -> void {
 	if (level.time < self->pain_debounce_time)
 		return;
 
@@ -846,24 +759,18 @@ PAIN(widow2_pain) (edict_t *self, edict_t *other, float kick, int damage, const 
 		gi.sound(self, CHAN_VOICE, sound_pain2, 1, ATTN_NONE, 0);
 	else
 		gi.sound(self, CHAN_VOICE, sound_pain3, 1, ATTN_NONE, 0);
-	
+
 	if (!M_ShouldReactToPain(self, mod))
 		return; // no pain anims in nightmare
 
-	if (damage >= 15)
-	{
-		if (damage < 75)
-		{
-			if ((skill->integer < 3) && (frandom() < (0.6f - (0.2f * skill->integer))))
-			{
+	if (damage >= 15) {
+		if (damage < 75) {
+			if ((skill->integer < 3) && (frandom() < (0.6f - (0.2f * skill->integer)))) {
 				self->monsterinfo.aiflags &= ~AI_MANUAL_STEERING;
 				M_SetAnimation(self, &widow2_move_pain);
 			}
-		}
-		else
-		{
-			if ((skill->integer < 3) && (frandom() < (0.75f - (0.1f * skill->integer))))
-			{
+		} else {
+			if ((skill->integer < 3) && (frandom() < (0.75f - (0.1f * skill->integer)))) {
 				self->monsterinfo.aiflags &= ~AI_MANUAL_STEERING;
 				M_SetAnimation(self, &widow2_move_pain);
 			}
@@ -871,24 +778,19 @@ PAIN(widow2_pain) (edict_t *self, edict_t *other, float kick, int damage, const 
 	}
 }
 
-MONSTERINFO_SETSKIN(widow2_setskin) (edict_t *self) -> void
-{
+MONSTERINFO_SETSKIN(widow2_setskin) (edict_t *self) -> void {
 	if (self->health < (self->max_health / 2))
 		self->s.skinnum = 1;
 	else
 		self->s.skinnum = 0;
 }
 
-void widow2_dead(edict_t *self)
-{
-}
+void widow2_dead(edict_t *self) {}
 
-void KillChildren(edict_t *self)
-{
+static void KillChildren(edict_t *self) {
 	edict_t *ent = nullptr;
 
-	while (1)
-	{
+	while (1) {
 		ent = G_FindByString<&edict_t::classname>(ent, "monster_stalker");
 		if (!ent)
 			return;
@@ -899,14 +801,12 @@ void KillChildren(edict_t *self)
 	}
 }
 
-DIE(widow2_die) (edict_t *self, edict_t *inflictor, edict_t *attacker, int damage, const vec3_t &point, const mod_t &mod) -> void
-{
+static DIE(widow2_die) (edict_t *self, edict_t *inflictor, edict_t *attacker, int damage, const vec3_t &point, const mod_t &mod) -> void {
 	int n;
 	int clipped;
 
 	// check for gib
-	if (self->deadflag && M_CheckGib(self, mod))
-	{
+	if (self->deadflag && M_CheckGib(self, mod)) {
 		clipped = min(damage, 100);
 
 		gi.sound(self, CHAN_VOICE, gi.soundindex("misc/udeath.wav"), 1, ATTN_NORM, 0);
@@ -914,24 +814,22 @@ DIE(widow2_die) (edict_t *self, edict_t *inflictor, edict_t *attacker, int damag
 			ThrowWidowGibLoc(self, "models/objects/gibs/bone/tris.md2", clipped, GIB_NONE, nullptr, false);
 		for (n = 0; n < 3; n++)
 			ThrowWidowGibLoc(self, "models/objects/gibs/sm_meat/tris.md2", clipped, GIB_NONE, nullptr, false);
-		for (n = 0; n < 3; n++)
-		{
+		for (n = 0; n < 3; n++) {
 			ThrowWidowGibSized(self, "models/monsters/blackwidow2/gib1/tris.md2", clipped, GIB_METALLIC, nullptr,
-							   0, false);
+				0, false);
 			ThrowWidowGibSized(self, "models/monsters/blackwidow2/gib2/tris.md2", clipped, GIB_METALLIC, nullptr,
-							   gi.soundindex("misc/fhit3.wav"), false);
+				gi.soundindex("misc/fhit3.wav"), false);
 		}
-		for (n = 0; n < 2; n++)
-		{
+		for (n = 0; n < 2; n++) {
 			ThrowWidowGibSized(self, "models/monsters/blackwidow2/gib3/tris.md2", clipped, GIB_METALLIC, nullptr,
-							   0, false);
+				0, false);
 			ThrowWidowGibSized(self, "models/monsters/blackwidow/gib3/tris.md2", clipped, GIB_METALLIC, nullptr,
-							   0, false);
+				0, false);
 		}
 		ThrowGibs(self, damage, {
 			{ "models/objects/gibs/chest/tris.md2" },
 			{ "models/objects/gibs/head2/tris.md2", GIB_HEAD }
-		});
+			});
 
 		return;
 	}
@@ -950,15 +848,13 @@ DIE(widow2_die) (edict_t *self, edict_t *inflictor, edict_t *attacker, int damag
 	M_SetAnimation(self, &widow2_move_death);
 }
 
-MONSTERINFO_CHECKATTACK(Widow2_CheckAttack) (edict_t *self) -> bool
-{
+MONSTERINFO_CHECKATTACK(Widow2_CheckAttack) (edict_t *self) -> bool {
 	if (!self->enemy)
 		return false;
 
 	WidowPowerups(self);
 
-	if ((frandom() < 0.8f) && (M_SlotsLeft(self) >= 2) && (realrange(self, self->enemy) > 150))
-	{
+	if ((frandom() < 0.8f) && (M_SlotsLeft(self) >= 2) && (realrange(self, self->enemy) > 150)) {
 		self->monsterinfo.aiflags |= AI_BLOCKED;
 		self->monsterinfo.attack_state = AS_MISSILE;
 		return true;
@@ -967,8 +863,7 @@ MONSTERINFO_CHECKATTACK(Widow2_CheckAttack) (edict_t *self) -> bool
 	return M_CheckAttack_Base(self, 0.4f, 0.8f, 0.8f, 0.5f, 0.f, 0.f);
 }
 
-void Widow2Precache()
-{
+static void Widow2Precache() {
 	// cache in all of the stalker stuff, widow stuff, spawngro stuff, gibs
 	gi.soundindex("parasite/parpain1.wav");
 	gi.soundindex("parasite/parpain2.wav");
@@ -998,12 +893,11 @@ void Widow2Precache()
 	gi.modelindex("models/monsters/blackwidow2/gib4/tris.md2");
 }
 
-/*QUAKED monster_widow2 (1 .5 0) (-70 -70 0) (70 70 144) Ambush Trigger_Spawn Sight
+/*QUAKED monster_widow2 (1 .5 0) (-70 -70 0) (70 70 144) AMBUSH TRIGGER_SPAWN SIGHT
  */
-void SP_monster_widow2(edict_t *self)
-{
-	if ( !M_AllowSpawn( self ) ) {
-		G_FreeEdict( self );
+void SP_monster_widow2(edict_t *self) {
+	if (!M_AllowSpawn(self)) {
+		G_FreeEdict(self);
 		return;
 	}
 
@@ -1014,8 +908,6 @@ void SP_monster_widow2(edict_t *self)
 	sound_search1.assign("bosshovr/bhvunqv1.wav");
 	sound_tentacles_retract.assign("brain/brnatck3.wav");
 
-	//	self->s.sound = gi.soundindex ("bosshovr/bhvengn1.wav");
-
 	self->movetype = MOVETYPE_STEP;
 	self->solid = SOLID_BBOX;
 	self->s.modelindex = gi.modelindex("models/monsters/blackwidow2/tris.md2");
@@ -1025,18 +917,11 @@ void SP_monster_widow2(edict_t *self)
 	self->health = (2000 + 800 + 1000 * skill->integer) * st.health_multiplier;
 	if (coop->integer)
 		self->health += 500 * skill->integer;
-	//	self->health = 1;
+
 	self->gib_health = -900;
 	self->mass = 2500;
 
-	/*	if (skill->integer == 2)
-		{
-			self->monsterinfo.power_armor_type = IT_POWER_SHIELD;
-			self->monsterinfo.power_armor_power = 500;
-		}
-		else */
-	if (skill->integer == 3)
-	{
+	if (skill->integer == 3) {
 		if (!st.was_key_specified("power_armor_type"))
 			self->monsterinfo.power_armor_type = IT_POWER_SHIELD;
 		if (!st.was_key_specified("power_armor_power"))
@@ -1073,15 +958,13 @@ void SP_monster_widow2(edict_t *self)
 // Death sequence stuff
 //
 
-void WidowVelocityForDamage(int damage, vec3_t &v)
-{
+static void WidowVelocityForDamage(int damage, vec3_t &v) {
 	v[0] = damage * crandom();
 	v[1] = damage * crandom();
 	v[2] = damage * crandom() + 200.0f;
 }
 
-TOUCH(widow_gib_touch) (edict_t *self, edict_t *other, const trace_t &tr, bool other_touching_self) -> void
-{
+static TOUCH(widow_gib_touch) (edict_t *self, edict_t *other, const trace_t &tr, bool other_touching_self) -> void {
 	self->solid = SOLID_NOT;
 	self->touch = nullptr;
 	self->s.angles[PITCH] = 0;
@@ -1092,23 +975,19 @@ TOUCH(widow_gib_touch) (edict_t *self, edict_t *other, const trace_t &tr, bool o
 		gi.sound(self, CHAN_VOICE, self->style, 1, ATTN_NORM, 0);
 }
 
-void ThrowWidowGib(edict_t *self, const char *gibname, int damage, gib_type_t type)
-{
+static void ThrowWidowGib(edict_t *self, const char *gibname, int damage, gib_type_t type) {
 	ThrowWidowGibReal(self, gibname, damage, type, nullptr, false, 0, true);
 }
 
-void ThrowWidowGibLoc(edict_t *self, const char *gibname, int damage, gib_type_t type, const vec3_t *startpos, bool fade)
-{
+void ThrowWidowGibLoc(edict_t *self, const char *gibname, int damage, gib_type_t type, const vec3_t *startpos, bool fade) {
 	ThrowWidowGibReal(self, gibname, damage, type, startpos, false, 0, fade);
 }
 
-void ThrowWidowGibSized(edict_t *self, const char *gibname, int damage, gib_type_t type, const vec3_t *startpos, int hitsound, bool fade)
-{
+void ThrowWidowGibSized(edict_t *self, const char *gibname, int damage, gib_type_t type, const vec3_t *startpos, int hitsound, bool fade) {
 	ThrowWidowGibReal(self, gibname, damage, type, startpos, true, hitsound, fade);
 }
 
-void ThrowWidowGibReal(edict_t *self, const char *gibname, int damage, gib_type_t type, const vec3_t *startpos, bool sized, int hitsound, bool fade)
-{
+void ThrowWidowGibReal(edict_t *self, const char *gibname, int damage, gib_type_t type, const vec3_t *startpos, bool sized, int hitsound, bool fade) {
 	edict_t *gib;
 	vec3_t	 vd;
 	vec3_t	 origin;
@@ -1122,8 +1001,7 @@ void ThrowWidowGibReal(edict_t *self, const char *gibname, int damage, gib_type_
 
 	if (startpos)
 		gib->s.origin = *startpos;
-	else
-	{
+	else {
 		origin = (self->absmin + self->absmax) * 0.5f;
 		gib->s.origin[0] = origin[0] + crandom() * size[0];
 		gib->s.origin[1] = origin[1] + crandom() * size[1];
@@ -1138,17 +1016,14 @@ void ThrowWidowGibReal(edict_t *self, const char *gibname, int damage, gib_type_
 	gib->s.renderfx |= RF_IR_VISIBLE;
 	gib->s.renderfx &= ~RF_DOT_SHADOW;
 
-	if (fade)
-	{
+	if (fade) {
 		gib->think = G_FreeEdict;
 		// sized gibs last longer
 		if (sized)
 			gib->nextthink = level.time + random_time(20_sec, 35_sec);
 		else
 			gib->nextthink = level.time + random_time(5_sec, 15_sec);
-	}
-	else
-	{
+	} else {
 		gib->think = G_FreeEdict;
 		// sized gibs last longer
 		if (sized)
@@ -1157,13 +1032,10 @@ void ThrowWidowGibReal(edict_t *self, const char *gibname, int damage, gib_type_
 			gib->nextthink = level.time + random_time(25_sec, 35_sec);
 	}
 
-	if (!(type & GIB_METALLIC))
-	{
+	if (!(type & GIB_METALLIC)) {
 		gib->movetype = MOVETYPE_TOSS;
 		vscale = 0.5;
-	}
-	else
-	{
+	} else {
 		gib->movetype = MOVETYPE_BOUNCE;
 		vscale = 1.0;
 	}
@@ -1174,8 +1046,7 @@ void ThrowWidowGibReal(edict_t *self, const char *gibname, int damage, gib_type_
 
 	gi.setmodel(gib, gibname);
 
-	if (sized)
-	{
+	if (sized) {
 		gib->style = hitsound;
 		gib->solid = SOLID_BBOX;
 		gib->avelocity[0] = frandom(400);
@@ -1190,19 +1061,14 @@ void ThrowWidowGibReal(edict_t *self, const char *gibname, int damage, gib_type_
 		gib->gravity = 0.25;
 		gib->touch = widow_gib_touch;
 		gib->owner = self;
-		if (gib->s.modelindex == gi.modelindex("models/monsters/blackwidow2/gib2/tris.md2"))
-		{
+		if (gib->s.modelindex == gi.modelindex("models/monsters/blackwidow2/gib2/tris.md2")) {
 			gib->mins = { -10, -10, 0 };
 			gib->maxs = { 10, 10, 10 };
-		}
-		else
-		{
+		} else {
 			gib->mins = { -5, -5, 0 };
 			gib->maxs = { 5, 5, 5 };
 		}
-	}
-	else
-	{
+	} else {
 		gib->velocity[0] *= 2;
 		gib->velocity[1] *= 2;
 		gib->avelocity[0] = frandom(600);
@@ -1213,8 +1079,7 @@ void ThrowWidowGibReal(edict_t *self, const char *gibname, int damage, gib_type_
 	gi.linkentity(gib);
 }
 
-void ThrowSmallStuff(edict_t *self, const vec3_t &point)
-{
+void ThrowSmallStuff(edict_t *self, const vec3_t &point) {
 	int n;
 
 	for (n = 0; n < 2; n++)
@@ -1223,12 +1088,10 @@ void ThrowSmallStuff(edict_t *self, const vec3_t &point)
 	ThrowWidowGibLoc(self, "models/objects/gibs/sm_metal/tris.md2", 100, GIB_METALLIC, &point, false);
 }
 
-void ThrowMoreStuff(edict_t *self, const vec3_t &point)
-{
+void ThrowMoreStuff(edict_t *self, const vec3_t &point) {
 	int n;
 
-	if (coop->integer)
-	{
+	if (coop->integer) {
 		ThrowSmallStuff(self, point);
 		return;
 	}
@@ -1241,8 +1104,7 @@ void ThrowMoreStuff(edict_t *self, const vec3_t &point)
 		ThrowWidowGibLoc(self, "models/objects/gibs/sm_metal/tris.md2", 100, GIB_METALLIC, &point, false);
 }
 
-THINK(WidowExplode) (edict_t *self) -> void
-{
+THINK(WidowExplode) (edict_t *self) -> void {
 	vec3_t org;
 	int	   n;
 
@@ -1253,8 +1115,7 @@ THINK(WidowExplode) (edict_t *self) -> void
 	org[2] += irandom(24, 40);
 	if (self->count < 8)
 		org[2] += irandom(24, 56);
-	switch (self->count)
-	{
+	switch (self->count) {
 	case 0:
 		org[0] -= 24;
 		org[1] -= 24;
@@ -1329,16 +1190,13 @@ THINK(WidowExplode) (edict_t *self) -> void
 	}
 
 	self->count++;
-	if (self->count >= 9 && self->count <= 12)
-	{
+	if (self->count >= 9 && self->count <= 12) {
 		gi.WriteByte(svc_temp_entity);
 		gi.WriteByte(TE_EXPLOSION1_BIG);
 		gi.WritePosition(org);
 		gi.multicast(self->s.origin, MULTICAST_ALL, false);
 		//		goto redo;
-	}
-	else
-	{
+	} else {
 		// else
 		gi.WriteByte(svc_temp_entity);
 		if (self->count % 2)
@@ -1352,8 +1210,7 @@ THINK(WidowExplode) (edict_t *self) -> void
 	self->nextthink = level.time + 10_hz;
 }
 
-void WidowExplosion1(edict_t *self)
-{
+void WidowExplosion1(edict_t *self) {
 	int	   n;
 	vec3_t f, r, u, startpoint;
 	vec3_t offset = { 23.74f, -37.67f, 76.96f };
@@ -1374,8 +1231,7 @@ void WidowExplosion1(edict_t *self)
 		ThrowWidowGibLoc(self, "models/objects/gibs/sm_metal/tris.md2", 300, GIB_METALLIC, &startpoint, false);
 }
 
-void WidowExplosion2(edict_t *self)
-{
+void WidowExplosion2(edict_t *self) {
 	int	   n;
 	vec3_t f, r, u, startpoint;
 	vec3_t offset = { -20.49f, 36.92f, 73.52f };
@@ -1396,8 +1252,7 @@ void WidowExplosion2(edict_t *self)
 		ThrowWidowGibLoc(self, "models/objects/gibs/sm_metal/tris.md2", 300, GIB_METALLIC, &startpoint, false);
 }
 
-void WidowExplosion3(edict_t *self)
-{
+void WidowExplosion3(edict_t *self) {
 	int	   n;
 	vec3_t f, r, u, startpoint;
 	vec3_t offset = { 2.11f, 0.05f, 92.20f };
@@ -1418,8 +1273,7 @@ void WidowExplosion3(edict_t *self)
 		ThrowWidowGibLoc(self, "models/objects/gibs/sm_metal/tris.md2", 300, GIB_METALLIC, &startpoint, false);
 }
 
-void WidowExplosion4(edict_t *self)
-{
+void WidowExplosion4(edict_t *self) {
 	int	   n;
 	vec3_t f, r, u, startpoint;
 	vec3_t offset = { -28.04f, -35.57f, -77.56f };
@@ -1440,8 +1294,7 @@ void WidowExplosion4(edict_t *self)
 		ThrowWidowGibLoc(self, "models/objects/gibs/sm_metal/tris.md2", 300, GIB_METALLIC, &startpoint, false);
 }
 
-void WidowExplosion5(edict_t *self)
-{
+void WidowExplosion5(edict_t *self) {
 	int	   n;
 	vec3_t f, r, u, startpoint;
 	vec3_t offset = { -20.11f, -1.11f, 40.76f };
@@ -1462,8 +1315,7 @@ void WidowExplosion5(edict_t *self)
 		ThrowWidowGibLoc(self, "models/objects/gibs/sm_metal/tris.md2", 300, GIB_METALLIC, &startpoint, false);
 }
 
-void WidowExplosion6(edict_t *self)
-{
+void WidowExplosion6(edict_t *self) {
 	int	   n;
 	vec3_t f, r, u, startpoint;
 	vec3_t offset = { -20.11f, -1.11f, 40.76f };
@@ -1484,8 +1336,7 @@ void WidowExplosion6(edict_t *self)
 		ThrowWidowGibLoc(self, "models/objects/gibs/sm_metal/tris.md2", 300, GIB_METALLIC, &startpoint, false);
 }
 
-void WidowExplosion7(edict_t *self)
-{
+void WidowExplosion7(edict_t *self) {
 	int	   n;
 	vec3_t f, r, u, startpoint;
 	vec3_t offset = { -20.11f, -1.11f, 40.76f };
@@ -1506,8 +1357,7 @@ void WidowExplosion7(edict_t *self)
 		ThrowWidowGibLoc(self, "models/objects/gibs/sm_metal/tris.md2", 300, GIB_METALLIC, &startpoint, false);
 }
 
-void WidowExplosionLeg(edict_t *self)
-{
+void WidowExplosionLeg(edict_t *self) {
 	vec3_t f, r, u, startpoint;
 	vec3_t offset1 = { -31.89f, -47.86f, 67.02f };
 	vec3_t offset2 = { -44.9f, -82.14f, 54.72f };
@@ -1521,7 +1371,7 @@ void WidowExplosionLeg(edict_t *self)
 	gi.multicast(self->s.origin, MULTICAST_ALL, false);
 
 	ThrowWidowGibSized(self, "models/monsters/blackwidow2/gib2/tris.md2", 200, GIB_METALLIC, &startpoint,
-					   gi.soundindex("misc/fhit3.wav"), false);
+		gi.soundindex("misc/fhit3.wav"), false);
 	ThrowWidowGibLoc(self, "models/objects/gibs/sm_meat/tris.md2", 300, GIB_NONE, &startpoint, false);
 	ThrowWidowGibLoc(self, "models/objects/gibs/sm_metal/tris.md2", 100, GIB_METALLIC, &startpoint, false);
 
@@ -1533,13 +1383,12 @@ void WidowExplosionLeg(edict_t *self)
 	gi.multicast(self->s.origin, MULTICAST_ALL, false);
 
 	ThrowWidowGibSized(self, "models/monsters/blackwidow2/gib1/tris.md2", 300, GIB_METALLIC, &startpoint,
-					   gi.soundindex("misc/fhit3.wav"), false);
+		gi.soundindex("misc/fhit3.wav"), false);
 	ThrowWidowGibLoc(self, "models/objects/gibs/sm_meat/tris.md2", 300, GIB_NONE, &startpoint, false);
 	ThrowWidowGibLoc(self, "models/objects/gibs/sm_metal/tris.md2", 100, GIB_METALLIC, &startpoint, false);
 }
 
-void ThrowArm1(edict_t *self)
-{
+void ThrowArm1(edict_t *self) {
 	int	   n;
 	vec3_t f, r, u, startpoint;
 	vec3_t offset1 = { 65.76f, 17.52f, 7.56f };
@@ -1556,8 +1405,7 @@ void ThrowArm1(edict_t *self)
 		ThrowWidowGibLoc(self, "models/objects/gibs/sm_metal/tris.md2", 100, GIB_METALLIC, &startpoint, false);
 }
 
-void ThrowArm2(edict_t *self)
-{
+void ThrowArm2(edict_t *self) {
 	vec3_t f, r, u, startpoint;
 	vec3_t offset1 = { 65.76f, 17.52f, 7.56f };
 
@@ -1565,6 +1413,6 @@ void ThrowArm2(edict_t *self)
 	startpoint = G_ProjectSource2(self->s.origin, offset1, f, r, u);
 
 	ThrowWidowGibSized(self, "models/monsters/blackwidow2/gib4/tris.md2", 200, GIB_METALLIC, &startpoint,
-					   gi.soundindex("misc/fhit3.wav"), false);
+		gi.soundindex("misc/fhit3.wav"), false);
 	ThrowWidowGibLoc(self, "models/objects/gibs/sm_meat/tris.md2", 300, GIB_NONE, &startpoint, false);
 }

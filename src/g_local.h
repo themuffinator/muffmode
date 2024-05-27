@@ -10,13 +10,26 @@
 constexpr const char *GAMEVERSION = "baseq2";
 
 constexpr const char *GAMEMOD_TITLE = "Muff Mode BETA";
-constexpr const char *GAMEMOD_VERSION = "0.13.0";
+constexpr const char *GAMEMOD_VERSION = "0.15.0";
 
 //==================================================================
 
 #define ARRAY_LEN(x)		(sizeof(x) / sizeof(*(x)))
 
 constexpr const int32_t GIB_HEALTH = -40;
+
+constexpr const int32_t AMMO_INFINITE = 1000;
+
+constexpr size_t MAX_CLIENTS_KEX = 32; // absolute limit
+
+enum team_t {
+	TEAM_NONE,
+	TEAM_SPECTATOR,
+	TEAM_FREE,
+	TEAM_RED,
+	TEAM_BLUE,
+	TEAM_NUM_TEAMS
+};
 
 enum gametype_t {
 	GT_HORDE,
@@ -58,20 +71,27 @@ constexpr const char *gt_cvar[GT_NUM_GAMETYPES] = {
 };
 
 typedef enum {
-	MS_NONE,
-	MS_WARMUP_DELAYED,		// pre-warmup (delay is active)
-	MS_WARMUP_DEFAULT,		// 'waiting for players' / match short of players / imbalanced teams
-	MS_WARMUP_READYUP,		// time for players to get ready
-	MS_MATCH_COUNTDOWN,	// all conditions met, counting down to match start, check conditions again at end of countdown before match start
-	MS_MATCH_IN_PROGRESS,	// match is in progress, not used in round-based gametypes
-	MS_MATCH_ENDED			// match or final round has ended
+	MATCH_NONE,
+	MATCH_WARMUP_DELAYED,	// pre-warmup (delay is active)
+	MATCH_WARMUP_DEFAULT,	// 'waiting for players' / match short of players / imbalanced teams
+	MATCH_WARMUP_READYUP,	// time for players to get ready
+	MATCH_COUNTDOWN,		// all conditions met, counting down to match start, check conditions again at end of countdown before match start
+	MATCH_IN_PROGRESS,		// match is in progress, not used in round-based gametypes
+	MATCH_ENDED				// match or final round has ended
 } match_states_t;
 
 typedef enum {
-	MS_ROUND_NONE,
-	MS_ROUND_COUNTDOWN,		// round-based gametypes only: initial delay before round starts
-	MS_ROUND_IN_PROGRESS,	// round-based gametypes only: round is in progress
-	MS_ROUND_ENDED			// round-based gametypes only: round has ended
+	WARMUP_REQ_NONE,
+	WARMUP_REQ_MORE_PLAYERS,
+	WARMUP_REQ_BALANCE,
+	WARMUP_REQ_READYUP
+} warmup_requisite_t;
+
+typedef enum {
+	ROUND_NONE,
+	ROUND_COUNTDOWN,		// round-based gametypes only: initial delay before round starts
+	ROUND_IN_PROGRESS,	// round-based gametypes only: round is in progress
+	ROUND_ENDED			// round-based gametypes only: round has ended
 } match_round_states_t;
 
 #define	RANK_TIED_FLAG		0x4000
@@ -91,14 +111,6 @@ enum grapple_state_t {
 	GRAPPLE_STATE_FLY,
 	GRAPPLE_STATE_PULL,
 	GRAPPLE_STATE_HANG
-};
-
-enum match_t {
-	MATCH_NONE,
-	MATCH_SETUP,
-	MATCH_PREGAME,
-	MATCH_GAME,
-	MATCH_POST
 };
 
 struct vcmds_t {
@@ -781,7 +793,8 @@ enum movetype_t {
 	MOVETYPE_FLYMISSILE, // extra size to monsters
 	MOVETYPE_BOUNCE,
 	MOVETYPE_WALLBOUNCE,
-	MOVETYPE_NEWTOSS // PGM - for deathball
+	MOVETYPE_NEWTOSS, // PGM - for deathball
+	MOVETYPE_FREECAM, // spectator free cam
 };
 
 // edict->flags
@@ -933,9 +946,9 @@ enum item_id_t : int32_t {
 	IT_PACK,
 	IT_IR_GOGGLES,
 	IT_POWERUP_DOUBLE,
-	IT_SPHERE_VENGEANCE,
-	IT_SPHERE_HUNTER,
-	IT_SPHERE_DEFENDER,
+	IT_POWERUP_SPHERE_VENGEANCE,
+	IT_POWERUP_SPHERE_HUNTER,
+	IT_POWERUP_SPHERE_DEFENDER,
 	IT_DOPPELGANGER,
 	IT_TAG_TOKEN,
 
@@ -974,31 +987,10 @@ enum item_id_t : int32_t {
 	IT_TOTAL
 };
 
-constexpr item_id_t tech_ids[] = { IT_TECH_DISRUPTOR_SHIELD, IT_TECH_POWER_AMP, IT_TECH_TIME_ACCEL, IT_TECH_AUTODOC };
+constexpr int FIRST_WEAPON = IT_WEAPON_GRAPPLE;
+constexpr int LAST_WEAPON = IT_WEAPON_DISRUPTOR;
 
-constexpr item_id_t weapon_ids[] = {
-	IT_WEAPON_GRAPPLE,
-	IT_WEAPON_BLASTER,
-	IT_WEAPON_CHAINFIST,
-	IT_WEAPON_SHOTGUN,
-	IT_WEAPON_SSHOTGUN,
-	IT_WEAPON_MACHINEGUN,
-	IT_WEAPON_ETF_RIFLE,
-	IT_WEAPON_CHAINGUN,
-	IT_AMMO_GRENADES,
-	IT_AMMO_TRAP,
-	IT_AMMO_TESLA,
-	IT_WEAPON_GLAUNCHER,
-	IT_WEAPON_PROXLAUNCHER,
-	IT_WEAPON_RLAUNCHER,
-	IT_WEAPON_HYPERBLASTER,
-	IT_WEAPON_IONRIPPER,
-	IT_WEAPON_PLASMABEAM,
-	IT_WEAPON_RAILGUN,
-	IT_WEAPON_PHALANX,
-	IT_WEAPON_BFG,
-	IT_WEAPON_DISRUPTOR
-};
+constexpr item_id_t tech_ids[] = { IT_TECH_DISRUPTOR_SHIELD, IT_TECH_POWER_AMP, IT_TECH_TIME_ACCEL, IT_TECH_AUTODOC };
 
 constexpr const char *ITEM_CTF_FLAG_RED = "item_flag_team_red";
 constexpr const char *ITEM_CTF_FLAG_BLUE = "item_flag_team_blue";
@@ -1107,9 +1099,9 @@ enum mod_id_t : uint8_t {
 	MOD_DEFENDER_SPHERE,
 	MOD_TRACKER,
 	MOD_THAW,
-	MOD_DOPPLE_EXPLODE,
-	MOD_DOPPLE_VENGEANCE,
-	MOD_DOPPLE_HUNTER,
+	MOD_DOPPEL_EXPLODE,
+	MOD_DOPPEL_VENGEANCE,
+	MOD_DOPPEL_HUNTER,
 	MOD_GRAPPLE,
 	MOD_BLUEBLASTER,
 	MOD_RAILGUN_SPLASH,
@@ -1181,13 +1173,8 @@ struct game_locals_t {
 	std::array<level_entry_t, MAX_LEVELS_PER_UNIT> level_entries;
 	int32_t max_lag_origins;
 	vec3_t *lag_origins; // maxclients * max_lag_origins
-/*
-	union map_queue_t[32] {
-		const char	*map;
-		int			flags;
-	}
-	*/
-	const char *map_queue[32];
+
+	std::vector<std::string> mapqueue;
 };
 
 constexpr size_t MAX_HEALTH_BARS = 2;
@@ -1355,39 +1342,40 @@ struct level_locals_t {
 	char		gametype_name[64];
 
 	//voting
-	char		vote_string[256];
-	char		vote_display_string[256];
 	gtime_t		vote_time;				// level.time vote was called
 	gtime_t		vote_execute_time;		// time the vote is executed
 	int8_t		vote_yes;
 	int8_t		vote_no;
 	int8_t		num_voting_clients;		// set by CalculateRanks
 	vcmds_t		*vote;
-	//char		vote_arg[32];
-	const char	*vote_arg;
+	std::string vote_arg;
 
-	//q3
 	uint8_t		num_connected_clients;
 	uint8_t		num_nonspectator_clients;	// includes connecting clients
 	uint8_t		num_playing_clients;		// connected, non-spectators
-	uint8_t		num_human_clients;			// bots excluded
+	uint8_t		num_playing_human_clients;	// players, bots excluded
 	int			sorted_clients[MAX_CLIENTS];// sorted by score
-	int			random_clients[MAX_CLIENTS];// sorted randomly
 	uint8_t		follow1, follow2;			// clientNums for auto-follow spectators
 
 	int			num_living_red;
 	int			num_eliminated_red;
 	int			num_living_blue;
 	int			num_eliminated_blue;
+	int			num_playing_red;
+	int			num_playing_blue;
 
 	int			team_scores[TEAM_NUM_TEAMS];
 
 	uint8_t		match_state;
+	uint8_t		warmup_requisite;
+	gtime_t		warmup_notice_time;
+	gtime_t		match_time;
 	int			match_state_queued;
 	gtime_t		match_state_timer;			// change match state at this time
 	int			warmup_modification_count;	// for detecting if g_warmup_countdown is changed
 
 	gtime_t		countdown_check;
+	gtime_t		matchendwarn_check;
 
 	int			round_number;
 	uint8_t		round_state;
@@ -1402,21 +1390,13 @@ struct level_locals_t {
 	int			count_living[TEAM_NUM_TEAMS];
 
 	bool		locked[TEAM_NUM_TEAMS];
-//ctf
-	gtime_t		last_flag_capture;
-	int			last_capture_team;
 
-	match_t		match;	   // match state
-	gtime_t		match_time; // time for match start/end (depends on state)
-	//int			lasttime;  // last time update, explicitly truncated to seconds
-	bool		countdown; // has audio countdown started?
-
-	int			warnactive; // true if stat string 30 is active
+	gtime_t		ctf_last_flag_capture;
+	team_t		ctf_last_capture_team;
 
 	ghost_t		ghosts[MAX_CLIENTS]; // ghost codes
-//-ctf
 
-	//int			 weapon_count[];
+	int			weapon_count[LAST_WEAPON - FIRST_WEAPON];
 
 	gtime_t		no_players_time;
 };
@@ -2027,38 +2007,23 @@ extern cvar_t *capturelimit;
 extern cvar_t *timelimit;
 extern cvar_t *roundlimit;
 extern cvar_t *roundtimelimit;
-
-extern cvar_t *g_quick_weapon_switch;
-extern cvar_t *g_instant_weapon_switch;
-extern cvar_t *g_dm_force_join;
-extern cvar_t *g_teamplay_allow_team_pick;
-extern cvar_t *g_teamplay_force_balance;
+extern cvar_t *mercylimit;
+extern cvar_t *noplayerstime;
 
 extern cvar_t *password;
 extern cvar_t *spectator_password;
+extern cvar_t *admin_password;
 extern cvar_t *needpass;
-extern cvar_t *g_select_empty;
-extern cvar_t *g_dedicated;
-
 extern cvar_t *filterban;
 
-extern cvar_t *g_gravity;
-extern cvar_t *g_maxvelocity;
-
-extern cvar_t *gun_x, *gun_y, *gun_z;
-extern cvar_t *g_rollspeed;
-extern cvar_t *g_rollangle;
-
-extern cvar_t *run_pitch;
-extern cvar_t *run_roll;
-extern cvar_t *bob_up;
-extern cvar_t *bob_pitch;
-extern cvar_t *bob_roll;
-
-extern cvar_t *g_cheats;
-extern cvar_t *g_debug_monster_paths;
-extern cvar_t *g_debug_monster_kills;
+extern cvar_t *maxplayers;
 extern cvar_t *maxspectators;
+extern cvar_t *minplayers;
+
+extern cvar_t *ai_allow_dm_spawn;
+extern cvar_t *ai_damage_scale;
+extern cvar_t *ai_model_scale;
+extern cvar_t *ai_movement_disabled;
 
 extern cvar_t *bot_debug_follow_actor;
 extern cvar_t *bot_debug_move_to_point;
@@ -2067,147 +2032,131 @@ extern cvar_t *flood_msgs;
 extern cvar_t *flood_persecond;
 extern cvar_t *flood_waitdelay;
 
-extern cvar_t *g_skip_view_modifiers;
-
-extern cvar_t *g_stopspeed; // PGM - this was a define in g_phys.c
-
-extern cvar_t *g_strict_saves;
-extern cvar_t *g_coop_health_scaling;
-extern cvar_t *g_weapon_respawn_time;
-
-extern cvar_t *g_no_health;
-extern cvar_t *g_no_items;
-extern cvar_t *g_no_powerups;
-extern cvar_t *g_dm_weapons_stay;
-extern cvar_t *g_dm_no_fall_damage;
-extern cvar_t *g_dm_no_self_damage;
-extern cvar_t *g_dm_instant_items;
-extern cvar_t *g_dm_same_level;
-extern cvar_t *g_friendly_fire;
-extern cvar_t *g_dm_force_respawn;
-extern cvar_t *g_dm_force_respawn_time;
-extern cvar_t *g_dm_respawn_delay_min;
-extern cvar_t *g_dm_spawn_farthest;
-extern cvar_t *g_no_armor;
-extern cvar_t *g_dm_allow_exit;
-extern cvar_t *g_infinite_ammo;
-extern cvar_t *g_dm_no_quad_drop;
-extern cvar_t *g_dm_no_quadfire_drop;
-extern cvar_t *g_dm_powerup_drop;
-extern cvar_t *g_no_mines;
-extern cvar_t *g_dm_no_stack_double;
-extern cvar_t *g_no_nukes;
-extern cvar_t *g_no_spheres;
-extern cvar_t *g_teamplay_armor_protect;
-extern cvar_t *g_allow_techs;
-extern cvar_t *g_dm_powerups_style;
-extern cvar_t *g_corpse_sink_time;
-
-extern cvar_t *g_start_items;
-extern cvar_t *g_map_list;
-extern cvar_t *g_map_list_shuffle;
-extern cvar_t *g_lag_compensation;
-
-extern cvar_t *g_dm_respawn_point_min_dist;
-extern cvar_t *g_dm_respawn_point_min_dist_debug;
-extern cvar_t *g_inactivity;
-extern cvar_t *g_entity_override_load;
-extern cvar_t *g_entity_override_save;
-
-extern cvar_t *g_motd;
-
-extern cvar_t *g_huntercam;
-extern cvar_t *g_dm_strong_mines;
-extern cvar_t *g_dm_random_items;
-
-extern cvar_t *g_instagib;
-extern cvar_t *g_instagib_splash;
-extern cvar_t *g_quadhog;
-extern cvar_t *g_nadefest;
-extern cvar_t *g_frenzy;
-extern cvar_t *g_coop_player_collision;
-extern cvar_t *g_coop_squad_respawn;
-extern cvar_t *g_coop_enable_lives;
-extern cvar_t *g_coop_num_lives;
-extern cvar_t *g_coop_instanced_items;
-extern cvar_t *g_allow_grapple;
-extern cvar_t *g_grapple_offhand;
-extern cvar_t *g_grapple_fly_speed;
-extern cvar_t *g_grapple_pull_speed;
-extern cvar_t *g_grapple_damage;
-
-extern cvar_t *g_frag_messages;
+extern cvar_t *bob_pitch;
+extern cvar_t *bob_roll;
+extern cvar_t *bob_up;
+extern cvar_t *gun_x, *gun_y, *gun_z;
+extern cvar_t *run_pitch;
+extern cvar_t *run_roll;
 
 extern cvar_t *g_airaccelerate;
-
-extern cvar_t *g_knockback_scale;
-extern cvar_t *g_frozen_time;
+extern cvar_t *g_allow_admin;
+extern cvar_t *g_allow_custom_skins;
+extern cvar_t *g_allow_forfeit;
+extern cvar_t *g_allow_grapple;
+extern cvar_t *g_allow_mymap;
+extern cvar_t *g_allow_spec_vote;
+extern cvar_t *g_allow_techs;
+extern cvar_t *g_allow_vote_midgame;
+extern cvar_t *g_allow_voting;
+extern cvar_t *g_cheats;
+extern cvar_t *g_coop_enable_lives;
+extern cvar_t *g_coop_health_scaling;
+extern cvar_t *g_coop_instanced_items;
+extern cvar_t *g_coop_num_lives;
+extern cvar_t *g_coop_player_collision;
+extern cvar_t *g_coop_squad_respawn;
+extern cvar_t *g_corpse_sink_time;
 extern cvar_t *g_damage_scale;
+extern cvar_t *g_debug_monster_kills;
+extern cvar_t *g_debug_monster_paths;
+extern cvar_t *g_dedicated;
+extern cvar_t *g_disable_player_collision;
+extern cvar_t *g_dm_allow_exit;
+extern cvar_t *g_dm_auto_join;
+extern cvar_t *g_dm_do_readyup;
+extern cvar_t *g_dm_do_warmup;
+extern cvar_t *g_dm_exec_level_cfg;
+extern cvar_t *g_dm_force_join;
+extern cvar_t *g_dm_force_respawn;
+extern cvar_t *g_dm_force_respawn_time;
+extern cvar_t *g_dm_instant_items;
+extern cvar_t *g_dm_intermission_shots;
+extern cvar_t *g_dm_no_fall_damage;
+extern cvar_t *g_dm_no_quad_drop;
+extern cvar_t *g_dm_no_quadfire_drop;
+extern cvar_t *g_dm_no_self_damage;
+extern cvar_t *g_dm_no_stack_double;
+extern cvar_t *g_dm_overtime;
+extern cvar_t *g_dm_powerup_drop;
+extern cvar_t *g_dm_powerups_minplayers;
+extern cvar_t *g_dm_powerups_style;
+extern cvar_t *g_dm_random_items;
+extern cvar_t *g_dm_respawn_delay_min;
+extern cvar_t *g_dm_respawn_point_min_dist;
+extern cvar_t *g_dm_respawn_point_min_dist_debug;
+extern cvar_t *g_dm_same_level;
+extern cvar_t *g_dm_spawn_farthest;
+extern cvar_t *g_dm_spawnpads;
+extern cvar_t *g_dm_strong_mines;
+extern cvar_t *g_dm_weapons_stay;
+extern cvar_t *g_entity_override_load;
+extern cvar_t *g_entity_override_save;
+extern cvar_t *g_expert;
+extern cvar_t *g_eyecam;
+extern cvar_t *g_fast_doors;
+extern cvar_t *g_frag_messages;
+extern cvar_t *g_frenzy;
+extern cvar_t *g_friendly_fire;
+extern cvar_t *g_frozen_time;
+extern cvar_t *g_grapple_damage;
+extern cvar_t *g_grapple_fly_speed;
+extern cvar_t *g_grapple_offhand;
+extern cvar_t *g_grapple_pull_speed;
+extern cvar_t *g_gravity;
+extern cvar_t *g_huntercam;
+extern cvar_t *g_inactivity;
+extern cvar_t *g_infinite_ammo;
+extern cvar_t *g_instagib;
+extern cvar_t *g_instagib_splash;
+extern cvar_t *g_instant_weapon_switch;
+extern cvar_t *g_item_bobbing;
+extern cvar_t *g_item_chain_random;
+extern cvar_t *g_knockback_scale;
+extern cvar_t *g_ladder_steps;
+extern cvar_t *g_lag_compensation;
+extern cvar_t *g_map_list;
+extern cvar_t *g_map_list_shuffle;
+extern cvar_t *g_map_pool;
+extern cvar_t *g_match_lock;
+extern cvar_t *g_matchstats;
+extern cvar_t *g_maxvelocity;
+extern cvar_t *g_motd;
+extern cvar_t *g_mover_debug;
+extern cvar_t *g_mover_speed_scale;
+extern cvar_t *g_nadefest;
+extern cvar_t *g_no_armor;
+extern cvar_t *g_no_health;
+extern cvar_t *g_no_items;
+extern cvar_t *g_no_mines;
+extern cvar_t *g_no_nukes;
+extern cvar_t *g_no_powerups;
+extern cvar_t *g_no_spheres;
+extern cvar_t *g_quadhog;
+extern cvar_t *g_quick_weapon_switch;
+extern cvar_t *g_rollangle;
+extern cvar_t *g_rollspeed;
+extern cvar_t *g_select_empty;
+extern cvar_t *g_showhelp;
+extern cvar_t *g_showmotd;
+extern cvar_t *g_skip_view_modifiers;
+extern cvar_t *g_start_items;
+extern cvar_t *g_stopspeed;
+extern cvar_t *g_strict_saves;
+extern cvar_t *g_teamplay_allow_team_pick;
+extern cvar_t *g_teamplay_armor_protect;
+extern cvar_t *g_teamplay_auto_balance;
+extern cvar_t *g_teamplay_force_balance;
+extern cvar_t *g_teamplay_item_drop_notice;
+extern cvar_t *g_teleporter_nofreeze;
 extern cvar_t *g_vampiric_damage;
 extern cvar_t *g_vampiric_health_max;
-extern cvar_t *g_disable_player_collision;
-extern cvar_t *ai_damage_scale;
-extern cvar_t *ai_model_scale;
-extern cvar_t *ai_allow_dm_spawn;
-extern cvar_t *ai_movement_disabled;
-
-extern cvar_t *minplayers;
-extern cvar_t *maxplayers;
-
-extern cvar_t *g_mover_speed_scale;
-extern cvar_t *g_mover_debug;
-
+extern cvar_t *g_vote_flags;
+extern cvar_t *g_vote_limit;
 extern cvar_t *g_warmup_countdown;
 extern cvar_t *g_warmup_ready_percentage;
-
-//ctf
-extern cvar_t *competition;
-extern cvar_t *g_match_lock;
-extern cvar_t *matchsetuptime;
-extern cvar_t *matchstarttime;
-extern cvar_t *admin_password;
-extern cvar_t *g_allow_admin;
-extern cvar_t *warn_unbalanced;
-//-ctf
-extern cvar_t *g_eyecam;
-extern cvar_t *g_teleporter_nofreeze;
-
-extern cvar_t *g_showhelp;
-
-extern cvar_t *g_matchstats;
-
-extern cvar_t *g_dm_spawnpads;
-
-extern cvar_t *g_expert;
-
-extern cvar_t *g_item_bobbing;
-extern cvar_t *g_weapon_force_central_projection;
-
-extern cvar_t *g_allow_custom_skins;
-
-extern cvar_t *g_allow_voting;
-extern cvar_t *g_allow_vote_midgame;
-extern cvar_t *g_allow_spec_vote;
-extern cvar_t *g_vote_limit;
-extern cvar_t *g_vote_flags;
-
-extern cvar_t *g_dm_auto_join;
-
-extern cvar_t *g_dm_overtime;
-
-extern cvar_t *g_dm_do_warmup;
-extern cvar_t *g_dm_do_readyup;
-
-extern cvar_t *g_item_chain_random;
-
-extern cvar_t *g_allow_forfeit;
-
-extern cvar_t *g_dm_powerups_minplayers;
-
-extern cvar_t *mercylimit;
-extern cvar_t *noplayerstime;
-
-extern cvar_t *g_ladder_steps;
+extern cvar_t *g_weapon_projection;
+extern cvar_t *g_weapon_respawn_time;
 
 #define world (&g_edicts[0])
 
@@ -2228,7 +2177,7 @@ constexpr spawnflags_t SPAWNFLAG_ITEM_TARGETS_USED		= 0x00040000_spawnflag;
 extern gitem_t itemlist[IT_TOTAL];
 
 //
-// g_cmds.c
+// g_cmds.cpp
 //
 bool CheckFlood(edict_t *ent);
 void Cmd_Help_f(edict_t *ent);
@@ -2237,13 +2186,13 @@ void Cmd_Score_f(edict_t *ent);
 void G_AssignPlayerSkin(edict_t *ent, const char *s);
 
 team_t PickTeam(int ignoreClientNum);
-void BroadcastTeamChange(edict_t *ent, int old_team, bool inactive);
-bool AllowTeamSwitch(int client_num, int new_team);
+void BroadcastTeamChange(edict_t *ent, int old_team, bool inactive, bool silent);
 bool AllowClientTeamSwitch(edict_t *ent);
-int8_t TeamCount(int8_t ignore_client_num, team_t team);
+int TeamBalance();
+void Cmd_ReadyUp_f(edict_t *ent);
 
 //
-// g_items.c
+// g_items.cpp
 //
 void		QuadHog_DoSpawn(edict_t *ent);
 void		QuadHog_DoReset(edict_t *ent);
@@ -2269,7 +2218,7 @@ gitem_t		*FindItem(const char *pickup_name);
 gitem_t		*FindItemByClassname(const char *classname);
 edict_t		*Drop_Item(edict_t *ent, gitem_t *item);
 void		SetRespawn(edict_t *ent, gtime_t delay, bool hide_self = true);
-void		ChangeWeapon(edict_t *ent);
+void		Change_Weapon(edict_t *ent);
 bool		SpawnItem(edict_t *ent, gitem_t *item);
 void		Think_Weapon(edict_t *ent);
 item_id_t	ArmorIndex(edict_t *ent);
@@ -2280,16 +2229,15 @@ gitem_t		*GetItemByPowerup(powerup_t powerup);
 bool		Add_Ammo(edict_t *ent, gitem_t *item, int count);
 void		G_CheckPowerArmor(edict_t *ent);
 void		Touch_Item(edict_t *ent, edict_t *other, const trace_t &tr, bool other_touching_self);
-//void		FinishSpawningItem(edict_t *ent);
 void		P_ToggleFlashlight(edict_t *ent, bool state);
 bool		Entity_IsVisibleToPlayer(edict_t *ent, edict_t *player);
 void		Compass_Update(edict_t *ent, bool first);
 item_id_t	DoRandomRespawn(edict_t *ent);
 void		RespawnItem(edict_t *ent);
-void		fire_doppleganger(edict_t *ent, const vec3_t &start, const vec3_t &aimdir);
+void		fire_doppelganger(edict_t *ent, const vec3_t &start, const vec3_t &aimdir);
 
 //
-// g_utils.c
+// g_utils.cpp
 //
 bool KillBox(edict_t *ent, bool from_spawning, mod_id_t mod = MOD_TELEFRAG, bool bsp_clipping = true);
 edict_t *G_Find(edict_t *from, std::function<bool(edict_t *e)> matcher);
@@ -2328,32 +2276,33 @@ char *G_CopyString(const char *in, int32_t tag);
 
 void G_PlayerNotifyGoal(edict_t *player);
 
-const char *Teams_TeamName(int team);
-const char *Teams_OtherTeamName(int team);
+const char *Teams_TeamName(team_t team);
+const char *Teams_OtherTeamName(team_t team);
 int Teams_OtherTeamNum(team_t team);
 bool Teams();
 void G_AdjustPlayerScore(gclient_t *cl, int32_t offset, bool adjust_team, int32_t team_offset);
 void Horde_AdjustPlayerScore(gclient_t *cl, int32_t offset);
 void G_SetPlayerScore(gclient_t *cl, int32_t value);
-void G_AdjustTeamScore(int team, int32_t offset);
-void G_SetTeamScore(int team, int32_t value);
+void G_AdjustTeamScore(team_t team, int32_t offset);
+void G_SetTeamScore(team_t team, int32_t value);
 const char *G_PlaceString(int rank);
 bool ItemSpawnsEnabled();
 bool loc_CanSee(edict_t *targ, edict_t *inflictor);
-bool SetTeam(edict_t *ent, team_t desired_team, bool inactive, bool force);
+bool SetTeam(edict_t *ent, team_t desired_team, bool inactive, bool force, bool silent);
 const char *G_TimeString(const int64_t msec);
 const char *G_TimeStringMs(const int64_t msec);
 void BroadcastSpectatorMessage(const char *msg);
+void BroadcastTeamMessage(team_t team, const char *msg);
 team_t StringToTeamNum(const char *in);
 
 //
-// g_spawn.c
+// g_spawn.cpp
 //
 void  ED_CallSpawn(edict_t *ent);
 char *ED_NewString(char *string);
 
 //
-// g_target.c
+// g_target.cpp
 //
 void target_laser_think(edict_t *self);
 void target_laser_off(edict_t *self);
@@ -2382,13 +2331,14 @@ enum damageflags_t {
 	DAMAGE_DESTROY_ARMOR	= 0x00000040,	// damage is done to armor and health.
 	DAMAGE_NO_REG_ARMOR		= 0x00000080,	// damage skips regular armor
 	DAMAGE_NO_POWER_ARMOR	= 0x00000100,	// damage skips power armor
-	DAMAGE_NO_INDICATOR		= 0x00000200	// for clients: no damage indicators
+	DAMAGE_NO_INDICATOR		= 0x00000200,	// for clients: no damage indicators
+	DAMAGE_STAT_ONCE		= 0x00000400	// only add as a hit to player stats once
 };
 
 MAKE_ENUM_BITFLAGS(damageflags_t);
 
 //
-// g_combat.c
+// g_combat.cpp
 //
 bool OnSameTeam(edict_t *ent1, edict_t *ent2);
 bool CanDamage(edict_t *targ, edict_t *inflictor);
@@ -2409,7 +2359,7 @@ constexpr int32_t DEFAULT_SHOTGUN_VSPREAD = 500;
 constexpr int32_t DEFAULT_SSHOTGUN_COUNT = 20;
 
 //
-// g_func.c
+// g_func.cpp
 //
 void train_use(edict_t *self, edict_t *other, edict_t *activator);
 void func_train_find(edict_t *self);
@@ -2426,7 +2376,7 @@ constexpr spawnflags_t SPAWNFLAG_TRAIN_MOVE_TEAMCHAIN = 8_spawnflag;
 constexpr spawnflags_t SPAWNFLAG_DOOR_REVERSE = 2_spawnflag;
 
 //
-// g_monster.c
+// g_monster.cpp
 //
 void monster_muzzleflash(edict_t *self, const vec3_t &start, monster_muzzleflash_id_t id);
 void monster_fire_bullet(edict_t *self, const vec3_t &start, const vec3_t &dir, int damage, int kick, int hspread,
@@ -2515,7 +2465,7 @@ constexpr spawnflags_t SPAWNFLAG_FIXBOT_LANDING = 16_spawnflag;
 constexpr spawnflags_t SPAWNFLAG_FIXBOT_WORKING = 32_spawnflag;
 
 //
-// g_misc.c
+// g_misc.cpp
 //
 void ThrowClientHead(edict_t *self, int damage);
 void gib_die(edict_t *self, edict_t *inflictor, edict_t *attacker, int damage, const vec3_t &point, const mod_t &mod);
@@ -2536,7 +2486,7 @@ constexpr spawnflags_t SPAWNFLAG_POINT_COMBAT_HOLD = 1_spawnflag;
 constexpr size_t CLOCK_MESSAGE_SIZE = 9;
 
 //
-// g_ai.c
+// g_ai.cpp
 //
 edict_t *AI_GetSightClient(edict_t *self);
 
@@ -2564,7 +2514,7 @@ bool FacingIdeal(edict_t *self);
 bool M_CheckAttack_Base(edict_t *self, float stand_ground_chance, float melee_chance, float near_chance, float mid_chance, float far_chance, float strafe_scalar);
 
 //
-// g_weapon.c
+// g_weapon.cpp
 //
 void Weapon_Stats_Hit(gclient_t *cl, mod_t mod);
 bool fire_hit(edict_t *self, vec3_t aim, int damage, int kick);
@@ -2582,7 +2532,7 @@ void fire_greenblaster(edict_t *self, const vec3_t &start, const vec3_t &aimdir,
 void Grenade_Explode(edict_t *ent);
 void fire_grenade(edict_t *self, const vec3_t &start, const vec3_t &aimdir, int damage, int speed, gtime_t timer,
 	float damage_radius, float right_adjust, float up_adjust, bool monster);
-void fire_grenade2(edict_t *self, const vec3_t &start, const vec3_t &aimdir, int damage, int speed, gtime_t timer,
+void fire_handgrenade(edict_t *self, const vec3_t &start, const vec3_t &aimdir, int damage, int speed, gtime_t timer,
 	float damage_radius, bool held);
 void rocket_touch(edict_t *ent, edict_t *other, const trace_t &tr, bool other_touching_self);
 edict_t *fire_rocket(edict_t *self, const vec3_t &start, const vec3_t &dir, int damage, int speed, float damage_radius,
@@ -2640,14 +2590,14 @@ struct pierce_args_t {
 void pierce_trace(const vec3_t &start, const vec3_t &end, edict_t *ignore, pierce_args_t &pierce, contents_t mask);
 
 //
-// g_ptrail.c
+// g_ptrail.cpp
 //
 void PlayerTrail_Add(edict_t *player);
 void PlayerTrail_Destroy(edict_t *player);
 edict_t *PlayerTrail_Pick(edict_t *self, bool next);
 
 //
-// g_client.c
+// g_client.cpp
 //
 constexpr spawnflags_t SPAWNFLAG_CHANGELEVEL_CLEAR_INVENTORY = 8_spawnflag;
 constexpr spawnflags_t SPAWNFLAG_CHANGELEVEL_NO_END_OF_UNIT = 16_spawnflag;
@@ -2670,18 +2620,18 @@ void P_SendLevelPOI(edict_t *ent);
 unsigned int P_GetLobbyUserNum(const edict_t *player);
 void G_UpdateLevelEntry();
 void G_EndOfUnitMessage();
-bool	 SelectSpawnPoint(edict_t *ent, vec3_t &origin, vec3_t &angles, bool force_spawn, bool &landmark);
+bool SelectSpawnPoint(edict_t *ent, vec3_t &origin, vec3_t &angles, bool force_spawn, bool &landmark);
 
 struct select_spawn_result_t {
 	edict_t *spot;
 	bool		any_valid = false; // set if a spawn point was found, even if it was taken
 };
 
-select_spawn_result_t SelectDeathmatchSpawnPoint(vec3_t avoid_point, bool farthest, bool force_spawn, bool fallback_to_ctf_or_start, bool intermission);
+select_spawn_result_t SelectDeathmatchSpawnPoint(edict_t *ent, vec3_t avoid_point, int mode, bool force_spawn, bool fallback_to_ctf_or_start, bool intermission, bool initial);
 void G_PostRespawn(edict_t *self);
 
 //
-// g_ctf.c
+// g_ctf.cpp
 //
 bool CTF_PickupFlag(edict_t *ent, edict_t *other);
 void CTF_DropFlag(edict_t *ent, gitem_t *item);
@@ -2695,30 +2645,30 @@ void CTF_CheckHurtCarrier(edict_t *targ, edict_t *attacker);
 
 
 //
-// g_menu.c
+// g_menu.cpp
 //
 void G_Menu_Join_Open(edict_t *ent);
 
 //
-// g_player.c
+// g_player.cpp
 //
 void player_die(edict_t *self, edict_t *inflictor, edict_t *attacker, int damage, const vec3_t &point, const mod_t &mod);
 
 //
-// g_svcmds.c
+// g_svcmds.cpp
 //
 void ServerCommand();
 bool G_FilterPacket(const char *from);
 
 //
-// p_view.c
+// p_view.cpp
 //
 void ClientEndServerFrame(edict_t *ent);
 void G_LagCompensate(edict_t *from_player, const vec3_t &start, const vec3_t &dir);
 void G_UnLagCompensate();
 
 //
-// p_hud.c
+// p_hud.cpp
 //
 void MoveClientToIntermission(edict_t *ent);
 void G_SetStats(edict_t *ent);
@@ -2731,13 +2681,11 @@ void TeamsScoreboardMessage(edict_t *ent, edict_t *killer);
 void G_ReportMatchDetails(bool is_end);
 
 //
-// p_weapon.c
+// p_weapon.cpp
 //
 void PlayerNoise(edict_t *who, const vec3_t &where, player_noise_t type);
 void P_ProjectSource(edict_t *ent, const vec3_t &angles, vec3_t distance, vec3_t &result_start, vec3_t &result_dir);
 void NoAmmoWeaponChange(edict_t *ent, bool sound);
-void G_RemoveAmmo(edict_t *ent);
-void G_RemoveAmmo(edict_t *ent, int32_t quantity);
 void Weapon_Generic(edict_t *ent, int FRAME_ACTIVATE_LAST, int FRAME_FIRE_LAST, int FRAME_IDLE_LAST,
 	int FRAME_DEACTIVATE_LAST, const int *pause_frames, const int *fire_frames,
 	void (*fire)(edict_t *ent));
@@ -2747,7 +2695,7 @@ void Throw_Generic(edict_t *ent, int FRAME_FIRE_LAST, int FRAME_IDLE_LAST, int F
 	const char *prime_sound, int FRAME_THROW_HOLD, int FRAME_THROW_FIRE, const int *pause_frames,
 	int EXPLODE, const char *primed_sound, void (*fire)(edict_t *ent, bool held), bool extra_idle_frame);
 byte P_DamageModifier(edict_t *ent);
-bool G_CheckInfiniteAmmo(gitem_t *item);
+bool InfiniteAmmoOn(gitem_t *item);
 void Weapon_PowerupSound(edict_t *ent);
 
 // GRAPPLE
@@ -2757,7 +2705,6 @@ void Weapon_Grapple_Pull(edict_t *self);
 
 // HOOK
 void Weapon_Hook(edict_t *ent);
-void Weapon_Hook_Pull(edict_t *self);
 
 constexpr gtime_t GRENADE_TIMER = 3_sec;
 constexpr float GRENADE_MINSPEED = 400.f;
@@ -2769,7 +2716,7 @@ extern player_muzzle_t is_silenced;
 extern byte damage_multiplier;
 
 //
-// m_move.c
+// m_move.cpp
 //
 bool M_CheckBottom_Fast_Generic(const vec3_t &absmins, const vec3_t &absmaxs, bool ceiling);
 bool M_CheckBottom_Slow_Generic(const vec3_t &origin, const vec3_t &absmins, const vec3_t &absmaxs, edict_t *ignore, contents_t mask, bool ceiling, bool allow_any_step_height);
@@ -2781,7 +2728,7 @@ void M_ChangeYaw(edict_t *ent);
 bool ai_check_move(edict_t *self, float dist);
 
 //
-// g_phys.c
+// g_phys.cpp
 //
 constexpr float g_friction = 6;
 constexpr float g_waterfriction = 1;
@@ -2796,21 +2743,22 @@ contents_t	G_GetClipMask(edict_t *ent);
 void		G_Impact(edict_t *e1, const trace_t &trace);
 
 //
-// g_main.c
+// g_main.cpp
 //
 void SaveClientData();
 void FetchClientEntData(edict_t *ent);
 void Match_Start();
 void Match_End();
 void Match_Reset();
+void SetIntermissionPoint(void);
 void FindIntermissionPoint(void);
 void CalculateRanks();
-void CheckExitRules();
+void CheckDMExitRules();
 void GT_Change(int gt);
 int GT_ScoreLimit();
 const char *GT_ScoreLimitString();
 void G_RevertVote(gclient_t *client);
-void Cmd_Vote_Passed();
+void Vote_Passed();
 void ExitLevel();
 void Teams_CalcRankings(std::array<uint32_t, MAX_CLIENTS> &player_ranks); // [Paril-KEX]
 void ReadyAll();
@@ -2818,22 +2766,25 @@ void UnReadyAll();
 void QueueIntermission(const char *msg, bool boo, bool reset);
 void Match_Reset();
 int MQ_Count();
-bool MQ_Add(const char *mapname);
+bool MQ_Add(edict_t *ent, const char *mapname);
 edict_t *CreateTargetChangeLevel(const char *map);
+bool InAMatch();
 
 //
-// g_chase.c
+// g_chase.cpp
 //
+void FreeFollower(edict_t *ent);
+void FreeClientFollowers(edict_t *ent);
 void UpdateChaseCam(edict_t *ent);
-void ChaseNext(edict_t *ent);
-void ChasePrev(edict_t *ent);
-void GetChaseTarget(edict_t *ent);
+void FollowNext(edict_t *ent);
+void FollowPrev(edict_t *ent);
+void GetFollowTarget(edict_t *ent);
 
 //====================
 // ROGUE PROTOTYPES
 
 //
-// g_rogue_newai.c
+// g_rogue_newai.cpp
 //
 bool	 blocked_checkplat(edict_t *self, float dist);
 
@@ -2888,19 +2839,18 @@ void	 SpawnGrow_Spawn(const vec3_t &startpos, float start_size, float end_size);
 void	 Widowlegs_Spawn(const vec3_t &startpos, const vec3_t &angles);
 
 //
-// g_rogue_sphere.c
+// g_rogue_sphere.cpp
 //
 void Defender_Launch(edict_t *self);
 void Vengeance_Launch(edict_t *self);
 void Hunter_Launch(edict_t *self);
 
 //
-// p_client.c
+// p_client.cpp
 //
 void RemoveAttackingPainDaemons(edict_t *self);
 bool G_ShouldPlayersCollide(bool weaponry);
 bool P_UseCoopInstancedItems();
-int TeamConnectedCount(int ignore_client_num, team_t team);
 
 constexpr spawnflags_t SPAWNFLAG_LANDMARK_KEEP_Z = 1_spawnflag;
 
@@ -3099,6 +3049,7 @@ struct client_respawn_t {
 
 	int32_t				kill_count;	// for rampage award, reset on respawn
 
+	bool				showed_motd;
 	bool				showed_help;
 
 	int					rank;
@@ -3241,9 +3192,8 @@ struct gclient_t {
 	gtime_t respawn_min_time; // can't respawn before time > this
 	gtime_t respawn_time; // can respawn when time > this
 
-	edict_t *chase_target; // player we are chasing
-	bool	chase_thirdperson;
-	bool	 update_chase; // need to update chase info?
+	edict_t *follow_target; // player we are following
+	bool	 follow_update; // need to update follow info?
 
 	gtime_t ir_time;
 	gtime_t nuke_time;
@@ -3340,7 +3290,6 @@ struct gclient_t {
 	int			last_match_timer_update;
 
 	client_match_stats_t mstats;
-	bool hit_target;
 
 	gtime_t		initial_menu_delay;
 	bool		initial_menu_shown;
@@ -3580,19 +3529,21 @@ struct edict_t {
 	const char *notfree;
 
 	gvec3_t		origin2;
+
+	bool		skip;
 //-muff
 
 	// team for spawn spot
 	team_t		fteam;
 };
 
-constexpr spawnflags_t SPHERE_DEFENDER = 0x0001_spawnflag;
-constexpr spawnflags_t SPHERE_HUNTER = 0x0002_spawnflag;
-constexpr spawnflags_t SPHERE_VENGEANCE = 0x0004_spawnflag;
-constexpr spawnflags_t SPHERE_DOPPLEGANGER = 0x10000_spawnflag;
+constexpr spawnflags_t SF_SPHERE_DEFENDER	= 0x0001_spawnflag;
+constexpr spawnflags_t SF_SPHERE_HUNTER		= 0x0002_spawnflag;
+constexpr spawnflags_t SF_SPHERE_VENGEANCE	= 0x0004_spawnflag;
+constexpr spawnflags_t SF_DOPPELGANGER		= 0x10000_spawnflag;
 
-constexpr spawnflags_t SPHERE_TYPE = SPHERE_DEFENDER | SPHERE_HUNTER | SPHERE_VENGEANCE;
-constexpr spawnflags_t SPHERE_FLAGS = SPHERE_DOPPLEGANGER;
+constexpr spawnflags_t SF_SPHERE_TYPE = SF_SPHERE_DEFENDER | SF_SPHERE_HUNTER | SF_SPHERE_VENGEANCE;
+constexpr spawnflags_t SF_SPHERE_FLAGS = SF_DOPPELGANGER;
 
 struct dm_game_rt {
 	void (*GameInit)();
@@ -3606,7 +3557,7 @@ struct dm_game_rt {
 	void (*PlayerDisconnect)(edict_t *ent);
 	int (*ChangeDamage)(edict_t *targ, edict_t *attacker, int damage, mod_t mod);
 	int (*ChangeKnockback)(edict_t *targ, edict_t *attacker, int knockback, mod_t mod);
-	int (*CheckExitRules)();
+	int (*CheckDMExitRules)();
 };
 
 // [Paril-KEX]
@@ -3739,10 +3690,21 @@ public:
 	inline entity_iterator_t<TFilter> end() const { return end_index; }
 };
 
+// inuse clients that are connected; may not be spawned yet, however
+struct active_clients_filter_t {
+	inline bool operator()(edict_t *ent) const {
+		return (ent->inuse && ent->client && ent->client->pers.connected);
+	}
+};
+
+inline entity_iterable_t<active_clients_filter_t> active_clients() {
+	return entity_iterable_t<active_clients_filter_t> { 1u, game.maxclients };
+}
+
 // inuse players that are connected; may not be spawned yet, however
 struct active_players_filter_t {
 	inline bool operator()(edict_t *ent) const {
-		return (ent->inuse && ent->client && ent->client->pers.connected);
+		return (ent->inuse && ent->client && ent->client->pers.connected && ClientIsPlaying(ent->client));
 	}
 };
 

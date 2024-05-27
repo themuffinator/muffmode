@@ -124,7 +124,6 @@ enum
 	FRAME_stand33,
 	FRAME_stand34,
 	FRAME_stand35,
-	// ROGUE
 	FRAME_jump01,
 	FRAME_jump02,
 	FRAME_jump03,
@@ -133,7 +132,6 @@ enum
 	FRAME_jump06,
 	FRAME_jump07,
 	FRAME_jump08
-	// ROGUE
 };
 
 constexpr float MODEL_SCALE = 1.000000f;

@@ -271,10 +271,35 @@ void M_WorldEffects(edict_t *ent) {
 						gi.sound(ent, CHAN_BODY, gi.soundindex("player/lava2.wav"), 1, ATTN_NORM, 0);
 				} else
 					gi.sound(ent, CHAN_BODY, gi.soundindex("player/watr_in.wav"), 1, ATTN_NORM, 0);
-			} else if (ent->watertype & CONTENTS_SLIME)
+
+				gi.WriteByte(svc_temp_entity);
+				gi.WriteByte(TE_SPLASH);
+				gi.WriteByte(32);
+				gi.WritePosition(ent->s.origin);
+				gi.WriteDir(ent->movedir);
+				gi.WriteByte(5);
+				gi.multicast(ent->s.origin, MULTICAST_PVS, false);
+			} else if (ent->watertype & CONTENTS_SLIME) {
 				gi.sound(ent, CHAN_BODY, gi.soundindex("player/watr_in.wav"), 1, ATTN_NORM, 0);
-			else if (ent->watertype & CONTENTS_WATER)
+
+				gi.WriteByte(svc_temp_entity);
+				gi.WriteByte(TE_SPLASH);
+				gi.WriteByte(32);
+				gi.WritePosition(ent->s.origin);
+				gi.WriteDir(ent->movedir);
+				gi.WriteByte(4);
+				gi.multicast(ent->s.origin, MULTICAST_PVS, false);
+			} else if (ent->watertype & CONTENTS_WATER) {
 				gi.sound(ent, CHAN_BODY, gi.soundindex("player/watr_in.wav"), 1, ATTN_NORM, 0);
+
+				gi.WriteByte(svc_temp_entity);
+				gi.WriteByte(TE_SPLASH);
+				gi.WriteByte(32);
+				gi.WritePosition(ent->s.origin);
+				gi.WriteDir(ent->movedir);
+				gi.WriteByte(2);
+				gi.multicast(ent->s.origin, MULTICAST_PVS, false);
+			}
 
 			ent->flags |= FL_INWATER;
 			ent->damage_debounce_time = 0_ms;
@@ -413,7 +438,7 @@ void M_SetAnimation(edict_t *self, const save_mmove_t &move, bool instant) {
 	self->monsterinfo.next_move = move;
 }
 
-void M_MoveFrame(edict_t *self) {
+static void M_MoveFrame(edict_t *self) {
 	const mmove_t *move = self->monsterinfo.active_move.pointer();
 
 	// [Paril-KEX] high tick rate adjustments;
@@ -551,7 +576,6 @@ void M_ProcessPain(edict_t *e) {
 		return;
 
 	if (e->health <= 0) {
-		// ROGUE
 		if (e->monsterinfo.aiflags & AI_MEDIC) {
 			if (e->enemy && e->enemy->inuse && (e->enemy->svflags & SVF_MONSTER)) // god, I hope so
 			{
@@ -561,13 +585,11 @@ void M_ProcessPain(edict_t *e) {
 			// clean up self
 			e->monsterinfo.aiflags &= ~AI_MEDIC;
 		}
-		// ROGUE
 
 		if (!e->deadflag) {
 			e->enemy = e->monsterinfo.damage_attacker;
 
-			// ROGUE
-			// ROGUE - free up slot for spawned monster if it's spawned
+			// free up slot for spawned monster if it's spawned
 			if (e->monsterinfo.aiflags & AI_SPAWNED_CARRIER) {
 				if (e->monsterinfo.commander && e->monsterinfo.commander->inuse &&
 					!strcmp(e->monsterinfo.commander->classname, "monster_carrier"))
@@ -897,7 +919,7 @@ USE(monster_use) (edict_t *self, edict_t *other, edict_t *activator) -> void {
 
 void monster_start_go(edict_t *self);
 
-THINK(monster_triggered_spawn) (edict_t *self) -> void {
+static THINK(monster_triggered_spawn) (edict_t *self) -> void {
 	self->s.origin[2] += 1;
 
 	self->solid = SOLID_BBOX;
@@ -951,14 +973,14 @@ static USE(monster_triggered_spawn_use) (edict_t *self, edict_t *other, edict_t 
 	}
 }
 
-THINK(monster_triggered_think) (edict_t *self) -> void {
+static THINK(monster_triggered_think) (edict_t *self) -> void {
 	if (!(self->monsterinfo.aiflags & AI_DO_NOT_COUNT))
 		gi.Draw_Bounds(self->absmin, self->absmax, rgba_blue, gi.frame_time_s, false);
 
 	self->nextthink = level.time + 1_ms;
 }
 
-void monster_triggered_start(edict_t *self) {
+static void monster_triggered_start(edict_t *self) {
 	self->solid = SOLID_NOT;
 	self->movetype = MOVETYPE_NONE;
 	self->svflags |= SVF_NOCLIENT;
@@ -1019,7 +1041,7 @@ void monster_death_use(edict_t *self) {
 
 // [Paril-KEX] adjust the monster's health from how
 // many active players we have
-void G_Monster_ScaleCoopHealth(edict_t *self) {
+static void G_Monster_ScaleCoopHealth(edict_t *self) {
 	// already scaled
 	if (self->monsterinfo.health_scaling >= level.coop_scale_players)
 		return;
@@ -1075,11 +1097,9 @@ bool monster_start(edict_t *self) {
 	if (self->monsterinfo.aiflags & AI_GOOD_GUY)
 		self->monsterinfo.aiflags |= AI_DO_NOT_COUNT;
 
-	// ROGUE
 	if (!(self->monsterinfo.aiflags & AI_DO_NOT_COUNT) && !self->spawnflags.has(SPAWNFLAG_MONSTER_DEAD)) {
 		if (g_debug_monster_kills->integer)
 			level.monsters_registered[level.total_monsters] = self;
-		// ROGUE
 		level.total_monsters++;
 	}
 
@@ -1351,7 +1371,7 @@ void monster_start_go(edict_t *self) {
 	}
 }
 
-THINK(walkmonster_start_go) (edict_t *self) -> void {
+static THINK(walkmonster_start_go) (edict_t *self) -> void {
 	if (!self->yaw_speed)
 		self->yaw_speed = 20;
 
@@ -1366,7 +1386,7 @@ void walkmonster_start(edict_t *self) {
 	monster_start(self);
 }
 
-THINK(flymonster_start_go) (edict_t *self) -> void {
+static THINK(flymonster_start_go) (edict_t *self) -> void {
 	if (!self->yaw_speed)
 		self->yaw_speed = 30;
 
@@ -1382,7 +1402,7 @@ void flymonster_start(edict_t *self) {
 	monster_start(self);
 }
 
-THINK(swimmonster_start_go) (edict_t *self) -> void {
+static THINK(swimmonster_start_go) (edict_t *self) -> void {
 	if (!self->yaw_speed)
 		self->yaw_speed = 30;
 
@@ -1398,7 +1418,7 @@ void swimmonster_start(edict_t *self) {
 	monster_start(self);
 }
 
-USE(trigger_health_relay_use) (edict_t *self, edict_t *other, edict_t *activator) -> void {
+static USE(trigger_health_relay_use) (edict_t *self, edict_t *other, edict_t *activator) -> void {
 	float percent_health = clamp((float)(other->health) / (float)(other->max_health), 0.f, 1.f);
 
 	// not ready to trigger yet
@@ -1516,7 +1536,7 @@ void dabeam_update(edict_t *self, bool damage) {
 
 constexpr spawnflags_t SPAWNFLAG_DABEAM_SECONDARY = 1_spawnflag;
 
-THINK(beam_think) (edict_t *self) -> void {
+static THINK(beam_think) (edict_t *self) -> void {
 	if (self->spawnflags.has(SPAWNFLAG_DABEAM_SECONDARY))
 		self->owner->beam2 = nullptr;
 	else
@@ -1571,7 +1591,7 @@ void monster_fire_heatbeam(edict_t *self, const vec3_t &start, const vec3_t &dir
 
 void stationarymonster_start_go(edict_t *self);
 
-THINK(stationarymonster_triggered_spawn) (edict_t *self) -> void {
+static THINK(stationarymonster_triggered_spawn) (edict_t *self) -> void {
 	self->solid = SOLID_BBOX;
 	self->movetype = MOVETYPE_NONE;
 	self->svflags &= ~SVF_NOCLIENT;
@@ -1595,7 +1615,7 @@ THINK(stationarymonster_triggered_spawn) (edict_t *self) -> void {
 	}
 }
 
-USE(stationarymonster_triggered_spawn_use) (edict_t *self, edict_t *other, edict_t *activator) -> void {
+static USE(stationarymonster_triggered_spawn_use) (edict_t *self, edict_t *other, edict_t *activator) -> void {
 	// we have a one frame delay here so we don't telefrag the guy who activated us
 	self->think = stationarymonster_triggered_spawn;
 	self->nextthink = level.time + FRAME_TIME_S;
@@ -1604,7 +1624,7 @@ USE(stationarymonster_triggered_spawn_use) (edict_t *self, edict_t *other, edict
 	self->use = monster_use;
 }
 
-void stationarymonster_triggered_start(edict_t *self) {
+static void stationarymonster_triggered_start(edict_t *self) {
 	self->solid = SOLID_NOT;
 	self->movetype = MOVETYPE_NONE;
 	self->svflags |= SVF_NOCLIENT;
@@ -1640,4 +1660,3 @@ void monster_done_dodge(edict_t *self) {
 int32_t M_SlotsLeft(edict_t *self) {
 	return self->monsterinfo.monster_slots - self->monsterinfo.monster_used;
 }
-// ROGUE

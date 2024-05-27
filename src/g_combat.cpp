@@ -138,8 +138,8 @@ static bool Match_CanDamage() {
 		return false;
 
 	switch (level.match_state) {
-	case MS_MATCH_COUNTDOWN:
-	case MS_MATCH_ENDED:
+	case MATCH_COUNTDOWN:
+	case MATCH_ENDED:
 		return false;
 	}
 
@@ -591,7 +591,7 @@ void T_Damage(edict_t *targ, edict_t *inflictor, edict_t *attacker, const vec3_t
 	client = targ->client;
 
 	// PMM - defender sphere takes half damage
-	if (damage && (client) && (client->owned_sphere) && (client->owned_sphere->spawnflags == SPHERE_DEFENDER)) {
+	if (damage && (client) && (client->owned_sphere) && (client->owned_sphere->spawnflags == SF_SPHERE_DEFENDER)) {
 		damage /= 2;
 		if (!damage)
 			damage = 1;
@@ -649,8 +649,13 @@ void T_Damage(edict_t *targ, edict_t *inflictor, edict_t *attacker, const vec3_t
 		}
 	}
 
-	if (targ != attacker && attacker->client && !OnSameTeam(targ, attacker) && !attacker->client->hit_target) {
-		attacker->client->hit_target = true;
+	if (g_matchstats->integer && level.match_state == MATCH_IN_PROGRESS) {
+		if (targ != attacker && attacker->client && !OnSameTeam(targ, attacker)) {
+			if ((!inflictor->skip && (dflags & DAMAGE_STAT_ONCE)) || !(dflags & DAMAGE_STAT_ONCE)) {
+				attacker->client->mstats.total_hits++;
+				inflictor->skip = true;
+			}
+		}
 	}
 
 	take = damage;
@@ -715,7 +720,7 @@ void T_Damage(edict_t *targ, edict_t *inflictor, edict_t *attacker, const vec3_t
 		SpawnDamage(te_sparks, point, normal, save);
 	}
 
-	if (g_vampiric_damage->integer && attacker != targ && !OnSameTeam(targ, attacker) && take > 0) {
+	if (g_vampiric_damage->integer && targ->health > 0 && attacker != targ && !OnSameTeam(targ, attacker) && take > 0) {
 		int vtake = take;
 		int hmax = g_vampiric_health_max->integer;
 
@@ -806,7 +811,7 @@ void T_Damage(edict_t *targ, edict_t *inflictor, edict_t *attacker, const vec3_t
 		if (!((targ->svflags & SVF_DEADMONSTER) || (targ->flags & FL_NO_DAMAGE_EFFECTS)) && mod.id != MOD_TARGET_LASER) {
 			attacker->client->ps.stats[STAT_HIT_MARKER] += take + psave + asave;
 		}
-		if (g_matchstats->integer) {
+		if (g_matchstats->integer && level.match_state == MATCH_IN_PROGRESS) {
 			attacker->client->mstats.total_dmg_dealt += stat_take + psave + asave;
 
 			if (targ->client)
@@ -830,7 +835,7 @@ void T_Damage(edict_t *targ, edict_t *inflictor, edict_t *attacker, const vec3_t
 				SpawnDamage(te_sparks, point, normal, take);
 		}
 
-		if (level.match_state != MS_MATCH_COUNTDOWN)
+		if (level.match_state != MATCH_COUNTDOWN)
 			targ->health = targ->health - take;
 
 		if ((targ->flags & FL_IMMORTAL) && targ->health <= 0)

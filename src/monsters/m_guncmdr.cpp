@@ -22,18 +22,15 @@ static cached_soundindex sound_open;
 static cached_soundindex sound_search;
 static cached_soundindex sound_sight;
 
-void guncmdr_idlesound(edict_t *self)
-{
+static void guncmdr_idlesound(edict_t *self) {
 	gi.sound(self, CHAN_VOICE, sound_idle, 1, ATTN_IDLE, 0);
 }
 
-MONSTERINFO_SIGHT(guncmdr_sight) (edict_t *self, edict_t *other) -> void
-{
+MONSTERINFO_SIGHT(guncmdr_sight) (edict_t *self, edict_t *other) -> void {
 	gi.sound(self, CHAN_VOICE, sound_sight, 1, ATTN_NORM, 0);
 }
 
-MONSTERINFO_SEARCH(guncmdr_search) (edict_t *self) -> void
-{
+MONSTERINFO_SEARCH(guncmdr_search) (edict_t *self) -> void {
 	gi.sound(self, CHAN_VOICE, sound_search, 1, ATTN_NORM, 0);
 }
 
@@ -107,8 +104,7 @@ mframe_t guncmdr_frames_fidget[] = {
 };
 MMOVE_T(guncmdr_move_fidget) = { FRAME_c_stand201, FRAME_c_stand254, guncmdr_frames_fidget, guncmdr_stand };
 
-void guncmdr_fidget(edict_t *self)
-{
+static void guncmdr_fidget(edict_t *self) {
 	if (self->monsterinfo.aiflags & AI_STAND_GROUND)
 		return;
 	else if (self->enemy)
@@ -164,8 +160,7 @@ mframe_t guncmdr_frames_stand[] = {
 };
 MMOVE_T(guncmdr_move_stand) = { FRAME_c_stand101, FRAME_c_stand140, guncmdr_frames_stand, nullptr };
 
-MONSTERINFO_STAND(guncmdr_stand) (edict_t *self) -> void
-{
+MONSTERINFO_STAND(guncmdr_stand) (edict_t *self) -> void {
 	M_SetAnimation(self, &guncmdr_move_stand);
 }
 
@@ -199,8 +194,7 @@ mframe_t guncmdr_frames_walk[] = {
 };
 MMOVE_T(guncmdr_move_walk) = { FRAME_c_walk101, FRAME_c_walk124, guncmdr_frames_walk, nullptr };
 
-MONSTERINFO_WALK(guncmdr_walk) (edict_t *self) -> void
-{
+MONSTERINFO_WALK(guncmdr_walk) (edict_t *self) -> void {
 	M_SetAnimation(self, &guncmdr_move_walk);
 }
 
@@ -215,8 +209,7 @@ mframe_t guncmdr_frames_run[] = {
 
 MMOVE_T(guncmdr_move_run) = { FRAME_c_run101, FRAME_c_run106, guncmdr_frames_run, nullptr };
 
-MONSTERINFO_RUN(guncmdr_run) (edict_t *self) -> void
-{
+MONSTERINFO_RUN(guncmdr_run) (edict_t *self) -> void {
 	monster_done_dodge(self);
 	if (self->monsterinfo.aiflags & AI_STAND_GROUND)
 		M_SetAnimation(self, &guncmdr_move_stand);
@@ -295,8 +288,7 @@ mframe_t guncmdr_frames_death1[] = {
 };
 MMOVE_T(guncmdr_move_death1) = { FRAME_c_death101, FRAME_c_death118, guncmdr_frames_death1, guncmdr_dead };
 
-void guncmdr_pain5_to_death1(edict_t *self)
-{
+static void guncmdr_pain5_to_death1(edict_t *self) {
 	if (self->health < 0)
 		M_SetAnimation(self, &guncmdr_move_death1, false);
 }
@@ -309,8 +301,7 @@ mframe_t guncmdr_frames_death2[] = {
 };
 MMOVE_T(guncmdr_move_death2) = { FRAME_c_death201, FRAME_c_death204, guncmdr_frames_death2, guncmdr_dead };
 
-static void guncmdr_pain5_to_death2(edict_t *self)
-{
+static void guncmdr_pain5_to_death2(edict_t *self) {
 	if (self->health < 0 && brandom())
 		M_SetAnimation(self, &guncmdr_move_death2, false);
 }
@@ -345,15 +336,13 @@ mframe_t guncmdr_frames_pain5[] = {
 };
 MMOVE_T(guncmdr_move_pain5) = { FRAME_c_pain501, FRAME_c_pain524, guncmdr_frames_pain5, guncmdr_run };
 
-void guncmdr_dead(edict_t *self)
-{
-	self->mins = vec3_t { -16, -16, -24 } * self->s.scale;
-	self->maxs = vec3_t { 16, 16, -8 } * self->s.scale;
+void guncmdr_dead(edict_t *self) {
+	self->mins = vec3_t{ -16, -16, -24 } *self->s.scale;
+	self->maxs = vec3_t{ 16, 16, -8 } *self->s.scale;
 	monster_dead(self);
 }
 
-static void guncmdr_shrink(edict_t *self)
-{
+static void guncmdr_shrink(edict_t *self) {
 	self->maxs[2] = -4 * self->s.scale;
 	self->svflags |= SVF_DEADMONSTER;
 	gi.linkentity(self);
@@ -378,8 +367,7 @@ mframe_t guncmdr_frames_death6[] = {
 };
 MMOVE_T(guncmdr_move_death6) = { FRAME_c_death601, FRAME_c_death614, guncmdr_frames_death6, guncmdr_dead };
 
-static void guncmdr_pain6_to_death6(edict_t *self)
-{
+static void guncmdr_pain6_to_death6(edict_t *self) {
 	if (self->health < 0)
 		M_SetAnimation(self, &guncmdr_move_death6, false);
 }
@@ -406,7 +394,7 @@ mframe_t guncmdr_frames_pain6[] = {
 	{ ai_move },
 	{ ai_move },
 	{ ai_move },
-	
+
 	{ ai_move },
 	{ ai_move, -6.1f },
 	{ ai_move, 10.5f },
@@ -448,17 +436,15 @@ extern const mmove_t guncmdr_move_duck_attack;
 
 bool guncmdr_sidestep(edict_t *self);
 
-static PAIN(guncmdr_pain) (edict_t *self, edict_t *other, float kick, int damage, const mod_t &mod) -> void
-{
+static PAIN(guncmdr_pain) (edict_t *self, edict_t *other, float kick, int damage, const mod_t &mod) -> void {
 	monster_done_dodge(self);
 
-	if (self->monsterinfo.active_move == &guncmdr_move_jump || 
+	if (self->monsterinfo.active_move == &guncmdr_move_jump ||
 		self->monsterinfo.active_move == &guncmdr_move_jump2 ||
 		self->monsterinfo.active_move == &guncmdr_move_duck_attack)
 		return;
 
-	if (level.time < self->pain_debounce_time)
-	{
+	if (level.time < self->pain_debounce_time) {
 		if (frandom() < 0.3)
 			self->monsterinfo.dodge(self, other, FRAME_TIME_S, nullptr, false);
 
@@ -472,8 +458,7 @@ static PAIN(guncmdr_pain) (edict_t *self, edict_t *other, float kick, int damage
 	else
 		gi.sound(self, CHAN_VOICE, sound_pain2, 1, ATTN_NORM, 0);
 
-	if (!M_ShouldReactToPain(self, mod))
-	{
+	if (!M_ShouldReactToPain(self, mod)) {
 		if (frandom() < 0.3)
 			self->monsterinfo.dodge(self, other, FRAME_TIME_S, nullptr, false);
 
@@ -488,8 +473,7 @@ static PAIN(guncmdr_pain) (edict_t *self, edict_t *other, float kick, int damage
 	dif.normalize();
 
 	// small pain
-	if (damage < 35)
-	{
+	if (damage < 35) {
 		int r = irandom(0, 4);
 
 		if (r == 0)
@@ -502,14 +486,11 @@ static PAIN(guncmdr_pain) (edict_t *self, edict_t *other, float kick, int damage
 			M_SetAnimation(self, &guncmdr_move_pain7);
 	}
 	// large pain from behind (aka Paril)
-	else if (dif.dot(forward) < -0.40f)
-	{
+	else if (dif.dot(forward) < -0.40f) {
 		M_SetAnimation(self, &guncmdr_move_pain6);
 
 		self->pain_debounce_time += 1.5_sec;
-	}
-	else
-	{
+	} else {
 		if (brandom())
 			M_SetAnimation(self, &guncmdr_move_pain4);
 		else
@@ -525,8 +506,7 @@ static PAIN(guncmdr_pain) (edict_t *self, edict_t *other, float kick, int damage
 		monster_duck_up(self);
 }
 
-MONSTERINFO_SETSKIN(guncmdr_setskin) (edict_t *self) -> void
-{
+MONSTERINFO_SETSKIN(guncmdr_setskin) (edict_t *self) -> void {
 	if (self->health < (self->max_health / 2))
 		self->s.skinnum |= 1;
 	else
@@ -544,7 +524,7 @@ mframe_t guncmdr_frames_death3[] = {
 	{ ai_move },
 	{ ai_move },
 	{ ai_move },
-	
+
 	{ ai_move },
 	{ ai_move },
 	{ ai_move },
@@ -555,7 +535,7 @@ mframe_t guncmdr_frames_death3[] = {
 	{ ai_move },
 	{ ai_move },
 	{ ai_move },
-	
+
 	{ ai_move }
 };
 MMOVE_T(guncmdr_move_death3) = { FRAME_c_death301, FRAME_c_death321, guncmdr_frames_death3, guncmdr_dead };
@@ -571,7 +551,7 @@ mframe_t guncmdr_frames_death7[] = {
 	{ ai_move },
 	{ ai_move },
 	{ ai_move },
-	
+
 	{ ai_move },
 	{ ai_move },
 	{ ai_move },
@@ -582,7 +562,7 @@ mframe_t guncmdr_frames_death7[] = {
 	{ ai_move },
 	{ ai_move },
 	{ ai_move },
-	
+
 	{ ai_move },
 	{ ai_move },
 	{ ai_move },
@@ -607,7 +587,7 @@ mframe_t guncmdr_frames_death4[] = {
 	{ ai_move },
 	{ ai_move },
 	{ ai_move },
-	
+
 	{ ai_move },
 	{ ai_move },
 	{ ai_move },
@@ -618,7 +598,7 @@ mframe_t guncmdr_frames_death4[] = {
 	{ ai_move },
 	{ ai_move },
 	{ ai_move },
-	
+
 	{ ai_move },
 	{ ai_move },
 	{ ai_move },
@@ -629,7 +609,7 @@ mframe_t guncmdr_frames_death4[] = {
 	{ ai_move },
 	{ ai_move },
 	{ ai_move },
-	
+
 	{ ai_move },
 	{ ai_move },
 	{ ai_move },
@@ -650,7 +630,7 @@ mframe_t guncmdr_frames_death5[] = {
 	{ ai_move, 2.5f },
 	{ ai_move },
 	{ ai_move },
-	
+
 	{ ai_move },
 	{ ai_move },
 	{ ai_move },
@@ -661,7 +641,7 @@ mframe_t guncmdr_frames_death5[] = {
 	{ ai_move },
 	{ ai_move },
 	{ ai_move },
-	
+
 	{ ai_move, -2.1f },
 	{ ai_move, -1.3f },
 	{ ai_move },
@@ -673,11 +653,9 @@ mframe_t guncmdr_frames_death5[] = {
 };
 MMOVE_T(guncmdr_move_death5) = { FRAME_c_death501, FRAME_c_death528, guncmdr_frames_death5, guncmdr_dead };
 
-static DIE(guncmdr_die) (edict_t *self, edict_t *inflictor, edict_t *attacker, int damage, const vec3_t &point, const mod_t &mod) -> void
-{
+static DIE(guncmdr_die) (edict_t *self, edict_t *inflictor, edict_t *attacker, int damage, const vec3_t &point, const mod_t &mod) -> void {
 	// check for gib
-	if (M_CheckGib(self, mod))
-	{
+	if (M_CheckGib(self, mod)) {
 		gi.sound(self, CHAN_VOICE, gi.soundindex("misc/udeath.wav"), 1, ATTN_NORM, 0);
 
 		const char *head_gib = (self->monsterinfo.active_move != &guncmdr_move_death5) ? "models/objects/gibs/sm_meat/tris.md2" : "models/monsters/gunner/gibs/head.md2";
@@ -693,7 +671,7 @@ static DIE(guncmdr_die) (edict_t *self, edict_t *inflictor, edict_t *attacker, i
 			{ "models/monsters/gunner/gibs/gun.md2", GIB_SKINNED | GIB_UPRIGHT },
 			{ "models/monsters/gunner/gibs/foot.md2", GIB_SKINNED },
 			{ head_gib, GIB_SKINNED | GIB_HEAD }
-		});
+			});
 		self->deadflag = true;
 		return;
 	}
@@ -723,16 +701,14 @@ static DIE(guncmdr_die) (edict_t *self, edict_t *inflictor, edict_t *attacker, i
 
 	// off with da head
 	if (fabsf((self->s.origin[2] + self->viewheight) - point[2]) <= 4 &&
-		self->velocity.z < 65.f)
-	{
+		self->velocity.z < 65.f) {
 		M_SetAnimation(self, &guncmdr_move_death5);
 
 		edict_t *head = ThrowGib(self, "models/monsters/gunner/gibs/head.md2", damage, GIB_NONE, self->s.scale);
 
-		if (head)
-		{
+		if (head) {
 			head->s.angles = self->s.angles;
-			head->s.origin = self->s.origin + vec3_t{0, 0, 24.f};
+			head->s.origin = self->s.origin + vec3_t{ 0, 0, 24.f };
 			vec3_t headDir = (self->s.origin - inflictor->s.origin);
 			head->velocity = headDir / headDir.length() * 100.0f;
 			head->velocity[2] = 200.0f;
@@ -741,8 +717,7 @@ static DIE(guncmdr_die) (edict_t *self, edict_t *inflictor, edict_t *attacker, i
 		}
 	}
 	// damage came from behind; use backwards death
-	else if (dif.dot(forward) < -0.40f)
-	{
+	else if (dif.dot(forward) < -0.40f) {
 		int r = irandom(0, self->monsterinfo.active_move == &guncmdr_move_pain6 ? 2 : 3);
 
 		if (r == 0)
@@ -751,9 +726,7 @@ static DIE(guncmdr_die) (edict_t *self, edict_t *inflictor, edict_t *attacker, i
 			M_SetAnimation(self, &guncmdr_move_death7);
 		else if (r == 2)
 			M_SetAnimation(self, &guncmdr_move_pain6);
-	}
-	else
-	{
+	} else {
 		int r = irandom(0, self->monsterinfo.active_move == &guncmdr_move_pain5 ? 1 : 2);
 
 		if (r == 0)
@@ -763,13 +736,11 @@ static DIE(guncmdr_die) (edict_t *self, edict_t *inflictor, edict_t *attacker, i
 	}
 }
 
-static void guncmdr_opengun(edict_t *self)
-{
+static void guncmdr_opengun(edict_t *self) {
 	gi.sound(self, CHAN_VOICE, sound_open, 1, ATTN_IDLE, 0);
 }
 
-static void GunnerCmdrFire(edict_t *self)
-{
+static void GunnerCmdrFire(edict_t *self) {
 	vec3_t					 start;
 	vec3_t					 forward, right;
 	vec3_t					 aim;
@@ -853,8 +824,7 @@ MMOVE_T(guncmdr_move_endfire_chain) = { FRAME_c_attack118, FRAME_c_attack124, gu
 constexpr float MORTAR_SPEED = 850.f;
 constexpr float GRENADE_SPEED = 600.f;
 
-static void GunnerCmdrGrenade(edict_t *self)
-{
+static void GunnerCmdrGrenade(edict_t *self) {
 	vec3_t					 start;
 	vec3_t					 forward, right, up;
 	vec3_t					 aim;
@@ -869,78 +839,57 @@ static void GunnerCmdrGrenade(edict_t *self)
 
 	if (self->monsterinfo.aiflags & AI_MANUAL_STEERING)
 		blindfire = true;
-	
-	if (self->s.frame == FRAME_c_attack205)
-	{
+
+	if (self->s.frame == FRAME_c_attack205) {
 		spread = -0.1f;
 		flash_number = MZ2_GUNCMDR_GRENADE_MORTAR_1;
-	}
-	else if (self->s.frame == FRAME_c_attack208)
-	{
+	} else if (self->s.frame == FRAME_c_attack208) {
 		spread = 0.f;
 		flash_number = MZ2_GUNCMDR_GRENADE_MORTAR_2;
-	}
-	else if (self->s.frame == FRAME_c_attack211)
-	{
+	} else if (self->s.frame == FRAME_c_attack211) {
 		spread = 0.1f;
 		flash_number = MZ2_GUNCMDR_GRENADE_MORTAR_3;
-	}
-	else if (self->s.frame == FRAME_c_attack304)
-	{
+	} else if (self->s.frame == FRAME_c_attack304) {
 		spread = -0.1f;
 		flash_number = MZ2_GUNCMDR_GRENADE_FRONT_1;
-	}
-	else if (self->s.frame == FRAME_c_attack307)
-	{
+	} else if (self->s.frame == FRAME_c_attack307) {
 		spread = 0.f;
 		flash_number = MZ2_GUNCMDR_GRENADE_FRONT_2;
-	}
-	else if (self->s.frame == FRAME_c_attack310)
-	{
+	} else if (self->s.frame == FRAME_c_attack310) {
 		spread = 0.1f;
 		flash_number = MZ2_GUNCMDR_GRENADE_FRONT_3;
-	}
-	else if (self->s.frame == FRAME_c_attack911)
-	{
+	} else if (self->s.frame == FRAME_c_attack911) {
 		spread = 0.25f;
 		flash_number = MZ2_GUNCMDR_GRENADE_CROUCH_1;
-	}
-	else if (self->s.frame == FRAME_c_attack912)
-	{
+	} else if (self->s.frame == FRAME_c_attack912) {
 		spread = 0.f;
 		flash_number = MZ2_GUNCMDR_GRENADE_CROUCH_2;
-	}
-	else if (self->s.frame == FRAME_c_attack913)
-	{
+	} else if (self->s.frame == FRAME_c_attack913) {
 		spread = -0.25f;
 		flash_number = MZ2_GUNCMDR_GRENADE_CROUCH_3;
 	}
 
 	// if we're shooting blind and we still can't see our enemy
-	if ((blindfire) && (!visible(self, self->enemy)))
-	{
+	if ((blindfire) && (!visible(self, self->enemy))) {
 		// and we have a valid blind_fire_target
 		if (!self->monsterinfo.blind_fire_target)
 			return;
 
 		target = self->monsterinfo.blind_fire_target;
-	}
-	else
+	} else
 		target = self->enemy->s.origin;
 
 	AngleVectors(self->s.angles, forward, right, up);
 	start = M_ProjectFlashSource(self, monster_flash_offset[flash_number], forward, right);
 
-	if (self->enemy && !(flash_number >= MZ2_GUNCMDR_GRENADE_CROUCH_1 && flash_number <= MZ2_GUNCMDR_GRENADE_CROUCH_3))
-	{
+	if (self->enemy && !(flash_number >= MZ2_GUNCMDR_GRENADE_CROUCH_1 && flash_number <= MZ2_GUNCMDR_GRENADE_CROUCH_3)) {
 		float dist;
 
 		aim = target - self->s.origin;
 		dist = aim.length();
 
 		// aim up if they're on the same level as me and far away.
-		if ((dist > 512) && (aim[2] < 64) && (aim[2] > -64))
-		{
+		if ((dist > 512) && (aim[2] < 64) && (aim[2] > -64)) {
 			aim[2] += (dist - 512);
 		}
 
@@ -958,33 +907,27 @@ static void GunnerCmdrGrenade(edict_t *self)
 	if (flash_number >= MZ2_GUNCMDR_GRENADE_FRONT_1 && flash_number <= MZ2_GUNCMDR_GRENADE_FRONT_3)
 		pitch -= 0.05f;
 
-	if (!(flash_number >= MZ2_GUNCMDR_GRENADE_CROUCH_1 && flash_number <= MZ2_GUNCMDR_GRENADE_CROUCH_3))
-	{
+	if (!(flash_number >= MZ2_GUNCMDR_GRENADE_CROUCH_1 && flash_number <= MZ2_GUNCMDR_GRENADE_CROUCH_3)) {
 		aim = forward + (right * spread);
 		aim += (up * pitch);
 		aim.normalize();
-	}
-	else
-	{
+	} else {
 		PredictAim(self, self->enemy, start, 800, false, 0.f, &aim, nullptr);
 		aim += right * spread;
 		aim.normalize();
 	}
 
-	if (flash_number >= MZ2_GUNCMDR_GRENADE_CROUCH_1 && flash_number <= MZ2_GUNCMDR_GRENADE_CROUCH_3)
-	{
+	if (flash_number >= MZ2_GUNCMDR_GRENADE_CROUCH_1 && flash_number <= MZ2_GUNCMDR_GRENADE_CROUCH_3) {
 		constexpr float inner_spread = 0.125f;
 
 		for (size_t i = 0; i < 3; i++)
 			fire_ionripper(self, start, aim + (right * (-(inner_spread * 2) + (inner_spread * (i + 1)))), 15, 800, EF_IONRIPPER);
 
 		monster_muzzleflash(self, start, flash_number);
-	}
-	else
-	{
+	} else {
 		// mortar fires farther
 		float speed;
-		
+
 		if (flash_number >= MZ2_GUNCMDR_GRENADE_MORTAR_1 && flash_number <= MZ2_GUNCMDR_GRENADE_MORTAR_3)
 			speed = MORTAR_SPEED;
 		else
@@ -1025,8 +968,7 @@ mframe_t guncmdr_frames_attack_mortar[] = {
 };
 MMOVE_T(guncmdr_move_attack_mortar) = { FRAME_c_attack201, FRAME_c_attack221, guncmdr_frames_attack_mortar, guncmdr_run };
 
-static void guncmdr_grenade_mortar_resume(edict_t *self)
-{
+static void guncmdr_grenade_mortar_resume(edict_t *self) {
 	M_SetAnimation(self, &guncmdr_move_attack_mortar);
 	self->monsterinfo.attack_state = AS_STRAIGHT;
 	self->s.frame = self->count;
@@ -1068,8 +1010,7 @@ mframe_t guncmdr_frames_attack_back[] = {
 };
 MMOVE_T(guncmdr_move_attack_grenade_back) = { FRAME_c_attack302, FRAME_c_attack321, guncmdr_frames_attack_back, guncmdr_run };
 
-void guncmdr_grenade_back_dodge_resume(edict_t *self)
-{
+static void guncmdr_grenade_back_dodge_resume(edict_t *self) {
 	M_SetAnimation(self, &guncmdr_move_attack_grenade_back);
 	self->monsterinfo.attack_state = AS_STRAIGHT;
 	self->s.frame = self->count;
@@ -1093,16 +1034,13 @@ mframe_t guncmdr_frames_attack_grenade_back_dodge_left[] = {
 };
 MMOVE_T(guncmdr_move_attack_grenade_back_dodge_left) = { FRAME_c_attack701, FRAME_c_attack705, guncmdr_frames_attack_grenade_back_dodge_left, guncmdr_grenade_back_dodge_resume };
 
-static void guncmdr_kick_finished(edict_t *self)
-{
+static void guncmdr_kick_finished(edict_t *self) {
 	self->monsterinfo.melee_debounce_time = level.time + 3_sec;
 	self->monsterinfo.attack(self);
 }
 
-static void guncmdr_kick(edict_t *self)
-{
-	if (fire_hit(self, vec3_t { MELEE_DISTANCE, 0.f, -32.f }, 15.f, 400.f))
-	{
+static void guncmdr_kick(edict_t *self) {
+	if (fire_hit(self, vec3_t{ MELEE_DISTANCE, 0.f, -32.f }, 15.f, 400.f)) {
 		if (self->enemy && self->enemy->client && self->enemy->velocity.z < 270.f)
 			self->enemy->velocity.z = 270.f;
 	}
@@ -1130,8 +1068,7 @@ constexpr float RANGE_GRENADE_MORTAR = 525.f;
 // at this range, run towards the enemy
 constexpr float RANGE_CHAINGUN_RUN = 400.f;
 
-MONSTERINFO_ATTACK(guncmdr_attack) (edict_t *self) -> void
-{
+MONSTERINFO_ATTACK(guncmdr_attack) (edict_t *self) -> void {
 	monster_done_dodge(self);
 
 	float d = range_to(self, self->enemy);
@@ -1146,40 +1083,35 @@ MONSTERINFO_ATTACK(guncmdr_attack) (edict_t *self) -> void
 	else if (self->bad_area || ((d <= RANGE_GRENADE || brandom()) && M_CheckClearShot(self, monster_flash_offset[MZ2_GUNCMDR_CHAINGUN_1])))
 		M_SetAnimation(self, &guncmdr_move_attack_chain);
 	else if ((d >= RANGE_GRENADE_MORTAR ||
-			fabs(self->absmin.z - self->enemy->absmax.z) > 64.f // enemy is far below or above us, always try mortar
-			) && M_CheckClearShot(self, monster_flash_offset[MZ2_GUNCMDR_GRENADE_MORTAR_1]) &&
-			M_CalculatePitchToFire(self, self->enemy->s.origin, M_ProjectFlashSource(self, monster_flash_offset[MZ2_GUNCMDR_GRENADE_MORTAR_1], forward, right),
-				aim = (self->enemy->s.origin - self->s.origin).normalized(), MORTAR_SPEED, 2.5f, true)
-		)
-	{
+		fabs(self->absmin.z - self->enemy->absmax.z) > 64.f // enemy is far below or above us, always try mortar
+		) && M_CheckClearShot(self, monster_flash_offset[MZ2_GUNCMDR_GRENADE_MORTAR_1]) &&
+		M_CalculatePitchToFire(self, self->enemy->s.origin, M_ProjectFlashSource(self, monster_flash_offset[MZ2_GUNCMDR_GRENADE_MORTAR_1], forward, right),
+			aim = (self->enemy->s.origin - self->s.origin).normalized(), MORTAR_SPEED, 2.5f, true)
+		) {
 		M_SetAnimation(self, &guncmdr_move_attack_mortar);
 		monster_duck_down(self);
-	}
-	else if (M_CheckClearShot(self, monster_flash_offset[MZ2_GUNCMDR_GRENADE_FRONT_1]) && !(self->monsterinfo.aiflags & AI_STAND_GROUND) &&
-			M_CalculatePitchToFire(self, self->enemy->s.origin, M_ProjectFlashSource(self, monster_flash_offset[MZ2_GUNCMDR_GRENADE_FRONT_1], forward, right),
-				aim = (self->enemy->s.origin - self->s.origin).normalized(), GRENADE_SPEED, 2.5f, false))
+	} else if (M_CheckClearShot(self, monster_flash_offset[MZ2_GUNCMDR_GRENADE_FRONT_1]) && !(self->monsterinfo.aiflags & AI_STAND_GROUND) &&
+		M_CalculatePitchToFire(self, self->enemy->s.origin, M_ProjectFlashSource(self, monster_flash_offset[MZ2_GUNCMDR_GRENADE_FRONT_1], forward, right),
+			aim = (self->enemy->s.origin - self->s.origin).normalized(), GRENADE_SPEED, 2.5f, false))
 		M_SetAnimation(self, &guncmdr_move_attack_grenade_back);
 	else if (self->monsterinfo.aiflags & AI_STAND_GROUND)
 		M_SetAnimation(self, &guncmdr_move_attack_chain);
 }
 
-void guncmdr_fire_chain(edict_t *self)
-{
+void guncmdr_fire_chain(edict_t *self) {
 	if (!(self->monsterinfo.aiflags & AI_STAND_GROUND) && self->enemy && range_to(self, self->enemy) > RANGE_CHAINGUN_RUN && ai_check_move(self, 8.0f))
 		M_SetAnimation(self, &guncmdr_move_fire_chain_run);
 	else
 		M_SetAnimation(self, &guncmdr_move_fire_chain);
 }
 
-void guncmdr_refire_chain(edict_t *self)
-{
+void guncmdr_refire_chain(edict_t *self) {
 	monster_done_dodge(self);
 	self->monsterinfo.attack_state = AS_STRAIGHT;
 
 	if (self->enemy->health > 0)
 		if (visible(self, self->enemy))
-			if (frandom() <= 0.5f)
-			{
+			if (frandom() <= 0.5f) {
 				if (!(self->monsterinfo.aiflags & AI_STAND_GROUND) && self->enemy && range_to(self, self->enemy) > RANGE_CHAINGUN_RUN && ai_check_move(self, 8.0f))
 					M_SetAnimation(self, &guncmdr_move_fire_chain_run, false);
 				else
@@ -1189,8 +1121,7 @@ void guncmdr_refire_chain(edict_t *self)
 	M_SetAnimation(self, &guncmdr_move_endfire_chain, false);
 }
 
-static void guncmdr_jump_now(edict_t *self)
-{
+static void guncmdr_jump_now(edict_t *self) {
 	vec3_t forward, up;
 
 	AngleVectors(self->s.angles, forward, nullptr, up);
@@ -1198,8 +1129,7 @@ static void guncmdr_jump_now(edict_t *self)
 	self->velocity += (up * 300);
 }
 
-static void guncmdr_jump2_now(edict_t *self)
-{
+static void guncmdr_jump2_now(edict_t *self) {
 	vec3_t forward, up;
 
 	AngleVectors(self->s.angles, forward, nullptr, up);
@@ -1207,16 +1137,13 @@ static void guncmdr_jump2_now(edict_t *self)
 	self->velocity += (up * 400);
 }
 
-static void guncmdr_jump_wait_land(edict_t *self)
-{
-	if (self->groundentity == nullptr)
-	{
+static void guncmdr_jump_wait_land(edict_t *self) {
+	if (self->groundentity == nullptr) {
 		self->monsterinfo.nextframe = self->s.frame;
 
 		if (monster_jump_finished(self))
 			self->monsterinfo.nextframe = self->s.frame + 1;
-	}
-	else
+	} else
 		self->monsterinfo.nextframe = self->s.frame + 1;
 }
 
@@ -1248,8 +1175,7 @@ mframe_t guncmdr_frames_jump2[] = {
 };
 MMOVE_T(guncmdr_move_jump2) = { FRAME_c_jump01, FRAME_c_jump10, guncmdr_frames_jump2, guncmdr_run };
 
-static void guncmdr_jump(edict_t *self, blocked_jump_result_t result)
-{
+static void guncmdr_jump(edict_t *self, blocked_jump_result_t result) {
 	if (!self->enemy)
 		return;
 
@@ -1263,8 +1189,7 @@ static void guncmdr_jump(edict_t *self, blocked_jump_result_t result)
 
 void T_SlamRadiusDamage(vec3_t point, edict_t *inflictor, edict_t *attacker, float damage, float kick, edict_t *ignore, float radius, mod_t mod);
 
-static void GunnerCmdrCounter(edict_t *self)
-{
+static void GunnerCmdrCounter(edict_t *self) {
 	gi.WriteByte(svc_temp_entity);
 	gi.WriteByte(TE_BERSERK_SLAM);
 	vec3_t f, r, start;
@@ -1293,7 +1218,7 @@ mframe_t guncmdr_frames_duck_attack[] = {
 	//{ ai_charge, 0, GunnerCmdrGrenade },
 	//{ ai_charge, 9.5f, GunnerCmdrGrenade },
 	//{ ai_charge, -1.5f, GunnerCmdrGrenade },
-	
+
 	{ ai_charge, 0 },
 	{ ai_charge, 9.5f, GunnerCmdrCounter },
 	{ ai_charge, -1.5f },
@@ -1306,11 +1231,9 @@ mframe_t guncmdr_frames_duck_attack[] = {
 };
 MMOVE_T(guncmdr_move_duck_attack) = { FRAME_c_attack901, FRAME_c_attack919, guncmdr_frames_duck_attack, guncmdr_run };
 
-MONSTERINFO_DUCK(guncmdr_duck) (edict_t *self, gtime_t eta) -> bool
-{
+MONSTERINFO_DUCK(guncmdr_duck) (edict_t *self, gtime_t eta) -> bool {
 	if ((self->monsterinfo.active_move == &guncmdr_move_jump2) ||
-		(self->monsterinfo.active_move == &guncmdr_move_jump))
-	{
+		(self->monsterinfo.active_move == &guncmdr_move_jump)) {
 		return false;
 	}
 
@@ -1318,8 +1241,7 @@ MONSTERINFO_DUCK(guncmdr_duck) (edict_t *self, gtime_t eta) -> bool
 		(self->monsterinfo.active_move == &guncmdr_move_fire_chain_dodge_right) ||
 		(self->monsterinfo.active_move == &guncmdr_move_attack_grenade_back_dodge_left) ||
 		(self->monsterinfo.active_move == &guncmdr_move_attack_grenade_back_dodge_right) ||
-		(self->monsterinfo.active_move == &guncmdr_move_attack_mortar_dodge))
-	{
+		(self->monsterinfo.active_move == &guncmdr_move_attack_mortar_dodge)) {
 		// if we're dodging, don't duck
 		self->monsterinfo.unduck(self);
 		return false;
@@ -1330,35 +1252,30 @@ MONSTERINFO_DUCK(guncmdr_duck) (edict_t *self, gtime_t eta) -> bool
 	return true;
 }
 
-MONSTERINFO_SIDESTEP(guncmdr_sidestep) (edict_t *self) -> bool
-{
+MONSTERINFO_SIDESTEP(guncmdr_sidestep) (edict_t *self) -> bool {
 	// use special dodge during the main firing anim
 	if (self->monsterinfo.active_move == &guncmdr_move_fire_chain ||
-		self->monsterinfo.active_move == &guncmdr_move_fire_chain_run)
-	{
+		self->monsterinfo.active_move == &guncmdr_move_fire_chain_run) {
 		M_SetAnimation(self, !self->monsterinfo.lefty ? &guncmdr_move_fire_chain_dodge_right : &guncmdr_move_fire_chain_dodge_left, false);
 		return true;
 	}
 
 	// for backwards mortar, back up where we are in the animation and do a quick dodge
-	if (self->monsterinfo.active_move == &guncmdr_move_attack_grenade_back)
-	{
+	if (self->monsterinfo.active_move == &guncmdr_move_attack_grenade_back) {
 		self->count = self->s.frame;
 		M_SetAnimation(self, !self->monsterinfo.lefty ? &guncmdr_move_attack_grenade_back_dodge_right : &guncmdr_move_attack_grenade_back_dodge_left, false);
 		return true;
 	}
 
 	// use crouch-move for mortar dodge
-	if (self->monsterinfo.active_move == &guncmdr_move_attack_mortar)
-	{
+	if (self->monsterinfo.active_move == &guncmdr_move_attack_mortar) {
 		self->count = self->s.frame;
 		M_SetAnimation(self, &guncmdr_move_attack_mortar_dodge, false);
 		return true;
 	}
 
 	// regular sidestep during run
-	if (self->monsterinfo.active_move == &guncmdr_move_run)
-	{
+	if (self->monsterinfo.active_move == &guncmdr_move_run) {
 		M_SetAnimation(self, &guncmdr_move_run, true);
 		return true;
 	}
@@ -1366,13 +1283,11 @@ MONSTERINFO_SIDESTEP(guncmdr_sidestep) (edict_t *self) -> bool
 	return false;
 }
 
-MONSTERINFO_BLOCKED(guncmdr_blocked) (edict_t *self, float dist) -> bool
-{
+MONSTERINFO_BLOCKED(guncmdr_blocked) (edict_t *self, float dist) -> bool {
 	if (blocked_checkplat(self, dist))
 		return true;
-	
-	if (auto result = blocked_checkjump(self, dist); result != blocked_jump_result_t::NO_JUMP)
-	{
+
+	if (auto result = blocked_checkjump(self, dist); result != blocked_jump_result_t::NO_JUMP) {
 		if (result != blocked_jump_result_t::JUMP_TURN)
 			guncmdr_jump(self, result);
 
@@ -1382,13 +1297,12 @@ MONSTERINFO_BLOCKED(guncmdr_blocked) (edict_t *self, float dist) -> bool
 	return false;
 }
 
-/*QUAKED monster_guncmdr (1 .5 0) (-16 -16 -24) (16 16 32) Ambush Trigger_Spawn Sight NoJumping
+/*QUAKED monster_guncmdr (1 .5 0) (-16 -16 -24) (16 16 32) AMBUSH TRIGGER_SPAWN SIGHT NOJUMPING
 model="models/monsters/guncmdr/tris.md2"
 */
-void SP_monster_guncmdr(edict_t *self)
-{
-	if ( !M_AllowSpawn( self ) ) {
-		G_FreeEdict( self );
+void SP_monster_guncmdr(edict_t *self) {
+	if (!M_AllowSpawn(self)) {
+		G_FreeEdict(self);
 		return;
 	}
 
@@ -1406,7 +1320,7 @@ void SP_monster_guncmdr(edict_t *self)
 	self->movetype = MOVETYPE_STEP;
 	self->solid = SOLID_BBOX;
 	self->s.modelindex = gi.modelindex("models/monsters/gunner/tris.md2");
-	
+
 	gi.modelindex("models/monsters/gunner/gibs/chest.md2");
 	gi.modelindex("models/monsters/gunner/gibs/foot.md2");
 	gi.modelindex("models/monsters/gunner/gibs/garm.md2");
@@ -1414,8 +1328,8 @@ void SP_monster_guncmdr(edict_t *self)
 	gi.modelindex("models/monsters/gunner/gibs/head.md2");
 
 	self->s.scale = 1.25f;
-	self->mins = vec3_t { -16, -16, -24 };
-	self->maxs = vec3_t { 16, 16, 36 };
+	self->mins = vec3_t{ -16, -16, -24 };
+	self->maxs = vec3_t{ 16, 16, 36 };
 	self->s.skinnum = 2;
 
 	self->health = 325 * st.health_multiplier;

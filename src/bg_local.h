@@ -15,8 +15,7 @@
 //
 // p_move.c
 //
-struct pm_config_t
-{
+struct pm_config_t {
 	int32_t		airaccel = 0;
 	bool		n64_physics = false;
 };
@@ -28,8 +27,7 @@ using pm_trace_func_t = trace_t(const vec3_t &start, const vec3_t &mins, const v
 using pm_trace_t = std::function<pm_trace_func_t>;
 void PM_StepSlideMove_Generic(vec3_t &origin, vec3_t &velocity, float frametime, const vec3_t &mins, const vec3_t &maxs, touch_list_t &touch, bool has_time, pm_trace_t trace);
 
-enum class stuck_result_t
-{
+enum class stuck_result_t {
 	GOOD_POSITION,
 	FIXED,
 	NO_GOOD_POSITION
@@ -39,19 +37,9 @@ using stuck_object_trace_fn_t = trace_t(const vec3_t &, const vec3_t &, const ve
 
 stuck_result_t G_FixStuckObject_Generic(vec3_t &origin, const vec3_t &own_mins, const vec3_t &own_maxs, std::function<stuck_object_trace_fn_t> trace);
 
-enum team_t {
-	TEAM_NONE,	// = -1,
-	TEAM_SPECTATOR,
-	TEAM_FREE,
-	TEAM_RED,
-	TEAM_BLUE,
-	TEAM_NUM_TEAMS
-};
-
 // state for coop respawning; used to select which
 // message to print for the player this is set on.
-enum coop_respawn_t
-{
+enum coop_respawn_t {
 	COOP_RESPAWN_NONE, // no messagee
 	COOP_RESPAWN_IN_COMBAT, // player is in combat
 	COOP_RESPAWN_BAD_AREA, // player not in a good spot
@@ -62,12 +50,11 @@ enum coop_respawn_t
 };
 
 // reserved general CS ranges
-enum
-{
+enum {
 	CONFIG_MATCH_STATE = CS_GENERAL,
-	CONFIG_CTF_TEAMINFO,
-	CONFIG_CTF_PLAYER_NAME,
-	CONFIG_CTF_PLAYER_NAME_END = CONFIG_CTF_PLAYER_NAME + MAX_CLIENTS,
+	CONFIG_TEAMINFO,
+	CONFIG_CHASE_PLAYER_NAME,
+	CONFIG_CHASE_PLAYER_NAME_END = CONFIG_CHASE_PLAYER_NAME + MAX_CLIENTS,
 
 	// nb: offset by 1 since NONE is zero
 	CONFIG_COOP_RESPAWN_STRING,
@@ -77,7 +64,7 @@ enum
 	CONFIG_N64_PHYSICS,
 	CONFIG_HEALTH_BAR_NAME, // active health bar name
 
-	CONFIG_STORY,	// this is also used for scorelimit display in dm
+	CONFIG_STORY_SCORELIMIT,	// this is also used for scorelimit display in dm
 
 	CONFIG_LAST
 };
@@ -85,8 +72,7 @@ enum
 static_assert(CONFIG_LAST <= CS_GENERAL + MAX_GENERAL);
 
 // ammo IDs
-enum ammo_t : uint8_t
-{
+enum ammo_t : uint8_t {
 	AMMO_BULLETS,
 	AMMO_SHELLS,
 	AMMO_ROCKETS,
@@ -99,12 +85,11 @@ enum ammo_t : uint8_t
 	AMMO_TESLA,
 	AMMO_DISRUPTOR,
 	AMMO_PROX,
-    AMMO_MAX
+	AMMO_MAX
 };
 
 // powerup IDs
-enum powerup_t : uint8_t
-{
+enum powerup_t : uint8_t {
 	POWERUP_SCREEN,
 	POWERUP_SHIELD,
 
@@ -128,10 +113,11 @@ enum powerup_t : uint8_t
 	POWERUP_FLASHLIGHT,
 	POWERUP_COMPASS,
 
-	TECH_DISRUPTOR_SHIELD,
-	TECH_POWER_AMP,
-	TECH_TIME_ACCEL,
-	TECH_AUTODOC,
+	POWERUP_TECH_DISRUPTOR_SHIELD,
+	POWERUP_TECH_POWER_AMP,
+	POWERUP_TECH_TIME_ACCEL,
+	POWERUP_TECH_AUTODOC,
+
 	POWERUP_MAX
 };
 
@@ -140,45 +126,40 @@ enum powerup_t : uint8_t
 constexpr size_t BITS_PER_AMMO = 9;
 
 template<typename TI>
-constexpr size_t num_of_type_for_bits(size_t num_bits)
-{
+constexpr size_t num_of_type_for_bits(size_t num_bits) {
 	return (num_bits + (sizeof(TI) * 8) - 1) / ((sizeof(TI) * 8) + 1);
 }
 
 template<size_t bits_per_value>
-constexpr void set_compressed_integer(uint16_t *start, uint8_t id, uint16_t count)
-{
+constexpr void set_compressed_integer(uint16_t *start, uint8_t id, uint16_t count) {
 	uint16_t bit_offset = bits_per_value * id;
 	uint16_t byte = bit_offset / 8;
 	uint16_t bit_shift = bit_offset % 8;
-	uint16_t mask = (bit_v<bits_per_value> - 1) << bit_shift;
-	uint16_t *base = (uint16_t *) ((uint8_t *) start + byte);
+	uint16_t mask = (bit_v<bits_per_value> -1) << bit_shift;
+	uint16_t *base = (uint16_t *)((uint8_t *)start + byte);
 	*base = (*base & ~mask) | ((count << bit_shift) & mask);
 }
 
 template<size_t bits_per_value>
-constexpr uint16_t get_compressed_integer(uint16_t *start, uint8_t id)
-{
+constexpr uint16_t get_compressed_integer(uint16_t *start, uint8_t id) {
 	uint16_t bit_offset = bits_per_value * id;
 	uint16_t byte = bit_offset / 8;
 	uint16_t bit_shift = bit_offset % 8;
-	uint16_t mask = (bit_v<bits_per_value> - 1) << bit_shift;
-	uint16_t *base = (uint16_t *) ((uint8_t *) start + byte);
+	uint16_t mask = (bit_v<bits_per_value> -1) << bit_shift;
+	uint16_t *base = (uint16_t *)((uint8_t *)start + byte);
 	return (*base & mask) >> bit_shift;
 }
 
 constexpr size_t NUM_BITS_FOR_AMMO = 9;
 constexpr size_t NUM_AMMO_STATS = num_of_type_for_bits<uint16_t>(NUM_BITS_FOR_AMMO * AMMO_MAX);
 // if this value is set on an STAT_AMMO_INFO_xxx, don't render ammo
-constexpr uint16_t AMMO_VALUE_INFINITE = bit_v<NUM_BITS_FOR_AMMO> - 1;
+constexpr uint16_t AMMO_VALUE_INFINITE = bit_v<NUM_BITS_FOR_AMMO> -1;
 
-constexpr void G_SetAmmoStat(uint16_t *start, uint8_t ammo_id, uint16_t count)
-{
+constexpr void G_SetAmmoStat(uint16_t *start, uint8_t ammo_id, uint16_t count) {
 	set_compressed_integer<NUM_BITS_FOR_AMMO>(start, ammo_id, count);
 }
 
-constexpr uint16_t G_GetAmmoStat(uint16_t *start, uint8_t ammo_id)
-{
+constexpr uint16_t G_GetAmmoStat(uint16_t *start, uint8_t ammo_id) {
 	return get_compressed_integer<NUM_BITS_FOR_AMMO>(start, ammo_id);
 }
 
@@ -188,37 +169,34 @@ constexpr uint16_t G_GetAmmoStat(uint16_t *start, uint8_t ammo_id)
 constexpr size_t NUM_BITS_PER_POWERUP = 2;
 constexpr size_t NUM_POWERUP_STATS = num_of_type_for_bits<uint16_t>(NUM_BITS_PER_POWERUP * POWERUP_MAX);
 
-constexpr void G_SetPowerupStat(uint16_t *start, uint8_t powerup_id, uint16_t count)
-{
+constexpr void G_SetPowerupStat(uint16_t *start, uint8_t powerup_id, uint16_t count) {
 	set_compressed_integer<NUM_BITS_PER_POWERUP>(start, powerup_id, count);
 }
 
-constexpr uint16_t G_GetPowerupStat(uint16_t *start, uint8_t powerup_id)
-{
+constexpr uint16_t G_GetPowerupStat(uint16_t *start, uint8_t powerup_id) {
 	return get_compressed_integer<NUM_BITS_PER_POWERUP>(start, powerup_id);
 }
 
 // player_state->stats[] indexes
-enum player_stat_t
-{
-    STAT_HEALTH_ICON = 0,
-    STAT_HEALTH = 1,
-    STAT_AMMO_ICON = 2,
-    STAT_AMMO = 3,
-    STAT_ARMOR_ICON = 4,
-    STAT_ARMOR = 5,
-    STAT_SELECTED_ICON = 6,
-    STAT_PICKUP_ICON = 7,
-    STAT_PICKUP_STRING = 8,
-    STAT_POWERUP_ICON = 9,
-    STAT_POWERUP_TIME = 10,
-    STAT_HELPICON = 11,
-    STAT_SELECTED_ITEM = 12,
-    STAT_LAYOUTS = 13,
-    STAT_SCORE = 14,
-    STAT_FLASHES = 15, // cleared each frame, 1 = health, 2 = armor
-    STAT_CHASE = 16,
-    STAT_SPECTATOR = 17,
+enum player_stat_t {
+	STAT_HEALTH_ICON = 0,
+	STAT_HEALTH = 1,
+	STAT_AMMO_ICON = 2,
+	STAT_AMMO = 3,
+	STAT_ARMOR_ICON = 4,
+	STAT_ARMOR = 5,
+	STAT_SELECTED_ICON = 6,
+	STAT_PICKUP_ICON = 7,
+	STAT_PICKUP_STRING = 8,
+	STAT_POWERUP_ICON = 9,
+	STAT_POWERUP_TIME = 10,
+	STAT_HELPICON = 11,
+	STAT_SELECTED_ITEM = 12,
+	STAT_LAYOUTS = 13,
+	STAT_SCORE = 14,
+	STAT_FLASHES = 15, // cleared each frame, 1 = health, 2 = armor
+	STAT_CHASE = 16,
+	STAT_SPECTATOR = 17,
 
 	STAT_MINISCORE_FIRST_PIC = 18,
 	STAT_MINISCORE_FIRST_SCORE = 19,
@@ -235,21 +213,21 @@ enum player_stat_t
 	STAT_CROSSHAIR_ID_VIEW_COLOR = 30,
 	STAT_TEAMPLAY_INFO = 31,
 
-    // [Kex] More stats for weapon wheel
-    STAT_WEAPONS_OWNED_1 = 32,
-    STAT_WEAPONS_OWNED_2 = 33,
-    STAT_AMMO_INFO_START = 34,
-    STAT_AMMO_INFO_END = STAT_AMMO_INFO_START + NUM_AMMO_STATS - 1,
+	// [Kex] More stats for weapon wheel
+	STAT_WEAPONS_OWNED_1 = 32,
+	STAT_WEAPONS_OWNED_2 = 33,
+	STAT_AMMO_INFO_START = 34,
+	STAT_AMMO_INFO_END = STAT_AMMO_INFO_START + NUM_AMMO_STATS - 1,
 	STAT_POWERUP_INFO_START,
 	STAT_POWERUP_INFO_END = STAT_POWERUP_INFO_START + NUM_POWERUP_STATS - 1,
 
-    // [Paril-KEX] Key display
-    STAT_KEY_A,
-    STAT_KEY_B,
-    STAT_KEY_C,
+	// [Paril-KEX] Key display
+	STAT_KEY_A,
+	STAT_KEY_B,
+	STAT_KEY_C,
 
-    // [Paril-KEX] currently active wheel weapon (or one we're switching to)
-    STAT_ACTIVE_WHEEL_WEAPON,
+	// [Paril-KEX] currently active wheel weapon (or one we're switching to)
+	STAT_ACTIVE_WHEEL_WEAPON,
 	// [Paril-KEX] top of screen coop respawn state
 	STAT_COOP_RESPAWN,
 	// [Paril-KEX] respawns remaining
@@ -271,7 +249,7 @@ enum player_stat_t
 	STAT_COUNTDOWN,
 
 	// don't use; just for verification
-    STAT_LAST
+	STAT_LAST
 };
 
 static_assert(STAT_LAST <= MAX_STATS + 1, "stats list overflow");

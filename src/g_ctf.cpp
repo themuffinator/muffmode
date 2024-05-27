@@ -34,7 +34,6 @@ order.
 ============
 */
 void CTF_ScoreBonuses(edict_t *targ, edict_t *inflictor, edict_t *attacker) {
-	edict_t		*ent;
 	item_id_t	flag_item, enemy_flag_item;
 	int			otherteam;
 	edict_t		*flag, *carrier = nullptr;
@@ -78,10 +77,9 @@ void CTF_ScoreBonuses(edict_t *targ, edict_t *inflictor, edict_t *attacker) {
 
 		// the target had the flag, clear the hurt carrier
 		// field on the other team
-		for (uint32_t i = 1; i <= game.maxclients; i++) {
-			ent = g_edicts + i;
-			if (ent->inuse && ent->client->resp.team == otherteam)
-				ent->client->resp.ctf_lasthurtcarrier = 0_ms;
+		for (auto ec : active_clients()) {
+			if (ec->inuse && ec->client->resp.team == otherteam)
+				ec->client->resp.ctf_lasthurtcarrier = 0_ms;
 		}
 		return;
 	}
@@ -126,12 +124,11 @@ void CTF_ScoreBonuses(edict_t *targ, edict_t *inflictor, edict_t *attacker) {
 		return; // can't find attacker's flag
 
 	// find attacker's team's flag carrier
-	for (uint32_t i = 1; i <= game.maxclients; i++) {
-		carrier = g_edicts + i;
-		if (carrier->inuse &&
-			carrier->client->pers.inventory[flag_item])
+	for (auto ec : active_clients()) {
+		if (ec->client->pers.inventory[flag_item]) {
+			carrier = ec;
 			break;
-		carrier = nullptr;
+		}
 	}
 
 	// ok we have the attackers flag and a pointer to the carrier
@@ -243,8 +240,7 @@ bool CTF_PickupFlag(edict_t *ent, edict_t *other) {
 	if (!ctf->integer)
 		return false;
 
-	int			team;
-	edict_t		*player;
+	team_t		team;
 	item_id_t	flag_item, enemy_flag_item;
 
 	// figure out what team this flag is
@@ -282,8 +278,8 @@ bool CTF_PickupFlag(edict_t *ent, edict_t *other) {
 				}
 				other->client->pers.inventory[enemy_flag_item] = 0;
 
-				level.last_flag_capture = level.time;
-				level.last_capture_team = team;
+				level.ctf_last_flag_capture = level.time;
+				level.ctf_last_capture_team = team;
 				G_AdjustTeamScore(team, 1);
 
 				gi.sound(ent, CHAN_RELIABLE | CHAN_NO_PHS_ADD | CHAN_AUX, gi.soundindex("ctf/flagcap.wav"), 1, ATTN_NONE, 0);
@@ -294,24 +290,20 @@ bool CTF_PickupFlag(edict_t *ent, edict_t *other) {
 					other->client->resp.ghost->caps++;
 
 				// Ok, let's do the player loop, hand out the bonuses
-				for (uint32_t i = 1; i <= game.maxclients; i++) {
-					player = &g_edicts[i];
-					if (!player->inuse)
-						continue;
-
-					if (player->client->resp.team != other->client->resp.team)
-						player->client->resp.ctf_lasthurtcarrier = -5_sec;
-					else if (player->client->resp.team == other->client->resp.team) {
-						if (player != other)
-							G_AdjustPlayerScore(player->client, CTF_TEAM_BONUS, false, 0);
+				for (auto ec : active_clients()) {
+					if (ec->client->resp.team != other->client->resp.team)
+						ec->client->resp.ctf_lasthurtcarrier = -5_sec;
+					else if (ec->client->resp.team == other->client->resp.team) {
+						if (ec != other)
+							G_AdjustPlayerScore(ec->client, CTF_TEAM_BONUS, false, 0);
 						// award extra points for capture assists
-						if (player->client->resp.ctf_lastreturnedflag && player->client->resp.ctf_lastreturnedflag + CTF_RETURN_FLAG_ASSIST_TIMEOUT > level.time) {
-							gi.LocBroadcast_Print(PRINT_HIGH, "$g_bonus_assist_return", player->client->resp.netname);
-							G_AdjustPlayerScore(player->client, CTF_RETURN_FLAG_ASSIST_BONUS, false, 0);
+						if (ec->client->resp.ctf_lastreturnedflag && ec->client->resp.ctf_lastreturnedflag + CTF_RETURN_FLAG_ASSIST_TIMEOUT > level.time) {
+							gi.LocBroadcast_Print(PRINT_HIGH, "$g_bonus_assist_return", ec->client->resp.netname);
+							G_AdjustPlayerScore(ec->client, CTF_RETURN_FLAG_ASSIST_BONUS, false, 0);
 						}
-						if (player->client->resp.ctf_lastfraggedcarrier && player->client->resp.ctf_lastfraggedcarrier + CTF_FRAG_CARRIER_ASSIST_TIMEOUT > level.time) {
-							gi.LocBroadcast_Print(PRINT_HIGH, "$g_bonus_assist_frag_carrier", player->client->resp.netname);
-							G_AdjustPlayerScore(player->client, CTF_FRAG_CARRIER_ASSIST_BONUS, false, 0);
+						if (ec->client->resp.ctf_lastfraggedcarrier && ec->client->resp.ctf_lastfraggedcarrier + CTF_FRAG_CARRIER_ASSIST_TIMEOUT > level.time) {
+							gi.LocBroadcast_Print(PRINT_HIGH, "$g_bonus_assist_frag_carrier", ec->client->resp.netname);
+							G_AdjustPlayerScore(ec->client, CTF_FRAG_CARRIER_ASSIST_BONUS, false, 0);
 						}
 					}
 				}
@@ -360,7 +352,6 @@ CTF_DropFlagTouch
 ============
 */
 static TOUCH(CTF_DropFlagTouch) (edict_t *ent, edict_t *other, const trace_t &tr, bool other_touching_self) -> void {
-
 	if (!ctf->integer)
 		return;
 
@@ -404,7 +395,6 @@ Called from PlayerDie, to drop the flag from a dying player
 ============
 */
 void CTF_DeadDropFlag(edict_t *self) {
-
 	if (!ctf->integer)
 		return;
 

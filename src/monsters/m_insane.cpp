@@ -22,40 +22,34 @@ static cached_soundindex sound_shake;
 static cached_soundindex sound_moan;
 static cached_soundindex sound_scream[8];
 
-void insane_fist(edict_t *self)
-{
+static void insane_fist(edict_t *self) {
 	gi.sound(self, CHAN_VOICE, sound_fist, 1, ATTN_IDLE, 0);
 }
 
-void insane_shake(edict_t *self)
-{
+static void insane_shake(edict_t *self) {
 	if (!self->spawnflags.has(SPAWNFLAG_INSANE_QUIET))
 		gi.sound(self, CHAN_VOICE, sound_shake, 1, ATTN_IDLE, 0);
 }
 
 extern const mmove_t insane_move_cross, insane_move_struggle_cross;
 
-void insane_moan(edict_t *self)
-{
+static void insane_moan(edict_t *self) {
 	if (self->spawnflags.has(SPAWNFLAG_INSANE_QUIET))
 		return;
 
 	// Paril: don't moan every second
-	if (self->monsterinfo.attack_finished < level.time)
-	{
+	if (self->monsterinfo.attack_finished < level.time) {
 		gi.sound(self, CHAN_VOICE, sound_moan, 1, ATTN_IDLE, 0);
 		self->monsterinfo.attack_finished = level.time + random_time(1_sec, 3_sec);
 	}
 }
 
-void insane_scream(edict_t *self)
-{
+static void insane_scream(edict_t *self) {
 	if (self->spawnflags.has(SPAWNFLAG_INSANE_QUIET))
 		return;
 
 	// Paril: don't moan every second
-	if (self->monsterinfo.attack_finished < level.time)
-	{
+	if (self->monsterinfo.attack_finished < level.time) {
 		gi.sound(self, CHAN_VOICE, random_element(sound_scream), 1, ATTN_IDLE, 0);
 		self->monsterinfo.attack_finished = level.time + random_time(1_sec, 3_sec);
 	}
@@ -72,8 +66,7 @@ void insane_onground(edict_t *self);
 
 // Paril: unused atm because it breaks N64.
 // may fix later
-void insane_shrink(edict_t *self)
-{
+static void insane_shrink(edict_t *self) {
 	self->maxs[2] = 0;
 	self->svflags |= SVF_DEADMONSTER;
 	gi.linkentity(self);
@@ -428,19 +421,16 @@ mframe_t insane_frames_struggle_cross[] = {
 };
 MMOVE_T(insane_move_struggle_cross) = { FRAME_cross16, FRAME_cross30, insane_frames_struggle_cross, insane_cross };
 
-void insane_cross(edict_t *self)
-{
+void insane_cross(edict_t *self) {
 	if (frandom() < 0.8f)
 		M_SetAnimation(self, &insane_move_cross);
 	else
 		M_SetAnimation(self, &insane_move_struggle_cross);
 }
 
-MONSTERINFO_WALK(insane_walk) (edict_t *self) -> void
-{
+MONSTERINFO_WALK(insane_walk) (edict_t *self) -> void {
 	if (self->spawnflags.has(SPAWNFLAG_INSANE_STAND_GROUND)) // Hold Ground?
-		if (self->s.frame == FRAME_cr_pain10)
-		{
+		if (self->s.frame == FRAME_cr_pain10) {
 			M_SetAnimation(self, &insane_move_down);
 			//monster_duck_down(self);
 			return;
@@ -453,11 +443,9 @@ MONSTERINFO_WALK(insane_walk) (edict_t *self) -> void
 		M_SetAnimation(self, &insane_move_walk_insane);
 }
 
-MONSTERINFO_RUN(insane_run) (edict_t *self) -> void
-{
+MONSTERINFO_RUN(insane_run) (edict_t *self) -> void {
 	if (self->spawnflags.has(SPAWNFLAG_INSANE_STAND_GROUND)) // Hold Ground?
-		if (self->s.frame == FRAME_cr_pain10)
-		{
+		if (self->s.frame == FRAME_cr_pain10) {
 			M_SetAnimation(self, &insane_move_down);
 			//monster_duck_down(self);
 			return;
@@ -469,16 +457,13 @@ MONSTERINFO_RUN(insane_run) (edict_t *self) -> void
 	{
 		M_SetAnimation(self, &insane_move_run_normal);
 		//monster_duck_up(self);
-	}
-	else
-	{
+	} else {
 		M_SetAnimation(self, &insane_move_run_insane);
 		//monster_duck_up(self);
 	}
 }
 
-PAIN(insane_pain) (edict_t *self, edict_t *other, float kick, int damage, const mod_t &mod) -> void
-{
+static PAIN(insane_pain) (edict_t *self, edict_t *other, float kick, int damage, const mod_t &mod) -> void {
 	int l, r;
 
 	if (level.time < self->pain_debounce_time)
@@ -498,36 +483,29 @@ PAIN(insane_pain) (edict_t *self, edict_t *other, float kick, int damage, const 
 	gi.sound(self, CHAN_VOICE, gi.soundindex(G_Fmt("player/male/pain{}_{}.wav", l, r).data()), 1, ATTN_IDLE, 0);
 
 	// Don't go into pain frames if crucified.
-	if (self->spawnflags.has(SPAWNFLAG_INSANE_CRUCIFIED))
-	{
+	if (self->spawnflags.has(SPAWNFLAG_INSANE_CRUCIFIED)) {
 		M_SetAnimation(self, &insane_move_struggle_cross);
 		return;
 	}
 
-	if (((self->s.frame >= FRAME_crawl1) && (self->s.frame <= FRAME_crawl9)) || ((self->s.frame >= FRAME_stand99) && (self->s.frame <= FRAME_stand160)) || ((self->s.frame >= FRAME_stand1 && self->s.frame <= FRAME_stand40)))
-	{
+	if (((self->s.frame >= FRAME_crawl1) && (self->s.frame <= FRAME_crawl9)) || ((self->s.frame >= FRAME_stand99) && (self->s.frame <= FRAME_stand160)) || ((self->s.frame >= FRAME_stand1 && self->s.frame <= FRAME_stand40))) {
 		M_SetAnimation(self, &insane_move_crawl_pain);
-	}
-	else
-	{
+	} else {
 		M_SetAnimation(self, &insane_move_stand_pain);
 		//monster_duck_up(self);
 	}
 }
 
-void insane_onground(edict_t *self)
-{
+void insane_onground(edict_t *self) {
 	M_SetAnimation(self, &insane_move_down);
 	//monster_duck_down(self);
 }
 
-void insane_checkdown(edict_t *self)
-{
+void insane_checkdown(edict_t *self) {
 	//	if ( (self->s.frame == FRAME_stand94) || (self->s.frame == FRAME_stand65) )
 	if (self->spawnflags.has(SPAWNFLAG_INSANE_ALWAYS_STAND)) // Always stand
 		return;
-	if (frandom() < 0.3f)
-	{
+	if (frandom() < 0.3f) {
 		if (frandom() < 0.5f)
 			M_SetAnimation(self, &insane_move_uptodown);
 		else
@@ -535,45 +513,36 @@ void insane_checkdown(edict_t *self)
 	}
 }
 
-void insane_checkup(edict_t *self)
-{
+void insane_checkup(edict_t *self) {
 	// If Hold_Ground and Crawl are set
 	if (self->spawnflags.has_all(SPAWNFLAG_INSANE_CRAWL | SPAWNFLAG_INSANE_STAND_GROUND))
 		return;
-	if (frandom() < 0.5f)
-	{
+	if (frandom() < 0.5f) {
 		M_SetAnimation(self, &insane_move_downtoup);
 		//monster_duck_up(self);
 	}
 }
 
-MONSTERINFO_STAND(insane_stand) (edict_t *self) -> void
-{
+MONSTERINFO_STAND(insane_stand) (edict_t *self) -> void {
 	if (self->spawnflags.has(SPAWNFLAG_INSANE_CRUCIFIED)) // If crucified
 	{
 		M_SetAnimation(self, &insane_move_cross);
 		self->monsterinfo.aiflags |= AI_STAND_GROUND;
 	}
 	// If Hold_Ground and Crawl are set
-	else if (self->spawnflags.has_all(SPAWNFLAG_INSANE_CRAWL | SPAWNFLAG_INSANE_STAND_GROUND))
-	{
+	else if (self->spawnflags.has_all(SPAWNFLAG_INSANE_CRAWL | SPAWNFLAG_INSANE_STAND_GROUND)) {
 		M_SetAnimation(self, &insane_move_down);
 		//monster_duck_down(self);
-	}
-	else if (frandom() < 0.5f)
+	} else if (frandom() < 0.5f)
 		M_SetAnimation(self, &insane_move_stand_normal);
 	else
 		M_SetAnimation(self, &insane_move_stand_insane);
 }
 
-void insane_dead(edict_t *self)
-{
-	if (self->spawnflags.has(SPAWNFLAG_INSANE_CRUCIFIED))
-	{
+void insane_dead(edict_t *self) {
+	if (self->spawnflags.has(SPAWNFLAG_INSANE_CRUCIFIED)) {
 		self->flags |= FL_FLY;
-	}
-	else
-	{
+	} else {
 		self->mins = { -16, -16, -24 };
 		self->maxs = { 16, 16, -8 };
 		self->movetype = MOVETYPE_TOSS;
@@ -581,16 +550,14 @@ void insane_dead(edict_t *self)
 	monster_dead(self);
 }
 
-DIE(insane_die) (edict_t *self, edict_t *inflictor, edict_t *attacker, int damage, const vec3_t &point, const mod_t &mod) -> void
-{
-	if (M_CheckGib(self, mod))
-	{
+static DIE(insane_die) (edict_t *self, edict_t *inflictor, edict_t *attacker, int damage, const vec3_t &point, const mod_t &mod) -> void {
+	if (M_CheckGib(self, mod)) {
 		gi.sound(self, CHAN_VOICE, gi.soundindex("misc/udeath.wav"), 1, ATTN_IDLE, 0);
 		ThrowGibs(self, damage, {
 			{ 2, "models/objects/gibs/bone/tris.md2" },
 			{ 4, "models/objects/gibs/sm_meat/tris.md2" },
 			{ "models/objects/gibs/head2/tris.md2", GIB_HEAD }
-		});
+			});
 		self->deadflag = true;
 		return;
 	}
@@ -603,12 +570,9 @@ DIE(insane_die) (edict_t *self, edict_t *inflictor, edict_t *attacker, int damag
 	self->deadflag = true;
 	self->takedamage = true;
 
-	if (self->spawnflags.has(SPAWNFLAG_INSANE_CRUCIFIED))
-	{
+	if (self->spawnflags.has(SPAWNFLAG_INSANE_CRUCIFIED)) {
 		insane_dead(self);
-	}
-	else
-	{
+	} else {
 		if (((self->s.frame >= FRAME_crawl1) && (self->s.frame <= FRAME_crawl9)) || ((self->s.frame >= FRAME_stand99) && (self->s.frame <= FRAME_stand160)))
 			M_SetAnimation(self, &insane_move_crawl_death);
 		else
@@ -616,20 +580,16 @@ DIE(insane_die) (edict_t *self, edict_t *inflictor, edict_t *attacker, int damag
 	}
 }
 
-/*QUAKED misc_insane (1 .5 0) (-16 -16 -24) (16 16 32) Ambush Trigger_Spawn CRAWL CRUCIFIED STAND_GROUND ALWAYS_STAND QUIET
+/*QUAKED misc_insane (1 .5 0) (-16 -16 -24) (16 16 32) AMBUSH TRIGGER_SPAWN CRAWL CRUCIFIED STAND_GROUND ALWAYS_STAND QUIET
  */
-void SP_misc_insane(edict_t *self)
-{
-	//	static int skin = 0;	//@@
-
-	if ( !M_AllowSpawn( self ) ) {
-		G_FreeEdict( self );
+void SP_misc_insane(edict_t *self) {
+	if (!M_AllowSpawn(self)) {
+		G_FreeEdict(self);
 		return;
 	}
 
 	sound_fist.assign("insane/insane11.wav");
-	if (!self->spawnflags.has(SPAWNFLAG_INSANE_QUIET))
-	{
+	if (!self->spawnflags.has(SPAWNFLAG_INSANE_QUIET)) {
 		sound_shake.assign("insane/insane5.wav");
 		sound_moan.assign("insane/insane7.wav");
 		sound_scream[0].assign("insane/insane1.wav");
@@ -665,12 +625,6 @@ void SP_misc_insane(edict_t *self)
 	self->monsterinfo.sight = nullptr;
 	self->monsterinfo.aiflags |= AI_GOOD_GUY;
 
-	//@@
-	//	self->s.skinnum = skin;
-	//	skin++;
-	//	if (skin > 12)
-	//		skin = 0;
-
 	gi.linkentity(self);
 
 	if (self->spawnflags.has(SPAWNFLAG_INSANE_STAND_GROUND)) // Stand Ground
@@ -680,12 +634,10 @@ void SP_misc_insane(edict_t *self)
 
 	self->monsterinfo.scale = MODEL_SCALE;
 
-	if (self->spawnflags.has(SPAWNFLAG_INSANE_CRUCIFIED)) // Crucified ?
-	{
+	if (self->spawnflags.has(SPAWNFLAG_INSANE_CRUCIFIED)) { // Crucified ?
 		self->flags |= FL_NO_KNOCKBACK | FL_STATIONARY;
 		stationarymonster_start(self);
-	}
-	else
+	} else
 		walkmonster_start(self);
 
 	self->s.skinnum = irandom(3);

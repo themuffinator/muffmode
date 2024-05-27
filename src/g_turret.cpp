@@ -462,9 +462,6 @@ void SP_turret_driver(edict_t *self)
 	gi.linkentity(self);
 }
 
-//============
-// ROGUE
-
 // invisible turret drivers so we can have unmanned turrets.
 // originally designed to shoot at func_trains and such, so they
 // fire at the center of the bounding box, rather than the entity's
@@ -656,6 +653,3 @@ void SP_turret_invisible_brain(edict_t *self)
 	self->movetype = MOVETYPE_PUSH;
 	gi.linkentity(self);
 }
-
-// ROGUE
-//============

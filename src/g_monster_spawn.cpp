@@ -4,10 +4,6 @@
 #include "g_local.h"
 
 //
-// ROGUE
-//
-
-//
 // Monster spawning code
 //
 // Used by the carrier, the medic_commander, and the black widow

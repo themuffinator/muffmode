@@ -559,6 +559,7 @@ enum effects_t : uint64_t
 MAKE_ENUM_BITFLAGS(effects_t);
 
 constexpr effects_t EF_FIREBALL = EF_ROCKET | EF_GIB;
+constexpr effects_t EF_DM_FIREBALL = EF_GIB;
 
 // entity_state_t->renderfx flags
 enum renderfx_t : uint32_t

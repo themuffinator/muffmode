@@ -16,8 +16,7 @@ static cached_soundindex sound_pain;
 static cached_soundindex sound_death;
 static cached_soundindex sound_sight;
 
-MONSTERINFO_SIGHT(arachnid_sight) (edict_t *self, edict_t *other) -> void
-{
+MONSTERINFO_SIGHT(arachnid_sight) (edict_t *self, edict_t *other) -> void {
 	gi.sound(self, CHAN_VOICE, sound_sight, 1, ATTN_NORM, 0);
 }
 
@@ -42,8 +41,7 @@ mframe_t arachnid_frames_stand[] = {
 };
 MMOVE_T(arachnid_move_stand) = { FRAME_idle1, FRAME_idle13, arachnid_frames_stand, nullptr };
 
-MONSTERINFO_STAND(arachnid_stand) (edict_t *self) -> void
-{
+MONSTERINFO_STAND(arachnid_stand) (edict_t *self) -> void {
 	M_SetAnimation(self, &arachnid_move_stand);
 }
 
@@ -53,8 +51,7 @@ MONSTERINFO_STAND(arachnid_stand) (edict_t *self) -> void
 
 static cached_soundindex sound_step;
 
-void arachnid_footstep(edict_t *self)
-{
+static void arachnid_footstep(edict_t *self) {
 	gi.sound(self, CHAN_BODY, sound_step, 0.5f, ATTN_IDLE, 0.0f);
 }
 
@@ -72,8 +69,7 @@ mframe_t arachnid_frames_walk[] = {
 };
 MMOVE_T(arachnid_move_walk) = { FRAME_walk1, FRAME_walk10, arachnid_frames_walk, nullptr };
 
-MONSTERINFO_WALK(arachnid_walk) (edict_t *self) -> void
-{
+MONSTERINFO_WALK(arachnid_walk) (edict_t *self) -> void {
 	M_SetAnimation(self, &arachnid_move_walk);
 }
 
@@ -95,10 +91,8 @@ mframe_t arachnid_frames_run[] = {
 };
 MMOVE_T(arachnid_move_run) = { FRAME_walk1, FRAME_walk10, arachnid_frames_run, nullptr };
 
-MONSTERINFO_RUN(arachnid_run) (edict_t *self) -> void
-{
-	if (self->monsterinfo.aiflags & AI_STAND_GROUND)
-	{
+MONSTERINFO_RUN(arachnid_run) (edict_t *self) -> void {
+	if (self->monsterinfo.aiflags & AI_STAND_GROUND) {
 		M_SetAnimation(self, &arachnid_move_stand);
 		return;
 	}
@@ -129,8 +123,7 @@ mframe_t arachnid_frames_pain2[] = {
 };
 MMOVE_T(arachnid_move_pain2) = { FRAME_pain21, FRAME_pain26, arachnid_frames_pain2, arachnid_run };
 
-PAIN(arachnid_pain) (edict_t *self, edict_t *other, float kick, int damage, const mod_t &mod) -> void
-{
+static PAIN(arachnid_pain) (edict_t *self, edict_t *other, float kick, int damage, const mod_t &mod) -> void {
 	if (level.time < self->pain_debounce_time)
 		return;
 
@@ -150,8 +143,7 @@ PAIN(arachnid_pain) (edict_t *self, edict_t *other, float kick, int damage, cons
 
 static cached_soundindex sound_charge;
 
-void arachnid_charge_rail(edict_t *self)
-{
+void arachnid_charge_rail(edict_t *self) {
 	if (!self->enemy || !self->enemy->inuse)
 		return;
 
@@ -160,28 +152,26 @@ void arachnid_charge_rail(edict_t *self)
 	self->pos1[2] += self->enemy->viewheight;
 }
 
-void arachnid_rail(edict_t *self)
-{
+static void arachnid_rail(edict_t *self) {
 	vec3_t start;
 	vec3_t dir;
 	vec3_t forward, right;
 	monster_muzzleflash_id_t id;
 
-	switch (self->s.frame)
-	{
-		case FRAME_rails4:
-		default:
-			id = MZ2_ARACHNID_RAIL1;
-			break;
-		case FRAME_rails8:
-			id = MZ2_ARACHNID_RAIL2;
-			break;
-		case FRAME_rails_up7:
-			id = MZ2_ARACHNID_RAIL_UP1;
-			break;
-		case FRAME_rails_up11:
-			id = MZ2_ARACHNID_RAIL_UP2;
-			break;
+	switch (self->s.frame) {
+	case FRAME_rails4:
+	default:
+		id = MZ2_ARACHNID_RAIL1;
+		break;
+	case FRAME_rails8:
+		id = MZ2_ARACHNID_RAIL2;
+		break;
+	case FRAME_rails_up7:
+		id = MZ2_ARACHNID_RAIL_UP1;
+		break;
+	case FRAME_rails_up11:
+		id = MZ2_ARACHNID_RAIL_UP2;
+		break;
 	}
 
 	AngleVectors(self->s.angles, forward, right, nullptr);
@@ -231,13 +221,11 @@ MMOVE_T(arachnid_attack_up1) = { FRAME_rails_up1, FRAME_rails_up16, arachnid_fra
 
 static cached_soundindex sound_melee, sound_melee_hit;
 
-void arachnid_melee_charge(edict_t *self)
-{
+static void arachnid_melee_charge(edict_t *self) {
 	gi.sound(self, CHAN_WEAPON, sound_melee, 1.f, ATTN_NORM, 0.f);
 }
 
-void arachnid_melee_hit(edict_t *self)
-{
+static void arachnid_melee_hit(edict_t *self) {
 	if (!fire_hit(self, { MELEE_DISTANCE, 0, 0 }, 15, 50))
 		self->monsterinfo.melee_debounce_time = level.time + 1000_ms;
 }
@@ -258,8 +246,7 @@ mframe_t arachnid_frames_melee[] = {
 };
 MMOVE_T(arachnid_melee) = { FRAME_melee_atk1, FRAME_melee_atk12, arachnid_frames_melee, arachnid_run };
 
-MONSTERINFO_ATTACK(arachnid_attack) (edict_t *self) -> void
-{
+MONSTERINFO_ATTACK(arachnid_attack) (edict_t *self) -> void {
 	if (!self->enemy || !self->enemy->inuse)
 		return;
 
@@ -275,8 +262,7 @@ MONSTERINFO_ATTACK(arachnid_attack) (edict_t *self) -> void
 // death
 //
 
-void arachnid_dead(edict_t *self)
-{
+static void arachnid_dead(edict_t *self) {
 	self->mins = { -16, -16, -24 };
 	self->maxs = { 16, 16, -8 };
 	self->movetype = MOVETYPE_TOSS;
@@ -309,17 +295,15 @@ mframe_t arachnid_frames_death1[] = {
 };
 MMOVE_T(arachnid_move_death) = { FRAME_death1, FRAME_death20, arachnid_frames_death1, arachnid_dead };
 
-DIE(arachnid_die) (edict_t *self, edict_t *inflictor, edict_t *attacker, int damage, const vec3_t &point, const mod_t &mod) -> void
-{
+static DIE(arachnid_die) (edict_t *self, edict_t *inflictor, edict_t *attacker, int damage, const vec3_t &point, const mod_t &mod) -> void {
 	// check for gib
-	if (M_CheckGib(self, mod))
-	{
+	if (M_CheckGib(self, mod)) {
 		gi.sound(self, CHAN_VOICE, gi.soundindex("misc/udeath.wav"), 1, ATTN_NORM, 0);
 		ThrowGibs(self, damage, {
 			{ 2, "models/objects/gibs/bone/tris.md2" },
 			{ 4, "models/objects/gibs/sm_meat/tris.md2" },
 			{ "models/objects/gibs/head2/tris.md2", GIB_HEAD }
-		});
+			});
 		self->deadflag = true;
 		return;
 	}
@@ -339,12 +323,11 @@ DIE(arachnid_die) (edict_t *self, edict_t *inflictor, edict_t *attacker, int dam
 // monster_arachnid
 //
 
-/*QUAKED monster_arachnid (1 .5 0) (-48 -48 -20) (48 48 48) Ambush Trigger_Spawn Sight
+/*QUAKED monster_arachnid (1 .5 0) (-48 -48 -20) (48 48 48) AMBUSH TRIGGER_SPAWN SIGHT
  */
-void SP_monster_arachnid(edict_t *self)
-{
-	if ( !M_AllowSpawn( self ) ) {
-		G_FreeEdict( self );
+void SP_monster_arachnid(edict_t *self) {
+	if (!M_AllowSpawn(self)) {
+		G_FreeEdict(self);
 		return;
 	}
 

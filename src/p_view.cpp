@@ -564,7 +564,7 @@ static void G_CalcBlend(edict_t *ent) {
 			G_AddBlend(0.4f, 1, 0.4f, 0.04f, ent->client->ps.screen_blend);
 	}
 /*freeze*/
-	else if (ent->client->frozen && !ent->client->chase_target && (!ent->client->resp.thawer))	// || level.framenum &8))
+	else if (ent->client->frozen && !ent->client->follow_target && (!ent->client->resp.thawer))	// || level.framenum &8))
 	{
 		if (ent->client->resp.team == TEAM_RED)
 			G_AddBlend(0.6f, 0, 0, 0.4f, ent->client->ps.screen_blend);
@@ -620,7 +620,7 @@ static void P_WorldEffects() {
 	bool		  breather, envirosuit, protection;
 	water_level_t waterlevel, old_waterlevel;
 
-	if (current_player->movetype == MOVETYPE_NOCLIP) {
+	if (current_player->movetype == MOVETYPE_FREECAM) {
 		current_player->air_finished = level.time + 12_sec; // don't need air
 		return;
 	}
@@ -833,7 +833,7 @@ static void G_SetClientEffects(edict_t *ent) {
 		if (G_PowerUpExpiring(ent->client->pu_time_double))
 			G_SetPowerupEffects(ent, EF_DOUBLE);
 	}
-	if ((ent->client->owned_sphere) && (ent->client->owned_sphere->spawnflags == SPHERE_DEFENDER)) {
+	if ((ent->client->owned_sphere) && (ent->client->owned_sphere->spawnflags == SF_SPHERE_DEFENDER)) {
 		G_SetPowerupEffects(ent, EF_HALF_DAMAGE);
 	}
 	if (ent->client->tracker_pain_time > level.time) {
@@ -1083,7 +1083,7 @@ void G_LagCompensate(edict_t *from_player, const vec3_t &start, const vec3_t &di
 
 	int32_t frame_delta = (current_frame - from_player->client->cmd.server_frame) + 1;
 
-	for (auto player : active_players()) {
+	for (auto player : active_clients()) {
 		// we aren't gonna hit ourselves
 		if (player == from_player)
 			continue;
@@ -1127,7 +1127,7 @@ void G_LagCompensate(edict_t *from_player, const vec3_t &start, const vec3_t &di
 
 // [Paril-KEX] pop everybody's lag compensation values
 void G_UnLagCompensate() {
-	for (auto player : active_players()) {
+	for (auto player : active_clients()) {
 		if (player->client->is_lag_compensated) {
 			player->client->is_lag_compensated = false;
 			player->s.origin = player->client->lag_restore_origin;
@@ -1253,16 +1253,16 @@ void ClientEndServerFrame(edict_t *ent) {
 		return;
 
 	float bobtime, bobtime_run;
-	edict_t *e = g_eyecam->integer && ent->client->chase_target ? ent->client->chase_target : ent;
+	edict_t *e = g_eyecam->integer && ent->client->follow_target ? ent->client->follow_target : ent;
 
 	current_player = e;
 	current_client = e->client;
 
 	if (deathmatch->integer) {
 		int limit = GT_ScoreLimit();
-		if (!ent->client->ps.stats[STAT_SCORELIMIT] || limit != atoi(gi.get_configstring(CONFIG_STORY))) {
-			ent->client->ps.stats[STAT_SCORELIMIT] = CONFIG_STORY;
-			gi.configstring(CONFIG_STORY, limit ? G_Fmt("{}", limit).data() : "");
+		if (!ent->client->ps.stats[STAT_SCORELIMIT] || limit != atoi(gi.get_configstring(CONFIG_STORY_SCORELIMIT))) {
+			ent->client->ps.stats[STAT_SCORELIMIT] = CONFIG_STORY_SCORELIMIT;
+			gi.configstring(CONFIG_STORY_SCORELIMIT, limit ? G_Fmt("{}", limit).data() : "");
 		}
 	}
 
@@ -1278,19 +1278,22 @@ void ClientEndServerFrame(edict_t *ent) {
 	// vampiric damage expiration
 	// don't expire if only 1 player in the match
 	if (g_vampiric_damage->integer && ClientIsPlaying(ent->client) && !ent->client->ps.stats[STAT_CHASE] && !level.intermission_time && ent->health > 0) {
-		if (level.num_playing_clients > 1 && ent->client->vampire_expiretime < level.time) {
+		if (level.num_playing_clients > 1 && level.time > ent->client->vampire_expiretime) {
 			int quantity = floor((ent->health - 1) / ent->max_health) + 1;
+			/*
 			if (ent->health > ent->max_health * 5)
 				quantity += ceil(ent->health - (ent->max_health * 5) / ent->max_health);
+				*/
 			ent->health -= quantity;
-			ent->client->vampire_expiretime += ent->health < ceil(ent->max_health / 2) ? 2000_ms : 1000_ms;
+			ent->client->vampire_expiretime = level.time + 1_sec;
+			//ent->client->vampire_expiretime += ent->health < ceil(ent->max_health / 2) ? 2_sec : 1_sec;
 			if (ent->health <= 0) {
 				G_AdjustPlayerScore(ent->client, -1, !!teamplay->integer, -1);
 
 				player_die(ent, ent, ent, 1, vec3_origin, { MOD_EXPIRE, true });
 				return;
 			}
-			ent->client->vampire_expiretime = level.time;
+			//ent->client->vampire_expiretime = level.time;
 		}
 	}
 
@@ -1395,13 +1398,6 @@ void ClientEndServerFrame(edict_t *ent) {
 	// accurately determined
 	G_CalcBlend(e);
 
-	if (g_matchstats->integer) {
-		if (ent->client->hit_target) {
-			ent->client->hit_target = false;
-			ent->client->mstats.total_hits++;
-		}
-	}
-
 	// chase cam stuff
 	if (!ClientIsPlaying(ent->client))
 		G_SetSpectatorStats(ent);
@@ -1462,7 +1458,7 @@ void ClientEndServerFrame(edict_t *ent) {
 	if (coop->integer && G_ShouldPlayersCollide(false) && !(ent->clipmask & CONTENTS_PLAYER) && ent->takedamage) {
 		bool clipped_player = false;
 
-		for (auto player : active_players()) {
+		for (auto player : active_clients()) {
 			if (player == ent)
 				continue;
 

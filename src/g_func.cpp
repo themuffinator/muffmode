@@ -1638,10 +1638,9 @@ static void door_go_up(edict_t *self, edict_t *activator) {
 }
 
 static THINK(smart_water_go_up) (edict_t *self) -> void {
-	float	 distance;
-	edict_t *lowestPlayer;
-	edict_t *ent;
-	float	 lowestPlayerPt;
+	float	distance;
+	edict_t	*lowestPlayer;
+	float	lowestPlayerPt;
 
 	if (self->moveinfo.state == STATE_TOP) { // reset top wait time
 		if (self->moveinfo.wait >= 0)
@@ -1668,14 +1667,12 @@ static THINK(smart_water_go_up) (edict_t *self) -> void {
 	// find the lowest player point.
 	lowestPlayerPt = 999999;
 	lowestPlayer = nullptr;
-	for (size_t i = 0; i < game.maxclients; i++) {
-		ent = &g_edicts[1 + i];
-
+	for (auto ec : active_clients()) {
 		// don't count dead or unused player slots
-		if ((ent->inuse) && (ent->health > 0)) {
-			if (ent->absmin[2] < lowestPlayerPt) {
-				lowestPlayerPt = ent->absmin[2];
-				lowestPlayer = ent;
+		if (ec->health > 0) {
+			if (ec->absmin[2] < lowestPlayerPt) {
+				lowestPlayerPt = ec->absmin[2];
+				lowestPlayer = ec;
 			}
 		}
 	}
@@ -1896,6 +1893,7 @@ static TOUCH(door_touch) (edict_t *self, edict_t *other, const trace_t &tr, bool
 
 	if (level.time < self->touch_debounce_time)
 		return;
+
 	self->touch_debounce_time = level.time + 5_sec;
 
 	gi.LocCenter_Print(other, "{}", self->message);
@@ -1944,17 +1942,19 @@ void SP_func_door(edict_t *ent) {
 		ent->speed = 100;
 	if (deathmatch->integer)
 		ent->speed *= 2;
-
-	if (!ent->accel)
-		ent->accel = ent->speed;
-	if (!ent->decel)
-		ent->decel = ent->speed;
+	if (g_fast_doors->integer)
+		ent->speed *= 2;
 
 	if (g_mover_speed_scale->value != 1.0f) {
 		ent->speed *= g_mover_speed_scale->value;
 		ent->accel *= g_mover_speed_scale->value;
 		ent->decel *= g_mover_speed_scale->value;
 	}
+
+	if (!ent->accel)
+		ent->accel = ent->speed;
+	if (!ent->decel)
+		ent->decel = ent->speed;
 
 	if (!ent->wait)
 		ent->wait = 3;
@@ -2110,16 +2110,19 @@ void SP_func_door_rotating(edict_t *ent) {
 
 	if (!ent->speed)
 		ent->speed = 100;
-	if (!ent->accel)
-		ent->accel = ent->speed;
-	if (!ent->decel)
-		ent->decel = ent->speed;
+	if (g_fast_doors->integer)
+		ent->speed *= 2;
 
 	if (g_mover_speed_scale->value != 1.0f) {
 		ent->speed *= g_mover_speed_scale->value;
 		ent->accel *= g_mover_speed_scale->value;
 		ent->decel *= g_mover_speed_scale->value;
 	}
+
+	if (!ent->accel)
+		ent->accel = ent->speed;
+	if (!ent->decel)
+		ent->decel = ent->speed;
 
 	if (!ent->wait)
 		ent->wait = 3;
@@ -3254,7 +3257,7 @@ static THINK(func_eye_think) (edict_t *self) -> void {
 	float closest_dist = 0;
 	edict_t *closest_player = nullptr;
 
-	for (auto player : active_players()) {
+	for (auto player : active_clients()) {
 		vec3_t dir = player->s.origin - self->s.origin;
 		float dist = dir.normalize();
 

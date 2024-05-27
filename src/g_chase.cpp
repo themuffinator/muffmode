@@ -2,6 +2,40 @@
 // Licensed under the GNU General Public License 2.0.
 #include "g_local.h"
 
+void FreeFollower(edict_t *ent) {
+	if (!ent)
+		return;
+
+	if (!ent->client->follow_target)
+		return;
+
+	ent->client->follow_target = nullptr;
+	ent->client->ps.pmove.pm_flags &= ~(PMF_NO_POSITIONAL_PREDICTION | PMF_NO_ANGULAR_PREDICTION);
+
+	ent->client->ps.kick_angles = {};
+	ent->client->ps.gunangles = {};
+	ent->client->ps.gunoffset = {};
+	ent->client->ps.gunindex = 0;
+	ent->client->ps.gunskin = 0;
+	ent->client->ps.gunframe = 0;
+	ent->client->ps.gunrate = 0;
+	ent->client->ps.screen_blend = {};
+	ent->client->ps.damage_blend = {};
+	ent->client->ps.rdflags = RDF_NONE;
+}
+
+void FreeClientFollowers(edict_t *ent) {
+	if (!ent)
+		return;
+
+	for (auto ec : active_clients()) {
+		if (!ec->client->follow_target)
+			continue;
+		if (ec->client->follow_target == ent)
+			FreeFollower(ec);
+	}
+}
+
 void UpdateChaseCam(edict_t *ent) {
 	vec3_t	o, ownerv, goal;
 	edict_t	*targ;
@@ -10,42 +44,14 @@ void UpdateChaseCam(edict_t *ent) {
 	vec3_t	oldgoal;
 	vec3_t	angles;
 
-	// is our chase target gone?
-	if (!ent->client->chase_target->inuse || !ent->client->chase_target->client || ent->client->chase_target->client->resp.spectator) {
-		SetTeam(ent, TEAM_SPECTATOR, false, false);
-		/*
-		edict_t *old = ent->client->chase_target;
-
-		ent->client->chase_target = nullptr;
-		ent->client->ps.pmove.pm_flags &= ~(PMF_NO_POSITIONAL_PREDICTION | PMF_NO_ANGULAR_PREDICTION);
-
-		ChaseNext(ent);
-		if (ent->client->chase_target == old || !ent->client->chase_target) {
-			ent->client->chase_target = nullptr;
-			ent->client->ps.pmove.pm_flags &= ~(PMF_NO_POSITIONAL_PREDICTION | PMF_NO_ANGULAR_PREDICTION);
-
-			ent->client->ps.kick_angles = {};
-			ent->client->ps.gunangles = {};
-			ent->client->ps.gunoffset = {};
-			ent->client->ps.gunindex = 0;
-			ent->client->ps.gunskin = 0;
-			ent->client->ps.gunframe = 0;
-			ent->client->ps.gunrate = 0;
-			ent->client->ps.screen_blend = {};
-			ent->client->ps.damage_blend = {};
-			ent->client->ps.rdflags = RDF_NONE;
-
-			ent->client->pers.hand = RIGHT_HANDED;
-			ent->client->pers.weapon = nullptr;
-
-			SetTeam(ent, TEAM_SPECTATOR, false, false);
-			return;
-		}
-		*/
+	// is our follow target gone?
+	if (!ent->client->follow_target->inuse || !ent->client->follow_target->client || ent->client->follow_target->client->resp.team == TEAM_SPECTATOR) {
+		SetTeam(ent, TEAM_SPECTATOR, false, false, false);
+		FreeClientFollowers(ent);
 		return;
 	}
 
-	targ = ent->client->chase_target;
+	targ = ent->client->follow_target;
 
 	ownerv = targ->s.origin;
 	oldgoal = ent->s.origin;
@@ -76,10 +82,10 @@ void UpdateChaseCam(edict_t *ent) {
 		ent->client->ps.pmove.gravity = targ->client->ps.pmove.gravity;
 		ent->client->ps.pmove.delta_angles = targ->client->ps.pmove.delta_angles;
 		ent->client->ps.pmove.viewheight = targ->client->ps.pmove.viewheight;
-		/*
-		ent->client->pers.hand = ent->client->chase_target->client->pers.hand;
-		ent->client->pers.weapon = ent->client->chase_target->client->pers.weapon;
-		*/
+		
+		ent->client->pers.hand = ent->client->follow_target->client->pers.hand;
+		ent->client->pers.weapon = ent->client->follow_target->client->pers.weapon;
+		
 		//FIXME: color shells and damage blends not working
 
 		// unadjusted view and origin handling
@@ -150,20 +156,89 @@ void UpdateChaseCam(edict_t *ent) {
 		AngleVectors(ent->client->v_angle, ent->client->v_forward, nullptr, nullptr);
 	}
 
+	edict_t *e = targ ? targ : ent;
+	ent->client->ps.stats[STAT_SHOW_STATUSBAR] = e->client->resp.team == TEAM_SPECTATOR ? 0 : 1;
+
 	ent->viewheight = 0;
 	if (!g_eyecam->integer)
 		ent->client->ps.pmove.pm_flags |= PMF_NO_POSITIONAL_PREDICTION | PMF_NO_ANGULAR_PREDICTION;
 	gi.linkentity(ent);
 }
 
-void ChaseNext(edict_t *ent) {
+/*
+==================
+SanitizeString
+
+Remove case and control characters
+==================
+*/
+static void SanitizeString(const char *in, char *out) {
+	while (*in) {
+		if (*in < ' ') {
+			in++;
+			continue;
+		}
+		*out = tolower(*in);
+		out++;
+		in++;
+	}
+
+	*out = '\0';
+}
+
+/*
+==================
+ClientNumberFromString
+
+Returns a player number for either a number or name string
+Returns -1 if invalid
+==================
+*/
+static int ClientNumberFromString(edict_t *to, char *s) {
+	gclient_t	*cl;
+	uint32_t	idnum;
+	char		s2[MAX_STRING_CHARS];
+	char		n2[MAX_STRING_CHARS];
+	
+	// numeric values are just slot numbers
+	if (s[0] >= '0' && s[0] <= '9') {
+		idnum = atoi(s);
+		if ((unsigned)idnum >= (unsigned)game.maxclients) {
+			gi.LocClient_Print(to, PRINT_HIGH, "Bad client slot: {}\n\"", idnum);
+			return -1;
+		}
+
+		cl = &game.clients[idnum];
+		if (!cl->pers.connected) {
+			gi.LocClient_Print(to, PRINT_HIGH, "Client {} is not active.\n\"", idnum);
+			return -1;
+		}
+		return idnum;
+	}
+
+	// check for a name match
+	SanitizeString(s, s2);
+	for (idnum = 0, cl = game.clients; idnum < game.maxclients; idnum++, cl++) {
+		if (!cl->pers.connected)
+			continue;
+		SanitizeString(cl->resp.netname, n2);
+		if (!strcmp(n2, s2)) {
+			return idnum;
+		}
+	}
+
+	gi.LocClient_Print(to, PRINT_HIGH, "User {} is not on the server.\n\"", s);
+	return -1;
+}
+
+void FollowNext(edict_t *ent) {
 	ptrdiff_t i;
 	edict_t *e;
 
-	if (!ent->client->chase_target)
+	if (!ent->client->follow_target)
 		return;
 
-	i = ent->client->chase_target - g_edicts;
+	i = ent->client->follow_target - g_edicts;
 	do {
 		i++;
 		if (i > game.maxclients)
@@ -173,20 +248,20 @@ void ChaseNext(edict_t *ent) {
 			continue;
 		if (ClientIsPlaying(e->client))
 			break;
-	} while (e != ent->client->chase_target);
+	} while (e != ent->client->follow_target);
 
-	ent->client->chase_target = e;
-	ent->client->update_chase = true;
+	ent->client->follow_target = e;
+	ent->client->follow_update = true;
 }
 
-void ChasePrev(edict_t *ent) {
+void FollowPrev(edict_t *ent) {
 	int		 i;
 	edict_t *e;
 
-	if (!ent->client->chase_target)
+	if (!ent->client->follow_target)
 		return;
 
-	i = ent->client->chase_target - g_edicts;
+	i = ent->client->follow_target - g_edicts;
 	do {
 		i--;
 		if (i < 1)
@@ -196,21 +271,60 @@ void ChasePrev(edict_t *ent) {
 			continue;
 		if (ClientIsPlaying(e->client))
 			break;
-	} while (e != ent->client->chase_target);
+	} while (e != ent->client->follow_target);
 
-	ent->client->chase_target = e;
-	ent->client->update_chase = true;
+	ent->client->follow_target = e;
+	ent->client->follow_update = true;
 }
 
-void GetChaseTarget(edict_t *ent) {
-	uint32_t i;
-	edict_t *other;
+void FollowCycle(edict_t *ent, int dir) {
+	int			clientnum;
+	int			original;
+	gclient_t	*cl = ent->client;
+	edict_t		*follow_ent = nullptr;
 
-	for (i = 1; i <= game.maxclients; i++) {
-		other = g_edicts + i;
-		if (other->inuse && ClientIsPlaying(other->client)) {
-			ent->client->chase_target = other;
-			ent->client->update_chase = true;
+	// if they are playing a duel game, count as a loss
+	if (duel->integer && ent->client->resp.team == TEAM_FREE)
+		ent->client->resp.losses++;
+
+	// first set them to spectator
+	if (cl->resp.spectator_state == SPECTATOR_NOT)
+		SetTeam(ent, TEAM_SPECTATOR, false, false, false);
+
+	clientnum = cl->resp.spectator_client;
+	original = clientnum;
+	do {
+		clientnum = (clientnum + dir) % game.maxclients;
+		follow_ent = &g_edicts[clientnum + 1];
+
+		// can only follow connected clients
+		if (!follow_ent->client->pers.connected)
+			continue;
+		
+		// can't follow another spectator
+		if (!ClientIsPlaying(follow_ent->client))
+			continue;
+
+		// this is good, we can use it
+		//q3
+		cl->resp.spectator_client = clientnum;
+		cl->resp.spectator_state = SPECTATOR_FOLLOW;
+
+		//q2
+		ent->client->follow_target = follow_ent;
+		ent->client->follow_update = true;
+
+		return;
+	} while (clientnum != original);
+
+	// leave it where it was
+}
+
+void GetFollowTarget(edict_t *ent) {
+	for (auto ec : active_clients()) {
+		if (ec->inuse && ClientIsPlaying(ec->client)) {
+			ent->client->follow_target = ec;
+			ent->client->follow_update = true;
 			UpdateChaseCam(ent);
 			return;
 		}

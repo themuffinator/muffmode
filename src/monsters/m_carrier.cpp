@@ -63,8 +63,7 @@ void carrier_prep_spawn(edict_t *self);
 void CarrierMachineGunHold(edict_t *self);
 void CarrierRocket(edict_t *self);
 
-MONSTERINFO_SIGHT(carrier_sight) (edict_t *self, edict_t *other) -> void
-{
+MONSTERINFO_SIGHT(carrier_sight) (edict_t *self, edict_t *other) -> void {
 	gi.sound(self, CHAN_VOICE, sound_sight, 1, ATTN_NORM, 0);
 }
 
@@ -73,8 +72,7 @@ MONSTERINFO_SIGHT(carrier_sight) (edict_t *self, edict_t *other) -> void
 //
 // if there is a player behind/below the carrier, and we can shoot, and we can trace a LOS to them ..
 // pick one of the group, and let it rip
-void CarrierCoopCheck(edict_t *self)
-{
+static void CarrierCoopCheck(edict_t *self) {
 	// no more than 8 players in coop, so..
 	std::array<edict_t *, MAX_SPLIT_PLAYERS> targets;
 	uint32_t num_targets = 0;
@@ -94,18 +92,11 @@ void CarrierCoopCheck(edict_t *self)
 	targets = {};
 
 	// cycle through players
-	for (uint32_t player = 1; player <= game.maxclients; player++)
-	{
-		ent = &g_edicts[player];
-		if (!ent->inuse)
-			continue;
-		if (!ent->client)
-			continue;
-		if (inback(self, ent) || below(self, ent))
-		{
-			tr = gi.traceline(self->s.origin, ent->s.origin, self, MASK_SOLID);
+	for (auto ce : active_clients()) {
+		if (inback(self, ce) || below(self, ce)) {
+			tr = gi.traceline(self->s.origin, ce->s.origin, self, MASK_SOLID);
 			if (tr.fraction == 1.0f)
-				targets[num_targets++] = ent;
+				targets[num_targets++] = ce;
 		}
 	}
 
@@ -130,8 +121,7 @@ void CarrierCoopCheck(edict_t *self)
 	return;
 }
 
-void CarrierGrenade(edict_t *self)
-{
+static void CarrierGrenade(edict_t *self) {
 	vec3_t					 start;
 	vec3_t					 forward, right, up;
 	vec3_t					 aim;
@@ -150,30 +140,21 @@ void CarrierGrenade(edict_t *self)
 	else
 		direction = 1.0f;
 
-	mytime = (int) ((level.time - self->timestamp) / 0.4f).seconds();
+	mytime = (int)((level.time - self->timestamp) / 0.4f).seconds();
 
-	if (mytime == 0)
-	{
+	if (mytime == 0) {
 		spreadR = 0.15f * direction;
 		spreadU = 0.1f - 0.1f * direction;
-	}
-	else if (mytime == 1)
-	{
+	} else if (mytime == 1) {
 		spreadR = 0;
 		spreadU = 0.1f;
-	}
-	else if (mytime == 2)
-	{
+	} else if (mytime == 2) {
 		spreadR = -0.15f * direction;
 		spreadU = 0.1f - -0.1f * direction;
-	}
-	else if (mytime == 3)
-	{
+	} else if (mytime == 3) {
 		spreadR = 0;
 		spreadU = 0.1f;
-	}
-	else
-	{
+	} else {
 		// error, shoot straight
 		spreadR = 0;
 		spreadU = 0;
@@ -197,8 +178,7 @@ void CarrierGrenade(edict_t *self)
 	monster_fire_grenade(self, start, aim, 50, 600, flash_number, (crandom_open() * 10.0f), 200.f + (crandom_open() * 10.0f));
 }
 
-void CarrierPredictiveRocket(edict_t *self)
-{
+static void CarrierPredictiveRocket(edict_t *self) {
 	vec3_t forward, right;
 	vec3_t start;
 	vec3_t dir;
@@ -226,22 +206,18 @@ void CarrierPredictiveRocket(edict_t *self)
 	monster_fire_rocket(self, start, dir, 50, CARRIER_ROCKET_SPEED, MZ2_CARRIER_ROCKET_4);
 }
 
-void CarrierRocket(edict_t *self)
-{
+void CarrierRocket(edict_t *self) {
 	vec3_t forward, right;
 	vec3_t start;
 	vec3_t dir;
 	vec3_t vec;
 
-	if (self->enemy)
-	{
-		if (self->enemy->client && frandom() < 0.5f)
-		{
+	if (self->enemy) {
+		if (self->enemy->client && frandom() < 0.5f) {
 			CarrierPredictiveRocket(self);
 			return;
 		}
-	}
-	else
+	} else
 		return;
 
 	AngleVectors(self->s.angles, forward, right, nullptr);
@@ -285,8 +261,7 @@ void CarrierRocket(edict_t *self)
 	monster_fire_rocket(self, start, dir, 50, 500, MZ2_CARRIER_ROCKET_4);
 }
 
-void carrier_firebullet_right(edict_t *self)
-{
+static void carrier_firebullet_right(edict_t *self) {
 	vec3_t					 forward, right, start;
 	monster_muzzleflash_id_t flashnum;
 
@@ -302,8 +277,7 @@ void carrier_firebullet_right(edict_t *self)
 	monster_fire_bullet(self, start, forward, 6, 4, DEFAULT_BULLET_HSPREAD, DEFAULT_BULLET_VSPREAD, flashnum);
 }
 
-void carrier_firebullet_left(edict_t *self)
-{
+static void carrier_firebullet_left(edict_t *self) {
 	vec3_t					 forward, right, start;
 	monster_muzzleflash_id_t flashnum;
 
@@ -319,8 +293,7 @@ void carrier_firebullet_left(edict_t *self)
 	monster_fire_bullet(self, start, forward, 6, 4, DEFAULT_BULLET_HSPREAD, DEFAULT_BULLET_VSPREAD, flashnum);
 }
 
-void CarrierMachineGun(edict_t *self)
-{
+static void CarrierMachineGun(edict_t *self) {
 	CarrierCoopCheck(self);
 	if (self->enemy)
 		carrier_firebullet_left(self);
@@ -328,8 +301,7 @@ void CarrierMachineGun(edict_t *self)
 		carrier_firebullet_right(self);
 }
 
-void CarrierSpawn(edict_t *self)
-{
+static void CarrierSpawn(edict_t *self) {
 	vec3_t	 f, r, offset, startpoint, spawnpoint;
 	edict_t *ent;
 
@@ -344,8 +316,7 @@ void CarrierSpawn(edict_t *self)
 
 	auto &reinforcement = self->monsterinfo.reinforcements.reinforcements[self->monsterinfo.chosen_reinforcements[0]];
 
-	if (FindSpawnPoint(startpoint, reinforcement.mins, reinforcement.maxs, spawnpoint, 32, false))
-	{
+	if (FindSpawnPoint(startpoint, reinforcement.mins, reinforcement.maxs, spawnpoint, 32, false)) {
 		ent = CreateFlyMonster(spawnpoint, self->s.angles, reinforcement.mins, reinforcement.maxs, reinforcement.classname);
 
 		if (!ent)
@@ -361,29 +332,22 @@ void CarrierSpawn(edict_t *self)
 		ent->monsterinfo.monster_slots = reinforcement.strength;
 		self->monsterinfo.monster_used += reinforcement.strength;
 
-		if ((self->enemy->inuse) && (self->enemy->health > 0))
-		{
+		if ((self->enemy->inuse) && (self->enemy->health > 0)) {
 			ent->enemy = self->enemy;
 			FoundTarget(ent);
 
-			if (!strcmp(ent->classname, "monster_kamikaze"))
-			{
+			if (!strcmp(ent->classname, "monster_kamikaze")) {
 				ent->monsterinfo.lefty = false;
 				ent->monsterinfo.attack_state = AS_STRAIGHT;
 				M_SetAnimation(ent, &flyer_move_kamikaze);
 				ent->monsterinfo.aiflags |= AI_CHARGING;
 				ent->owner = self;
-			}
-			else if (!strcmp(ent->classname, "monster_flyer"))
-			{
-				if (brandom())
-				{
+			} else if (!strcmp(ent->classname, "monster_flyer")) {
+				if (brandom()) {
 					ent->monsterinfo.lefty = false;
 					ent->monsterinfo.attack_state = AS_SLIDING;
 					M_SetAnimation(ent, &flyer_move_attack3);
-				}
-				else
-				{
+				} else {
 					ent->monsterinfo.lefty = true;
 					ent->monsterinfo.attack_state = AS_SLIDING;
 					M_SetAnimation(ent, &flyer_move_attack3);
@@ -393,16 +357,14 @@ void CarrierSpawn(edict_t *self)
 	}
 }
 
-void carrier_prep_spawn(edict_t *self)
-{
+void carrier_prep_spawn(edict_t *self) {
 	CarrierCoopCheck(self);
 	self->monsterinfo.aiflags |= AI_MANUAL_STEERING;
 	self->timestamp = level.time;
 	self->yaw_speed = 10;
 }
 
-void carrier_spawn_check(edict_t *self)
-{
+void carrier_spawn_check(edict_t *self) {
 	CarrierCoopCheck(self);
 	CarrierSpawn(self);
 
@@ -410,13 +372,11 @@ void carrier_spawn_check(edict_t *self)
 	{
 		self->monsterinfo.aiflags &= ~AI_MANUAL_STEERING;
 		self->yaw_speed = orig_yaw_speed;
-	}
-	else
+	} else
 		self->monsterinfo.nextframe = FRAME_spawn08;
 }
 
-void carrier_ready_spawn(edict_t *self)
-{
+static void carrier_ready_spawn(edict_t *self) {
 	float  current_yaw;
 	vec3_t offset, f, r, startpoint, spawnpoint;
 
@@ -424,8 +384,7 @@ void carrier_ready_spawn(edict_t *self)
 
 	current_yaw = anglemod(self->s.angles[YAW]);
 
-	if (fabsf(current_yaw - self->ideal_yaw) > 0.1f)
-	{
+	if (fabsf(current_yaw - self->ideal_yaw) > 0.1f) {
 		self->monsterinfo.aiflags |= AI_HOLD_FRAME;
 		self->timestamp += FRAME_TIME_S;
 		return;
@@ -444,16 +403,14 @@ void carrier_ready_spawn(edict_t *self)
 	offset = { 105, 0, -58 };
 	AngleVectors(self->s.angles, f, r, nullptr);
 	startpoint = M_ProjectFlashSource(self, offset, f, r);
-	if (FindSpawnPoint(startpoint, reinforcement.mins, reinforcement.maxs, spawnpoint, 32, false))
-	{
+	if (FindSpawnPoint(startpoint, reinforcement.mins, reinforcement.maxs, spawnpoint, 32, false)) {
 		float radius = (reinforcement.maxs - reinforcement.mins).length() * 0.5f;
 
 		SpawnGrow_Spawn(spawnpoint + (reinforcement.mins + reinforcement.maxs), radius, radius * 2.f);
 	}
 }
 
-void carrier_start_spawn(edict_t *self)
-{
+void carrier_start_spawn(edict_t *self) {
 	int	   mytime;
 	float  enemy_yaw;
 	vec3_t temp;
@@ -465,7 +422,7 @@ void carrier_start_spawn(edict_t *self)
 	if (!self->enemy)
 		return;
 
-	mytime = (int) ((level.time - self->timestamp) / 0.5).seconds();
+	mytime = (int)((level.time - self->timestamp) / 0.5).seconds();
 
 	temp = self->enemy->s.origin - self->s.origin;
 	enemy_yaw = vectoyaw(temp);
@@ -530,8 +487,7 @@ mframe_t carrier_frames_run[] = {
 };
 MMOVE_T(carrier_move_run) = { FRAME_search01, FRAME_search13, carrier_frames_run, nullptr };
 
-static void CarrierSpool(edict_t *self)
-{
+static void CarrierSpool(edict_t *self) {
 	CarrierCoopCheck(self);
 	gi.sound(self, CHAN_BODY, sound_cg_up, 1, 0.5f, 0);
 
@@ -599,8 +555,7 @@ mframe_t carrier_frames_attack_rocket[] = {
 };
 MMOVE_T(carrier_move_attack_rocket) = { FRAME_fireb01, FRAME_fireb01, carrier_frames_attack_rocket, carrier_run };
 
-void CarrierRail(edict_t *self)
-{
+static void CarrierRail(edict_t *self) {
 	vec3_t start;
 	vec3_t dir;
 	vec3_t forward, right;
@@ -617,8 +572,7 @@ void CarrierRail(edict_t *self)
 	self->monsterinfo.attack_finished = level.time + RAIL_FIRE_TIME;
 }
 
-void CarrierSaveLoc(edict_t *self)
-{
+static void CarrierSaveLoc(edict_t *self) {
 	CarrierCoopCheck(self);
 	self->pos1 = self->enemy->s.origin; // save for aiming the shot
 	self->pos1[2] += self->enemy->viewheight;
@@ -701,13 +655,11 @@ mframe_t carrier_frames_death[] = {
 };
 MMOVE_T(carrier_move_death) = { FRAME_death01, FRAME_death16, carrier_frames_death, carrier_dead };
 
-MONSTERINFO_STAND(carrier_stand) (edict_t *self) -> void
-{
+MONSTERINFO_STAND(carrier_stand) (edict_t *self) -> void {
 	M_SetAnimation(self, &carrier_move_stand);
 }
 
-MONSTERINFO_RUN(carrier_run) (edict_t *self) -> void
-{
+MONSTERINFO_RUN(carrier_run) (edict_t *self) -> void {
 	self->monsterinfo.aiflags &= ~AI_HOLD_FRAME;
 
 	if (self->monsterinfo.aiflags & AI_STAND_GROUND)
@@ -716,18 +668,15 @@ MONSTERINFO_RUN(carrier_run) (edict_t *self) -> void
 		M_SetAnimation(self, &carrier_move_run);
 }
 
-MONSTERINFO_WALK(carrier_walk) (edict_t *self) -> void
-{
+MONSTERINFO_WALK(carrier_walk) (edict_t *self) -> void {
 	M_SetAnimation(self, &carrier_move_walk);
 }
 
-void CarrierMachineGunHold(edict_t *self)
-{
+void CarrierMachineGunHold(edict_t *self) {
 	CarrierMachineGun(self);
 }
 
-MONSTERINFO_ATTACK(carrier_attack) (edict_t *self) -> void
-{
+MONSTERINFO_ATTACK(carrier_attack) (edict_t *self) -> void {
 	vec3_t vec;
 	float  range, luck;
 	bool   enemy_inback, enemy_infront, enemy_below;
@@ -741,22 +690,19 @@ MONSTERINFO_ATTACK(carrier_attack) (edict_t *self) -> void
 	enemy_infront = infront(self, self->enemy);
 	enemy_below = below(self, self->enemy);
 
-	if (self->bad_area)
-	{
+	if (self->bad_area) {
 		if ((enemy_inback) || (enemy_below))
 			M_SetAnimation(self, &carrier_move_attack_rocket);
 		else if ((frandom() < 0.1f) || (level.time < self->monsterinfo.attack_finished))
 			M_SetAnimation(self, &carrier_move_attack_pre_mg);
-		else
-		{
+		else {
 			gi.sound(self, CHAN_WEAPON, sound_rail, 1, ATTN_NORM, 0);
 			M_SetAnimation(self, &carrier_move_attack_rail);
 		}
 		return;
 	}
 
-	if (self->monsterinfo.attack_state == AS_BLIND)
-	{
+	if (self->monsterinfo.attack_state == AS_BLIND) {
 		M_SetAnimation(self, &carrier_move_spawn);
 		return;
 	}
@@ -765,117 +711,89 @@ MONSTERINFO_ATTACK(carrier_attack) (edict_t *self) -> void
 	{
 		if ((frandom() < 0.1f) || (level.time < self->monsterinfo.attack_finished))
 			M_SetAnimation(self, &carrier_move_attack_pre_mg);
-		else
-		{
+		else {
 			gi.sound(self, CHAN_WEAPON, sound_rail, 1, ATTN_NORM, 0);
 			M_SetAnimation(self, &carrier_move_attack_rail);
 		}
 		return;
 	}
 
-	if (enemy_infront)
-	{
+	if (enemy_infront) {
 		vec = self->enemy->s.origin - self->s.origin;
 		range = vec.length();
-		if (range <= 125)
-		{
+		if (range <= 125) {
 			if ((frandom() < 0.8f) || (level.time < self->monsterinfo.attack_finished))
 				M_SetAnimation(self, &carrier_move_attack_pre_mg);
-			else
-			{
+			else {
 				gi.sound(self, CHAN_WEAPON, sound_rail, 1, ATTN_NORM, 0);
 				M_SetAnimation(self, &carrier_move_attack_rail);
 			}
-		}
-		else if (range < 600)
-		{
+		} else if (range < 600) {
 			luck = frandom();
-			if (M_SlotsLeft(self) > 2)
-			{
+			if (M_SlotsLeft(self) > 2) {
 				if (luck <= 0.20f)
 					M_SetAnimation(self, &carrier_move_attack_pre_mg);
 				else if (luck <= 0.40f)
 					M_SetAnimation(self, &carrier_move_attack_pre_gren);
-				else if ((luck <= 0.7f) && !(level.time < self->monsterinfo.attack_finished))
-				{
+				else if ((luck <= 0.7f) && !(level.time < self->monsterinfo.attack_finished)) {
 					gi.sound(self, CHAN_WEAPON, sound_rail, 1, ATTN_NORM, 0);
 					M_SetAnimation(self, &carrier_move_attack_rail);
-				}
-				else
+				} else
 					M_SetAnimation(self, &carrier_move_spawn);
-			}
-			else
-			{
+			} else {
 				if (luck <= 0.30f)
 					M_SetAnimation(self, &carrier_move_attack_pre_mg);
 				else if (luck <= 0.65f)
 					M_SetAnimation(self, &carrier_move_attack_pre_gren);
-				else if (level.time >= self->monsterinfo.attack_finished)
-				{
+				else if (level.time >= self->monsterinfo.attack_finished) {
 					gi.sound(self, CHAN_WEAPON, sound_rail, 1, ATTN_NORM, 0);
 					M_SetAnimation(self, &carrier_move_attack_rail);
-				}
-				else
+				} else
 					M_SetAnimation(self, &carrier_move_attack_pre_mg);
 			}
-		}
-		else // won't use grenades at this range
+		} else // won't use grenades at this range
 		{
 			luck = frandom();
-			if (M_SlotsLeft(self) > 2)
-			{
+			if (M_SlotsLeft(self) > 2) {
 				if (luck < 0.3f)
 					M_SetAnimation(self, &carrier_move_attack_pre_mg);
-				else if ((luck < 0.65f) && !(level.time < self->monsterinfo.attack_finished))
-				{
+				else if ((luck < 0.65f) && !(level.time < self->monsterinfo.attack_finished)) {
 					gi.sound(self, CHAN_WEAPON, sound_rail, 1, ATTN_NORM, 0);
 					self->pos1 = self->enemy->s.origin; // save for aiming the shot
 					self->pos1[2] += self->enemy->viewheight;
 					M_SetAnimation(self, &carrier_move_attack_rail);
-				}
-				else
+				} else
 					M_SetAnimation(self, &carrier_move_spawn);
-			}
-			else
-			{
+			} else {
 				if ((luck < 0.45f) || (level.time < self->monsterinfo.attack_finished))
 					M_SetAnimation(self, &carrier_move_attack_pre_mg);
-				else
-				{
+				else {
 					gi.sound(self, CHAN_WEAPON, sound_rail, 1, ATTN_NORM, 0);
 					M_SetAnimation(self, &carrier_move_attack_rail);
 				}
 			}
 		}
-	}
-	else if ((enemy_below) || (enemy_inback))
-	{
+	} else if ((enemy_below) || (enemy_inback)) {
 		M_SetAnimation(self, &carrier_move_attack_rocket);
 	}
 }
 
-void carrier_attack_mg(edict_t *self)
-{
+void carrier_attack_mg(edict_t *self) {
 	CarrierCoopCheck(self);
 	M_SetAnimation(self, &carrier_move_attack_mg);
 	self->monsterinfo.melee_debounce_time = level.time + random_time(1.2_sec, 2_sec);
 }
 
-void carrier_reattack_mg(edict_t *self)
-{
+void carrier_reattack_mg(edict_t *self) {
 	CarrierMachineGun(self);
 
 	CarrierCoopCheck(self);
-	if (visible(self, self->enemy) && infront(self, self->enemy))
-	{
-		if (frandom() < 0.6f)
-		{
+	if (visible(self, self->enemy) && infront(self, self->enemy)) {
+		if (frandom() < 0.6f) {
 			self->monsterinfo.melee_debounce_time += random_time(250_ms, 500_ms);
 			M_SetAnimation(self, &carrier_move_attack_mg);
 			return;
-		}
-		else if (self->monsterinfo.melee_debounce_time > level.time)
-		{
+		} else if (self->monsterinfo.melee_debounce_time > level.time) {
 			M_SetAnimation(self, &carrier_move_attack_mg);
 			return;
 		}
@@ -886,15 +804,13 @@ void carrier_reattack_mg(edict_t *self)
 	gi.sound(self, CHAN_BODY, sound_cg_down, 1, 0.5f, 0);
 }
 
-void carrier_attack_gren(edict_t *self)
-{
+void carrier_attack_gren(edict_t *self) {
 	CarrierCoopCheck(self);
 	self->timestamp = level.time;
 	M_SetAnimation(self, &carrier_move_attack_gren);
 }
 
-void carrier_reattack_gren(edict_t *self)
-{
+void carrier_reattack_gren(edict_t *self) {
 	CarrierCoopCheck(self);
 	if (infront(self, self->enemy))
 		if (self->timestamp + 1.3_sec > level.time) // four grenades
@@ -905,8 +821,7 @@ void carrier_reattack_gren(edict_t *self)
 	M_SetAnimation(self, &carrier_move_attack_post_gren);
 }
 
-PAIN(carrier_pain) (edict_t *self, edict_t *other, float kick, int damage, const mod_t &mod) -> void
-{
+static PAIN(carrier_pain) (edict_t *self, edict_t *other, float kick, int damage, const mod_t &mod) -> void {
 	bool changed = false;
 
 	if (level.time < self->pain_debounce_time)
@@ -920,48 +835,40 @@ PAIN(carrier_pain) (edict_t *self, edict_t *other, float kick, int damage, const
 		gi.sound(self, CHAN_VOICE, sound_pain1, 1, ATTN_NONE, 0);
 	else
 		gi.sound(self, CHAN_VOICE, sound_pain2, 1, ATTN_NONE, 0);
-	
+
 	if (!M_ShouldReactToPain(self, mod))
 		return; // no pain anims in nightmare
 
 	self->monsterinfo.weapon_sound = 0;
 
-	if (damage >= 10)
-	{
-		if (damage < 30)
-		{
-			if (mod.id == MOD_CHAINFIST || frandom() < 0.5f)
-			{
+	if (damage >= 10) {
+		if (damage < 30) {
+			if (mod.id == MOD_CHAINFIST || frandom() < 0.5f) {
 				changed = true;
 				M_SetAnimation(self, &carrier_move_pain_light);
 			}
-		}
-		else
-		{
+		} else {
 			M_SetAnimation(self, &carrier_move_pain_heavy);
 			changed = true;
 		}
 	}
 
 	// if we changed frames, clean up our little messes
-	if (changed)
-	{
+	if (changed) {
 		self->monsterinfo.aiflags &= ~AI_HOLD_FRAME;
 		self->monsterinfo.aiflags &= ~AI_MANUAL_STEERING;
 		self->yaw_speed = orig_yaw_speed;
 	}
 }
 
-MONSTERINFO_SETSKIN(carrier_setskin) (edict_t *self) -> void
-{
+MONSTERINFO_SETSKIN(carrier_setskin) (edict_t *self) -> void {
 	if (self->health < (self->max_health / 2))
 		self->s.skinnum = 1;
 	else
 		self->s.skinnum = 0;
 }
 
-void carrier_dead(edict_t *self)
-{
+void carrier_dead(edict_t *self) {
 	gi.WriteByte(svc_temp_entity);
 	gi.WriteByte(TE_EXPLOSION1_BIG);
 	gi.WritePosition(self->s.origin);
@@ -985,11 +892,10 @@ void carrier_dead(edict_t *self)
 		{ 2, "models/monsters/carrier/gibs/spawner.md2", GIB_SKINNED },
 		{ 2, "models/monsters/carrier/gibs/thigh.md2", GIB_SKINNED },
 		{ "models/monsters/carrier/gibs/head.md2", GIB_SKINNED | GIB_METALLIC | GIB_HEAD }
-	});
+		});
 }
 
-DIE(carrier_die) (edict_t *self, edict_t *inflictor, edict_t *attacker, int damage, const vec3_t &point, const mod_t &mod) -> void
-{
+static DIE(carrier_die) (edict_t *self, edict_t *inflictor, edict_t *attacker, int damage, const vec3_t &point, const mod_t &mod) -> void {
 	gi.sound(self, CHAN_VOICE, sound_death, 1, ATTN_NONE, 0);
 	self->deadflag = true;
 	self->takedamage = false;
@@ -1000,18 +906,15 @@ DIE(carrier_die) (edict_t *self, edict_t *inflictor, edict_t *attacker, int dama
 	self->monsterinfo.weapon_sound = 0;
 }
 
-MONSTERINFO_CHECKATTACK(Carrier_CheckAttack) (edict_t *self) -> bool
-{
+MONSTERINFO_CHECKATTACK(Carrier_CheckAttack) (edict_t *self) -> bool {
 	bool enemy_infront = infront(self, self->enemy);
 	bool enemy_inback = inback(self, self->enemy);
 	bool enemy_below = below(self, self->enemy);
 
 	// PMM - shoot out the back if appropriate
-	if ((enemy_inback) || (!enemy_infront && enemy_below))
-	{
+	if ((enemy_inback) || (!enemy_infront && enemy_below)) {
 		// this is using wait because the attack is supposed to be independent
-		if (level.time >= self->monsterinfo.fire_wait)
-		{
+		if (level.time >= self->monsterinfo.fire_wait) {
 			self->monsterinfo.fire_wait = level.time + CARRIER_ROCKET_TIME;
 			self->monsterinfo.attack(self);
 			if (frandom() < 0.6f)
@@ -1025,8 +928,7 @@ MONSTERINFO_CHECKATTACK(Carrier_CheckAttack) (edict_t *self) -> bool
 	return M_CheckAttack_Base(self, 0.4f, 0.8f, 0.8f, 0.8f, 0.5f, 0.f);
 }
 
-void CarrierPrecache()
-{
+static void CarrierPrecache() {
 	gi.soundindex("flyer/flysght1.wav");
 	gi.soundindex("flyer/flysrch1.wav");
 	gi.soundindex("flyer/flypain1.wav");
@@ -1051,12 +953,11 @@ void CarrierPrecache()
 	gi.modelindex("models/objects/gibs/gear/tris.md2");
 }
 
-/*QUAKED monster_carrier (1 .5 0) (-56 -56 -44) (56 56 44) Ambush Trigger_Spawn Sight
+/*QUAKED monster_carrier (1 .5 0) (-56 -56 -44) (56 56 44) AMBUSH TRIGGER_SPAWN SIGHT
  */
-void SP_monster_carrier(edict_t *self)
-{
-	if ( !M_AllowSpawn( self ) ) {
-		G_FreeEdict( self );
+void SP_monster_carrier(edict_t *self) {
+	if (!M_AllowSpawn(self)) {
+		G_FreeEdict(self);
 		return;
 	}
 
@@ -1077,7 +978,7 @@ void SP_monster_carrier(edict_t *self)
 	self->movetype = MOVETYPE_STEP;
 	self->solid = SOLID_BBOX;
 	self->s.modelindex = gi.modelindex("models/monsters/carrier/tris.md2");
-	
+
 	gi.modelindex("models/monsters/carrier/gibs/base.md2");
 	gi.modelindex("models/monsters/carrier/gibs/chest.md2");
 	gi.modelindex("models/monsters/carrier/gibs/gl.md2");
@@ -1136,8 +1037,7 @@ void SP_monster_carrier(edict_t *self)
 	if (st.was_key_specified("reinforcements"))
 		reinforcements = st.reinforcements;
 
-	if (self->monsterinfo.monster_slots && reinforcements && *reinforcements)
-	{
+	if (self->monsterinfo.monster_slots && reinforcements && *reinforcements) {
 		if (skill->integer)
 			self->monsterinfo.monster_slots += floor(self->monsterinfo.monster_slots * (skill->value / 2.f));
 

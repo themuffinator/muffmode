@@ -64,8 +64,7 @@ mframe_t actor_frames_stand[] = {
 };
 MMOVE_T(actor_move_stand) = { FRAME_stand101, FRAME_stand140, actor_frames_stand, nullptr };
 
-MONSTERINFO_STAND(actor_stand) (edict_t *self) -> void
-{
+MONSTERINFO_STAND(actor_stand) (edict_t *self) -> void {
 	M_SetAnimation(self, &actor_move_stand);
 
 	// randomize on startup
@@ -85,8 +84,7 @@ mframe_t actor_frames_walk[] = {
 };
 MMOVE_T(actor_move_walk) = { FRAME_walk01, FRAME_walk08, actor_frames_walk, nullptr };
 
-MONSTERINFO_WALK(actor_walk) (edict_t *self) -> void
-{
+MONSTERINFO_WALK(actor_walk) (edict_t *self) -> void {
 	M_SetAnimation(self, &actor_move_walk);
 }
 
@@ -100,10 +98,8 @@ mframe_t actor_frames_run[] = {
 };
 MMOVE_T(actor_move_run) = { FRAME_run02, FRAME_run07, actor_frames_run, nullptr };
 
-MONSTERINFO_RUN(actor_run) (edict_t *self) -> void
-{
-	if ((level.time < self->pain_debounce_time) && (!self->enemy))
-	{
+MONSTERINFO_RUN(actor_run) (edict_t *self) -> void {
+	if ((level.time < self->pain_debounce_time) && (!self->enemy)) {
 		if (self->movetarget)
 			actor_walk(self);
 		else
@@ -111,8 +107,7 @@ MONSTERINFO_RUN(actor_run) (edict_t *self) -> void
 		return;
 	}
 
-	if (self->monsterinfo.aiflags & AI_STAND_GROUND)
-	{
+	if (self->monsterinfo.aiflags & AI_STAND_GROUND) {
 		actor_stand(self);
 		return;
 	}
@@ -187,8 +182,7 @@ const char *messages[] = {
 	"Check your targets"
 };
 
-PAIN(actor_pain) (edict_t *self, edict_t *other, float kick, int damage, const mod_t &mod) -> void
-{
+static PAIN(actor_pain) (edict_t *self, edict_t *other, float kick, int damage, const mod_t &mod) -> void {
 	int n;
 
 	if (level.time < self->pain_debounce_time)
@@ -197,8 +191,7 @@ PAIN(actor_pain) (edict_t *self, edict_t *other, float kick, int damage, const m
 	self->pain_debounce_time = level.time + 3_sec;
 	//	gi.sound (self, CHAN_VOICE, actor.sound_pain, 1, ATTN_NORM, 0);
 
-	if ((other->client) && (frandom() < 0.4f))
-	{
+	if ((other->client) && (frandom() < 0.4f)) {
 		vec3_t		v;
 		const char *name;
 
@@ -222,45 +215,36 @@ PAIN(actor_pain) (edict_t *self, edict_t *other, float kick, int damage, const m
 		M_SetAnimation(self, &actor_move_pain3);
 }
 
-MONSTERINFO_SETSKIN(actor_setskin) (edict_t *self) -> void
-{
+MONSTERINFO_SETSKIN(actor_setskin) (edict_t *self) -> void {
 	if (self->health < (self->max_health / 2))
 		self->s.skinnum = 1;
 	else
 		self->s.skinnum = 0;
 }
 
-void actorMachineGun(edict_t *self)
-{
+static void actorMachineGun(edict_t *self) {
 	vec3_t start, target;
 	vec3_t forward, right;
 
 	AngleVectors(self->s.angles, forward, right, nullptr);
 	start = G_ProjectSource(self->s.origin, monster_flash_offset[MZ2_ACTOR_MACHINEGUN_1], forward, right);
-	if (self->enemy)
-	{
-		if (self->enemy->health > 0)
-		{
+	if (self->enemy) {
+		if (self->enemy->health > 0) {
 			target = self->enemy->s.origin + (self->enemy->velocity * -0.2f);
 			target[2] += self->enemy->viewheight;
-		}
-		else
-		{
+		} else {
 			target = self->enemy->absmin;
 			target[2] += (self->enemy->size[2] / 2) + 1;
 		}
 		forward = target - start;
 		forward.normalize();
-	}
-	else
-	{
+	} else {
 		AngleVectors(self->s.angles, forward, nullptr, nullptr);
 	}
 	monster_fire_bullet(self, start, forward, 3, 4, DEFAULT_BULLET_HSPREAD, DEFAULT_BULLET_VSPREAD, MZ2_ACTOR_MACHINEGUN_1);
 }
 
-void actor_dead(edict_t *self)
-{
+static void actor_dead(edict_t *self) {
 	self->mins = { -16, -16, -24 };
 	self->maxs = { 16, 16, -8 };
 	self->movetype = MOVETYPE_TOSS;
@@ -297,17 +281,15 @@ mframe_t actor_frames_death2[] = {
 };
 MMOVE_T(actor_move_death2) = { FRAME_death201, FRAME_death213, actor_frames_death2, actor_dead };
 
-DIE(actor_die) (edict_t *self, edict_t *inflictor, edict_t *attacker, int damage, const vec3_t &point, const mod_t &mod) -> void
-{
+static DIE(actor_die) (edict_t *self, edict_t *inflictor, edict_t *attacker, int damage, const vec3_t &point, const mod_t &mod) -> void {
 	// check for gib
-	if (self->health <= -80)
-	{
+	if (self->health <= -80) {
 		//		gi.sound (self, CHAN_VOICE, actor.sound_gib, 1, ATTN_NORM, 0);
 		ThrowGibs(self, damage, {
 			{ 2, "models/objects/gibs/bone/tris.md2" },
 			{ 4, "models/objects/gibs/sm_meat/tris.md2" },
 			{ "models/objects/gibs/head2/tris.md2", GIB_HEAD }
-		});
+			});
 		self->deadflag = true;
 		return;
 	}
@@ -326,8 +308,7 @@ DIE(actor_die) (edict_t *self, edict_t *inflictor, edict_t *attacker, int damage
 		M_SetAnimation(self, &actor_move_death2);
 }
 
-void actor_fire(edict_t *self)
-{
+static void actor_fire(edict_t *self) {
 	actorMachineGun(self);
 
 	if (level.time >= self->monsterinfo.fire_wait)
@@ -344,19 +325,16 @@ mframe_t actor_frames_attack[] = {
 };
 MMOVE_T(actor_move_attack) = { FRAME_attak01, FRAME_attak04, actor_frames_attack, actor_run };
 
-MONSTERINFO_ATTACK(actor_attack) (edict_t *self) -> void
-{
+MONSTERINFO_ATTACK(actor_attack) (edict_t *self) -> void {
 	M_SetAnimation(self, &actor_move_attack);
 	self->monsterinfo.fire_wait = level.time + random_time(1_sec, 2.6_sec);
 }
 
-USE(actor_use) (edict_t *self, edict_t *other, edict_t *activator) -> void
-{
+static USE(actor_use) (edict_t *self, edict_t *other, edict_t *activator) -> void {
 	vec3_t v;
 
 	self->goalentity = self->movetarget = G_PickTarget(self->target);
-	if ((!self->movetarget) || (strcmp(self->movetarget->classname, "target_actor") != 0))
-	{
+	if ((!self->movetarget) || (strcmp(self->movetarget->classname, "target_actor") != 0)) {
 		gi.Com_PrintFmt("{}: bad target {}\n", *self, self->target);
 		self->target = nullptr;
 		self->monsterinfo.pausetime = HOLD_FOREVER;
@@ -373,22 +351,19 @@ USE(actor_use) (edict_t *self, edict_t *other, edict_t *activator) -> void
 /*QUAKED misc_actor (1 .5 0) (-16 -16 -24) (16 16 32)
  */
 
-void SP_misc_actor(edict_t *self)
-{
-	if ( !M_AllowSpawn( self ) ) {
+void SP_misc_actor(edict_t *self) {
+	if (!M_AllowSpawn(self)) {
 		G_FreeEdict(self);
 		return;
 	}
 
-	if (!self->targetname)
-	{
+	if (!self->targetname) {
 		gi.Com_PrintFmt("{}: no targetname\n", *self);
 		G_FreeEdict(self);
 		return;
 	}
 
-	if (!self->target)
-	{
+	if (!self->target) {
 		gi.Com_PrintFmt("{}: no target\n", *self);
 		G_FreeEdict(self);
 		return;
@@ -449,8 +424,7 @@ constexpr spawnflags_t SPAWNFLAG_TARGET_ACTOR_ATTACK = 4_spawnflag;
 constexpr spawnflags_t SPAWNFLAG_TARGET_ACTOR_HOLD = 16_spawnflag;
 constexpr spawnflags_t SPAWNFLAG_TARGET_ACTOR_BRUTAL = 32_spawnflag;
 
-TOUCH(target_actor_touch) (edict_t *self, edict_t *other, const trace_t &tr, bool other_touching_self) -> void
-{
+static TOUCH(target_actor_touch) (edict_t *self, edict_t *other, const trace_t &tr, bool other_touching_self) -> void {
 	vec3_t v;
 
 	if (other->movetarget != self)
@@ -462,25 +436,14 @@ TOUCH(target_actor_touch) (edict_t *self, edict_t *other, const trace_t &tr, boo
 	other->goalentity = other->movetarget = nullptr;
 
 	if (self->message)
-	{
-		edict_t *ent;
+		for (auto ce : active_clients())
+			gi.LocClient_Print(ce, PRINT_CHAT, "{}: {}\n", actor_names[(other - g_edicts) % q_countof(actor_names)], self->message);
 
-		for (uint32_t n = 1; n <= game.maxclients; n++)
-		{
-			ent = &g_edicts[n];
-			if (!ent->inuse)
-				continue;
-			gi.LocClient_Print(ent, PRINT_CHAT, "{}: {}\n", actor_names[(other - g_edicts) % q_countof(actor_names)], self->message);
-		}
-	}
-
-	if (self->spawnflags.has(SPAWNFLAG_TARGET_ACTOR_JUMP)) // jump
-	{
+	if (self->spawnflags.has(SPAWNFLAG_TARGET_ACTOR_JUMP)) { // jump
 		other->velocity[0] = self->movedir[0] * self->speed;
 		other->velocity[1] = self->movedir[1] * self->speed;
 
-		if (other->groundentity)
-		{
+		if (other->groundentity) {
 			other->groundentity = nullptr;
 			other->velocity[2] = self->movedir[2];
 			gi.sound(other, CHAN_VOICE, gi.soundindex("player/male/jump1.wav"), 1, ATTN_NORM, 0);
@@ -489,29 +452,23 @@ TOUCH(target_actor_touch) (edict_t *self, edict_t *other, const trace_t &tr, boo
 
 	if (self->spawnflags.has(SPAWNFLAG_TARGET_ACTOR_SHOOT)) // shoot
 	{
-	}
-	else if (self->spawnflags.has(SPAWNFLAG_TARGET_ACTOR_ATTACK)) // attack
+	} else if (self->spawnflags.has(SPAWNFLAG_TARGET_ACTOR_ATTACK)) // attack
 	{
 		other->enemy = G_PickTarget(self->pathtarget);
-		if (other->enemy)
-		{
+		if (other->enemy) {
 			other->goalentity = other->enemy;
 			if (self->spawnflags.has(SPAWNFLAG_TARGET_ACTOR_BRUTAL))
 				other->monsterinfo.aiflags |= AI_BRUTAL;
-			if (self->spawnflags.has(SPAWNFLAG_TARGET_ACTOR_HOLD))
-			{
+			if (self->spawnflags.has(SPAWNFLAG_TARGET_ACTOR_HOLD)) {
 				other->monsterinfo.aiflags |= AI_STAND_GROUND;
 				actor_stand(other);
-			}
-			else
-			{
+			} else {
 				actor_run(other);
 			}
 		}
 	}
 
-	if (!self->spawnflags.has((SPAWNFLAG_TARGET_ACTOR_ATTACK | SPAWNFLAG_TARGET_ACTOR_SHOOT)) && (self->pathtarget))
-	{
+	if (!self->spawnflags.has((SPAWNFLAG_TARGET_ACTOR_ATTACK | SPAWNFLAG_TARGET_ACTOR_SHOOT)) && (self->pathtarget)) {
 		const char *savetarget;
 
 		savetarget = self->target;
@@ -525,20 +482,16 @@ TOUCH(target_actor_touch) (edict_t *self, edict_t *other, const trace_t &tr, boo
 	if (!other->goalentity)
 		other->goalentity = other->movetarget;
 
-	if (!other->movetarget && !other->enemy)
-	{
+	if (!other->movetarget && !other->enemy) {
 		other->monsterinfo.pausetime = HOLD_FOREVER;
 		other->monsterinfo.stand(other);
-	}
-	else if (other->movetarget == other->goalentity)
-	{
+	} else if (other->movetarget == other->goalentity) {
 		v = other->movetarget->s.origin - other->s.origin;
 		other->ideal_yaw = vectoyaw(v);
 	}
 }
 
-void SP_target_actor(edict_t *self)
-{
+void SP_target_actor(edict_t *self) {
 	if (!self->targetname)
 		gi.Com_PrintFmt("{}: no targetname\n", *self);
 
@@ -548,8 +501,7 @@ void SP_target_actor(edict_t *self)
 	self->maxs = { 8, 8, 8 };
 	self->svflags = SVF_NOCLIENT;
 
-	if (self->spawnflags.has(SPAWNFLAG_TARGET_ACTOR_JUMP))
-	{
+	if (self->spawnflags.has(SPAWNFLAG_TARGET_ACTOR_JUMP)) {
 		if (!self->speed)
 			self->speed = 200;
 		if (!st.height)
@@ -557,7 +509,7 @@ void SP_target_actor(edict_t *self)
 		if (self->s.angles[YAW] == 0)
 			self->s.angles[YAW] = 360;
 		G_SetMovedir(self->s.angles, self->movedir);
-		self->movedir[2] = (float) st.height;
+		self->movedir[2] = (float)st.height;
 	}
 
 	gi.linkentity(self);

@@ -26,13 +26,11 @@ static cached_soundindex sound_melee1;
 static cached_soundindex sound_melee2;
 static cached_soundindex sound_melee3;
 
-MONSTERINFO_SIGHT(brain_sight) (edict_t *self, edict_t *other) -> void
-{
+MONSTERINFO_SIGHT(brain_sight) (edict_t *self, edict_t *other) -> void {
 	gi.sound(self, CHAN_VOICE, sound_sight, 1, ATTN_NORM, 0);
 }
 
-MONSTERINFO_SEARCH(brain_search) (edict_t *self) -> void
-{
+MONSTERINFO_SEARCH(brain_search) (edict_t *self) -> void {
 	gi.sound(self, CHAN_VOICE, sound_search, 1, ATTN_NORM, 0);
 }
 
@@ -81,8 +79,7 @@ mframe_t brain_frames_stand[] = {
 };
 MMOVE_T(brain_move_stand) = { FRAME_stand01, FRAME_stand30, brain_frames_stand, nullptr };
 
-MONSTERINFO_STAND(brain_stand) (edict_t *self) -> void
-{
+MONSTERINFO_STAND(brain_stand) (edict_t *self) -> void {
 	M_SetAnimation(self, &brain_move_stand);
 }
 
@@ -126,8 +123,7 @@ mframe_t brain_frames_idle[] = {
 };
 MMOVE_T(brain_move_idle) = { FRAME_stand31, FRAME_stand60, brain_frames_idle, brain_stand };
 
-MONSTERINFO_IDLE(brain_idle) (edict_t *self) -> void
-{
+MONSTERINFO_IDLE(brain_idle) (edict_t *self) -> void {
 	gi.sound(self, CHAN_AUTO, sound_idle3, 1, ATTN_IDLE, 0);
 	M_SetAnimation(self, &brain_move_idle);
 }
@@ -150,8 +146,7 @@ mframe_t brain_frames_walk1[] = {
 };
 MMOVE_T(brain_move_walk1) = { FRAME_walk101, FRAME_walk111, brain_frames_walk1, nullptr };
 
-MONSTERINFO_WALK(brain_walk) (edict_t *self) -> void
-{
+MONSTERINFO_WALK(brain_walk) (edict_t *self) -> void {
 	M_SetAnimation(self, &brain_move_walk1);
 }
 
@@ -214,8 +209,7 @@ mframe_t brain_frames_duck[] = {
 };
 MMOVE_T(brain_move_duck) = { FRAME_duck01, FRAME_duck08, brain_frames_duck, brain_run };
 
-static void brain_shrink(edict_t *self)
-{
+static void brain_shrink(edict_t *self) {
 	self->maxs[2] = 0;
 	self->svflags |= SVF_DEADMONSTER;
 	gi.linkentity(self);
@@ -256,13 +250,11 @@ MMOVE_T(brain_move_death1) = { FRAME_death101, FRAME_death118, brain_frames_deat
 // MELEE
 //
 
-void brain_swing_right(edict_t *self)
-{
+static void brain_swing_right(edict_t *self) {
 	gi.sound(self, CHAN_BODY, sound_melee1, 1, ATTN_NORM, 0);
 }
 
-void brain_hit_right(edict_t *self)
-{
+static void brain_hit_right(edict_t *self) {
 	vec3_t aim = { MELEE_DISTANCE, self->maxs[0], 8 };
 	if (fire_hit(self, aim, irandom(15, 20), 40))
 		gi.sound(self, CHAN_WEAPON, sound_melee3, 1, ATTN_NORM, 0);
@@ -270,13 +262,11 @@ void brain_hit_right(edict_t *self)
 		self->monsterinfo.melee_debounce_time = level.time + 3_sec;
 }
 
-void brain_swing_left(edict_t *self)
-{
+static void brain_swing_left(edict_t *self) {
 	gi.sound(self, CHAN_BODY, sound_melee2, 1, ATTN_NORM, 0);
 }
 
-void brain_hit_left(edict_t *self)
-{
+static void brain_hit_left(edict_t *self) {
 	vec3_t aim = { MELEE_DISTANCE, self->mins[0], 8 };
 	if (fire_hit(self, aim, irandom(15, 20), 40))
 		gi.sound(self, CHAN_WEAPON, sound_melee3, 1, ATTN_NORM, 0);
@@ -306,15 +296,13 @@ mframe_t brain_frames_attack1[] = {
 };
 MMOVE_T(brain_move_attack1) = { FRAME_attak101, FRAME_attak118, brain_frames_attack1, brain_run };
 
-void brain_chest_open(edict_t *self)
-{
+static void brain_chest_open(edict_t *self) {
 	self->count = 0;
 	self->monsterinfo.power_armor_type = IT_NULL;
 	gi.sound(self, CHAN_BODY, sound_chest_open, 1, ATTN_NORM, 0);
 }
 
-void brain_tentacle_attack(edict_t *self)
-{
+static void brain_tentacle_attack(edict_t *self) {
 	vec3_t aim = { MELEE_DISTANCE, 0, 8 };
 	if (fire_hit(self, aim, irandom(10, 15), -600))
 		self->count = 1;
@@ -323,11 +311,9 @@ void brain_tentacle_attack(edict_t *self)
 	gi.sound(self, CHAN_WEAPON, sound_tentacles_retract, 1, ATTN_NORM, 0);
 }
 
-void brain_chest_closed(edict_t *self)
-{
+static void brain_chest_closed(edict_t *self) {
 	self->monsterinfo.power_armor_type = IT_POWER_SCREEN;
-	if (self->count)
-	{
+	if (self->count) {
 		self->count = 0;
 		M_SetAnimation(self, &brain_move_attack1);
 	}
@@ -354,16 +340,14 @@ mframe_t brain_frames_attack2[] = {
 };
 MMOVE_T(brain_move_attack2) = { FRAME_attak201, FRAME_attak217, brain_frames_attack2, brain_run };
 
-MONSTERINFO_MELEE(brain_melee) (edict_t *self) -> void
-{
+MONSTERINFO_MELEE(brain_melee) (edict_t *self) -> void {
 	if (frandom() <= 0.5f)
 		M_SetAnimation(self, &brain_move_attack1);
 	else
 		M_SetAnimation(self, &brain_move_attack2);
 }
 
-static bool brain_tounge_attack_ok(const vec3_t &start, const vec3_t &end)
-{
+static bool brain_tounge_attack_ok(const vec3_t &start, const vec3_t &end) {
 	vec3_t dir, angles;
 
 	// check for max distance
@@ -381,8 +365,7 @@ static bool brain_tounge_attack_ok(const vec3_t &start, const vec3_t &end)
 	return true;
 }
 
-void brain_tounge_attack(edict_t *self)
-{
+static void brain_tounge_attack(edict_t *self) {
 	vec3_t	offset, start, f, r, end, dir;
 	trace_t tr;
 	int		damage;
@@ -393,11 +376,9 @@ void brain_tounge_attack(edict_t *self)
 	start = M_ProjectFlashSource(self, offset, f, r);
 
 	end = self->enemy->s.origin;
-	if (!brain_tounge_attack_ok(start, end))
-	{
+	if (!brain_tounge_attack_ok(start, end)) {
 		end[2] = self->enemy->s.origin[2] + self->enemy->maxs[2] - 8;
-		if (!brain_tounge_attack_ok(start, end))
-		{
+		if (!brain_tounge_attack_ok(start, end)) {
 			end[2] = self->enemy->s.origin[2] + self->enemy->mins[2] + 8;
 			if (!brain_tounge_attack_ok(start, end))
 				return;
@@ -459,8 +440,7 @@ constexpr vec3_t brain_leye[] = {
 	{ -4.332820f, 9.444570f, 33.526340f }
 };
 
-PRETHINK(brain_right_eye_laser_update) (edict_t *laser) -> void
-{
+static PRETHINK(brain_right_eye_laser_update) (edict_t *laser) -> void {
 	edict_t *self = laser->owner;
 
 	vec3_t start, forward, right, up, dir;
@@ -480,8 +460,7 @@ PRETHINK(brain_right_eye_laser_update) (edict_t *laser) -> void
 	gi.linkentity(laser);
 }
 
-PRETHINK(brain_left_eye_laser_update) (edict_t *laser) -> void
-{
+static PRETHINK(brain_left_eye_laser_update) (edict_t *laser) -> void {
 	edict_t *self = laser->owner;
 
 	vec3_t start, forward, right, up, dir;
@@ -502,8 +481,7 @@ PRETHINK(brain_left_eye_laser_update) (edict_t *laser) -> void
 	dabeam_update(laser, false);
 }
 
-void brain_laserbeam(edict_t *self)
-{
+static void brain_laserbeam(edict_t *self) {
 	// dis is my right eye
 	monster_fire_dabeam(self, 1, false, brain_right_eye_laser_update);
 
@@ -511,8 +489,7 @@ void brain_laserbeam(edict_t *self)
 	monster_fire_dabeam(self, 1, true, brain_left_eye_laser_update);
 }
 
-void brain_laserbeam_reattack(edict_t *self)
-{
+static void brain_laserbeam_reattack(edict_t *self) {
 	if (frandom() < 0.5f)
 		if (visible(self, self->enemy))
 			if (self->enemy->health > 0)
@@ -555,17 +532,14 @@ mframe_t brain_frames_attack4[] = {
 };
 MMOVE_T(brain_move_attack4) = { FRAME_walk101, FRAME_walk111, brain_frames_attack4, brain_run };
 
-MONSTERINFO_ATTACK(brain_attack) (edict_t *self) -> void
-{
+MONSTERINFO_ATTACK(brain_attack) (edict_t *self) -> void {
 	float r = range_to(self, self->enemy);
-	if (r <= RANGE_NEAR)
-	{
+	if (r <= RANGE_NEAR) {
 		if (frandom() < 0.5f)
 			M_SetAnimation(self, &brain_move_attack3);
 		else if (!self->spawnflags.has(SPAWNFLAG_BRAIN_NO_LASERS))
 			M_SetAnimation(self, &brain_move_attack4);
-	}
-	else if (!self->spawnflags.has(SPAWNFLAG_BRAIN_NO_LASERS))
+	} else if (!self->spawnflags.has(SPAWNFLAG_BRAIN_NO_LASERS))
 		M_SetAnimation(self, &brain_move_attack4);
 }
 
@@ -588,8 +562,7 @@ mframe_t brain_frames_run[] = {
 };
 MMOVE_T(brain_move_run) = { FRAME_walk101, FRAME_walk111, brain_frames_run, nullptr };
 
-MONSTERINFO_RUN(brain_run) (edict_t *self) -> void
-{
+MONSTERINFO_RUN(brain_run) (edict_t *self) -> void {
 	self->monsterinfo.power_armor_type = IT_POWER_SCREEN;
 	if (self->monsterinfo.aiflags & AI_STAND_GROUND)
 		M_SetAnimation(self, &brain_move_stand);
@@ -597,8 +570,7 @@ MONSTERINFO_RUN(brain_run) (edict_t *self) -> void
 		M_SetAnimation(self, &brain_move_run);
 }
 
-PAIN(brain_pain) (edict_t *self, edict_t *other, float kick, int damage, const mod_t &mod) -> void
-{
+static PAIN(brain_pain) (edict_t *self, edict_t *other, float kick, int damage, const mod_t &mod) -> void {
 	float r;
 
 	if (level.time < self->pain_debounce_time)
@@ -614,7 +586,7 @@ PAIN(brain_pain) (edict_t *self, edict_t *other, float kick, int damage, const m
 		gi.sound(self, CHAN_VOICE, sound_pain2, 1, ATTN_NORM, 0);
 	else
 		gi.sound(self, CHAN_VOICE, sound_pain1, 1, ATTN_NORM, 0);
-	
+
 	if (!M_ShouldReactToPain(self, mod))
 		return; // no pain anims in nightmare
 
@@ -630,40 +602,34 @@ PAIN(brain_pain) (edict_t *self, edict_t *other, float kick, int damage, const m
 		monster_duck_up(self);
 }
 
-MONSTERINFO_SETSKIN(brain_setskin) (edict_t *self) -> void
-{
+MONSTERINFO_SETSKIN(brain_setskin) (edict_t *self) -> void {
 	if (self->health < (self->max_health / 2))
 		self->s.skinnum = 1;
 	else
 		self->s.skinnum = 0;
 }
 
-void brain_dead(edict_t *self)
-{
+void brain_dead(edict_t *self) {
 	self->mins = { -16, -16, -24 };
 	self->maxs = { 16, 16, -8 };
 	monster_dead(self);
 }
 
-DIE(brain_die) (edict_t *self, edict_t *inflictor, edict_t *attacker, int damage, const vec3_t &point, const mod_t &mod) -> void
-{
+static DIE(brain_die) (edict_t *self, edict_t *inflictor, edict_t *attacker, int damage, const vec3_t &point, const mod_t &mod) -> void {
 	self->s.effects = EF_NONE;
 	self->monsterinfo.power_armor_type = IT_NULL;
 
 	// check for gib
-	if (M_CheckGib(self, mod))
-	{
+	if (M_CheckGib(self, mod)) {
 		gi.sound(self, CHAN_VOICE, gi.soundindex("misc/udeath.wav"), 1, ATTN_NORM, 0);
 
 		self->s.skinnum /= 2;
 
-		if (self->beam)
-		{
+		if (self->beam) {
 			G_FreeEdict(self->beam);
 			self->beam = nullptr;
 		}
-		if (self->beam2)
-		{
+		if (self->beam2) {
 			G_FreeEdict(self->beam2);
 			self->beam2 = nullptr;
 		}
@@ -677,7 +643,7 @@ DIE(brain_die) (edict_t *self, edict_t *inflictor, edict_t *attacker, int damage
 			{ "models/monsters/brain/gibs/chest.md2", GIB_SKINNED },
 			{ 2, "models/monsters/brain/gibs/door.md2", GIB_SKINNED | GIB_UPRIGHT },
 			{ "models/monsters/brain/gibs/head.md2", GIB_SKINNED | GIB_HEAD }
-		});
+			});
 		self->deadflag = true;
 		return;
 	}
@@ -695,19 +661,17 @@ DIE(brain_die) (edict_t *self, edict_t *inflictor, edict_t *attacker, int damage
 		M_SetAnimation(self, &brain_move_death2);
 }
 
-MONSTERINFO_DUCK(brain_duck) (edict_t *self, gtime_t eta) -> bool
-{
+MONSTERINFO_DUCK(brain_duck) (edict_t *self, gtime_t eta) -> bool {
 	M_SetAnimation(self, &brain_move_duck);
 
 	return true;
 }
 
-/*QUAKED monster_brain (1 .5 0) (-16 -16 -24) (16 16 32) Ambush Trigger_Spawn Sight
+/*QUAKED monster_brain (1 .5 0) (-16 -16 -24) (16 16 32) AMBUSH TRIGGER_SPAWN SIGHT
  */
-void SP_monster_brain(edict_t *self)
-{
-	if ( !M_AllowSpawn( self ) ) {
-		G_FreeEdict( self );
+void SP_monster_brain(edict_t *self) {
+	if (!M_AllowSpawn(self)) {
+		G_FreeEdict(self);
 		return;
 	}
 
@@ -729,7 +693,7 @@ void SP_monster_brain(edict_t *self)
 	self->movetype = MOVETYPE_STEP;
 	self->solid = SOLID_BBOX;
 	self->s.modelindex = gi.modelindex("models/monsters/brain/tris.md2");
-	
+
 	gi.modelindex("models/monsters/brain/gibs/arm.md2");
 	gi.modelindex("models/monsters/brain/gibs/boot.md2");
 	gi.modelindex("models/monsters/brain/gibs/chest.md2");
@@ -759,7 +723,7 @@ void SP_monster_brain(edict_t *self)
 	self->monsterinfo.search = brain_search;
 	self->monsterinfo.idle = brain_idle;
 	self->monsterinfo.setskin = brain_setskin;
-	
+
 	if (!st.was_key_specified("power_armor_type"))
 		self->monsterinfo.power_armor_type = IT_POWER_SCREEN;
 	if (!st.was_key_specified("power_armor_power"))
