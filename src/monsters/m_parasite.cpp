@@ -796,7 +796,7 @@ MONSTERINFO_SETSKIN(parasite_setskin) (edict_t *self) -> void {
 
 constexpr spawnflags_t SPAWNFLAG_PARASITE_NOJUMPING = 8_spawnflag;
 
-/*QUAKED monster_parasite (1 .5 0) (-16 -16 -24) (16 16 32) AMBUSH TRIGGER_SPAWN SIGHT NOJUMPING
+/*QUAKED monster_parasite (1 .5 0) (-16 -16 -24) (16 16 32) AMBUSH TRIGGER_SPAWN SIGHT NOJUMPING x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
  */
 void SP_monster_parasite(edict_t *self) {
 	if (!M_AllowSpawn(self)) {

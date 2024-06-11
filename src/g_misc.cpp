@@ -4,7 +4,7 @@
 
 #include "g_local.h"
 
-/*QUAKED func_group (0 0 0) ?
+/*QUAKED func_group (0 0 0) ? x x x x x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
 Used to group brushes together just for editor convenience.
 */
 
@@ -15,7 +15,7 @@ static USE(Use_Areaportal) (edict_t *ent, edict_t *other, edict_t *activator) ->
 	gi.SetAreaPortalState(ent->style, ent->count);
 }
 
-/*QUAKED func_areaportal (0 0 0) ?
+/*QUAKED func_areaportal (0 0 0) ? x x x x x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
 
 This is a non-visible object that divides the world into
 areas that are seperated when this portal is not activated.
@@ -285,7 +285,7 @@ static void BecomeExplosion2(edict_t *self) {
 	G_FreeEdict(self);
 }
 
-/*QUAKED path_corner (.5 .3 0) (-8 -8 -8) (8 8 8) TELEPORT
+/*QUAKED path_corner (.5 .3 0) (-8 -8 -8) (8 8 8) TELEPORT x x x x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
 Target: next path corner
 Pathtarget: gets used when an entity that has
 	this path_corner targeted touches it
@@ -366,7 +366,7 @@ void SP_path_corner(edict_t *self) {
 	gi.linkentity(self);
 }
 
-/*QUAKED point_combat (0.5 0.3 0) (-8 -8 -8) (8 8 8) Hold
+/*QUAKED point_combat (0.5 0.3 0) (-8 -8 -8) (8 8 8) HOLD x x x x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
 Makes this the target of a monster and it will head here
 when first activated before going after the activator.  If
 hold is selected, it will stay here.
@@ -440,22 +440,22 @@ void SP_point_combat(edict_t *self) {
 	gi.linkentity(self);
 }
 
-/*QUAKED info_null (0 0.5 0) (-4 -4 -4) (4 4 4)
+/*QUAKED info_null (0 0.5 0) (-4 -4 -4) (4 4 4) x x x x x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
 Used as a positional target for spotlights, etc.
 */
 void SP_info_null(edict_t *self) {
 	G_FreeEdict(self);
 }
 
-/*QUAKED info_notnull (0 0.5 0) (-4 -4 -4) (4 4 4)
-Used as a positional target for lightning.
+/*QUAKED info_notnull (0 0.5 0) (-4 -4 -4) (4 4 4) x x x x x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
+Used as a positional target for entities.
 */
 void SP_info_notnull(edict_t *self) {
 	self->absmin = self->s.origin;
 	self->absmax = self->s.origin;
 }
 
-/*QUAKED light (0 1 0) (-8 -8 -8) (8 8 8) START_OFF ALLOW_IN_DM
+/*QUAKED light (0 1 0) (-8 -8 -8) (8 8 8) START_OFF ALLOW_IN_DM x x x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
 Non-displayed light.
 Default light value is 300.
 Default style is 0.
@@ -644,7 +644,7 @@ void SP_light(edict_t *self) {
 	setup_dynamic_light(self);
 }
 
-/*QUAKED func_wall (0 .5 .8) ? TRIGGER_SPAWN TOGGLE START_ON ANIMATED ANIMATED_FAST
+/*QUAKED func_wall (0 .5 .8) ? TRIGGER_SPAWN TOGGLE START_ON ANIMATED ANIMATED_FAST x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
 This is just a solid wall if not inhibited
 
 TRIGGER_SPAWN	the wall will not be present until triggered
@@ -719,7 +719,7 @@ void SP_func_wall(edict_t *self) {
 }
 
 // [Paril-KEX]
-/*QUAKED func_animation (0 .5 .8) ? START_ON
+/*QUAKED func_animation (0 .5 .8) ? START_ON x x x x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
 Similar to func_wall, but triggering it will toggle animation
 state rather than going on/off.
 
@@ -754,7 +754,7 @@ void SP_func_animation(edict_t *self) {
 	gi.linkentity(self);
 }
 
-/*QUAKED func_object (0 .5 .8) ? TRIGGER_SPAWN ANIMATED ANIMATED_FAST
+/*QUAKED func_object (0 .5 .8) ? TRIGGER_SPAWN ANIMATED ANIMATED_FAST x x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
 This is solid bmodel that will fall if it's support it removed.
 */
 
@@ -825,7 +825,7 @@ void SP_func_object(edict_t *self) {
 	gi.linkentity(self);
 }
 
-/*QUAKED func_explosive (0 .5 .8) ? Trigger_Spawn ANIMATED ANIMATED_FAST INACTIVE ALWAYS_SHOOTABLE
+/*QUAKED func_explosive (0 .5 .8) ? TRIGGER_SPAWN ANIMATED ANIMATED_FAST INACTIVE ALWAYS_SHOOTABLE x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
 Any brush that you want to explode or break apart.  If you want an
 ex0plosion, set dmg and it will do a radius explosion of that amount
 at the center of the bursh.
@@ -1006,7 +1006,7 @@ void SP_func_explosive(edict_t *self) {
 	gi.linkentity(self);
 }
 
-/*QUAKED misc_explobox (0 .5 .8) (-16 -16 0) (16 16 40)
+/*QUAKED misc_explobox (0 .5 .8) (-16 -16 0) (16 16 40) x x x x x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
 Large exploding box.  You can override its mass (100),
 health (80), and dmg (150).
 */
@@ -1129,7 +1129,7 @@ void SP_misc_explobox(edict_t *self) {
 // miscellaneous specialty items
 //
 
-/*QUAKED misc_blackhole (1 .5 0) (-8 -8 -8) (8 8 8) AUTO_NOISE
+/*QUAKED misc_blackhole (1 .5 0) (-8 -8 -8) (8 8 8) AUTO_NOISE x x x x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
 model="models/objects/black/tris.md2"
 */
 
@@ -1180,7 +1180,7 @@ void SP_misc_blackhole(edict_t *ent) {
 	gi.linkentity(ent);
 }
 
-/*QUAKED misc_eastertank (1 .5 0) (-32 -32 -16) (32 32 32)
+/*QUAKED misc_eastertank (1 .5 0) (-32 -32 -16) (32 32 32) x x x x x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
  */
 
 THINK(misc_eastertank_think) (edict_t *self) -> void {
@@ -1204,7 +1204,7 @@ void SP_misc_eastertank(edict_t *ent) {
 	gi.linkentity(ent);
 }
 
-/*QUAKED misc_easterchick (1 .5 0) (-32 -32 0) (32 32 32)
+/*QUAKED misc_easterchick (1 .5 0) (-32 -32 0) (32 32 32) x x x x x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
  */
 
 THINK(misc_easterchick_think) (edict_t *self) -> void {
@@ -1228,7 +1228,7 @@ void SP_misc_easterchick(edict_t *ent) {
 	gi.linkentity(ent);
 }
 
-/*QUAKED misc_easterchick2 (1 .5 0) (-32 -32 0) (32 32 32)
+/*QUAKED misc_easterchick2 (1 .5 0) (-32 -32 0) (32 32 32) x x x x x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
  */
 
 THINK(misc_easterchick2_think) (edict_t *self) -> void {
@@ -1252,7 +1252,7 @@ void SP_misc_easterchick2(edict_t *ent) {
 	gi.linkentity(ent);
 }
 
-/*QUAKED monster_commander_body (1 .5 0) (-32 -32 0) (32 32 48)
+/*QUAKED monster_commander_body (1 .5 0) (-32 -32 0) (32 32 48) x x x x x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
 Not really a monster, this is the Tank Commander's decapitated body.
 There should be a item_commander_head that has this as it's target.
 */
@@ -1297,7 +1297,7 @@ void SP_monster_commander_body(edict_t *self) {
 	self->nextthink = level.time + 50_hz;
 }
 
-/*QUAKED misc_banner (1 .5 0) (-4 -4 -4) (4 4 4)
+/*QUAKED misc_banner (1 .5 0) (-4 -4 -4) (4 4 4) x x x x x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
 The origin is the bottom of the banner.
 The banner is 128 tall.
 model="models/objects/banner/tris.md2"
@@ -1319,7 +1319,7 @@ void SP_misc_banner(edict_t *ent) {
 }
 
 /*-----------------------------------------------------------------------*/
-/*QUAKED misc_ctf_banner (1 .5 0) (-4 -64 0) (4 64 248) TEAM_BLUE
+/*QUAKED misc_ctf_banner (1 .5 0) (-4 -64 0) (4 64 248) TEAM_BLUE x x x x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
 The origin is the bottom of the banner.
 The banner is 248 tall.
 */
@@ -1344,7 +1344,7 @@ void SP_misc_ctf_banner(edict_t *ent) {
 	ent->nextthink = level.time + 10_hz;
 }
 
-/*QUAKED misc_ctf_small_banner (1 .5 0) (-4 -32 0) (4 32 124) TEAM_BLUE
+/*QUAKED misc_ctf_small_banner (1 .5 0) (-4 -32 0) (4 32 124) TEAM_BLUE x x x x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
 The origin is the bottom of the banner.
 The banner is 124 tall.
 */
@@ -1362,7 +1362,7 @@ void SP_misc_ctf_small_banner(edict_t *ent) {
 	ent->nextthink = level.time + 10_hz;
 }
 
-/*QUAKED misc_deadsoldier (1 .5 0) (-16 -16 0) (16 16 16) ON_BACK ON_STOMACH BACK_DECAP FETAL_POS SIT_DECAP IMPALED
+/*QUAKED misc_deadsoldier (1 .5 0) (-16 -16 0) (16 16 16) ON_BACK ON_STOMACH BACK_DECAP FETAL_POS SIT_DECAP IMPALED x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
 This is the dead player model. Comes in 6 exciting different poses!
 */
 
@@ -1422,7 +1422,7 @@ void SP_misc_deadsoldier(edict_t *ent) {
 	gi.linkentity(ent);
 }
 
-/*QUAKED misc_viper (1 .5 0) (-16 -16 0) (16 16 32)
+/*QUAKED misc_viper (1 .5 0) (-16 -16 0) (16 16 32) x x x x x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
 This is the Viper for the flyby bombing.
 It is trigger_spawned, so you must have something use it for it to show up.
 There must be a path for it to follow once it is activated.
@@ -1461,7 +1461,7 @@ void SP_misc_viper(edict_t *ent) {
 	gi.linkentity(ent);
 }
 
-/*QUAKED misc_bigviper (1 .5 0) (-176 -120 -24) (176 120 72)
+/*QUAKED misc_bigviper (1 .5 0) (-176 -120 -24) (176 120 72) x x x x x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
 This is a large stationary viper as seen in Paul's intro
 */
 void SP_misc_bigviper(edict_t *ent) {
@@ -1473,7 +1473,7 @@ void SP_misc_bigviper(edict_t *ent) {
 	gi.linkentity(ent);
 }
 
-/*QUAKED misc_viper_bomb (1 0 0) (-8 -8 -8) (8 8 8)
+/*QUAKED misc_viper_bomb (1 0 0) (-8 -8 -8) (8 8 8) x x x x x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
 "dmg"	how much boom should the bomb make?
 */
 TOUCH(misc_viper_bomb_touch) (edict_t *self, edict_t *other, const trace_t &tr, bool other_touching_self) -> void {
@@ -1535,7 +1535,7 @@ void SP_misc_viper_bomb(edict_t *self) {
 	gi.linkentity(self);
 }
 
-/*QUAKED misc_strogg_ship (1 .5 0) (-16 -16 0) (16 16 32)
+/*QUAKED misc_strogg_ship (1 .5 0) (-16 -16 0) (16 16 32) x x x x x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
 This is a Storgg ship for the flybys.
 It is trigger_spawned, so you must have something use it for it to show up.
 There must be a path for it to follow once it is activated.
@@ -1573,7 +1573,7 @@ void SP_misc_strogg_ship(edict_t *ent) {
 	gi.linkentity(ent);
 }
 
-/*QUAKED misc_satellite_dish (1 .5 0) (-64 -64 0) (64 64 128)
+/*QUAKED misc_satellite_dish (1 .5 0) (-64 -64 0) (64 64 128) x x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
 model="models/objects/satellite/tris.md2"
 */
 THINK(misc_satellite_dish_think) (edict_t *self) -> void {
@@ -1598,7 +1598,7 @@ void SP_misc_satellite_dish(edict_t *ent) {
 	gi.linkentity(ent);
 }
 
-/*QUAKED light_mine1 (0 1 0) (-2 -2 -12) (2 2 12)
+/*QUAKED light_mine1 (0 1 0) (-2 -2 -12) (2 2 12) x x x x x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
  */
 void SP_light_mine1(edict_t *ent) {
 	ent->movetype = MOVETYPE_NONE;
@@ -1608,7 +1608,7 @@ void SP_light_mine1(edict_t *ent) {
 	gi.linkentity(ent);
 }
 
-/*QUAKED light_mine2 (0 1 0) (-2 -2 -12) (2 2 12)
+/*QUAKED light_mine2 (0 1 0) (-2 -2 -12) (2 2 12) x x x x x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
  */
 void SP_light_mine2(edict_t *ent) {
 	ent->movetype = MOVETYPE_NONE;
@@ -1618,7 +1618,7 @@ void SP_light_mine2(edict_t *ent) {
 	gi.linkentity(ent);
 }
 
-/*QUAKED misc_gib_arm (1 0 0) (-8 -8 -8) (8 8 8)
+/*QUAKED misc_gib_arm (1 0 0) (-8 -8 -8) (8 8 8) x x x x x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
 Intended for use with the target_spawner
 */
 void SP_misc_gib_arm(edict_t *ent) {
@@ -1637,7 +1637,7 @@ void SP_misc_gib_arm(edict_t *ent) {
 	gi.linkentity(ent);
 }
 
-/*QUAKED misc_gib_leg (1 0 0) (-8 -8 -8) (8 8 8)
+/*QUAKED misc_gib_leg (1 0 0) (-8 -8 -8) (8 8 8) x x x x x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
 Intended for use with the target_spawner
 */
 void SP_misc_gib_leg(edict_t *ent) {
@@ -1656,7 +1656,7 @@ void SP_misc_gib_leg(edict_t *ent) {
 	gi.linkentity(ent);
 }
 
-/*QUAKED misc_gib_head (1 0 0) (-8 -8 -8) (8 8 8)
+/*QUAKED misc_gib_head (1 0 0) (-8 -8 -8) (8 8 8) x x x x x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
 Intended for use with the target_spawner
 */
 void SP_misc_gib_head(edict_t *ent) {
@@ -1677,7 +1677,7 @@ void SP_misc_gib_head(edict_t *ent) {
 
 //=====================================================
 
-/*QUAKED target_character (0 0 1) ?
+/*QUAKED target_character (0 0 1) ? x x x x x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
 used with target_string (must be on same "team")
 "count" is position in the string (starts at 1)
 */
@@ -1691,7 +1691,7 @@ void SP_target_character(edict_t *self) {
 	return;
 }
 
-/*QUAKED target_string (0 0 1) (-8 -8 -8) (8 8 8)
+/*QUAKED target_string (0 0 1) (-8 -8 -8) (8 8 8) x x x x x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
  */
 
 USE(target_string_use) (edict_t *self, edict_t *other, edict_t *activator) -> void {
@@ -1728,7 +1728,7 @@ void SP_target_string(edict_t *self) {
 	self->use = target_string_use;
 }
 
-/*QUAKED func_clock (0 0 1) (-8 -8 -8) (8 8 8) TIMER_UP TIMER_DOWN START_OFF MULTI_USE
+/*QUAKED func_clock (0 0 1) (-8 -8 -8) (8 8 8) TIMER_UP TIMER_DOWN START_OFF MULTI_USE x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
 target a target_string with this
 
 The default is to be a time of day clock
@@ -1865,42 +1865,61 @@ void SP_func_clock(edict_t *self) {
 constexpr spawnflags_t SPAWNFLAG_TELEPORTER_NO_SOUND = 1_spawnflag;
 constexpr spawnflags_t SPAWNFLAG_TELEPORTER_NO_TELEPORT_EFFECT = 2_spawnflag;
 
-static TOUCH(teleporter_touch) (edict_t *self, edict_t *other, const trace_t &tr, bool other_touching_self) -> void {
-	edict_t *dest;
-
-	if (!other->client)
-		return;
-	dest = G_FindByString<&edict_t::targetname>(nullptr, self->target);
-	if (!dest) {
-		gi.Com_Print("Couldn't find destination\n");
-		return;
-	}
-
-	Weapon_Grapple_DoReset(other->client);
+void TeleportPlayer(edict_t *player, vec3_t origin, vec3_t angles) {
+	Weapon_Grapple_DoReset(player->client);
 
 	// unlink to make sure it can't possibly interfere with KillBox
-	gi.unlinkentity(other);
+	gi.unlinkentity(player);
 
-	other->s.origin = dest->s.origin;
-	other->s.old_origin = dest->s.origin;
-	other->s.origin[2] += 10;
+	player->s.origin = origin;
+	player->s.old_origin = origin;
+	player->s.origin[2] += 10;
 
 	if (g_teleporter_nofreeze->value == 0) {
 		// clear the velocity and hold them in place briefly
-		other->velocity = {};
-		other->client->ps.pmove.pm_time = 160;		// hold time
-		other->client->ps.pmove.pm_flags |= PMF_TIME_TELEPORT;
+		player->velocity = {};
+		player->client->ps.pmove.pm_time = 160; // hold time
+		player->client->ps.pmove.pm_flags |= PMF_TIME_TELEPORT;
 	} else {
 		// preserve velocity and 'spit' them out of destination
 		float	len;
 
-		other->velocity[2] = 0;
+		player->velocity[2] = 0;
 
-		len = other->velocity.length();
+		len = player->velocity.length();
 
-		AngleVectors(dest->s.angles, other->velocity, NULL, NULL);
-		other->velocity *= len;
+		AngleVectors(angles, player->velocity, NULL, NULL);
+		player->velocity *= len;
 	}
+
+	// set angles
+	player->client->ps.pmove.delta_angles = angles - player->client->resp.cmd_angles;
+
+	player->s.angles = {};
+	player->client->ps.viewangles = {};
+	player->client->v_angle = {};
+	AngleVectors(player->client->v_angle, player->client->v_forward, nullptr, nullptr);
+
+	gi.linkentity(player);
+
+	// kill anything at the destination
+	KillBox(player, !!player->client);
+
+	// [Paril-KEX] move sphere, if we own it
+	if (player->client->owned_sphere) {
+		edict_t *sphere = player->client->owned_sphere;
+		sphere->s.origin = player->s.origin;
+		sphere->s.origin[2] = player->absmax[2];
+		sphere->s.angles[YAW] = player->s.angles[YAW];
+		gi.linkentity(sphere);
+	}
+}
+
+static TOUCH(teleporter_touch) (edict_t *self, edict_t *other, const trace_t &tr, bool other_touching_self) -> void {
+	if (!other->client)
+		return;
+
+	TeleportPlayer(other, self->target_ent->s.origin, self->target_ent->s.angles);
 
 	// draw the teleport splash at source and on the player
 	if (!self->spawnflags.has(SPAWNFLAG_TELEPORTER_NO_TELEPORT_EFFECT)) {
@@ -1910,31 +1929,9 @@ static TOUCH(teleporter_touch) (edict_t *self, edict_t *other, const trace_t &tr
 		self->owner->s.event = EV_OTHER_TELEPORT;
 		other->s.event = EV_OTHER_TELEPORT;
 	}
-
-	// set angles
-	other->client->ps.pmove.delta_angles = dest->s.angles - other->client->resp.cmd_angles;
-
-	other->s.angles = {};
-	other->client->ps.viewangles = {};
-	other->client->v_angle = {};
-	AngleVectors(other->client->v_angle, other->client->v_forward, nullptr, nullptr);
-
-	gi.linkentity(other);
-
-	// kill anything at the destination
-	KillBox(other, !!other->client);
-
-	// [Paril-KEX] move sphere, if we own it
-	if (other->client->owned_sphere) {
-		edict_t *sphere = other->client->owned_sphere;
-		sphere->s.origin = other->s.origin;
-		sphere->s.origin[2] = other->absmax[2];
-		sphere->s.angles[YAW] = other->s.angles[YAW];
-		gi.linkentity(sphere);
-	}
 }
 
-/*QUAKED misc_teleporter (1 0 0) (-32 -32 -24) (32 32 -16) NO_SOUND NO_TELEPORT_EFFECT N64_EFFECT
+/*QUAKED misc_teleporter (1 0 0) (-32 -32 -24) (32 32 -16) NO_SOUND NO_TELEPORT_EFFECT N64_EFFECT x x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
 Stepping onto this disc will teleport players to the targeted misc_teleporter_dest object.
 */
 constexpr spawnflags_t SPAWNFLAG_TEMEPORTER_N64_EFFECT = 4_spawnflag;
@@ -1975,6 +1972,13 @@ void SP_misc_teleporter(edict_t *ent) {
 	if (!ent->target)
 		return;
 
+	edict_t *dest = G_FindByString<&edict_t::targetname>(nullptr, ent->target);
+	if (!dest) {
+		gi.Com_PrintFmt("{}: Couldn't find destination.\n", *ent);
+		G_FreeEdict(ent);
+		return;
+	}
+
 	trig = G_Spawn();
 	trig->classname = "teleporter";
 	trig->touch = teleporter_touch;
@@ -1984,10 +1988,11 @@ void SP_misc_teleporter(edict_t *ent) {
 	trig->s.origin = ent->s.origin;
 	trig->mins = mins;
 	trig->maxs = maxs;
+	trig->target_ent = dest;
 	gi.linkentity(trig);
 }
 
-/*QUAKED misc_teleporter_dest (1 0 0) (-32 -32 -24) (32 32 -16)
+/*QUAKED misc_teleporter_dest (1 0 0) (-32 -32 -24) (32 32 -16) x x x x x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
 Point teleporters at these.
 */
 void SP_misc_teleporter_dest(edict_t *ent) {
@@ -2004,7 +2009,7 @@ void SP_misc_teleporter_dest(edict_t *ent) {
 	gi.linkentity(ent);
 }
 
-/*QUAKED misc_flare (1.0 1.0 0.0) (-32 -32 -32) (32 32 32) RED GREEN BLUE LOCK_ANGLE
+/*QUAKED misc_flare (1.0 1.0 0.0) (-32 -32 -32) (32 32 32) RED GREEN BLUE LOCK_ANGLE x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
 Creates a flare seen in the N64 version.
 */
 
@@ -2059,7 +2064,7 @@ static THINK(misc_hologram_think) (edict_t *ent) -> void {
 	ent->s.alpha = frandom(0.2f, 0.6f);
 }
 
-/*QUAKED misc_hologram (1.0 1.0 0.0) (-16 -16 0) (16 16 32)
+/*QUAKED misc_hologram (1.0 1.0 0.0) (-16 -16 0) (16 16 32) x x x x x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
 Ship hologram seen in the N64 version.
 */
 void SP_misc_hologram(edict_t *ent) {
@@ -2076,7 +2081,7 @@ void SP_misc_hologram(edict_t *ent) {
 }
 
 
-/*QUAKED misc_fireball (0 .5 .8) (-8 -8 -8) (8 8 8) NO_EXPLODE
+/*QUAKED misc_fireball (0 .5 .8) (-8 -8 -8) (8 8 8) NO_EXPLODE x x x x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
 Lava Balls. Shamelessly copied from Quake 1, like N64 guys
 probably did too.
 */
@@ -2138,6 +2143,7 @@ void SP_info_landmark(edict_t *self) {
 constexpr spawnflags_t SPAWNFLAG_WORLD_TEXT_START_OFF = 1_spawnflag;
 constexpr spawnflags_t SPAWNFLAG_WORLD_TEXT_TRIGGER_ONCE = 2_spawnflag;
 constexpr spawnflags_t SPAWNFLAG_WORLD_TEXT_REMOVE_ON_TRIGGER = 4_spawnflag;
+constexpr spawnflags_t SPAWNFLAG_WORLD_TEXT_LEADER_BOARD = 8_spawnflag;
 
 USE(info_world_text_use) (edict_t *self, edict_t *other, edict_t *activator) -> void {
 	if (self->activator == nullptr) {
@@ -2168,6 +2174,7 @@ USE(info_world_text_use) (edict_t *self, edict_t *other, edict_t *activator) -> 
 
 static THINK(info_world_text_think) (edict_t *self) -> void {
 	rgba_t color = rgba_white;
+	const char *s = self->message;
 
 	switch (self->sounds) {
 	case 0:
@@ -2208,27 +2215,40 @@ static THINK(info_world_text_think) (edict_t *self) -> void {
 		break;
 	}
 
+	if (deathmatch->integer && self->spawnflags.has(SPAWNFLAG_WORLD_TEXT_LEADER_BOARD)) {
+		edict_t *e = &g_edicts[level.sorted_clients[0] + 1];
+		if (level.match_state == matchst_t::MATCH_WARMUP_READYUP)
+			s = G_Fmt("Welcome to Muff Mode\nKindly ready the fuck up...").data();
+		else if (level.match_state <= matchst_t::MATCH_WARMUP_DEFAULT)
+			s = G_Fmt("Welcome to Muff Mode").data();
+		else if (e && e->client && level.total_player_deaths > 0 && e->client->resp.score > 0)
+			s = G_Fmt("{} is in the lead\nwith a score of {}",
+				e->client->resp.netname, e->client->resp.score).data();
+	}
+
 	if (self->s.angles[YAW] == -3.0f) {
-		gi.Draw_OrientedWorldText(self->s.origin, self->message, color, self->size[2], FRAME_TIME_MS.seconds(), true);
+		gi.Draw_OrientedWorldText(self->s.origin, (s != nullptr || s[0]) ? s : self->message, color, self->size[2], FRAME_TIME_MS.seconds(), true);
 	} else {
 		vec3_t textAngle = { 0.0f, 0.0f, 0.0f };
 		textAngle[YAW] = anglemod(self->s.angles[YAW]) + 180;
 		if (textAngle[YAW] > 360.0f) {
 			textAngle[YAW] -= 360.0f;
 		}
-		gi.Draw_StaticWorldText(self->s.origin, textAngle, self->message, color, self->size[2], FRAME_TIME_MS.seconds(), true);
+		gi.Draw_StaticWorldText(self->s.origin, textAngle, (s != nullptr || s[0]) ? s : self->message, color, self->size[2], FRAME_TIME_MS.seconds(), true);
 	}
 	self->nextthink = level.time + FRAME_TIME_MS;
 }
 
-/*QUAKED info_world_text (1.0 1.0 0.0) (-16 -16 0) (16 16 32)
+/*QUAKED info_world_text (1.0 1.0 0.0) (-16 -16 0) (16 16 32) START_OFF TRIGGER_ONCE REMOVE_ON_TRIGGER LEADER x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
 Designer placed in world text for debugging.
 */
 void SP_info_world_text(edict_t *self) {
 	if (self->message == nullptr) {
-		gi.Com_PrintFmt("{}: no message\n", *self);
-		G_FreeEdict(self);
-		return;
+		if (!self->spawnflags.has(SPAWNFLAG_WORLD_TEXT_LEADER_BOARD)) {
+			gi.Com_PrintFmt("{}: no message\n", *self);
+			G_FreeEdict(self);
+			return;
+		}
 	} // not much point without something to print...
 
 	self->think = info_world_text_think;
@@ -2358,7 +2378,7 @@ static void SetupMannequinModel(edict_t *self, const int32_t modelType, const ch
 	}
 }
 
-/*QUAKED misc_player_mannequin (1.0 1.0 0.0) (-32 -32 -32) (32 32 32)
+/*QUAKED misc_player_mannequin (1.0 1.0 0.0) (-32 -32 -32) (32 32 32) x x x x x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
 	Creates a player mannequin that stands around.
 
 	NOTE: this is currently very limited, and only allows one unique model
@@ -2407,7 +2427,7 @@ void SP_misc_player_mannequin(edict_t *self) {
 	gi.linkentity(self);
 }
 
-/*QUAKED misc_model (1 0 0) (-8 -8 -8) (8 8 8)
+/*QUAKED misc_model (1 0 0) (-8 -8 -8) (8 8 8) x x x x x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
 */
 void SP_misc_model(edict_t *ent) {
 	gi.setmodel(ent, ent->model);
@@ -2415,8 +2435,8 @@ void SP_misc_model(edict_t *ent) {
 }
 
 
-/*QUAKED misc_crashviper (1 .5 0) (-176 -120 -24) (176 120 72)
-This is a large viper about to crash
+/*QUAKED misc_crashviper (1 .5 0) (-176 -120 -24) (176 120 72) x x x x x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
+A large viper about to crash.
 */
 void SP_misc_crashviper(edict_t *ent) {
 	if (!ent->target) {
@@ -2443,7 +2463,7 @@ void SP_misc_crashviper(edict_t *ent) {
 	gi.linkentity(ent);
 }
 
-/*QUAKED misc_viper_missile (1 0 0) (-8 -8 -8) (8 8 8)
+/*QUAKED misc_viper_missile (1 0 0) (-8 -8 -8) (8 8 8) x x x x x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
 "dmg"	how much boom should the bomb make? the default value is 250
 */
 
@@ -2485,7 +2505,7 @@ void SP_misc_viper_missile(edict_t *self) {
 	gi.linkentity(self);
 }
 
-/*QUAKED misc_transport (1 0 0) (-8 -8 -8) (8 8 8)
+/*QUAKED misc_transport (1 0 0) (-8 -8 -8) (8 8 8) x x x x x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
 Maxx's transport at end of game
 */
 void SP_misc_transport(edict_t *ent) {
@@ -2517,7 +2537,7 @@ void SP_misc_transport(edict_t *ent) {
 	gi.linkentity(ent);
 }
 
-/*QUAKED misc_amb4 (1 0 0) (-16 -16 -16) (16 16 16)
+/*QUAKED misc_amb4 (1 0 0) (-16 -16 -16) (16 16 16) x x x x x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
 Mal's amb4 loop entity
 */
 static cached_soundindex amb4sound;
@@ -2534,16 +2554,37 @@ void SP_misc_amb4(edict_t *ent) {
 	gi.linkentity(ent);
 }
 
-/*QUAKED misc_nuke (1 0 0) (-16 -16 -16) (16 16 16)
+/*QUAKED misc_nuke (1 0 0) (-16 -16 -16) (16 16 16) x x x x x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
  */
 extern void target_killplayers_use(edict_t *self, edict_t *other, edict_t *activator);
 
-void SP_misc_nuke(edict_t *ent) {
-	ent->use = target_killplayers_use;
+static THINK(misc_nuke_think) (edict_t *self) -> void {
+	Nuke_Explode(self);
 }
 
-/*QUAKED misc_nuke_core (1 0 0) (-16 -16 -16) (16 16 16)
-toggles visible/not visible. starts visible.
+static USE(misc_nuke_use) (edict_t *self, edict_t *other, edict_t *activator) -> void {
+	edict_t *nuke;
+
+	nuke = G_Spawn();
+	nuke->s.origin = self->s.origin;
+	nuke->clipmask = MASK_PROJECTILE;
+	nuke->solid = SOLID_NOT;
+	nuke->mins = { -1, -1, 1 };
+	nuke->maxs = { 1, 1, 1 };
+	nuke->owner = self;
+	nuke->teammaster = self;
+	nuke->nextthink = level.time + FRAME_TIME_S;
+	nuke->dmg = 800;
+	nuke->dmg_radius = 8192;
+	nuke->think = misc_nuke_think;
+}
+
+void SP_misc_nuke(edict_t *ent) {
+	ent->use = misc_nuke_use;
+}
+
+/*QUAKED misc_nuke_core (1 0 0) (-16 -16 -16) (16 16 16) x x x x x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
+Toggles visible/not visible. Starts visible.
 */
 static USE(misc_nuke_core_use) (edict_t *self, edict_t *other, edict_t *activator) -> void {
 	if (self->svflags & SVF_NOCLIENT)

@@ -323,7 +323,7 @@ static DIE(arachnid_die) (edict_t *self, edict_t *inflictor, edict_t *attacker, 
 // monster_arachnid
 //
 
-/*QUAKED monster_arachnid (1 .5 0) (-48 -48 -20) (48 48 48) AMBUSH TRIGGER_SPAWN SIGHT
+/*QUAKED monster_arachnid (1 .5 0) (-48 -48 -20) (48 48 48) AMBUSH TRIGGER_SPAWN SIGHT x x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
  */
 void SP_monster_arachnid(edict_t *self) {
 	if (!M_AllowSpawn(self)) {

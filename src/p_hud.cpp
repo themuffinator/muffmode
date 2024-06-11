@@ -254,18 +254,20 @@ TeamsScoreboardMessage
 */
 void TeamsScoreboardMessage(edict_t *ent, edict_t *killer) {
 	uint32_t	i, j, k, n;
-	uint32_t	sorted[2][MAX_CLIENTS];
-	int32_t		sortedscores[2][MAX_CLIENTS];
+	uint8_t		sorted[2][MAX_CLIENTS];
+	int8_t		sortedscores[2][MAX_CLIENTS];
 	int			score;
-	uint32_t	total[2];
+	uint8_t		total[2];
+	uint8_t		total_living[2];
 	int			totalscore[2];
-	uint32_t	last[2];
+	uint8_t		last[2];
 	gclient_t	*cl;
 	edict_t		*cl_ent;
 	int			team;
 
 	// sort the clients by team and score
 	total[0] = total[1] = 0;
+	total_living[0] = total_living[1] = 0;
 	last[0] = last[1] = 0;
 	totalscore[0] = totalscore[1] = 0;
 	for (i = 0; i < game.maxclients; i++) {
@@ -280,10 +282,9 @@ void TeamsScoreboardMessage(edict_t *ent, edict_t *killer) {
 			continue; // unknown team?
 
 		score = game.clients[i].resp.score;
-		for (j = 0; j < total[team]; j++) {
+		for (j = 0; j < total[team]; j++)
 			if (score > sortedscores[team][j])
 				break;
-		}
 		for (k = total[team]; k > j; k--) {
 			sorted[team][k] = sorted[team][k - 1];
 			sortedscores[team][k] = sortedscores[team][k - 1];
@@ -292,6 +293,8 @@ void TeamsScoreboardMessage(edict_t *ent, edict_t *killer) {
 		sortedscores[team][j] = score;
 		totalscore[team] += score;
 		total[team]++;
+		if (!game.clients[i].eliminated)
+			total_living[team]++;
 	}
 
 	// print level name and exit rules
@@ -303,15 +306,14 @@ void TeamsScoreboardMessage(edict_t *ent, edict_t *killer) {
 	//fmt::format_to(std::back_inserter(string), FMT_STRING("xv 0 yv -20 cstring2 \"{}\" "), G_Fmt("[{}] {}", level.mapname, level.level_name));
 
 	// [Paril-KEX] time & frags
-	if (ctf->integer) {
-		if (capturelimit->integer) {
+	if (ctf->integer)
+		if (capturelimit->integer)
 			fmt::format_to(std::back_inserter(string), FMT_STRING("xv -20 yv -10 loc_string2 1 $g_score_captures \"{}\" "), capturelimit->integer);
-		}
-	} else {
-		if (fraglimit->integer) {
+	else if (IsRoundBased())
+		if (roundlimit->integer)
+			fmt::format_to(std::back_inserter(string), FMT_STRING("xv -20 yv -10 loc_string2 1 Round Limit: \"{}\" "), roundlimit->integer);
+	else if (fraglimit->integer)
 			fmt::format_to(std::back_inserter(string), FMT_STRING("xv -20 yv -10 loc_string2 1 $g_score_frags \"{}\" "), fraglimit->integer);
-		}
-	}
 	if (timelimit->value) {
 		//int	t = timelimit->value ? (level.match_time + gtime_t::from_min(timelimit->value) + level.overtime - level.time).seconds<int>() : level.time.seconds<int>() - level.match_time.seconds<int>();
 		//fmt::format_to(std::back_inserter(string), FMT_STRING("xv 340 yv -10 time_limit {} "), t);
@@ -319,18 +321,7 @@ void TeamsScoreboardMessage(edict_t *ent, edict_t *killer) {
 		//fmt::format_to(std::back_inserter(string), FMT_STRING("xv 340 yv -10 loc_string2 1 {} "), gi.ServerFrame() + level.time.milliseconds() / gi.frame_time_ms);
 	}
 
-	// team one
-	if (teamplay->integer) {
-		fmt::format_to(std::back_inserter(string),
-			FMT_STRING("if 25 xv -32 yv 8 pic 25 endif "
-				"xv -123 yv 28 cstring \"{}\" "
-				"xv 41 yv 12 num 3 19 "
-				"if 26 xv 208 yv 8 pic 26 endif "
-				"xv 117 yv 28 cstring \"{}\" "
-				"xv 280 yv 12 num 3 21 "),
-			total[0],
-			total[1]);
-	} else {
+	if (ctf->integer) {
 		fmt::format_to(std::back_inserter(string),
 			FMT_STRING("if 25 xv -32 yv 8 pic 25 endif "
 				"xv 0 yv 28 string \"{:4}/{:<3}\" "
@@ -340,13 +331,33 @@ void TeamsScoreboardMessage(edict_t *ent, edict_t *killer) {
 				"xv 296 yv 12 num 2 21 "),
 			totalscore[0], total[0],
 			totalscore[1], total[1]);
+	} else if (clanarena->integer || freeze->integer) {
+		fmt::format_to(std::back_inserter(string),
+			FMT_STRING("if 25 xv -32 yv 8 pic 25 endif "
+				"xv 0 yv 28 string \"{}/{}\" "
+				"xv 58 yv 12 num 2 19 "
+				"if 26 xv 208 yv 8 pic 26 endif "
+				"xv 240 yv 28 string \"{}/{}\" "
+				"xv 296 yv 12 num 2 21 "),
+			total_living[0], total[0],
+			total_living[1], total[1]);
+	} else {
+		fmt::format_to(std::back_inserter(string),
+			FMT_STRING("if 25 xv -32 yv 8 pic 25 endif "
+				"xv -123 yv 28 cstring \"{}\" "
+				"xv 41 yv 12 num 3 19 "
+				"if 26 xv 208 yv 8 pic 26 endif "
+				"xv 117 yv 28 cstring \"{}\" "
+				"xv 280 yv 12 num 3 21 "),
+			total[0],
+			total[1]);
 	}
 
 	for (i = 0; i < 16; i++) {
 		if (i >= total[0] && i >= total[1])
 			break; // we're done
-
-		// left side
+		
+		// red team on left
 		if (i < total[0]) {
 			cl = &game.clients[sorted[0][i]];
 			cl_ent = g_edicts + 1 + sorted[0][i];
@@ -364,7 +375,7 @@ void TeamsScoreboardMessage(edict_t *ent, edict_t *killer) {
 			}
 		}
 
-		// right side
+		// blue team on right
 		if (i < total[1]) {
 			cl = &game.clients[sorted[1][i]];
 			cl_ent = g_edicts + 1 + sorted[1][i];
@@ -444,19 +455,16 @@ DuelScoreboardMessage
 ==================
 */
 static void DuelScoreboardMessage(edict_t *ent, edict_t *killer) {
-	uint8_t		i;
+	uint8_t		i, i2 = 0;
 	uint32_t	j, k, n;
-	gclient_t *cl;
-	edict_t *cl_ent;
 
 	static std::string entry, string;
 	int			x, y;
 
 	string.clear();
 
-	if (fraglimit->integer) {
+	if (fraglimit->integer)
 		fmt::format_to(std::back_inserter(string), FMT_STRING("xv -20 yv -10 loc_string2 1 $g_score_frags \"{}\" "), fraglimit->integer);
-	}
 	if (timelimit->value) {
 		//int	t = timelimit->value ? (level.match_time + gtime_t::from_min(timelimit->value) + level.overtime - level.time).seconds<int>() : level.time.seconds<int>() - level.match_time.seconds<int>();
 		//fmt::format_to(std::back_inserter(string), FMT_STRING("xv 340 yv -10 time_limit {} "), t);
@@ -480,9 +488,15 @@ static void DuelScoreboardMessage(edict_t *ent, edict_t *killer) {
 	);
 	*/
 
-	for (i = 0; i < 2; i++) {
+	if (!level.num_playing_clients)
+		return;
+
+	gclient_t *cl;
+	edict_t *cl_ent;
+	
+	for (i = 0, i2 = 0; i < level.num_playing_clients, i2 < 2; i++) {
 		cl = &game.clients[level.sorted_clients[i]];
-		cl_ent = g_edicts + 1 + level.sorted_clients[i];
+		cl_ent = &g_edicts[cl - game.clients];
 
 		if (!cl_ent)
 			continue;
@@ -493,7 +507,7 @@ static void DuelScoreboardMessage(edict_t *ent, edict_t *killer) {
 		if (!cl)
 			continue;
 
-		if (cl->resp.team != TEAM_FREE)
+		if (!ClientIsPlaying(cl))
 			continue;
 
 		x = i ? 130 : -72;
@@ -507,6 +521,10 @@ static void DuelScoreboardMessage(edict_t *ent, edict_t *killer) {
 		if (img_index)
 			fmt::format_to(std::back_inserter(entry), FMT_STRING("xv {} yv {} picn {} "), x, y, s);
 
+		// player ready marker
+		if (level.match_state == matchst_t::MATCH_WARMUP_READYUP && (cl->resp.is_a_bot || cl->resp.ready))
+			fmt::format_to(std::back_inserter(entry), FMT_STRING("xv {} yv {} picn {} "), x + 16, y + 16, "wheel/p_compass_selected");
+
 		if (string.length() + entry.length() > MAX_STRING_CHARS)
 			break;
 
@@ -516,12 +534,13 @@ static void DuelScoreboardMessage(edict_t *ent, edict_t *killer) {
 
 		fmt::format_to(std::back_inserter(entry),
 			FMT_STRING("client {} {} {} {} {} {} "),
-			x, y, level.sorted_clients[i], cl->resp.score, cl->ping, (int32_t)(level.time - cl->resp.entertime).minutes());
+			x, y, level.sorted_clients[i], cl->resp.score, cl->ping, (level.time - cl->resp.team_join_time).minutes<int>());
 
 		if (string.length() + entry.length() > MAX_STRING_CHARS)
 			break;
 
 		string += entry;
+		i2++;
 
 		entry.clear();
 	}
@@ -532,13 +551,7 @@ static void DuelScoreboardMessage(edict_t *ent, edict_t *killer) {
 	if (string.size() < MAX_STRING_CHARS - 50) {
 		for (i = 0; i < game.maxclients; i++) {
 			cl = &game.clients[level.sorted_clients[i]];
-			cl_ent = &g_edicts[cl - game.clients];
-			/*
-			if (!cl_ent->inuse ||
-				cl_ent->solid != SOLID_NOT ||
-				ClientIsPlaying(cl))
-				continue;
-				*/
+			cl_ent = &g_edicts[cl - game.clients + 1];
 
 			if (!cl_ent)
 				continue;
@@ -557,23 +570,24 @@ static void DuelScoreboardMessage(edict_t *ent, edict_t *killer) {
 
 			if (!k) {
 				k = 1;
-				fmt::format_to(std::back_inserter(string), FMT_STRING("xv 0 yv {} loc_string2 0 \"Queued Contenders\" "), j);
+				fmt::format_to(std::back_inserter(string), FMT_STRING("xv 0 yv {} loc_string2 0 \"Queued Contenders:\" "), j);
+				j += 8;
+				fmt::format_to(std::back_inserter(string), FMT_STRING("xv -40 yv {} loc_string2 0 \"w  l  name\" "), j);
 				j += 8;
 			}
 
 			std::string_view entry = G_Fmt("ctf {} {} {} {} {} \"\" ",
-				(n & 1) ? 200 : -40,		// x
+				-40,						// x
 				j,							// y
 				level.sorted_clients[i],	// playernum
-				cl->resp.score,
-				cl->ping > 999 ? 999 : cl->ping);
+				cl->resp.wins,
+				cl->resp.losses
+			);
 
 			if (string.size() + entry.size() < MAX_STRING_CHARS)
 				string += entry;
 
-			if (n & 1)
-				j += 8;
-			n++;
+			j += 8;
 		}
 	}
 
@@ -593,15 +607,6 @@ DeathmatchScoreboardMessage
 ==================
 */
 void DeathmatchScoreboardMessage(edict_t *ent, edict_t *killer) {
-	static std::string entry, string;
-	size_t		j;
-	int			sorted[MAX_CLIENTS];
-	int			sortedscores[MAX_CLIENTS];
-	int			score;
-	int			x, y;
-	gclient_t *cl;
-	edict_t *cl_ent;
-
 	if (Teams()) {
 		TeamsScoreboardMessage(ent, ent->enemy);
 		return;
@@ -611,50 +616,42 @@ void DeathmatchScoreboardMessage(edict_t *ent, edict_t *killer) {
 		return;
 	}
 
-	entry.clear();
-	string.clear();
+	uint8_t total = level.num_playing_clients;
 
-	//  sort the clients by score
-	uint8_t total = 0;
-	for (size_t i = 0; i < game.maxclients; i++) {
-		cl_ent = g_edicts + 1 + i;
-		if (!cl_ent->inuse || !ClientIsPlaying(&game.clients[i]))
-			continue;
-		score = game.clients[i].resp.score;
-		for (j = 0; j < total; j++) {
-			if (score > sortedscores[j])
-				break;
-		}
-		for (uint8_t k = total; k > j; k--) {
-			sorted[k] = sorted[k - 1];
-			sortedscores[k] = sortedscores[k - 1];
-		}
-		sorted[j] = i;
-		sortedscores[j] = score;
-		total++;
-	}
-
-	// add the clients in sorted order
 	if (total > 16)
 		total = 16;
 
+	static std::string entry, string;
+	int			x, y;
+	gclient_t *cl;
+	edict_t *cl_ent;
+	entry.clear();
+	string.clear();
+
 	for (size_t i = 0; i < total; i++) {
-		cl = &game.clients[sorted[i]];
-		cl_ent = g_edicts + 1 + sorted[i];
+		cl = &game.clients[level.sorted_clients[i]];
+		cl_ent = g_edicts + 1 + level.sorted_clients[i];
 
 		x = (i >= 8) ? 130 : -72;
 		y = 0 + 32 * (i % 8);
 
+		// selected player/killer tag
 		if (cl_ent == ent)
 			fmt::format_to(std::back_inserter(entry), FMT_STRING("xv {} yv {} picn {} "), x, y, "/tags/default");
 		else if (cl_ent == killer)
 			fmt::format_to(std::back_inserter(entry), FMT_STRING("xv {} yv {} picn {} "), x, y, "/tags/bloody");
 
+		// player skin icon
 		const char *s = G_Fmt("/players/{}_i", cl->pers.skin).data();
 		int32_t		img_index = cl->pers.skin_icon_index;
 
 		if (img_index)
 			fmt::format_to(std::back_inserter(entry), FMT_STRING("xv {} yv {} picn {} "), x, y, s);
+
+		// player ready marker
+		if (level.match_state == matchst_t::MATCH_WARMUP_READYUP && (cl->resp.is_a_bot || cl->resp.ready)) {
+			fmt::format_to(std::back_inserter(entry), FMT_STRING("xv {} yv {} picn {} "), x + 16, y + 16, "wheel/p_compass_selected");
+		}
 
 		if (string.length() + entry.length() > MAX_STRING_CHARS)
 			break;
@@ -665,7 +662,7 @@ void DeathmatchScoreboardMessage(edict_t *ent, edict_t *killer) {
 
 		fmt::format_to(std::back_inserter(entry),
 			FMT_STRING("client {} {} {} {} {} {} "),
-			x, y, sorted[i], cl->resp.score, cl->ping, (int32_t)(level.time - cl->resp.entertime).minutes());
+			x, y, level.sorted_clients[i], cl->resp.score, cl->ping, (int32_t)(level.time - cl->resp.entertime).minutes());
 
 		if (string.length() + entry.length() > MAX_STRING_CHARS)
 			break;
@@ -1167,6 +1164,15 @@ static void SetMiniScoreStats(edict_t *ent) {
 			ent->client->ps.stats[STAT_MINISCORE_FIRST_SCORE] = level.team_scores[TEAM_RED];
 			ent->client->ps.stats[STAT_MINISCORE_SECOND_PIC] = ii_teams_blue_default;
 			ent->client->ps.stats[STAT_MINISCORE_SECOND_SCORE] = level.team_scores[TEAM_BLUE];
+
+			if (clanarena->integer || freeze->integer) {
+				//TODO: configstrings??
+				ent->client->ps.stats[STAT_MINISCORE_FIRST_VAL] = 0;	// level.num_playing_red - level.num_eliminated_red;
+				ent->client->ps.stats[STAT_MINISCORE_SECOND_VAL] = 0;	//level.num_playing_blue - level.num_eliminated_blue;
+			} else {
+				ent->client->ps.stats[STAT_MINISCORE_FIRST_VAL] = 0;
+				ent->client->ps.stats[STAT_MINISCORE_SECOND_VAL] = 0;
+			}
 		} else {
 			int16_t pic1 = 0, pic2 = 0;
 
@@ -1565,13 +1571,12 @@ void G_SetStats(edict_t *ent) {
 	}
 
 	if (ctf->integer) {
-		//ent->client->ps.stats[STAT_MATCH_STATE] = level.match_state > MATCH_NONE ? CONFIG_MATCH_STATE : 0;
+		//ent->client->ps.stats[STAT_MATCH_STATE] = level.match_state > matchst_t::MATCH_NONE ? CONFIG_MATCH_STATE : 0;
 		//ent->client->ps.stats[STAT_TEAMPLAY_INFO] = level.warnactive ? CONFIG_TEAMINFO : 0;
 	}
 
 	// match countdown
 	ent->client->ps.stats[STAT_COUNTDOWN] = level.countdown_check.seconds<int>();
-
 	//
 	// match timer
 	//
@@ -1581,38 +1586,58 @@ void G_SetStats(edict_t *ent) {
 		// Don't update any more than once/second
 		static int lasttime = 0;
 		//int	t = timelimit->value ? (gtime_t::from_min(timelimit->value) + level.overtime - level.time).seconds<int>() : level.time.seconds<int>();
-		int	t = timelimit->value ? (level.match_time + gtime_t::from_min(timelimit->value) + level.overtime - level.time).seconds<int>() : level.time.seconds<int>() - level.match_time.seconds<int>();
+		gtime_t clock = timelimit->value ? (level.match_time + gtime_t::from_min(timelimit->value) + level.overtime - level.time) : level.time - level.match_time;
+		int	t = clock.milliseconds();
+		int ft = floor(t * 1000);
 		
-		if (t != ent->client->last_match_timer_update) {
+		if (ent->client->last_match_timer_update != ft) {
 			const char *s, *s1, *s2 = "";
 
-			ent->client->last_match_timer_update = t;
+			ent->client->last_match_timer_update = ft;
 
 			switch (level.match_state) {
-			case MATCH_WARMUP_DELAYED:
-				s1 = "";
+			case matchst_t::MATCH_WARMUP_DELAYED:
+				if (level.warmup_notice_time + 5_sec > level.time) {
+					s1 = G_Fmt("{} v{}", GAMEMOD_TITLE, GAMEMOD_VERSION).data();
+				} else {
+					s1 = "";
+				}
 				break;
-			case MATCH_WARMUP_DEFAULT:
-			case MATCH_WARMUP_READYUP:
+			case matchst_t::MATCH_WARMUP_DEFAULT:
+			case matchst_t::MATCH_WARMUP_READYUP:
 				s1 = "WARMUP";
 				break;
-			case MATCH_COUNTDOWN:
+			case matchst_t::MATCH_COUNTDOWN:
 				s1 = "COUNTDOWN";
 				break;
-			default:
-				s1 = t < 0 && t >= -4 ? "OVERTIME!" : G_TimeString(t * 1000);
+			default: {
+				if (t < 0 && t >= -4) {
+					s1 = "OVERTIME!";
+				} else if (IsRoundBased()) {
+					if (level.round_state == roundst_t::ROUND_COUNTDOWN) {
+						s1 = "COUNTDOWN";
+					} else if (level.round_state == roundst_t::ROUND_IN_PROGRESS) {
+						int t2 = (level.round_state_timer - level.time).milliseconds();
+						s1 = G_Fmt("{} ({})", G_TimeString(t), G_TimeString(t2)).data();
+					} else {
+						s1 = "";
+					}
+				} else {
+					s1 = G_TimeString(t);
+				}
 				break;
 			}
-			if (level.match_state == MATCH_WARMUP_DEFAULT || level.match_state == MATCH_WARMUP_READYUP) {
+			}
+			if (level.match_state == matchst_t::MATCH_WARMUP_DEFAULT || level.match_state == matchst_t::MATCH_WARMUP_READYUP) {
 				if (level.warmup_requisite && level.warmup_notice_time + 3_sec > level.time) {
 					switch (level.warmup_requisite) {
-					case WARMUP_REQ_MORE_PLAYERS:
+					case warmupreq_t::WARMUP_REQ_MORE_PLAYERS:
 						s2 = G_Fmt(": More players needed ({} players min.)", minplayers->integer).data();
 						break;
-					case WARMUP_REQ_BALANCE:
+					case warmupreq_t::WARMUP_REQ_BALANCE:
 						s2 = ": Teams are imbalanced.";
 						break;
-					case WARMUP_REQ_READYUP:
+					case warmupreq_t::WARMUP_REQ_READYUP:
 						s2 = ": Players must ready up.";
 						break;
 					}

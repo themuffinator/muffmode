@@ -248,6 +248,9 @@ enum player_stat_t {
 
 	STAT_COUNTDOWN,
 
+	STAT_MINISCORE_FIRST_VAL,
+	STAT_MINISCORE_SECOND_VAL,
+
 	// don't use; just for verification
 	STAT_LAST
 };

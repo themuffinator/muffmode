@@ -1059,7 +1059,7 @@ static THINK(bfg_explode) (edict_t *self) -> void {
 			if (ent == self->owner)
 				continue;
 			/*freeze*/
-			if (freeze->integer && ent->client && ent->client->frozen)
+			if (ent->client && ent->client->eliminated)
 				continue;
 			/*freeze*/
 			if (!CanDamage(ent, self))
@@ -1192,7 +1192,7 @@ static THINK(bfg_think) (edict_t *self) -> void {
 		if (ent == self->owner)
 			continue;
 		/*freeze*/
-		if (freeze->integer && ent->client && ent->client->frozen)
+		if (ent->client && ent->client->eliminated)
 			continue;
 		/*freeze*/
 		if (!ent->takedamage)
@@ -1779,10 +1779,10 @@ static DIE(prox_die) (edict_t *self, edict_t *inflictor, edict_t *attacker, int 
 static TOUCH(Prox_Field_Touch) (edict_t *ent, edict_t *other, const trace_t &tr, bool other_touching_self) -> void {
 	edict_t *prox;
 
-	if (!(other->svflags & SVF_MONSTER) && !other->client)
+	if (deathmatch->integer && IsCombatDisabled())
 		return;
 
-	if (deathmatch->integer && level.match_state == MATCH_COUNTDOWN)
+	if (!(other->svflags & SVF_MONSTER) && !other->client)
 		return;
 
 	// trigger the prox mine if it's still there, and still mine.
@@ -2217,12 +2217,20 @@ static THINK(Nuke_Quake) (edict_t *self) -> void {
 		G_FreeEdict(self);
 }
 
-static void Nuke_Explode(edict_t *ent) {
+void Nuke_Explode(edict_t *ent) {
+	float dmg = ent->dmg;
+	float dmg_radius = ent->dmg_radius;
+
+	if (!dmg)
+		dmg = 400;
+
+	if (!dmg_radius)
+		dmg = 512;
 
 	if (ent->teammaster->client)
 		PlayerNoise(ent->teammaster, ent->s.origin, PNOISE_IMPACT);
 
-	T_RadiusNukeDamage(ent, ent->teammaster, (float)ent->dmg, ent, ent->dmg_radius, MOD_NUKE);
+	T_RadiusNukeDamage(ent, ent->teammaster, dmg, ent, dmg_radius, MOD_NUKE);
 
 	if (ent->dmg > NUKE_DAMAGE)
 		gi.sound(ent, CHAN_ITEM, gi.soundindex("items/damage3.wav"), 1, ATTN_NORM, 0);
@@ -2471,7 +2479,7 @@ static THINK(tesla_think_active) (edict_t *self) -> void {
 		return;
 	}
 
-	if (deathmatch->integer && level.match_state == MATCH_COUNTDOWN)
+	if (deathmatch->integer && IsCombatDisabled())
 		return;
 
 	start = self->s.origin;
@@ -2981,22 +2989,8 @@ static void SP_item_foodcube(edict_t *self) {
 		return;
 	}
 
-	self->model = "models/objects/trapfx/tris.md2";
-	SpawnItem(self, GetItemByIndex(IT_HEALTH_SMALL));
+	SpawnItem(self, GetItemByIndex(IT_FOODCUBE));
 	self->spawnflags |= SPAWNFLAG_ITEM_DROPPED;
-	self->style = HEALTH_IGNORE_MAX;
-	self->classname = "item_foodcube";
-	self->s.effects |= EF_GIB;
-
-	// Paril: set pickup noise for foodcube based on amount
-	if (self->count < 10)
-		self->noise_index = gi.soundindex("items/s_health.wav");
-	else if (self->count < 25)
-		self->noise_index = gi.soundindex("items/n_health.wav");
-	else if (self->count < 50)
-		self->noise_index = gi.soundindex("items/l_health.wav");
-	else
-		self->noise_index = gi.soundindex("items/m_health.wav");
 }
 
 void SpawnDamage(int type, const vec3_t &origin, const vec3_t &normal, int damage);
@@ -3076,7 +3070,7 @@ static THINK(Trap_Think) (edict_t *ent) -> void {
 		return;
 	}
 
-	if (deathmatch->integer && level.match_state == MATCH_COUNTDOWN)
+	if (deathmatch->integer && IsCombatDisabled())
 		return;
 
 	while ((target = findradius(target, ent->s.origin, 256)) != nullptr) {

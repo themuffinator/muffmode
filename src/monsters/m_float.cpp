@@ -594,7 +594,7 @@ static void float_set_fly_parameters(edict_t *self) {
 
 constexpr spawnflags_t SPAWNFLAG_FLOATER_DISGUISE = 8_spawnflag;
 
-/*QUAKED monster_floater (1 .5 0) (-16 -16 -24) (16 16 32) AMBUSH TRIGGER_SPAWN SIGHT DISGUISE
+/*QUAKED monster_floater (1 .5 0) (-16 -16 -24) (16 16 32) AMBUSH TRIGGER_SPAWN SIGHT DISGUISE x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
  */
 void SP_monster_floater(edict_t *self) {
 	if (!M_AllowSpawn(self)) {

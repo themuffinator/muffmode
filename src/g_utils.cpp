@@ -395,7 +395,7 @@ void G_TouchTriggers(edict_t *ent) {
 	edict_t *hit;
 
 /*freeze*/
-	if (freeze->integer && ent->client && ent->client->frozen);
+	if (freeze->integer && ent->client && ent->client->eliminated);
 	else
 /*freeze*/
 			// dead things don't activate triggers!
@@ -608,7 +608,7 @@ G_AdjustPlayerScore
 void G_AdjustPlayerScore(gclient_t *cl, int32_t offset, bool adjust_team, int32_t team_offset) {
 	if (!cl) return;
 
-	if (level.match_state != MATCH_IN_PROGRESS)
+	if (IsScoringDisabled())
 		return;
 
 	if (level.intermission_queued)
@@ -633,7 +633,7 @@ void Horde_AdjustPlayerScore(gclient_t *cl, int32_t offset) {
 	if (!horde->integer) return;
 	if (!cl) return;
 
-	if (level.match_state != MATCH_IN_PROGRESS)
+	if (IsScoringDisabled())
 		return;
 
 	gi.Com_PrintFmt("monster kill score = {}\n", offset);
@@ -648,7 +648,7 @@ G_SetPlayerScore
 void G_SetPlayerScore(gclient_t *cl, int32_t value) {
 	if (!cl) return;
 
-	if (level.match_state != MATCH_IN_PROGRESS)
+	if (IsScoringDisabled())
 		return;
 
 	if (level.intermission_queued)
@@ -666,7 +666,7 @@ G_AdjustTeamScore
 */
 void G_AdjustTeamScore(team_t team, int32_t offset) {
 
-	if (level.match_state != MATCH_IN_PROGRESS)
+	if (IsScoringDisabled())
 		return;
 
 	if (level.intermission_queued)
@@ -688,7 +688,7 @@ G_SetTeamScore
 */
 void G_SetTeamScore(team_t team, int32_t value) {
 
-	if (level.match_state != MATCH_IN_PROGRESS)
+	if (IsScoringDisabled())
 		return;
 
 	if (level.intermission_queued)
@@ -875,8 +875,66 @@ bool InAMatch() {
 		return false;
 	if (level.intermission_queued)
 		return false;
-	if (level.match_state == MATCH_IN_PROGRESS)
+	if (level.match_state == matchst_t::MATCH_IN_PROGRESS)
 		return true;
 
 	return false;
+}
+
+bool IsRoundBased() {
+	if (clanarena->integer)
+		return true;
+	return false;
+}
+
+bool IsCombatDisabled() {
+	if (level.intermission_queued)
+		return true;
+	if (level.match_state == matchst_t::MATCH_COUNTDOWN)
+		return true;
+	if (IsRoundBased() && level.match_state == matchst_t::MATCH_IN_PROGRESS) {
+		// added round none to allow gibbing etc. at end of rounds
+		// scoring to be explicitly disabled during this time
+		if (level.round_state != roundst_t::ROUND_IN_PROGRESS && level.round_state != roundst_t::ROUND_NONE)
+			return true;
+	}
+	return false;
+}
+
+bool IsScoringDisabled() {
+	if (IsCombatDisabled())
+		return true;
+	if (IsRoundBased() && level.round_state != roundst_t::ROUND_IN_PROGRESS)
+		return true;
+	return false;
+}
+
+const char *G_GetGametypeShortName(void) {
+	if (!deathmatch->integer)
+		return "CPN";
+
+	if (ctf->integer)
+		return gt_short_name_upper[GT_CTF];
+	if (freeze->integer)
+		return gt_short_name_upper[GT_FREEZE];
+	if (clanarena->integer)
+		return gt_short_name_upper[GT_CA];
+	if (teamplay->integer)
+		return gt_short_name_upper[GT_TDM];
+	if (duel->integer)
+		return gt_short_name_upper[GT_DUEL];
+	if (horde->integer)
+		return gt_short_name_upper[GT_HORDE];
+
+	return gt_short_name_upper[GT_FFA];
+}
+
+gametype_t GT_IndexFromString(const char *in) {
+	for (size_t i = 0; i < gametype_t::GT_NUM_GAMETYPES; i++) {
+		if (!Q_strcasecmp(in, gt_short_name[i]))
+			return (gametype_t)i;
+		if (!Q_strcasecmp(in, gt_long_name[i]))
+			return (gametype_t)i;
+	}
+	return GT_NONE;
 }

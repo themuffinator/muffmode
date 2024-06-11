@@ -2,7 +2,7 @@
 // Licensed under the GNU General Public License 2.0.
 #include "g_local.h"
 
-/*QUAKED target_temp_entity (1 0 0) (-8 -8 -8) (8 8 8)
+/*QUAKED target_temp_entity (1 0 0) (-8 -8 -8) (8 8 8) x x x x x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
 Fire an origin based temp entity event to the clients.
 "style"		type byte
 */
@@ -24,7 +24,7 @@ void SP_target_temp_entity(edict_t *ent) {
 
 //==========================================================
 
-/*QUAKED target_speaker (1 0 0) (-8 -8 -8) (8 8 8) LOOPED-ON LOOPED-OFF RELIABLE
+/*QUAKED target_speaker (1 0 0) (-8 -8 -8) (8 8 8) LOOPED-ON LOOPED-OFF RELIABLE x x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
 "noise"		wav file to play
 "attenuation"
 -1 = none, send to whole level
@@ -130,7 +130,7 @@ static USE(Use_Target_Help) (edict_t *ent, edict_t *other, edict_t *activator) -
 	}
 }
 
-/*QUAKED target_help (1 0 1) (-16 -16 -24) (16 16 24) HELP1 SETPOI
+/*QUAKED target_help (1 0 1) (-16 -16 -24) (16 16 24) HELP1 SETPOI x x x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
 When fired, the "message" key becomes the current personal computer string, and the message light will be set on all clients status bars.
 */
 void SP_target_help(edict_t *ent) {
@@ -157,7 +157,7 @@ void SP_target_help(edict_t *ent) {
 
 //==========================================================
 
-/*QUAKED target_secret (1 0 1) (-8 -8 -8) (8 8 8)
+/*QUAKED target_secret (1 0 1) (-8 -8 -8) (8 8 8) x x x x x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
 Counts a secret found.
 These are single use targets.
 */
@@ -266,7 +266,7 @@ void G_PlayerNotifyGoal(edict_t *player) {
 	}
 }
 
-/*QUAKED target_goal (1 0 1) (-8 -8 -8) (8 8 8) KEEP_MUSIC
+/*QUAKED target_goal (1 0 1) (-8 -8 -8) (8 8 8) KEEP_MUSIC x x x x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
 Counts a goal completed.
 These are single use targets.
 */
@@ -313,7 +313,7 @@ void SP_target_goal(edict_t *ent) {
 
 //==========================================================
 
-/*QUAKED target_explosion (1 0 0) (-8 -8 -8) (8 8 8)
+/*QUAKED target_explosion (1 0 0) (-8 -8 -8) (8 8 8) x x x x x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
 Spawns an explosion temporary entity when used.
 
 "delay"		wait this long before going off
@@ -354,7 +354,7 @@ void SP_target_explosion(edict_t *ent) {
 
 //==========================================================
 
-/*QUAKED target_changelevel (1 0 0) (-8 -8 -8) (8 8 8) END_OF_UNIT UNKNOWN UNKNOWN CLEAR_INVENTORY NO_END_OF_UNIT FADE_OUT IMMEDIATE_LEAVE
+/*QUAKED target_changelevel (1 0 0) (-8 -8 -8) (8 8 8) END_OF_UNIT x x CLEAR_INVENTORY NO_END_OF_UNIT FADE_OUT IMMEDIATE_LEAVE x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
 Changes level to "map" when fired
 */
 static USE(use_target_changelevel) (edict_t *self, edict_t *other, edict_t *activator) -> void {
@@ -427,7 +427,7 @@ void SP_target_changelevel(edict_t *ent) {
 
 //==========================================================
 
-/*QUAKED target_splash (1 0 0) (-8 -8 -8) (8 8 8)
+/*QUAKED target_splash (1 0 0) (-8 -8 -8) (8 8 8) x x x x x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
 Creates a particle splash effect when used.
 
 Set "sounds" to one of the following:
@@ -472,7 +472,7 @@ void SP_target_splash(edict_t *self) {
 
 //==========================================================
 
-/*QUAKED target_spawner (1 0 0) (-8 -8 -8) (8 8 8)
+/*QUAKED target_spawner (1 0 0) (-8 -8 -8) (8 8 8) x x x x x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
 Set target to the type of entity you want spawned.
 Useful for spawning monsters and gibs in the factory levels.
 
@@ -522,7 +522,7 @@ void SP_target_spawner(edict_t *self) {
 
 //==========================================================
 
-/*QUAKED target_blaster (1 0 0) (-8 -8 -8) (8 8 8) NOTRAIL NOEFFECTS
+/*QUAKED target_blaster (1 0 0) (-8 -8 -8) (8 8 8) NOTRAIL NOEFFECTS x x x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
 Fires a blaster bolt in the set direction when triggered.
 
 dmg		default is 15
@@ -561,7 +561,7 @@ void SP_target_blaster(edict_t *self) {
 
 //==========================================================
 
-/*QUAKED target_crosslevel_trigger (.5 .5 .5) (-8 -8 -8) (8 8 8) TRIGGER1 TRIGGER2 TRIGGER3 TRIGGER4 TRIGGER5 TRIGGER6 TRIGGER7 TRIGGER8
+/*QUAKED target_crosslevel_trigger (.5 .5 .5) (-8 -8 -8) (8 8 8) TRIGGER1 TRIGGER2 TRIGGER3 TRIGGER4 TRIGGER5 TRIGGER6 TRIGGER7 TRIGGER8 NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
 Once this trigger is touched/used, any trigger_crosslevel_target with the same trigger number is automatically used when a level is started within the same unit.  It is OK to check multiple triggers.  Message, delay, target, and killtarget also work.
 */
 static USE(trigger_crosslevel_trigger_use) (edict_t *self, edict_t *other, edict_t *activator) -> void {
@@ -574,7 +574,7 @@ void SP_target_crosslevel_trigger(edict_t *self) {
 	self->use = trigger_crosslevel_trigger_use;
 }
 
-/*QUAKED target_crosslevel_target (.5 .5 .5) (-8 -8 -8) (8 8 8) TRIGGER1 TRIGGER2 TRIGGER3 TRIGGER4 TRIGGER5 TRIGGER6 TRIGGER7 TRIGGER8 - - - - - - - - TRIGGER9 TRIGGER10 TRIGGER11 TRIGGER12 TRIGGER13 TRIGGER14 TRIGGER15 TRIGGER16
+/*QUAKED target_crosslevel_target (.5 .5 .5) (-8 -8 -8) (8 8 8) TRIGGER1 TRIGGER2 TRIGGER3 TRIGGER4 TRIGGER5 TRIGGER6 TRIGGER7 TRIGGER8 x x x x x x x x TRIGGER9 TRIGGER10 TRIGGER11 TRIGGER12 TRIGGER13 TRIGGER14 TRIGGER15 TRIGGER16
 Triggered by a trigger_crosslevel elsewhere within a unit.  If multiple triggers are checked, all must be true.  Delay, target and
 killtarget also work.
 
@@ -598,7 +598,7 @@ void SP_target_crosslevel_target(edict_t *self) {
 
 //==========================================================
 
-/*QUAKED target_laser (0 .5 .8) (-8 -8 -8) (8 8 8) START_ON RED GREEN BLUE YELLOW ORANGE FAT WINDOWSTOP
+/*QUAKED target_laser (0 .5 .8) (-8 -8 -8) (8 8 8) START_ON RED GREEN BLUE YELLOW ORANGE FAT WINDOWSTOP NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
 When triggered, fires a laser.  You can either set a target or a direction.
 
 WINDOWSTOP - stops at CONTENTS_WINDOW
@@ -797,7 +797,7 @@ void SP_target_laser(edict_t *self) {
 
 //==========================================================
 
-/*QUAKED target_lightramp (0 .5 .8) (-8 -8 -8) (8 8 8) TOGGLE
+/*QUAKED target_lightramp (0 .5 .8) (-8 -8 -8) (8 8 8) TOGGLE x x x x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
 speed		How many seconds the ramping will take
 message		two letters; starting lightlevel and ending lightlevel
 */
@@ -881,7 +881,7 @@ void SP_target_lightramp(edict_t *self) {
 
 //==========================================================
 
-/*QUAKED target_earthquake (1 0 0) (-8 -8 -8) (8 8 8) SILENT TOGGLE UNKNOWN_ROGUE ONE_SHOT
+/*QUAKED target_earthquake (1 0 0) (-8 -8 -8) (8 8 8) SILENT TOGGLE UNKNOWN_ROGUE ONE_SHOT x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
 When triggered, this initiates a level-wide earthquake.
 All players are affected with a screen shake.
 "speed"		severity of the quake (default:200)
@@ -975,7 +975,7 @@ void SP_target_earthquake(edict_t *self) {
 		self->noise_index = gi.soundindex("world/quake.wav");
 }
 
-/*QUAKED target_camera (1 0 0) (-8 -8 -8) (8 8 8)
+/*QUAKED target_camera (1 0 0) (-8 -8 -8) (8 8 8) x x x x x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
 [Sam-KEX] Creates a camera path as seen in the N64 version.
 */
 
@@ -1196,7 +1196,7 @@ void SP_target_camera(edict_t *self) {
 	self->svflags = SVF_NOCLIENT;
 }
 
-/*QUAKED target_gravity (1 0 0) (-8 -8 -8) (8 8 8) NOTRAIL NOEFFECTS
+/*QUAKED target_gravity (1 0 0) (-8 -8 -8) (8 8 8) NOTRAIL NOEFFECTS x x x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
 [Sam-KEX] Changes gravity, as seen in the N64 version
 */
 
@@ -1210,7 +1210,7 @@ void SP_target_gravity(edict_t *self) {
 	self->gravity = atof(st.gravity);
 }
 
-/*QUAKED target_soundfx (1 0 0) (-8 -8 -8) (8 8 8) NOTRAIL NOEFFECTS
+/*QUAKED target_soundfx (1 0 0) (-8 -8 -8) (8 8 8) NOTRAIL NOEFFECTS x x x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
 [Sam-KEX] Plays a sound fx, as seen in the N64 version
 */
 
@@ -1258,7 +1258,7 @@ void SP_target_soundfx(edict_t *self) {
 	self->use = use_target_soundfx;
 }
 
-/*QUAKED target_light (1 0 0) (-8 -8 -8) (8 8 8) START_ON NO_LERP FLICKER
+/*QUAKED target_light (1 0 0) (-8 -8 -8) (8 8 8) START_ON NO_LERP FLICKER x x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
 [Paril-KEX] dynamic light entity that follows a lightstyle.
 */
 
@@ -1370,7 +1370,7 @@ void SP_target_light(edict_t *self) {
 	gi.linkentity(self);
 }
 
-/*QUAKED target_poi (1 0 0) (-4 -4 -4) (4 4 4) NEAREST DUMMY DYNAMIC
+/*QUAKED target_poi (1 0 0) (-4 -4 -4) (4 4 4) NEAREST DUMMY DYNAMIC x x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
 [Paril-KEX] point of interest for help in player navigation.
 Without any additional setup, targeting this entity will switch
 the current POI in the level to the one this is linked to.
@@ -1593,7 +1593,7 @@ void SP_target_poi(edict_t *self) {
 	}
 }
 
-/*QUAKED target_music (1 0 0) (-8 -8 -8) (8 8 8)
+/*QUAKED target_music (1 0 0) (-8 -8 -8) (8 8 8) x x x x x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
 Change music when used
 */
 
@@ -1605,11 +1605,10 @@ void SP_target_music(edict_t *self) {
 	self->use = use_target_music;
 }
 
-/*QUAKED target_healthbar (0 1 0) (-8 -8 -8) (8 8 8) PVS_ONLY
-*
-* Hook up health bars to monsters.
-* "delay" is how long to show the health bar for after death.
-* "message" is their name
+/*QUAKED target_healthbar (0 1 0) (-8 -8 -8) (8 8 8) PVS_ONLY x x x x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
+Hook up health bars to monsters.
+"delay" is how long to show the health bar for after death.
+"message" is their name
 */
 
 static USE(use_target_healthbar) (edict_t *ent, edict_t *other, edict_t *activator) -> void {
@@ -1675,9 +1674,8 @@ void SP_target_healthbar(edict_t *self) {
 	self->nextthink = level.time + 25_ms;
 }
 
-/*QUAKED target_autosave (0 1 0) (-8 -8 -8) (8 8 8)
-*
-* Auto save on command.
+/*QUAKED target_autosave (0 1 0) (-8 -8 -8) (8 8 8) x x x x x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
+Auto save on command.
 */
 
 static USE(use_target_autosave) (edict_t *ent, edict_t *other, edict_t *activator) -> void {
@@ -1698,9 +1696,8 @@ void SP_target_autosave(edict_t *self) {
 	self->use = use_target_autosave;
 }
 
-/*QUAKED target_sky (0 1 0) (-8 -8 -8) (8 8 8)
-*
-* Change sky parameters.
+/*QUAKED target_sky (0 1 0) (-8 -8 -8) (8 8 8) x x x x x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
+Change sky parameters.
 "sky"	environment map name
 "skyaxis"	vector axis for rotating sky
 "skyrotate"	speed of rotation in degrees/second
@@ -1794,7 +1791,7 @@ void SP_target_crossunit_target(edict_t *self) {
 	self->nextthink = level.time + gtime_t::from_sec(self->delay);
 }
 
-/*QUAKED target_achievement (.5 .5 .5) (-8 -8 -8) (8 8 8)
+/*QUAKED target_achievement (.5 .5 .5) (-8 -8 -8) (8 8 8) x x x x x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
 Give an achievement.
 
 "achievement"		cheevo to give
@@ -1833,7 +1830,7 @@ void SP_target_story(edict_t *self) {
 	self->use = use_target_story;
 }
 
-/*QUAKED target_mal_laser (1 0 0) (-4 -4 -4) (4 4 4) START_ON RED GREEN BLUE YELLOW ORANGE FAT
+/*QUAKED target_mal_laser (1 0 0) (-4 -4 -4) (4 4 4) START_ON RED GREEN BLUE YELLOW ORANGE FAT x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
 Mal's laser
 */
 static void target_mal_laser_on(edict_t *self) {
@@ -1925,7 +1922,7 @@ void SP_target_mal_laser(edict_t *self) {
 
 //==========================================================
 
-/*QUAKED target_steam (1 0 0) (-8 -8 -8) (8 8 8)
+/*QUAKED target_steam (1 0 0) (-8 -8 -8) (8 8 8) x x x x x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
 Creates a steam effect (particles w/ velocity in a line).
 
 speed = velocity of particles (default 50)
@@ -2081,7 +2078,7 @@ static USE(target_anger_use) (edict_t *self, edict_t *other, edict_t *activator)
 	}
 }
 
-/*QUAKED target_anger (1 0 0) (-8 -8 -8) (8 8 8)
+/*QUAKED target_anger (1 0 0) (-8 -8 -8) (8 8 8) x x x x x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
 This trigger will cause an entity to be angry at another entity when a player touches it. Target the
 entity you want to anger, and killtarget the entity you want it to be angry at.
 
@@ -2137,7 +2134,7 @@ USE(target_killplayers_use) (edict_t *self, edict_t *other, edict_t *activator) 
 	level.deadly_kill_box = false;
 }
 
-/*QUAKED target_killplayers (1 0 0) (-8 -8 -8) (8 8 8)
+/*QUAKED target_killplayers (1 0 0) (-8 -8 -8) (8 8 8) x x x x x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
 When triggered, this will kill all the players on the map.
 */
 void SP_target_killplayers(edict_t *self) {
@@ -2145,7 +2142,7 @@ void SP_target_killplayers(edict_t *self) {
 	self->svflags = SVF_NOCLIENT;
 }
 
-/*QUAKED target_blacklight (1 0 1) (-16 -16 -24) (16 16 24)
+/*QUAKED target_blacklight (1 0 1) (-16 -16 -24) (16 16 24) x x x x x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
 Pulsing black light with sphere in the center
 */
 static THINK(blacklight_think) (edict_t *self) -> void {
@@ -2173,7 +2170,7 @@ void SP_target_blacklight(edict_t *ent) {
 	gi.linkentity(ent);
 }
 
-/*QUAKED target_orb (1 0 1) (-16 -16 -24) (16 16 24)
+/*QUAKED target_orb (1 0 1) (-16 -16 -24) (16 16 24) x x x x x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
 Translucent pulsing orb with speckles
 */
 void SP_target_orb(edict_t *ent) {
@@ -2194,4 +2191,538 @@ void SP_target_orb(edict_t *ent) {
 	ent->s.scale = 8.f;
 	ent->s.effects |= EF_SPHERETRANS;
 	gi.linkentity(ent);
+}
+
+//==========================================================
+
+/*QUAKED target_remove_powerups (1 0 0) (-8 -8 -8) (8 8 8) x x x x x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
+Takes away all the activator's powerups, techs, held items, keys and CTF flags.
+*/
+static USE(target_remove_powerups_use) (edict_t *ent, edict_t *other, edict_t *activator) -> void {
+	if (!activator->client)
+		return;
+
+	activator->client->pu_time_quad = 0_sec;
+	activator->client->pu_time_duelfire = 0_sec;
+	activator->client->pu_time_double = 0_sec;
+	activator->client->pu_time_protection = 0_sec;
+	activator->client->pu_time_invisibility = 0_sec;
+	activator->client->pu_time_rebreather = 0_sec;
+	activator->client->pu_time_enviro = 0_sec;
+
+	activator->client->pers.max_ammo.fill(50);
+	activator->client->pers.max_ammo[AMMO_SHELLS] = 50;
+	activator->client->pers.max_ammo[AMMO_BULLETS] = 300;
+	activator->client->pers.max_ammo[AMMO_GRENADES] = 50;
+	activator->client->pers.max_ammo[AMMO_ROCKETS] = 50;
+	activator->client->pers.max_ammo[AMMO_CELLS] = 200;
+	activator->client->pers.max_ammo[AMMO_SLUGS] = 25;
+	activator->client->pers.max_ammo[AMMO_TRAP] = 5;
+	activator->client->pers.max_ammo[AMMO_FLECHETTES] = 200;
+	activator->client->pers.max_ammo[AMMO_DISRUPTOR] = 12;
+	activator->client->pers.max_ammo[AMMO_TESLA] = 5;
+	
+	if (activator->client->pers.inventory[IT_AMMO_SHELLS] > activator->client->pers.max_ammo[AMMO_SHELLS])
+		activator->client->pers.inventory[IT_AMMO_SHELLS] = activator->client->pers.max_ammo[AMMO_SHELLS];
+	if (activator->client->pers.inventory[IT_AMMO_BULLETS] > activator->client->pers.max_ammo[AMMO_BULLETS])
+		activator->client->pers.inventory[IT_AMMO_BULLETS] = activator->client->pers.max_ammo[AMMO_BULLETS];
+	if (activator->client->pers.inventory[IT_AMMO_GRENADES] > activator->client->pers.max_ammo[AMMO_GRENADES])
+		activator->client->pers.inventory[IT_AMMO_GRENADES] = activator->client->pers.max_ammo[AMMO_GRENADES];
+	if (activator->client->pers.inventory[IT_AMMO_ROCKETS] > activator->client->pers.max_ammo[AMMO_ROCKETS])
+		activator->client->pers.inventory[IT_AMMO_ROCKETS] = activator->client->pers.max_ammo[AMMO_ROCKETS];
+	if (activator->client->pers.inventory[IT_AMMO_CELLS] > activator->client->pers.max_ammo[AMMO_CELLS])
+		activator->client->pers.inventory[IT_AMMO_CELLS] = activator->client->pers.max_ammo[AMMO_CELLS];
+	if (activator->client->pers.inventory[IT_AMMO_SLUGS] > activator->client->pers.max_ammo[AMMO_SLUGS])
+		activator->client->pers.inventory[IT_AMMO_SLUGS] = activator->client->pers.max_ammo[AMMO_SLUGS];
+	if (activator->client->pers.inventory[IT_AMMO_TRAP] > activator->client->pers.max_ammo[AMMO_TRAP])
+		activator->client->pers.inventory[IT_AMMO_TRAP] = activator->client->pers.max_ammo[AMMO_TRAP];
+	if (activator->client->pers.inventory[IT_AMMO_FLECHETTES] > activator->client->pers.max_ammo[AMMO_FLECHETTES])
+		activator->client->pers.inventory[IT_AMMO_FLECHETTES] = activator->client->pers.max_ammo[AMMO_FLECHETTES];
+	if (activator->client->pers.inventory[IT_AMMO_ROUNDS] > activator->client->pers.max_ammo[AMMO_DISRUPTOR])
+		activator->client->pers.inventory[IT_AMMO_ROUNDS] = activator->client->pers.max_ammo[AMMO_DISRUPTOR];
+	if (activator->client->pers.inventory[IT_AMMO_TESLA] > activator->client->pers.max_ammo[AMMO_TESLA])
+		activator->client->pers.inventory[IT_AMMO_TESLA] = activator->client->pers.max_ammo[AMMO_TESLA];
+
+	for (size_t i = 0; i < IT_TOTAL; i++) {
+		if (!activator->client->pers.inventory[i])
+			continue;
+		
+		if (itemlist[i].flags & IF_KEY | IF_POWERUP | IF_TIMED | IF_SPHERE | IF_TECH) {
+			if (itemlist[i].id == IT_POWERUP_QUAD && g_quadhog->integer) {
+				// spawn quad
+				
+			}
+			activator->client->pers.inventory[i] = 0;
+		} else if (itemlist[i].flags & IF_POWER_ARMOR) {
+			activator->client->pers.inventory[i] = 0;
+			G_CheckPowerArmor(activator);
+		} else if (itemlist[i].flags & IF_TECH) {
+			activator->client->pers.inventory[i] = 0;
+			Tech_DeadDrop(activator);
+		} else if (itemlist[i].id == IT_FLAG_BLUE) {
+			activator->client->pers.inventory[i] = 0;
+			CTF_ResetTeamFlag(TEAM_BLUE);
+		} else if (itemlist[i].id == IT_FLAG_RED) {
+			activator->client->pers.inventory[i] = 0;
+			CTF_ResetTeamFlag(TEAM_RED);
+		}
+	}
+}
+
+void SP_target_remove_powerups(edict_t *ent) {
+	ent->use = target_remove_powerups_use;
+}
+
+//==========================================================
+
+/*QUAKED target_remove_weapons (1 0 0) (-8 -8 -8) (8 8 8) BLASTER x x x x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
+Takes away all the activator's weapons and ammo (except blaster).
+BLASTER : also remove blaster
+*/
+static USE(target_remove_weapons_use) (edict_t *ent, edict_t *other, edict_t *activator) -> void {
+	if (!activator->client)
+		return;
+	
+	for (size_t i = 0; i < IT_TOTAL; i++) {
+		if (!activator->client->pers.inventory[i])
+			continue;
+
+		if (itemlist[i].flags & IF_WEAPON | IF_AMMO && itemlist[i].id != IT_WEAPON_BLASTER)
+			activator->client->pers.inventory[i] = 0;
+	}
+
+	NoAmmoWeaponChange(ent, false);
+
+	activator->client->pers.weapon = activator->client->newweapon;
+	if (activator->client->newweapon)
+		activator->client->pers.selected_item = activator->client->newweapon->id;
+	activator->client->newweapon = nullptr;
+	activator->client->pers.lastweapon = activator->client->pers.weapon;
+}
+
+void SP_target_remove_weapons(edict_t *ent) {
+	ent->use = target_remove_weapons_use;
+}
+
+//==========================================================
+
+/*QUAKED target_give (1 0 0) (-8 -8 -8) (8 8 8) x x x x x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
+Gives the activator the targetted item.
+*/
+static USE(target_give_use) (edict_t *ent, edict_t *other, edict_t *activator) -> void {
+	if (!activator->client)
+		return;
+
+	ent->item->pickup(ent, other);
+}
+
+void SP_target_give(edict_t *ent) {
+	edict_t *target_ent = G_PickTarget(ent->target);
+	if (!target_ent || !target_ent->classname[0]) {
+		gi.Com_PrintFmt("{}: Invalid target entity, removing.\n", *ent);
+		G_FreeEdict(ent);
+		return;
+	}
+
+	gitem_t *it = FindItemByClassname(target_ent->classname);
+	if (!it || !it->pickup) {
+		gi.Com_PrintFmt("{}: Targetted entity is not an item, removing.\n", *ent);
+		G_FreeEdict(ent);
+		return;
+	}
+	
+	ent->item = it;
+	ent->use = target_give_use;
+	ent->svflags = SVF_NOCLIENT;
+}
+
+//==========================================================
+
+/*QUAKED target_delay (1 0 0) (-8 -8 -8) (8 8 8) x x x x x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
+Sets a delay before firing its targets.
+"wait" seconds to pause before firing targets.
+"random" delay variance, total delay = delay +/- random seconds
+*/
+static THINK(target_delay_think) (edict_t *ent) -> void {
+	G_UseTargets(ent, ent->activator);
+}
+
+static USE(target_delay_use) (edict_t *ent, edict_t *other, edict_t *activator) -> void {
+	ent->nextthink = gtime_t::from_ms(level.time.milliseconds() + (ent->wait + ent->random * crandom()) * 1000);
+	ent->think = target_delay_think;
+	ent->activator = activator;
+}
+
+void SP_target_delay(edict_t *ent) {
+	if (!ent->wait)
+		ent->wait = 1;
+	ent->use = target_delay_use;
+	ent->svflags = SVF_NOCLIENT;
+}
+
+//==========================================================
+
+/*QUAKED target_print (1 0 0) (-8 -8 -8) (8 8 8) REDTEAM BLUETEAM PRIVATE x x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
+Sends a center-printed message to clients.
+"message"	text to print
+If "private", only the activator gets the message. If no checks, all clients get the message.
+*/
+static USE(target_print_use) (edict_t *ent, edict_t *other, edict_t *activator) -> void {
+	if (activator && activator->client && ent->spawnflags.has(4_spawnflag)) {
+		gi.LocClient_Print(activator, PRINT_CENTER, "{}", ent->message);
+		return;
+	}
+
+	if (ent->spawnflags.has(3_spawnflag)) {
+		if (ent->spawnflags.has(1_spawnflag))
+			BroadcastTeamMessage(TEAM_RED, G_Fmt("{}", ent->message).data());
+		if (ent->spawnflags.has(2_spawnflag))
+			BroadcastTeamMessage(TEAM_BLUE, G_Fmt("{}", ent->message).data());
+		return;
+	}
+
+	gi.LocBroadcast_Print(PRINT_CENTER, "{}", ent->message);
+}
+
+void SP_target_print(edict_t *ent) {
+	if (!ent->message[0]) {
+		gi.Com_PrintFmt("{}: No message, removing.\n", *ent);
+		G_FreeEdict(ent);
+		return;
+	}
+	ent->use = target_print_use;
+	ent->svflags = SVF_NOCLIENT;
+}
+
+//==========================================================
+
+/*QUAKED target_teleporter (1 0 0) (-8 -8 -8) (8 8 8) x x x x x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
+The activator will be teleported to the targetted destination.
+If no target set, it will find a player spawn point instead.
+*/
+
+static void TeleportPlayerToSpawnPoint(edict_t *ent) {
+	bool	valid_spawn = false;
+	vec3_t	spawn_origin, spawn_angles;
+	bool	is_landmark = false;
+
+	valid_spawn = SelectSpawnPoint(ent, spawn_origin, spawn_angles, true, is_landmark);
+
+	if (!valid_spawn)
+		return;
+
+	TeleportPlayer(ent, spawn_origin, spawn_angles);
+}
+
+static USE(target_teleporter_use) (edict_t *ent, edict_t *other, edict_t *activator) -> void {
+	if (!activator || !activator->client)
+		return;
+
+	// no target point to teleport to, teleport to a spawn point
+	if (!ent->target_ent) {
+		TeleportPlayerToSpawnPoint(activator);
+		return;
+	}
+
+	TeleportPlayer(activator, ent->target_ent->s.origin, ent->target_ent->s.angles);
+}
+
+void SP_target_teleporter(edict_t *ent) {
+	
+	if (!ent->target[0]) {
+		//gi.Com_PrintFmt("{}: Couldn't find teleporter destination, removing.\n", ent);
+		//G_FreeEdict(ent);
+		//return;
+	}
+	
+	ent->target_ent = G_PickTarget(ent->target);
+	if (!ent->target_ent) {
+		//gi.Com_PrintFmt("{}: Couldn't find teleporter destination, removing.\n", ent);
+		//G_FreeEdict(ent);
+		//return;
+	}
+
+	ent->use = target_teleporter_use;
+}
+
+//==========================================================
+
+/*QUAKED target_kill (.5 .5 .5) (-8 -8 -8) (8 8 8) x x x x x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
+Kills the activator.
+*/
+
+static USE(target_kill_use) (edict_t *self, edict_t *other, edict_t *activator) -> void {
+	if (!activator)
+		return;
+	T_Damage(activator, self, self, vec3_origin, self->s.origin, vec3_origin, 100000, 0, DAMAGE_NO_PROTECTION, MOD_UNKNOWN);
+
+}
+
+void SP_target_kill(edict_t *self) {
+	self->use = target_kill_use;
+	self->svflags = SVF_NOCLIENT;
+}
+
+//==========================================================
+
+/*QUAKED target_cvar (1 0 0) (-8 -8 -8) (8 8 8) x x x x x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
+When targetted sets a cvar to a value.
+"cvar" : name of cvar to set
+"cvarValue" : value to set cvar to
+*/
+static USE(target_cvar_use) (edict_t *self, edict_t *other, edict_t *activator) -> void {
+	if (!activator || !activator->client)
+		return;
+
+	gi.cvar_set(self->cvar, self->cvarvalue);
+}
+
+void SP_target_cvar(edict_t *ent) {
+	if (!ent->cvar[0] || !ent->cvarvalue[0]) {
+		G_FreeEdict(ent);
+		return;
+	}
+
+	ent->use = target_cvar_use;
+}
+
+//==========================================================
+
+/*QUAKED target_setskill (1 0 0) (-8 -8 -8) (8 8 8) x x x x x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
+Set skill level.
+"message" : skill level to set to (0-3)
+
+Skill levels are:
+0 = Easy
+1 = Medium
+2 = Hard
+3 = Nightmare/Hard+
+*/
+static USE(target_setskill_use) (edict_t *self, edict_t *other, edict_t *activator) -> void {
+	if (!activator || !activator->client)
+		return;
+	
+	int skill_level = clamp(atoi(self->message), 0, 3);
+	gi.cvar_set("skill", G_Fmt("{}", skill_level).data());
+}
+
+void SP_target_setskill(edict_t *ent) {
+	if (!ent->message[0]) {
+		gi.Com_PrintFmt("{}: No message key set, removing.\n", *ent);
+		G_FreeEdict(ent);
+		return;
+	}
+
+	ent->use = target_setskill_use;
+}
+//==========================================================
+
+/*QUAKED target_score (1 0 0) (-8 -8 -8) (8 8 8) TEAM x x x x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
+"count" number of points to adjust by, default 1
+
+The activator is given this many points.
+
+TEAM : also adjust team score
+*/
+static USE(target_score_use) (edict_t *self, edict_t *other, edict_t *activator) -> void {
+	if (!activator || !activator->client)
+		return;
+
+	G_AdjustPlayerScore(activator->client, self->count, !!teamplay->integer || self->spawnflags.has(1_spawnflag), self->count);
+}
+
+void SP_target_score(edict_t *ent) {
+	if (!ent->count)
+		ent->count = 1;
+
+	ent->use = target_score_use;
+}
+
+//==========================================================
+
+/*QUAKED target_shooter_grenade (1 0 0) (-8 -8 -8) (8 8 8) x x x x x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
+Fires a grenade in the set direction when triggered.
+
+dmg		default is 120
+speed	default is 600
+*/
+
+static USE(use_target_shooter_grenade) (edict_t *self, edict_t *other, edict_t *activator) -> void {
+	fire_grenade(self, self->s.origin, self->movedir, self->dmg, (int)self->speed, 2.5_sec, self->dmg, (crandom_open() * 10.0f), (200 + crandom_open() * 10.0f), true);
+	gi.sound(self, CHAN_VOICE, self->noise_index, 1, ATTN_NORM, 0);
+}
+
+void SP_target_shooter_grenade(edict_t *self) {
+	self->use = use_target_shooter_grenade;
+	G_SetMovedir(self->s.angles, self->movedir);
+	self->noise_index = gi.soundindex("weapons/grenlf1a.wav");
+
+	if (!self->dmg)
+		self->dmg = 120;
+	if (!self->speed)
+		self->speed = 600;
+
+	self->svflags = SVF_NOCLIENT;
+}
+
+//==========================================================
+
+/*QUAKED target_shooter_rocket (1 0 0) (-8 -8 -8) (8 8 8) x x x x x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
+Fires a rocket in the set direction when triggered.
+
+dmg		default is 120
+speed	default is 600
+*/
+
+static USE(use_target_shooter_rocket) (edict_t *self, edict_t *other, edict_t *activator) -> void {
+	fire_rocket(self, self->s.origin, self->movedir, self->dmg, (int)self->speed, self->dmg, self->dmg);
+	gi.sound(self, CHAN_VOICE, self->noise_index, 1, ATTN_NORM, 0);
+}
+
+void SP_target_shooter_rocket(edict_t *self) {
+	self->use = use_target_shooter_rocket;
+	G_SetMovedir(self->s.angles, self->movedir);
+	self->noise_index = gi.soundindex("weapons/rocklf1a.wav");
+
+	if (!self->dmg)
+		self->dmg = 120;
+	if (!self->speed)
+		self->speed = 600;
+
+	self->svflags = SVF_NOCLIENT;
+}
+
+//==========================================================
+
+/*QUAKED target_shooter_bfg (1 0 0) (-8 -8 -8) (8 8 8) x x x x x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
+Fires a BFG projectile in the set direction when triggered.
+
+dmg			default is 200 in DM, 500 in campaigns
+speed		default is 400
+*/
+
+static USE(use_target_shooter_bfg) (edict_t *self, edict_t *other, edict_t *activator) -> void {
+	fire_bfg(self, self->s.origin, self->movedir, self->dmg, (int)self->speed, 1000);
+	gi.sound(self, CHAN_VOICE, self->noise_index, 1, ATTN_NORM, 0);
+}
+
+void SP_target_shooter_bfg(edict_t *self) {
+	self->use = use_target_shooter_bfg;
+	G_SetMovedir(self->s.angles, self->movedir);
+	self->noise_index = gi.soundindex("makron/bfg_fire.wav");
+
+	if (!self->dmg)
+		self->dmg = deathmatch->integer ? 200 : 500;
+	if (!self->speed)
+		self->speed = 400;
+
+	self->svflags = SVF_NOCLIENT;
+}
+
+//==========================================================
+
+/*QUAKED target_shooter_prox (1 0 0) (-8 -8 -8) (8 8 8) x x x x x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
+Fires a prox mine in the set direction when triggered.
+
+dmg			default is 90
+speed		default is 600
+*/
+
+static USE(use_target_shooter_prox) (edict_t *self, edict_t *other, edict_t *activator) -> void {
+	fire_prox(self, self->s.origin, self->movedir, self->dmg, (int)self->speed);
+	gi.sound(self, CHAN_VOICE, self->noise_index, 1, ATTN_NORM, 0);
+}
+
+void SP_target_shooter_prox(edict_t *self) {
+	self->use = use_target_shooter_prox;
+	G_SetMovedir(self->s.angles, self->movedir);
+	self->noise_index = gi.soundindex("weapons/proxlr1a.wav");
+
+	if (!self->dmg)
+		self->dmg = 90;
+	if (!self->speed)
+		self->speed = 600;
+
+	self->svflags = SVF_NOCLIENT;
+}
+
+//==========================================================
+
+/*QUAKED target_shooter_ionripper (1 0 0) (-8 -8 -8) (8 8 8) x x x x x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
+Fires an ionripper projectile in the set direction when triggered.
+
+dmg			default is 20 in DM and 50 in campaigns
+speed		default is 800
+*/
+
+static USE(use_target_shooter_ionripper) (edict_t *self, edict_t *other, edict_t *activator) -> void {
+	fire_ionripper(self, self->s.origin, self->movedir, self->dmg, (int)self->speed, EF_IONRIPPER);
+	gi.sound(self, CHAN_VOICE, self->noise_index, 1, ATTN_NORM, 0);
+}
+
+void SP_target_shooter_ionripper(edict_t *self) {
+	self->use = use_target_shooter_ionripper;
+	G_SetMovedir(self->s.angles, self->movedir);
+	self->noise_index = gi.soundindex("weapons/rippfire.wav");
+
+	if (!self->dmg)
+		self->dmg = deathmatch->integer ? 20 : 50;
+	if (!self->speed)
+		self->speed = 800;
+
+	self->svflags = SVF_NOCLIENT;
+}
+
+//==========================================================
+
+/*QUAKED target_shooter_phalanx (1 0 0) (-8 -8 -8) (8 8 8) x x x x x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
+Fires a phalanx projectile in the set direction when triggered.
+
+dmg			default is 80
+speed		default is 725
+*/
+
+static USE(use_target_shooter_phalanx) (edict_t *self, edict_t *other, edict_t *activator) -> void {
+	fire_plasma(self, self->s.origin, self->movedir, self->dmg, (int)self->speed, 120, 30);
+	gi.sound(self, CHAN_VOICE, self->noise_index, 1, ATTN_NORM, 0);
+}
+
+void SP_target_shooter_phalanx(edict_t *self) {
+	self->use = use_target_shooter_phalanx;
+	G_SetMovedir(self->s.angles, self->movedir);
+	self->noise_index = gi.soundindex("weapons/plasshot.wav");
+
+	if (!self->dmg)
+		self->dmg = 80;
+	if (!self->speed)
+		self->speed = 725;
+
+	self->svflags = SVF_NOCLIENT;
+}
+
+//==========================================================
+
+/*QUAKED target_shooter_flechette (1 0 0) (-8 -8 -8) (8 8 8) x x x x x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
+Fires a flechette in the set direction when triggered.
+
+dmg			default is 10
+speed		default is 1150
+*/
+
+static USE(use_target_shooter_flechette) (edict_t *self, edict_t *other, edict_t *activator) -> void {
+	fire_flechette(self, self->s.origin, self->movedir, self->dmg, (int)self->speed, 0);
+	gi.sound(self, CHAN_VOICE, self->noise_index, 1, ATTN_NORM, 0);
+}
+
+void SP_target_shooter_flechette(edict_t *self) {
+	self->use = use_target_shooter_flechette;
+	G_SetMovedir(self->s.angles, self->movedir);
+	self->noise_index = gi.soundindex("weapons/nail1.wav");
+
+	if (!self->dmg)
+		self->dmg = 10;
+	if (!self->speed)
+		self->speed = 1150;
+
+	self->svflags = SVF_NOCLIENT;
 }

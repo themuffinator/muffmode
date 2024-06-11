@@ -705,7 +705,7 @@ MONSTERINFO_SIDESTEP(chick_sidestep) (edict_t *self) -> bool {
 	return true;
 }
 
-/*QUAKED monster_chick (1 .5 0) (-16 -16 -24) (16 16 32) AMBUSH TRIGGER_SPAWN SIGHT
+/*QUAKED monster_chick (1 .5 0) (-16 -16 -24) (16 16 32) AMBUSH TRIGGER_SPAWN SIGHT x x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
  */
 void SP_monster_chick(edict_t *self) {
 	if (!M_AllowSpawn(self)) {
@@ -771,7 +771,7 @@ void SP_monster_chick(edict_t *self) {
 	walkmonster_start(self);
 }
 
-/*QUAKED monster_chick_heat (1 .5 0) (-16 -16 -24) (16 16 32) AMBUSH TRIGGER_SPAWN SIGHT
+/*QUAKED monster_chick_heat (1 .5 0) (-16 -16 -24) (16 16 32) AMBUSH TRIGGER_SPAWN SIGHT x x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
  */
 void SP_monster_chick_heat(edict_t *self) {
 	SP_monster_chick(self);

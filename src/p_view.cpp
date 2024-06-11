@@ -290,7 +290,7 @@ static void G_CalcViewOffset(edict_t *ent) {
 	vec3_t &angles = ent->client->ps.kick_angles;
 
 	// if dead, fix the angle and don't add any kick
-	if (ent->deadflag && ClientIsPlaying(ent->client) && !(freeze->integer && ent->client->frozen)) {
+	if (ent->deadflag && ClientIsPlaying(ent->client) && !ent->client->eliminated) {
 		angles = {};
 
 		if (ent->flags & FL_SAM_RAIMI) {
@@ -564,7 +564,7 @@ static void G_CalcBlend(edict_t *ent) {
 			G_AddBlend(0.4f, 1, 0.4f, 0.04f, ent->client->ps.screen_blend);
 	}
 /*freeze*/
-	else if (ent->client->frozen && !ent->client->follow_target && (!ent->client->resp.thawer))	// || level.framenum &8))
+	else if (freeze->integer && ent->client->eliminated && !ent->client->follow_target && (!ent->client->resp.thawer))	// || level.framenum &8))
 	{
 		if (ent->client->resp.team == TEAM_RED)
 			G_AddBlend(0.6f, 0, 0, 0.4f, ent->client->ps.screen_blend);
@@ -785,7 +785,7 @@ static void G_SetClientEffects(edict_t *ent) {
 	int pa_type;
 
 /*freeze*/
-	if (freeze->integer && !level.intermission_time && ent->client->frozen && !ent->client->resp.thawer) {	// || level.framenum & 8) {
+	if (freeze->integer && !level.intermission_time && ent->client->eliminated && !ent->client->resp.thawer) {	// || level.framenum & 8) {
 		ent->s.effects |= EF_COLOR_SHELL;
 		ent->s.renderfx |= (RF_SHELL_RED | RF_SHELL_GREEN | RF_SHELL_BLUE);
 	} else {

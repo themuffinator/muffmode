@@ -1729,7 +1729,7 @@ static void monster_soldier_x(edict_t *self) {
 	walkmonster_start(self);
 }
 
-/*QUAKED monster_soldier_light (1 .5 0) (-16 -16 -24) (16 16 32) AMBUSH TRIGGER_SPAWN SIGHT
+/*QUAKED monster_soldier_light (1 .5 0) (-16 -16 -24) (16 16 32) AMBUSH TRIGGER_SPAWN SIGHT x x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
  */
 void SP_monster_soldier_light(edict_t *self) {
 	if (!M_AllowSpawn(self)) {
@@ -1754,7 +1754,7 @@ void SP_monster_soldier_light(edict_t *self) {
 	self->monsterinfo.blindfire = true;
 }
 
-/*QUAKED monster_soldier (1 .5 0) (-16 -16 -24) (16 16 32) AMBUSH TRIGGER_SPAWN SIGHT
+/*QUAKED monster_soldier (1 .5 0) (-16 -16 -24) (16 16 32) AMBUSH TRIGGER_SPAWN SIGHT x x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
  */
 void SP_monster_soldier(edict_t *self) {
 	if (!M_AllowSpawn(self)) {
@@ -1774,7 +1774,7 @@ void SP_monster_soldier(edict_t *self) {
 	self->gib_health = -30;
 }
 
-/*QUAKED monster_soldier_ss (1 .5 0) (-16 -16 -24) (16 16 32) AMBUSH TRIGGER_SPAWN SIGHT
+/*QUAKED monster_soldier_ss (1 .5 0) (-16 -16 -24) (16 16 32) AMBUSH TRIGGER_SPAWN SIGHT x x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
  */
 void SP_monster_soldier_ss(edict_t *self) {
 	if (!M_AllowSpawn(self)) {
@@ -1803,7 +1803,7 @@ static void monster_soldier_h(edict_t *self) {
 	self->style = 1;
 }
 
-/*QUAKED monster_soldier_ripper (1 .5 0) (-16 -16 -24) (16 16 32) AMBUSH TRIGGER_SPAWN SIGHT
+/*QUAKED monster_soldier_ripper (1 .5 0) (-16 -16 -24) (16 16 32) AMBUSH TRIGGER_SPAWN SIGHT x x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
  */
 void SP_monster_soldier_ripper(edict_t *self) {
 	if (!M_AllowSpawn(self)) {
@@ -1828,7 +1828,7 @@ void SP_monster_soldier_ripper(edict_t *self) {
 	self->monsterinfo.blindfire = true;
 }
 
-/*QUAKED monster_soldier_hypergun (1 .5 0) (-16 -16 -24) (16 16 32) AMBUSH TRIGGER_SPAWN SIGHT
+/*QUAKED monster_soldier_hypergun (1 .5 0) (-16 -16 -24) (16 16 32) AMBUSH TRIGGER_SPAWN SIGHT x x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
  */
 void SP_monster_soldier_hypergun(edict_t *self) {
 	if (!M_AllowSpawn(self)) {
@@ -1854,7 +1854,7 @@ void SP_monster_soldier_hypergun(edict_t *self) {
 	self->monsterinfo.blindfire = true;
 }
 
-/*QUAKED monster_soldier_lasergun (1 .5 0) (-16 -16 -24) (16 16 32) AMBUSH TRIGGER_SPAWN SIGHT
+/*QUAKED monster_soldier_lasergun (1 .5 0) (-16 -16 -24) (16 16 32) AMBUSH TRIGGER_SPAWN SIGHT x x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
  */
 void SP_monster_soldier_lasergun(edict_t *self) {
 	if (!M_AllowSpawn(self)) {

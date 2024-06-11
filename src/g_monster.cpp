@@ -1432,7 +1432,7 @@ static USE(trigger_health_relay_use) (edict_t *self, edict_t *other, edict_t *ac
 	G_FreeEdict(self);
 }
 
-/*QUAKED trigger_health_relay (1.0 1.0 0.0) (-8 -8 -8) (8 8 8)
+/*QUAKED trigger_health_relay (1.0 1.0 0.0) (-8 -8 -8) (8 8 8) x x x x x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
 Special type of relay that fires when a linked object is reduced
 beyond a certain amount of health.
 

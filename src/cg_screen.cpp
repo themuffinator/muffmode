@@ -902,6 +902,10 @@ static void CG_ExecuteLayoutString(const char *s, vrect_t hud_vrect, vrect_t hud
 				//muff: hoo boy, another little hacky hack
 				if (strstr(token, "/players/")) {
 					w = h = 32;
+					
+				} else if (strstr(token, "p_compass_selected")) {
+					w = h = 16;
+					
 				} else {
 					cgi.Draw_GetPicSize(&w, &h, token);
 				}

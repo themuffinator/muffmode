@@ -621,7 +621,7 @@ MONSTERINFO_BLOCKED(mutant_blocked) (edict_t *self, float dist) -> bool {
 // SPAWN
 //
 
-/*QUAKED monster_mutant (1 .5 0) (-32 -32 -24) (32 32 32) AMBUSH TRIGGER_SPAWN SIGHT NOJUMPING
+/*QUAKED monster_mutant (1 .5 0) (-32 -32 -24) (32 32 32) AMBUSH TRIGGER_SPAWN SIGHT NOJUMPING x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
 model="models/monsters/mutant/tris.md2"
 */
 void SP_monster_mutant(edict_t *self) {

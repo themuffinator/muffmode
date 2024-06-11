@@ -587,7 +587,7 @@ static TOUCH(flyer_touch) (edict_t *ent, edict_t *other, const trace_t &tr, bool
 	}
 }
 
-/*QUAKED monster_flyer (1 .5 0) (-16 -16 -24) (16 16 32) AMBUSH TRIGGER_SPAWN SIGHT
+/*QUAKED monster_flyer (1 .5 0) (-16 -16 -24) (16 16 32) AMBUSH TRIGGER_SPAWN SIGHT x x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
  */
 void SP_monster_flyer(edict_t *self) {
 	if (!M_AllowSpawn(self)) {

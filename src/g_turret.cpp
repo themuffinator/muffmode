@@ -32,7 +32,7 @@ MOVEINFO_BLOCKED(turret_blocked) (edict_t *self, edict_t *other) -> void
 	}
 }
 
-/*QUAKED turret_breach (0 0 0) ?
+/*QUAKED turret_breach (0 0 0) ? x x x x x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
 This portion of the turret can change both pitch and yaw.
 The model  should be made with a flat pitch.
 It (and the associated base) need to be oriented towards 0.
@@ -256,7 +256,7 @@ void SP_turret_breach(edict_t *self)
 	gi.linkentity(self);
 }
 
-/*QUAKED turret_base (0 0 0) ?
+/*QUAKED turret_base (0 0 0) ? x x x x x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
 This portion of the turret changes yaw only.
 MUST be teamed with a turret_breach.
 */
@@ -274,7 +274,7 @@ void SP_turret_base(edict_t *self)
 	gi.linkentity(self);
 }
 
-/*QUAKED turret_driver (1 .5 0) (-16 -16 -24) (16 16 32)
+/*QUAKED turret_driver (1 .5 0) (-16 -16 -24) (16 16 32) x x x x x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
 Must NOT be on the team with the rest of the turret parts.
 Instead it must target the turret_breach.
 */
@@ -613,7 +613,7 @@ USE(turret_brain_activate) (edict_t *self, edict_t *other, edict_t *activator) -
 	self->nextthink = level.time + FRAME_TIME_S;
 }
 
-/*QUAKED turret_invisible_brain (1 .5 0) (-16 -16 -16) (16 16 16)
+/*QUAKED turret_invisible_brain (1 .5 0) (-16 -16 -16) (16 16 16) x x x x x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
 Invisible brain to drive the turret.
 
 Does not search for targets. If targeted, can only be turned on once

@@ -30,7 +30,7 @@ static THINK(Think_Boss3Stand) (edict_t *self) -> void {
 	self->nextthink = level.time + 10_hz;
 }
 
-/*QUAKED monster_boss3_stand (1 .5 0) (-32 -32 0) (32 32 90)
+/*QUAKED monster_boss3_stand (1 .5 0) (-32 -32 0) (32 32 90) x x x x x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
 
 Just stands and cycles in one place until targeted, then teleports away.
 */

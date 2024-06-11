@@ -459,7 +459,7 @@ static DIE(guardian_die) (edict_t *self, edict_t *inflictor, edict_t *attacker, 
 // monster_tank
 //
 
-/*QUAKED monster_guardian (1 .5 0) (-96 -96 -66) (96 96 62) AMBUSH TRIGGER_SPAWN SIGHT
+/*QUAKED monster_guardian (1 .5 0) (-96 -96 -66) (96 96 62) AMBUSH TRIGGER_SPAWN SIGHT x x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
  */
 void SP_monster_guardian(edict_t *self) {
 	if (!M_AllowSpawn(self)) {

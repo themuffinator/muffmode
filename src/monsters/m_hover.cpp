@@ -501,10 +501,10 @@ static void hover_set_fly_parameters(edict_t *self) {
 	self->monsterinfo.fly_max_distance = 350.f;
 }
 
-/*QUAKED monster_hover (1 .5 0) (-16 -16 -24) (16 16 32) AMBUSH TRIGGER_SPAWN SIGHT
+/*QUAKED monster_hover (1 .5 0) (-16 -16 -24) (16 16 32) AMBUSH TRIGGER_SPAWN SIGHT x x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
  */
 
-/*QUAKED monster_daedalus (1 .5 0) (-16 -16 -24) (16 16 32) AMBUSH TRIGGER_SPAWN SIGHT
+/*QUAKED monster_daedalus (1 .5 0) (-16 -16 -24) (16 16 32) AMBUSH TRIGGER_SPAWN SIGHT x x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
 This is the improved icarus monster.
 */
 void SP_monster_hover(edict_t *self) {

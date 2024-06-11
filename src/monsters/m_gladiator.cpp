@@ -353,7 +353,7 @@ MONSTERINFO_BLOCKED(gladiator_blocked) (edict_t *self, float dist) -> bool {
 	return false;
 }
 
-/*QUAKED monster_gladiator (1 .5 0) (-32 -32 -24) (32 32 64) AMBUSH TRIGGER_SPAWN SIGHT
+/*QUAKED monster_gladiator (1 .5 0) (-32 -32 -24) (32 32 64) AMBUSH TRIGGER_SPAWN SIGHT x x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
  */
 void SP_monster_gladiator(edict_t *self) {
 	if (!M_AllowSpawn(self)) {
@@ -437,7 +437,7 @@ void SP_monster_gladiator(edict_t *self) {
 //
 // monster_gladb
 //
-/*QUAKED monster_gladb (1 .5 0) (-32 -32 -24) (32 32 64) AMBUSH TRIGGER_SPAWN SIGHT
+/*QUAKED monster_gladb (1 .5 0) (-32 -32 -24) (32 32 64) AMBUSH TRIGGER_SPAWN SIGHT x x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
  */
 void SP_monster_gladb(edict_t *self) {
 	SP_monster_gladiator(self);

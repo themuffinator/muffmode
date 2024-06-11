@@ -64,6 +64,11 @@ void SP_trigger_teleport(edict_t *self);
 void SP_trigger_ctf_teleport(edict_t *self);
 void SP_trigger_disguise(edict_t *self);
 
+void SP_trigger_teleport(edict_t *self);	//q3
+void SP_trigger_deathcount(edict_t *ent);	//mm
+void SP_trigger_no_monsters(edict_t *ent);	//mm
+void SP_trigger_monsters(edict_t *ent);	//mm
+
 void SP_target_temp_entity(edict_t *ent);
 void SP_target_speaker(edict_t *ent);
 void SP_target_explosion(edict_t *ent);
@@ -103,6 +108,24 @@ void SP_target_killplayers(edict_t *self);
 void SP_target_blacklight(edict_t *self);
 void SP_target_orb(edict_t *self);
 // pmm
+void SP_target_remove_powerups(edict_t *ent);	//q3
+void SP_target_give(edict_t *ent);	//q3
+void SP_target_delay(edict_t *ent);	//q3
+void SP_target_print(edict_t *ent);	//q3
+void SP_target_teleporter(edict_t *ent);	//q3
+void SP_target_kill(edict_t *self);	//q3
+void SP_target_cvar(edict_t *ent);	//ql
+void SP_target_setskill(edict_t *ent);
+void SP_target_score(edict_t *ent);	//q3
+void SP_target_remove_weapons(edict_t *ent);
+
+void SP_target_shooter_grenade(edict_t *ent);
+void SP_target_shooter_rocket(edict_t *ent);
+void SP_target_shooter_bfg(edict_t *ent);
+void SP_target_shooter_prox(edict_t *ent);
+void SP_target_shooter_ionripper(edict_t *ent);
+void SP_target_shooter_phalanx(edict_t *ent);
+void SP_target_shooter_flechette(edict_t *ent);
 
 void SP_worldspawn(edict_t *ent);
 
@@ -263,6 +286,7 @@ static const std::initializer_list<spawn_t> spawns = {
 	{ "trigger_teleport", SP_trigger_teleport },
 	{ "trigger_ctf_teleport", SP_trigger_ctf_teleport },
 	{ "trigger_disguise", SP_trigger_disguise },
+	{ "trigger_setskill", SP_target_setskill },
 
 	{ "target_temp_entity", SP_target_temp_entity },
 	{ "target_speaker", SP_target_speaker },
@@ -303,6 +327,25 @@ static const std::initializer_list<spawn_t> spawns = {
 	{ "target_blacklight", SP_target_blacklight },
 	{ "target_orb", SP_target_orb },
 	// pmm
+	{ "target_remove_powerups", SP_target_remove_powerups },
+	{ "target_give", SP_target_give },
+	{ "target_delay", SP_target_delay },
+	{ "target_print", SP_target_print },
+	{ "target_teleporter", SP_target_teleporter },
+	{ "target_relay", SP_trigger_relay },
+	{ "target_kill", SP_target_kill },
+	{ "target_cvar", SP_target_cvar },
+	{ "target_setskill", SP_target_setskill },
+	{ "target_position", SP_info_notnull },
+	{ "target_remove_weapons", SP_target_remove_weapons },
+
+	{ "target_shooter_grenade", SP_target_shooter_grenade },
+	{ "target_shooter_rocket", SP_target_shooter_rocket },
+	{ "target_shooter_bfg", SP_target_shooter_bfg },
+	{ "target_shooter_prox", SP_target_shooter_prox },
+	{ "target_shooter_ionripper", SP_target_shooter_ionripper },
+	{ "target_shooter_phalanx", SP_target_shooter_phalanx },
+	{ "target_shooter_flechette", SP_target_shooter_flechette },
 
 	{ "worldspawn", SP_worldspawn },
 
@@ -778,6 +821,8 @@ static const std::initializer_list<field_t> entity_fields = {
 		FIELD_AUTO(not_gametype),
 		FIELD_AUTO(notteam),
 		FIELD_AUTO(notfree),
+		FIELD_AUTO(cvar),
+		FIELD_AUTO(cvarvalue),
 	//-muff
 		FIELD_AUTO_NAMED("monster_slots", monsterinfo.monster_slots)
 };
@@ -992,7 +1037,7 @@ All but the last will have the teamchain field set to the next one
 
 // adjusts teams so that trains that move their children
 // are in the front of the team
-void G_FixTeams() {
+static void G_FixTeams() {
 	edict_t *e, *e2, *chain;
 	uint32_t i, j;
 	uint32_t c;
@@ -1036,7 +1081,7 @@ void G_FixTeams() {
 	gi.Com_PrintFmt("{} teams repaired\n", c);
 }
 
-void G_FindTeams() {
+static void G_FindTeams() {
 	edict_t *e, *e2, *chain;
 	uint32_t i, j;
 	uint32_t c, c2;
@@ -1698,10 +1743,10 @@ static void G_InitStatusbar() {
 
 		// mini scores...
 		// red/first
-		sb.ifstat(STAT_MINISCORE_FIRST_PIC).xr(-26).yb(-110).pic(STAT_MINISCORE_FIRST_PIC).xr(-78).num(3, STAT_MINISCORE_FIRST_SCORE).endifstat();
+		sb.ifstat(STAT_MINISCORE_FIRST_PIC).xr(-26).yb(-110).pic(STAT_MINISCORE_FIRST_PIC).xr(-78).num(3, STAT_MINISCORE_FIRST_SCORE).ifstat(STAT_MINISCORE_FIRST_VAL).xr(-24).yb(-94).stat_string(STAT_MINISCORE_FIRST_VAL).endifstat().endifstat();
 		sb.ifstat(STAT_MINISCORE_FIRST_POS).xr(-28).yb(-112).pic(STAT_MINISCORE_FIRST_POS).endifstat();
 		// blue/second
-		sb.ifstat(STAT_MINISCORE_SECOND_PIC).xr(-26).yb(-83).pic(STAT_MINISCORE_SECOND_PIC).xr(-78).num(3, STAT_MINISCORE_SECOND_SCORE).endifstat();
+		sb.ifstat(STAT_MINISCORE_SECOND_PIC).xr(-26).yb(-83).pic(STAT_MINISCORE_SECOND_PIC).xr(-78).num(3, STAT_MINISCORE_SECOND_SCORE).ifstat(STAT_MINISCORE_SECOND_VAL).xr(-24).yb(-68).stat_string(STAT_MINISCORE_SECOND_VAL).endifstat().endifstat();
 		sb.ifstat(STAT_MINISCORE_SECOND_POS).xr(-28).yb(-85).pic(STAT_MINISCORE_SECOND_POS).endifstat();
 		// score limit
 		sb.ifstat(STAT_MINISCORE_FIRST_PIC).xr(-28).yb(-57).stat_string(STAT_SCORELIMIT).endifstat();
@@ -1713,7 +1758,6 @@ static void G_InitStatusbar() {
 
 	gi.configstring(CS_STATUSBAR, sb.sb.str().c_str());
 }
-
 
 static void G_SetGametypeName(void) {
 	const char *s;
@@ -1831,7 +1875,6 @@ static void G_SetGametypeName(void) {
 
 	Q_strlcpy(level.gamemod_name, G_Fmt("{} v{}", GAMEMOD_TITLE, GAMEMOD_VERSION).data(), sizeof(level.gamemod_name));
 }
-
 
 /*QUAKED worldspawn (0 0 0) ?
 

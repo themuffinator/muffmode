@@ -10,7 +10,7 @@
 constexpr const char *GAMEVERSION = "baseq2";
 
 constexpr const char *GAMEMOD_TITLE = "Muff Mode BETA";
-constexpr const char *GAMEMOD_VERSION = "0.15.0";
+constexpr const char *GAMEMOD_VERSION = "0.15.5";
 
 //==================================================================
 
@@ -32,6 +32,7 @@ enum team_t {
 };
 
 enum gametype_t {
+	GT_NONE,
 	GT_HORDE,
 	GT_FFA,
 	GT_DUEL,
@@ -43,6 +44,7 @@ enum gametype_t {
 };
 
 constexpr const char *gt_short_name[GT_NUM_GAMETYPES] = {
+	"none",
 	"horde",
 	"ffa",
 	"duel",
@@ -51,7 +53,18 @@ constexpr const char *gt_short_name[GT_NUM_GAMETYPES] = {
 	"ca",
 	"ft"
 };
+constexpr const char *gt_short_name_upper[GT_NUM_GAMETYPES] = {
+	"none",
+	"HORDE",
+	"FFA",
+	"DUEL",
+	"TDM",
+	"CTF",
+	"CA",
+	"FT"
+};
 constexpr const char *gt_long_name[GT_NUM_GAMETYPES] = {
+	"none",
 	"Horde Mode",
 	"Deathmatch",
 	"Duel",
@@ -61,6 +74,7 @@ constexpr const char *gt_long_name[GT_NUM_GAMETYPES] = {
 	"Freeze Tag"
 };
 constexpr const char *gt_cvar[GT_NUM_GAMETYPES] = {
+	"none",
 	"horde",
 	"deathmatch",
 	"duel",
@@ -78,21 +92,21 @@ typedef enum {
 	MATCH_COUNTDOWN,		// all conditions met, counting down to match start, check conditions again at end of countdown before match start
 	MATCH_IN_PROGRESS,		// match is in progress, not used in round-based gametypes
 	MATCH_ENDED				// match or final round has ended
-} match_states_t;
+} matchst_t;
 
 typedef enum {
 	WARMUP_REQ_NONE,
 	WARMUP_REQ_MORE_PLAYERS,
 	WARMUP_REQ_BALANCE,
 	WARMUP_REQ_READYUP
-} warmup_requisite_t;
+} warmupreq_t;
 
 typedef enum {
 	ROUND_NONE,
-	ROUND_COUNTDOWN,		// round-based gametypes only: initial delay before round starts
+	ROUND_COUNTDOWN,	// round-based gametypes only: initial delay before round starts
 	ROUND_IN_PROGRESS,	// round-based gametypes only: round is in progress
 	ROUND_ENDED			// round-based gametypes only: round has ended
-} match_round_states_t;
+} roundst_t;
 
 #define	RANK_TIED_FLAG		0x4000
 
@@ -984,6 +998,8 @@ enum item_id_t : int32_t {
 	IT_FLASHLIGHT,
 	IT_COMPASS,
 
+	IT_FOODCUBE,
+
 	IT_TOTAL
 };
 
@@ -1175,6 +1191,8 @@ struct game_locals_t {
 	vec3_t *lag_origins; // maxclients * max_lag_origins
 
 	std::vector<std::string> mapqueue;
+
+	gametype_t	gametype;
 };
 
 constexpr size_t MAX_HEALTH_BARS = 2;
@@ -1366,8 +1384,8 @@ struct level_locals_t {
 
 	int			team_scores[TEAM_NUM_TEAMS];
 
-	uint8_t		match_state;
-	uint8_t		warmup_requisite;
+	matchst_t	match_state;
+	warmupreq_t	warmup_requisite;
 	gtime_t		warmup_notice_time;
 	gtime_t		match_time;
 	int			match_state_queued;
@@ -1378,7 +1396,7 @@ struct level_locals_t {
 	gtime_t		matchendwarn_check;
 
 	int			round_number;
-	uint8_t		round_state;
+	roundst_t	round_state;
 	int			round_state_queued;
 	gtime_t		round_state_timer;			// change match state at this time
 
@@ -1399,6 +1417,8 @@ struct level_locals_t {
 	int			weapon_count[LAST_WEAPON - FIRST_WEAPON];
 
 	gtime_t		no_players_time;
+
+	int			total_player_deaths;
 };
 
 struct shadow_light_temp_t {
@@ -2010,6 +2030,8 @@ extern cvar_t *roundtimelimit;
 extern cvar_t *mercylimit;
 extern cvar_t *noplayerstime;
 
+extern cvar_t *ruleset;
+
 extern cvar_t *password;
 extern cvar_t *spectator_password;
 extern cvar_t *admin_password;
@@ -2044,12 +2066,15 @@ extern cvar_t *g_allow_admin;
 extern cvar_t *g_allow_custom_skins;
 extern cvar_t *g_allow_forfeit;
 extern cvar_t *g_allow_grapple;
+extern cvar_t *g_allow_kill;
 extern cvar_t *g_allow_mymap;
 extern cvar_t *g_allow_spec_vote;
 extern cvar_t *g_allow_techs;
 extern cvar_t *g_allow_vote_midgame;
 extern cvar_t *g_allow_voting;
 extern cvar_t *g_cheats;
+extern cvar_t *g_clanarena_start_health;
+extern cvar_t *g_clanarena_start_armor;
 extern cvar_t *g_coop_enable_lives;
 extern cvar_t *g_coop_health_scaling;
 extern cvar_t *g_coop_instanced_items;
@@ -2090,6 +2115,7 @@ extern cvar_t *g_dm_spawn_farthest;
 extern cvar_t *g_dm_spawnpads;
 extern cvar_t *g_dm_strong_mines;
 extern cvar_t *g_dm_weapons_stay;
+extern cvar_t *g_drop_cmds;
 extern cvar_t *g_entity_override_load;
 extern cvar_t *g_entity_override_save;
 extern cvar_t *g_expert;
@@ -2158,6 +2184,8 @@ extern cvar_t *g_warmup_ready_percentage;
 extern cvar_t *g_weapon_projection;
 extern cvar_t *g_weapon_respawn_time;
 
+extern cvar_t *bot_name_prefix;
+
 #define world (&g_edicts[0])
 
 uint32_t GetUnicastKey();
@@ -2166,10 +2194,10 @@ uint32_t GetUnicastKey();
 constexpr spawnflags_t SPAWNFLAG_ITEM_TRIGGER_SPAWN		= 0x00000001_spawnflag;
 constexpr spawnflags_t SPAWNFLAG_ITEM_NO_TOUCH			= 0x00000002_spawnflag;
 constexpr spawnflags_t SPAWNFLAG_ITEM_TOSS_SPAWN		= 0x00000004_spawnflag;
-constexpr spawnflags_t SPAWNFLAG_ITEM_MAX				= 0x00000008_spawnflag;
+constexpr spawnflags_t SPAWNFLAG_ITEM_SUSPENDED			= 0x00000008_spawnflag;
+constexpr spawnflags_t SPAWNFLAG_ITEM_MAX				= 0x00000010_spawnflag;
 // 8 bits reserved for editor flags & power cube bits
 // (see SPAWNFLAG_NOT_EASY above)
-constexpr spawnflags_t SPAWNFLAG_ITEM_SUSPENDED			= 0x00008000_spawnflag;
 constexpr spawnflags_t SPAWNFLAG_ITEM_DROPPED			= 0x00010000_spawnflag;
 constexpr spawnflags_t SPAWNFLAG_ITEM_DROPPED_PLAYER	= 0x00020000_spawnflag;
 constexpr spawnflags_t SPAWNFLAG_ITEM_TARGETS_USED		= 0x00040000_spawnflag;
@@ -2190,6 +2218,18 @@ void BroadcastTeamChange(edict_t *ent, int old_team, bool inactive, bool silent)
 bool AllowClientTeamSwitch(edict_t *ent);
 int TeamBalance();
 void Cmd_ReadyUp_f(edict_t *ent);
+
+void VoteCommandStore(edict_t *ent);
+vcmds_t *FindVoteCmdByName(const char *name);
+void Vote_Pass_Map();
+void Vote_Pass_RestartMatch();
+void Vote_Pass_Gametype();
+void Vote_Pass_NextMap();
+void Vote_Pass_ShuffleTeams();
+void Vote_Pass_Cointoss();
+void Vote_Pass_Random();
+void Vote_Pass_Timelimit();
+void Vote_Pass_Scorelimit();
 
 //
 // g_items.cpp
@@ -2285,6 +2325,7 @@ void Horde_AdjustPlayerScore(gclient_t *cl, int32_t offset);
 void G_SetPlayerScore(gclient_t *cl, int32_t value);
 void G_AdjustTeamScore(team_t team, int32_t offset);
 void G_SetTeamScore(team_t team, int32_t value);
+const char *G_GetGametypeShortName(void);
 const char *G_PlaceString(int rank);
 bool ItemSpawnsEnabled();
 bool loc_CanSee(edict_t *targ, edict_t *inflictor);
@@ -2294,6 +2335,10 @@ const char *G_TimeStringMs(const int64_t msec);
 void BroadcastSpectatorMessage(const char *msg);
 void BroadcastTeamMessage(team_t team, const char *msg);
 team_t StringToTeamNum(const char *in);
+bool IsCombatDisabled();
+gametype_t GT_IndexFromString(const char *in);
+bool IsRoundBased();
+bool IsScoringDisabled();
 
 //
 // g_spawn.cpp
@@ -2475,6 +2520,7 @@ void misc_viper_use(edict_t *self, edict_t *other, edict_t *activator);
 void misc_strogg_ship_use(edict_t *self, edict_t *other, edict_t *activator);
 void VelocityForDamage(int damage, vec3_t &v);
 void ClipGibVelocity(edict_t *ent);
+void TeleportPlayer(edict_t *player, vec3_t origin, vec3_t angles);
 
 constexpr spawnflags_t SPAWNFLAG_PATH_CORNER_TELEPORT = 1_spawnflag;
 
@@ -2559,6 +2605,8 @@ vec3_t P_CurrentKickAngles(edict_t *ent);
 vec3_t P_CurrentKickOrigin(edict_t *ent);
 void P_AddWeaponKick(edict_t *ent, const vec3_t &origin, const vec3_t &angles);
 
+void Nuke_Explode(edict_t *ent);
+
 // we won't ever pierce more than this many entities for a single trace.
 constexpr size_t MAX_PIERCE = 16;
 
@@ -2604,6 +2652,7 @@ constexpr spawnflags_t SPAWNFLAG_CHANGELEVEL_NO_END_OF_UNIT = 16_spawnflag;
 constexpr spawnflags_t SPAWNFLAG_CHANGELEVEL_FADE_OUT = 32_spawnflag;
 constexpr spawnflags_t SPAWNFLAG_CHANGELEVEL_IMMEDIATE_LEAVE = 64_spawnflag;
 
+void ClientSetEliminated(edict_t *self);
 void ClientRespawn(edict_t *ent);
 void BeginIntermission(edict_t *targ);
 void ClientSpawn(edict_t *ent);
@@ -2754,7 +2803,7 @@ void SetIntermissionPoint(void);
 void FindIntermissionPoint(void);
 void CalculateRanks();
 void CheckDMExitRules();
-void GT_Change(int gt);
+void GT_Change(gametype_t gt);
 int GT_ScoreLimit();
 const char *GT_ScoreLimitString();
 void G_RevertVote(gclient_t *client);
@@ -3050,6 +3099,7 @@ struct client_respawn_t {
 	int32_t				kill_count;	// for rampage award, reset on respawn
 
 	bool				showed_motd;
+	int					motd_mod_count;
 	bool				showed_help;
 
 	int					rank;
@@ -3277,13 +3327,13 @@ struct gclient_t {
 	// saved - for coop; last time we were in a firing state
 	gtime_t	 last_firing_time;
 
-	/*freeze*/
-	bool		frozen;
+/*freeze*/
+	bool		eliminated;
 	edict_t		*viewed;
 	float		thaw_time;
 	float		frozen_time;
 	float		moan_time;
-	/*freeze*/
+/*freeze*/
 
 	bool		ready_to_exit;
 
@@ -3531,6 +3581,9 @@ struct edict_t {
 	gvec3_t		origin2;
 
 	bool		skip;
+
+	const char *cvar;
+	const char *cvarvalue;
 //-muff
 
 	// team for spawn spot

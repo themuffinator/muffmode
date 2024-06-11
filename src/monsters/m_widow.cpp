@@ -1101,7 +1101,7 @@ static void WidowPrecache() {
 	gi.soundindex("widow/bwstep1.wav");
 }
 
-/*QUAKED monster_widow (1 .5 0) (-40 -40 0) (40 40 144) AMBUSH TRIGGER_SPAWN SIGHT
+/*QUAKED monster_widow (1 .5 0) (-40 -40 0) (40 40 144) AMBUSH TRIGGER_SPAWN SIGHT x x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
  */
 void SP_monster_widow(edict_t *self) {
 	if (!M_AllowSpawn(self)) {

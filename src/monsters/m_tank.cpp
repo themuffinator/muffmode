@@ -906,10 +906,10 @@ MONSTERINFO_BLOCKED(tank_blocked) (edict_t *self, float dist) -> bool {
 // monster_tank
 //
 
-/*QUAKED monster_tank (1 .5 0) (-32 -32 -16) (32 32 72) AMBUSH TRIGGER_SPAWN SIGHT
+/*QUAKED monster_tank (1 .5 0) (-32 -32 -16) (32 32 72) AMBUSH TRIGGER_SPAWN SIGHT x x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
 model="models/monsters/tank/tris.md2"
 */
-/*QUAKED monster_tank_commander (1 .5 0) (-32 -32 -16) (32 32 72) AMBUSH TRIGGER_SPAWN SIGHT GUARDIAN HEATSEEKING
+/*QUAKED monster_tank_commander (1 .5 0) (-32 -32 -16) (32 32 72) AMBUSH TRIGGER_SPAWN SIGHT GUARDIAN HEATSEEKING x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
 */
 void SP_monster_tank(edict_t *self) {
 	if (!M_AllowSpawn(self)) {
@@ -1007,7 +1007,7 @@ static THINK(Think_TankStand) (edict_t *ent) -> void {
 	ent->nextthink = level.time + 10_hz;
 }
 
-/*QUAKED monster_tank_stand (1 .5 0) (-32 -32 0) (32 32 90)
+/*QUAKED monster_tank_stand (1 .5 0) (-32 -32 0) (32 32 90) x x x x x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
 
 Just stands and cycles in one place until targeted, then teleports away.
 N64 edition!

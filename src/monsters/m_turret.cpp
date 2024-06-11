@@ -805,7 +805,7 @@ MONSTERINFO_CHECKATTACK(turret_checkattack) (edict_t *self) -> bool {
 //  SPAWN
 // **********************
 
-/*QUAKED monster_turret (1 .5 0) (-16 -16 -16) (16 16 16) AMBUSH TRIGGER_SPAWN SIGHT BLASTER MACHINEGUN ROCKET HEATBEAM WALLUNIT
+/*QUAKED monster_turret (1 .5 0) (-16 -16 -16) (16 16 16) AMBUSH TRIGGER_SPAWN SIGHT BLASTER MACHINEGUN ROCKET HEATBEAM WALLUNIT NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
 
 The automated defense turret that mounts on walls.
 Check the weapon you want it to use: blaster, machinegun, rocket, heatbeam.

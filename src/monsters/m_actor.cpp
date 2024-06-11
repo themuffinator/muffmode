@@ -348,7 +348,7 @@ static USE(actor_use) (edict_t *self, edict_t *other, edict_t *activator) -> voi
 	self->target = nullptr;
 }
 
-/*QUAKED misc_actor (1 .5 0) (-16 -16 -24) (16 16 32)
+/*QUAKED misc_actor (1 .5 0) (-16 -16 -24) (16 16 32) x x x x x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
  */
 
 void SP_misc_actor(edict_t *self) {
@@ -403,7 +403,7 @@ void SP_misc_actor(edict_t *self) {
 	self->use = actor_use;
 }
 
-/*QUAKED target_actor (.5 .3 0) (-8 -8 -8) (8 8 8) JUMP SHOOT ATTACK x HOLD BRUTAL
+/*QUAKED target_actor (.5 .3 0) (-8 -8 -8) (8 8 8) JUMP SHOOT ATTACK x HOLD BRUTAL x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
 JUMP			jump in set direction upon reaching this target
 SHOOT			take a single shot at the pathtarget
 ATTACK			attack pathtarget until it or actor is dead

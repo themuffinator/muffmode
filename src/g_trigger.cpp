@@ -91,7 +91,7 @@ static TOUCH(Touch_Multi) (edict_t *self, edict_t *other, const trace_t &tr, boo
 	multi_trigger(self);
 }
 
-/*QUAKED trigger_multiple (.5 .5 .5) ? MONSTER NOT_PLAYER TRIGGERED TOGGLE LATCHED
+/*QUAKED trigger_multiple (.5 .5 .5) ? MONSTER NOT_PLAYER TRIGGERED TOGGLE LATCHED x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
 Variable sized repeatable trigger.  Must be targeted at one or more entities.
 If "delay" is set, the trigger waits some time after activating before firing.
 "wait" : Seconds between triggerings. (.2 default)
@@ -184,7 +184,7 @@ void SP_trigger_multiple(edict_t *ent) {
 		ent->svflags |= SVF_HULL;
 }
 
-/*QUAKED trigger_once (.5 .5 .5) ? x x TRIGGERED
+/*QUAKED trigger_once (.5 .5 .5) ? x x TRIGGERED x x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
 Triggers once, then removes itself.
 You must set the key "target" to the name of another object in the level that has a matching "targetname".
 
@@ -212,7 +212,7 @@ void SP_trigger_once(edict_t *ent) {
 	SP_trigger_multiple(ent);
 }
 
-/*QUAKED trigger_relay (.5 .5 .5) (-8 -8 -8) (8 8 8)
+/*QUAKED trigger_relay (.5 .5 .5) (-8 -8 -8) (8 8 8) x x x x x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
 This fixed size trigger cannot be touched, it can only be fired by other events.
 */
 constexpr spawnflags_t SPAWNFLAGS_TRIGGER_RELAY_NO_SOUND = 1_spawnflag;
@@ -239,9 +239,11 @@ trigger_key
 ==============================================================================
 */
 
-/*QUAKED trigger_key (.5 .5 .5) (-8 -8 -8) (8 8 8)
+/*QUAKED trigger_key (.5 .5 .5) (-8 -8 -8) (8 8 8) MULTI x x x x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
 A relay trigger that only fires it's targets if player has the proper key.
 Use "item" to specify the required key, for example "key_data_cd"
+
+MULTI : allow multiple uses
 */
 static USE(trigger_key_use) (edict_t *self, edict_t *other, edict_t *activator) -> void {
 	item_id_t index;
@@ -294,12 +296,16 @@ static USE(trigger_key_use) (edict_t *self, edict_t *other, edict_t *activator) 
 			}
 		}
 	} else {
-		activator->client->pers.inventory[index]--;
+		// don't remove keys in DM
+		if (!deathmatch->integer)
+			activator->client->pers.inventory[index]--;
 	}
 
 	G_UseTargets(self, activator);
 
-	self->use = nullptr;
+	// allow multi use
+	if (deathmatch->integer || !self->spawnflags.has(1_spawnflag))
+		self->use = nullptr;
 }
 
 void SP_trigger_key(edict_t *self) {
@@ -333,10 +339,10 @@ trigger_counter
 ==============================================================================
 */
 
-/*QUAKED trigger_counter (.5 .5 .5) ? nomessage
+/*QUAKED trigger_counter (.5 .5 .5) ? NOMESSAGE x x x x x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
 Acts as an intermediary for an action that takes multiple inputs.
 
-If nomessage is not set, t will print "1 more.. " etc when triggered and "sequence complete" when finished.
+If NOMESSAGE is not set, it will print "1 more.. " etc when triggered and "sequence complete" when finished.
 
 After the counter has been triggered "count" times (default 2), it will fire all of it's targets and remove itself.
 */
@@ -381,7 +387,7 @@ trigger_always
 ==============================================================================
 */
 
-/*QUAKED trigger_always (.5 .5 .5) (-8 -8 -8) (8 8 8)
+/*QUAKED trigger_always (.5 .5 .5) (-8 -8 -8) (8 8 8) x x x x x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
 This trigger will always fire.  It is activated by the world.
 */
 void SP_trigger_always(edict_t *ent) {
@@ -391,6 +397,86 @@ void SP_trigger_always(edict_t *ent) {
 	G_UseTargets(ent, ent);
 }
 
+//==========================================================
+
+/*QUAKED trigger_deathcount (1 0 0) (-8 -8 -8) (8 8 8) REPEAT
+Fires targets only if minimum death count has been achieved in the level.
+Deaths considered are monsters during campaigns and players during deathmatch.
+
+"count"	minimum number of deaths required (default 10)
+
+REPEAT : repeats per every 'count' deaths
+*/
+void SP_trigger_deathcount(edict_t *ent) {
+	if (!ent->count) {
+		gi.Com_PrintFmt("{}: No count key set, setting to 10.\n", *ent);
+		ent->count = 10;
+	}
+
+	int kills = deathmatch->integer ? level.total_player_deaths : level.killed_monsters;
+
+	if (!kills)
+		return;
+
+	if (ent->spawnflags.has(1_spawnflag)) {	// only once
+		if (kills == ent->count) {
+			G_UseTargets(ent, ent);
+			G_FreeEdict(ent);
+			return;
+		}
+	} else {	// every 'count' deaths
+		if (!(kills % ent->count)) {
+			G_UseTargets(ent, ent);
+		}
+	}
+}
+
+//==========================================================
+
+/*QUAKED trigger_no_monsters (1 0 0) (-8 -8 -8) (8 8 8) ONCE
+Fires targets only if all monsters have been killed or none are present.
+Auto-removed in deathmatch (except horde mode).
+
+ONCE : will be removed after firing once
+*/
+void SP_trigger_no_monsters(edict_t *ent) {
+	if (deathmatch->integer && !horde->integer) {
+		G_FreeEdict(ent);
+		return;
+	}
+	
+	if (level.killed_monsters < level.total_monsters)
+		return;
+	
+	G_UseTargets(ent, ent);
+
+	if (ent->spawnflags.has(1_spawnflag))
+		G_FreeEdict(ent);
+}
+
+//==========================================================
+
+/*QUAKED trigger_monsters (1 0 0) (-8 -8 -8) (8 8 8) ONCE
+Fires targets only if monsters are present in the level.
+Auto-removed in deathmatch (except horde mode).
+
+ONCE : will be removed after firing once
+*/
+void SP_trigger_monsters(edict_t *ent) {
+	if (deathmatch->integer && !horde->integer) {
+		G_FreeEdict(ent);
+		return;
+	}
+	
+	if (level.killed_monsters >= level.total_monsters)
+		return;
+	
+	G_UseTargets(ent, ent);
+
+	if (ent->spawnflags.has(1_spawnflag))
+		G_FreeEdict(ent);
+}
+
 /*
 ==============================================================================
 
@@ -398,7 +484,7 @@ trigger_push
 
 ==============================================================================
 */
-#if 0
+
 /*
 =================
 AimAtTarget
@@ -407,7 +493,6 @@ Calculate origin2 so the target apogee will be hit
 =================
 */
 static void AimAtTarget(edict_t *self) {
-	edict_t *ent;
 	vec3_t	origin;
 	float	height, gravity, time, forward;
 	float	dist;
@@ -415,9 +500,7 @@ static void AimAtTarget(edict_t *self) {
 	origin = self->absmin + self->absmax;
 	origin *= 0.5;
 
-	ent = G_PickTarget(self->target);
-
-	height = ent->s.origin[2] - origin[2];
+	height = self->target_ent->s.origin[2] - origin[2];
 	gravity = g_gravity->value;
 	time = sqrt(height / (0.5 * gravity));
 	if (!time) {
@@ -426,7 +509,7 @@ static void AimAtTarget(edict_t *self) {
 	}
 
 	// set origin2 to the push velocity
-	self->origin2 = ent->s.origin - origin;
+	self->origin2 = self->target_ent->s.origin - origin;
 	self->origin2[2] = 0;
 	dist = self->origin2.normalize();
 
@@ -434,7 +517,7 @@ static void AimAtTarget(edict_t *self) {
 	self->origin2 *= forward;
 	self->origin2[2] = time * gravity;
 }
-#endif
+
 constexpr spawnflags_t SPAWNFLAG_PUSH_ONCE = 0x01_spawnflag;
 constexpr spawnflags_t SPAWNFLAG_PUSH_PLUS = 0x02_spawnflag;
 constexpr spawnflags_t SPAWNFLAG_PUSH_SILENT = 0x04_spawnflag;
@@ -444,6 +527,13 @@ constexpr spawnflags_t SPAWNFLAG_PUSH_CLIP = 0x10_spawnflag;
 static cached_soundindex windsound;
 
 static TOUCH(trigger_push_touch) (edict_t *self, edict_t *other, const trace_t &tr, bool other_touching_self) -> void {
+	if (self->target_ent) {
+		AimAtTarget(other);
+
+		other->fly_sound_debounce_time = level.time + 1.5_sec;
+		gi.sound(other, CHAN_AUTO, windsound, 1, ATTN_NORM, 0);
+		return;
+	}
 
 	if (self->spawnflags.has(SPAWNFLAG_PUSH_CLIP)) {
 		trace_t clip = gi.clip(self, other->s.origin, other->mins, other->maxs, other->s.origin, G_GetClipMask(other));
@@ -454,7 +544,7 @@ static TOUCH(trigger_push_touch) (edict_t *self, edict_t *other, const trace_t &
 
 	if (strcmp(other->classname, "grenade") == 0) {
 		other->velocity = self->movedir * (self->speed * 10);
-	} else if (other->health > 0 || (freeze->integer && other->client && other->client->frozen)) {
+	} else if (other->health > 0 || (freeze->integer && other->client && other->client->eliminated)) {
 		other->velocity = self->movedir * (self->speed * 10);
 
 		if (other->client) {
@@ -525,12 +615,13 @@ THINK(trigger_push_active) (edict_t *self) -> void {
 	}
 }
 
-/*QUAKED trigger_push (.5 .5 .5) ? PUSH_ONCE PUSH_PLUS PUSH_SILENT START_OFF CLIP
+/*QUAKED trigger_push (.5 .5 .5) ? PUSH_ONCE PUSH_PLUS PUSH_SILENT START_OFF CLIP x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
 Pushes the player
 "speed"	defaults to 1000
 "wait"  defaults to 10, must use PUSH_PLUS
 
 If targeted, it will toggle on and off when used.
+If it has a target, will set an apogee to the target and modify speed and angle accordingly (ala-Q3)
 
 START_OFF - toggled trigger_push begins in off setting
 SILENT - doesn't make wind noise
@@ -570,6 +661,12 @@ void SP_trigger_push(edict_t *self) {
 
 	if (self->spawnflags.has(SPAWNFLAG_PUSH_CLIP))
 		self->svflags |= SVF_HULL;
+
+	if (self->target) {
+		edict_t *e = G_PickTarget(self->target);
+		if (e)
+			self->target_ent = e;
+	}
 }
 
 /*
@@ -580,7 +677,7 @@ trigger_hurt
 ==============================================================================
 */
 
-/*QUAKED trigger_hurt (.5 .5 .5) ? START_OFF TOGGLE SILENT NO_PROTECTION SLOW NO_PLAYERS NO_MONSTERS
+/*QUAKED trigger_hurt (.5 .5 .5) ? START_OFF TOGGLE SILENT NO_PROTECTION SLOW NO_PLAYERS NO_MONSTERS x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
 Any entity that touches this will be hurt.
 
 It does dmg points of damage each server frame
@@ -686,7 +783,7 @@ trigger_gravity
 ==============================================================================
 */
 
-/*QUAKED trigger_gravity (.5 .5 .5) ? TOGGLE START_OFF
+/*QUAKED trigger_gravity (.5 .5 .5) ? TOGGLE START_OFF x x x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
 Changes the touching entites gravity to the value of "gravity".
 1.0 is standard gravity for the level.
 
@@ -753,7 +850,7 @@ trigger_monsterjump
 ==============================================================================
 */
 
-/*QUAKED trigger_monsterjump (.5 .5 .5) ?
+/*QUAKED trigger_monsterjump (.5 .5 .5) ? x x x x x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
 Walking monsters that touch this will jump in the direction of the trigger's angle
 "speed" default to 200, the speed thrown forward
 "height" default to 200, the speed thrown upwards
@@ -833,7 +930,7 @@ trigger_flashlight
 ==============================================================================
 */
 
-/*QUAKED trigger_flashlight (.5 .5 .5) ?
+/*QUAKED trigger_flashlight (.5 .5 .5) ? x x x x x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
 Players moving against this trigger will have their flashlight turned on or off.
 "style" default to 0, set to 1 to always turn flashlight on, 2 to always turn off,
 		otherwise "angles" are used to control on/off state
@@ -883,7 +980,7 @@ trigger_fog
 ==============================================================================
 */
 
-/*QUAKED trigger_fog (.5 .5 .5) ? AFFECT_FOG AFFECT_HEIGHTFOG INSTANTANEOUS FORCE BLEND
+/*QUAKED trigger_fog (.5 .5 .5) ? AFFECT_FOG AFFECT_HEIGHTFOG INSTANTANEOUS FORCE BLEND x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
 Players moving against this trigger will have their fog settings changed.
 Fog/heightfog will be adjusted if the spawnflags are set. Instantaneous
 ignores any delays. Force causes it to ignore movement dir and always use
@@ -1080,7 +1177,7 @@ void SP_trigger_fog(edict_t *self) {
 	self->touch = trigger_fog_touch;
 }
 
-/*QUAKED trigger_coop_relay (.5 .5 .5) ?
+/*QUAKED trigger_coop_relay (.5 .5 .5) ? x x x x x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
 The same as a trigger_relay.
 */
 
@@ -1177,7 +1274,7 @@ void SP_trigger_coop_relay(edict_t *self) {
 }
 
 
-/*QUAKED info_teleport_destination (.5 .5 .5) (-16 -16 -24) (16 16 32)
+/*QUAKED info_teleport_destination (.5 .5 .5) (-16 -16 -24) (16 16 32) x x x x x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
 Destination marker for a teleporter.
 */
 void SP_info_teleport_destination(edict_t *self) {}
@@ -1190,7 +1287,7 @@ void SP_info_teleport_destination(edict_t *self) {}
 // constexpr uint32_t SPAWNFLAG_TELEPORT_CTF_ONLY		= 4;
 constexpr spawnflags_t SPAWNFLAG_TELEPORT_START_ON = 8_spawnflag;
 
-/*QUAKED trigger_teleport (.5 .5 .5) ? PLAYER_ONLY SILENT CTF_ONLY START_ON
+/*QUAKED trigger_teleport (.5 .5 .5) ? PLAYER_ONLY SILENT CTF_ONLY START_ON x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
 Any object touching this will be transported to the corresponding
 info_teleport_destination entity. You must set the "target" field,
 and create an object with a "targetname" field that matches.
@@ -1229,8 +1326,12 @@ static TOUCH(trigger_teleport_touch) (edict_t *self, edict_t *other, const trace
 	other->s.old_origin = dest->s.origin;
 	other->s.origin[2] += 10;
 
-	// clear the velocity and hold them in place briefly
-	other->velocity = {};
+	if (g_teleporter_nofreeze->value == 0) {
+		// clear the velocity and hold them in place briefly
+		other->velocity = {};
+		other->client->ps.pmove.pm_time = 160; // hold time
+		other->client->ps.pmove.pm_flags |= PMF_TIME_TELEPORT;
+	}
 
 	if (other->client) {
 		other->client->ps.pmove.pm_time = 160; // hold time
@@ -1294,7 +1395,7 @@ void SP_trigger_teleport(edict_t *self) {
 	gi.linkentity(self);
 }
 
-/*QUAKED trigger_ctf_teleport (0.5 0.5 0.5) ?
+/*QUAKED trigger_ctf_teleport (0.5 0.5 0.5) ? x x x x x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
 Players touching this will be teleported
 */
 
@@ -1320,10 +1421,12 @@ static TOUCH(old_teleporter_touch) (edict_t *self, edict_t *other, const trace_t
 	other->s.old_origin = dest->s.origin;
 	//	other->s.origin[2] += 10;
 
-	// clear the velocity and hold them in place briefly
-	other->velocity = {};
-	other->client->ps.pmove.pm_time = 160; // hold time
-	other->client->ps.pmove.pm_flags |= PMF_TIME_TELEPORT;
+	if (g_teleporter_nofreeze->value == 0) {
+		// clear the velocity and hold them in place briefly
+		other->velocity = {};
+		other->client->ps.pmove.pm_time = 160; // hold time
+		other->client->ps.pmove.pm_flags |= PMF_TIME_TELEPORT;
+	}
 
 	// draw the teleport splash at source and on the player
 	self->enemy->s.event = EV_PLAYER_TELEPORT;
@@ -1384,7 +1487,7 @@ void SP_trigger_ctf_teleport(edict_t *ent) {
 }
 
 
-/*QUAKED trigger_disguise (.5 .5 .5) ? TOGGLE START_ON REMOVE
+/*QUAKED trigger_disguise (.5 .5 .5) ? TOGGLE START_ON REMOVE x x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
 Anything passing through this trigger when it is active will
 be marked as disguised.
 
@@ -1433,3 +1536,43 @@ void SP_trigger_disguise(edict_t *self) {
 	gi.setmodel(self, self->model);
 	gi.linkentity(self);
 }
+
+//==========================================================
+#if 0
+/*QUAKED trigger_teleport (.5 .5 .5) ? SPECTATOR NO_TELEPORT_EFFECT x x x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
+Must have a target, which will be the teleport destination.
+
+If spectator is set, only spectators can use this teleport.
+*/
+static TOUCH(trigger_teleport_touch) (edict_t *self, edict_t *other, const trace_t &tr, bool other_touching_self) -> void {
+	if (!other->client)
+		return;
+	if (other->health <= 0)
+		return;
+
+	// Spectators only?
+	if ((self->spawnflags.has(1_spawnflag)) &&
+			other->client->resp.team != TEAM_SPECTATOR) {
+		return;
+	}
+
+	TeleportPlayer(other, self->target_ent->s.origin, self->target_ent->s.angles);
+
+	// draw the teleport splash at source and on the player
+	if (!self->spawnflags.has(2_spawnflag)) {
+		self->owner->s.event = EV_PLAYER_TELEPORT;
+		other->s.event = EV_PLAYER_TELEPORT;
+	} else {
+		self->owner->s.event = EV_OTHER_TELEPORT;
+		other->s.event = EV_OTHER_TELEPORT;
+	}
+}
+
+void SP_trigger_teleport(edict_t *self) {
+	InitTrigger(self);
+
+	self->touch = trigger_teleport_touch;
+
+	gi.linkentity(self);
+}
+#endif

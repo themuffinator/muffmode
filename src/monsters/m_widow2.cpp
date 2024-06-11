@@ -893,7 +893,7 @@ static void Widow2Precache() {
 	gi.modelindex("models/monsters/blackwidow2/gib4/tris.md2");
 }
 
-/*QUAKED monster_widow2 (1 .5 0) (-70 -70 0) (70 70 144) AMBUSH TRIGGER_SPAWN SIGHT
+/*QUAKED monster_widow2 (1 .5 0) (-70 -70 0) (70 70 144) AMBUSH TRIGGER_SPAWN SIGHT x x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
  */
 void SP_monster_widow2(edict_t *self) {
 	if (!M_AllowSpawn(self)) {

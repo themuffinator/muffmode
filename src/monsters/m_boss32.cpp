@@ -661,7 +661,7 @@ void MakronPrecache() {
 	gi.modelindex("models/monsters/boss3/rider/tris.md2");
 }
 
-/*QUAKED monster_makron (1 .5 0) (-30 -30 0) (30 30 90) AMBUSH TRIGGER_SPAWN SIGHT
+/*QUAKED monster_makron (1 .5 0) (-30 -30 0) (30 30 90) AMBUSH TRIGGER_SPAWN SIGHT x x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
  */
 void SP_monster_makron(edict_t *self) {
 	if (!M_AllowSpawn(self)) {

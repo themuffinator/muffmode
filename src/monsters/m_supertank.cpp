@@ -544,7 +544,7 @@ MONSTERINFO_BLOCKED(supertank_blocked) (edict_t *self, float dist) -> bool {
 // monster_supertank
 //
 
-/*QUAKED monster_supertank (1 .5 0) (-64 -64 0) (64 64 72) AMBUSH TRIGGER_SPAWN SIGHT POWERSHIELD LONGDEATH
+/*QUAKED monster_supertank (1 .5 0) (-64 -64 0) (64 64 72) AMBUSH TRIGGER_SPAWN SIGHT POWERSHIELD LONGDEATH x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
 */
 void SP_monster_supertank(edict_t *self) {
 	if (!M_AllowSpawn(self)) {
@@ -621,7 +621,7 @@ void SP_monster_supertank(edict_t *self) {
 	}
 }
 
-/*QUAKED monster_boss5 (1 .5 0) (-64 -64 0) (64 64 72) AMBUSH TRIGGER_SPAWN SIGHT
+/*QUAKED monster_boss5 (1 .5 0) (-64 -64 0) (64 64 72) AMBUSH TRIGGER_SPAWN SIGHT x x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
  */
 void SP_monster_boss5(edict_t *self) {
 	self->spawnflags |= SPAWNFLAG_SUPERTANK_POWERSHIELD;

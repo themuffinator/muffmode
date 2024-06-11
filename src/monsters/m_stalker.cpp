@@ -953,7 +953,7 @@ DIE(stalker_die) (edict_t *self, edict_t *inflictor, edict_t *attacker, int dama
 // SPAWN
 // ******************
 
-/*QUAKED monster_stalker (1 .5 0) (-28 -28 -18) (28 28 18) AMBUSH TRIGGER_SPAWN SIGHT ONROOF NOJUMPING
+/*QUAKED monster_stalker (1 .5 0) (-28 -28 -18) (28 28 18) AMBUSH TRIGGER_SPAWN SIGHT ONROOF NOJUMPING x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
 Spider Monster
 
   ONROOF - Monster starts sticking to the roof.

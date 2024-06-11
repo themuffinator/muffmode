@@ -28,7 +28,7 @@ Stats_AddShot
 ================
 */
 static void Stats_AddShot(edict_t *ent) {
-	if (g_matchstats->integer && level.match_state == MATCH_IN_PROGRESS)
+	if (g_matchstats->integer && level.match_state == matchst_t::MATCH_IN_PROGRESS)
 		ent->client->mstats.total_shots++;
 }
 
@@ -268,8 +268,15 @@ bool Pickup_Weapon(edict_t *ent, edict_t *other) {
 			ammo = GetItemByIndex(ent->item->ammo);
 			if (InfiniteAmmoOn(ammo))
 				Add_Ammo(other, ammo, AMMO_INFINITE);
-			else
-				Add_Ammo(other, ammo, ammo->quantity);
+			else {
+				int count = ammo->quantity;
+
+				if (ent->item->id == IT_AMMO_SLUGS)
+					if (ruleset->integer != 1)
+						count *= 2;
+
+				Add_Ammo(other, ammo, count);
+			}
 		}
 
 		if (!(ent->spawnflags & SPAWNFLAG_ITEM_DROPPED_PLAYER)) {
@@ -390,6 +397,7 @@ void NoAmmoWeaponChange(edict_t *ent, bool sound) {
 
 	constexpr item_id_t no_ammo_order[] = {
 		IT_WEAPON_DISRUPTOR,
+		IT_WEAPON_BFG,
 		IT_WEAPON_RAILGUN,
 		IT_WEAPON_PLASMABEAM,
 		IT_WEAPON_IONRIPPER,
@@ -403,9 +411,9 @@ void NoAmmoWeaponChange(edict_t *ent, bool sound) {
 		IT_WEAPON_RLAUNCHER,
 		IT_WEAPON_GLAUNCHER,
 		IT_WEAPON_PROXLAUNCHER,
-		IT_WEAPON_CHAINFIST,
 		IT_AMMO_GRENADES,
-		IT_WEAPON_BLASTER
+		IT_WEAPON_BLASTER,
+		IT_WEAPON_CHAINFIST
 	};
 
 	for (size_t i = 0; i < q_countof(no_ammo_order); i++) {
@@ -630,8 +638,7 @@ void Drop_Weapon(edict_t *ent, gitem_t *item) {
 	item_id_t index = item->id;
 	// see if we're already using it
 	if (((item == ent->client->pers.weapon) || (item == ent->client->newweapon)) && (ent->client->pers.inventory[index] == 1)) {
-		gi.LocClient_Print(ent, PRINT_HIGH, "$g_cant_drop_weapon");
-		return;
+		NoAmmoWeaponChange(ent, false);
 	}
 
 	edict_t *drop = Drop_Item(ent, item);
@@ -804,10 +811,13 @@ enum weapon_ready_state_t {
 
 static inline weapon_ready_state_t Weapon_HandleReady(edict_t *ent, int FRAME_FIRE_FIRST, int FRAME_IDLE_FIRST, int FRAME_IDLE_LAST, const int *pause_frames) {
 	if (ent->client->weaponstate == WEAPON_READY) {
-		bool request_firing = ent->client->weapon_fire_buffered || ((ent->client->latched_buttons | ent->client->buttons) & BUTTON_ATTACK);
+		bool request_firing;
 
-		if (level.match_state == MATCH_COUNTDOWN)
+		if (IsCombatDisabled()) {
 			request_firing = false;
+			ent->client->latched_buttons &= ~BUTTON_ATTACK;
+		} else
+			request_firing = ent->client->weapon_fire_buffered || ((ent->client->latched_buttons | ent->client->buttons) & BUTTON_ATTACK);
 
 		if (request_firing && ent->client->weapon_fire_finished <= level.time) {
 			ent->client->latched_buttons &= ~BUTTON_ATTACK;
@@ -1005,7 +1015,7 @@ void Throw_Generic(edict_t *ent, int FRAME_FIRE_LAST, int FRAME_IDLE_LAST, int F
 	// when we die, just toss what we had in our hands.
 	if (ent->health <= 0) {
 		fire(ent, true);
-		if (g_matchstats->integer && level.match_state == MATCH_IN_PROGRESS)
+		if (g_matchstats->integer && level.match_state == matchst_t::MATCH_IN_PROGRESS)
 			ent->client->mstats.total_shots++;
 		return;
 	}
@@ -1035,10 +1045,13 @@ void Throw_Generic(edict_t *ent, int FRAME_FIRE_LAST, int FRAME_IDLE_LAST, int F
 	}
 
 	if (ent->client->weaponstate == WEAPON_READY) {
-		bool request_firing = ent->client->weapon_fire_buffered || ((ent->client->latched_buttons | ent->client->buttons) & BUTTON_ATTACK);
+		bool request_firing;
 
-		if (level.match_state == MATCH_COUNTDOWN)
+		if (IsCombatDisabled()) {
 			request_firing = false;
+			ent->client->latched_buttons &= ~BUTTON_ATTACK;
+		} else
+			request_firing = ent->client->weapon_fire_buffered || ((ent->client->latched_buttons | ent->client->buttons) & BUTTON_ATTACK);
 
 		if (request_firing && ent->client->weapon_fire_finished <= level.time) {
 			ent->client->latched_buttons &= ~BUTTON_ATTACK;
@@ -1102,7 +1115,7 @@ void Throw_Generic(edict_t *ent, int FRAME_FIRE_LAST, int FRAME_IDLE_LAST, int F
 					Weapon_PowerupSound(ent);
 					ent->client->weapon_sound = 0;
 					fire(ent, true);
-					if (g_matchstats->integer && level.match_state == MATCH_IN_PROGRESS)
+					if (g_matchstats->integer && level.match_state == matchst_t::MATCH_IN_PROGRESS)
 						ent->client->mstats.total_shots++;
 
 					ent->client->grenade_blew_up = true;
@@ -1129,7 +1142,7 @@ void Throw_Generic(edict_t *ent, int FRAME_FIRE_LAST, int FRAME_IDLE_LAST, int F
 					Weapon_PowerupSound(ent);
 					ent->client->weapon_sound = 0;
 					fire(ent, false);
-					if (g_matchstats->integer && level.match_state == MATCH_IN_PROGRESS)
+					if (g_matchstats->integer && level.match_state == matchst_t::MATCH_IN_PROGRESS)
 						ent->client->mstats.total_shots++;
 
 					if (!EXPLODE || !ent->client->grenade_blew_up)
@@ -1240,7 +1253,7 @@ ROCKET LAUNCHER
 */
 
 static void Weapon_RocketLauncher_Fire(edict_t *ent) {
-	int	  damage = 120;	// irandom(100, 120);	//muff mod: no more randomised silliness
+	int	  damage = !!(ruleset->integer == 1) ? 120 : irandom(100, 120);	//muff mod: no more randomised silliness
 	float damage_radius = 120;
 	int	  radius_damage = 120;
 
@@ -1951,7 +1964,7 @@ static void Weapon_SuperShotgun_Fire(edict_t *ent) {
 	PlayerNoise(ent, start, PNOISE_WEAPON);
 
 	Stats_AddShot(ent);
-	RemoveAmmo(ent, 1);
+	RemoveAmmo(ent, 2);
 }
 
 void Weapon_SuperShotgun(edict_t *ent) {
@@ -1972,7 +1985,7 @@ RAILGUN
 static void Weapon_Railgun_Fire(edict_t *ent) {
 	// normal damage too extreme for DM
 	int damage = deathmatch->integer ? 100 : 150;
-	int kick = damage * 2;
+	int kick = !!(ruleset->integer == 1) ? (damage * 2) : (deathmatch->integer ? 200 : 225);
 
 	if (is_quad) {
 		damage *= damage_multiplier;
@@ -2053,7 +2066,7 @@ static void Weapon_BFG_Fire(edict_t *ent) {
 	PlayerNoise(ent, start, PNOISE_WEAPON);
 
 	Stats_AddShot(ent);
-	RemoveAmmo(ent, 1);
+	RemoveAmmo(ent, 50);
 }
 
 void Weapon_BFG(edict_t *ent) {
@@ -2391,7 +2404,7 @@ PLASMA BEAM
 */
 
 static void Weapon_PlasmaBeam_Fire(edict_t *ent) {
-	bool firing = (ent->client->buttons & BUTTON_ATTACK) && !(level.match_state == MATCH_COUNTDOWN || level.intermission_queued);
+	bool firing = (ent->client->buttons & BUTTON_ATTACK) && !IsCombatDisabled();
 	bool has_ammo = ent->client->pers.inventory[ent->client->pers.weapon->ammo] >= ent->client->pers.weapon->quantity;
 
 	if (!firing || !has_ammo) {
@@ -2422,9 +2435,14 @@ static void Weapon_PlasmaBeam_Fire(edict_t *ent) {
 
 	// for comparison, the hyperblaster is 15/20
 	// jim requested more damage, so try 15/15 --- PGM 07/23/98
-	//muffmode: jim you are a silly boy, 15 is way OP for DM
-	damage = deathmatch->integer ? 10 : 15;
-	kick = deathmatch->integer ? 50 : 30; // really knock 'em around in deathmatch, muffmode: jesus christ but not so much (was 75)
+	// muffmode: jim you are a silly boy, 15 is way OP for DM
+	if (ruleset->integer == 1) {
+		damage = deathmatch->integer ? 10 : 15;
+		kick = deathmatch->integer ? 50 : 30;
+	} else {
+		damage = 15;
+		kick = deathmatch->integer ? 75 : 30;
+	}
 
 	if (is_quad) {
 		damage *= damage_multiplier;
@@ -2452,7 +2470,7 @@ static void Weapon_PlasmaBeam_Fire(edict_t *ent) {
 	PlayerNoise(ent, start, PNOISE_WEAPON);
 
 	Stats_AddShot(ent);
-	RemoveAmmo(ent, 1);
+	RemoveAmmo(ent, 2);
 
 	ent->client->anim_priority = ANIM_ATTACK;
 	if (ent->client->ps.pmove.pm_flags & PMF_DUCKED) {
@@ -2481,7 +2499,7 @@ ION RIPPER
 */
 static void Weapon_IonRipper_Fire(edict_t *ent) {
 	vec3_t tempang;
-	int	   damage = deathmatch->integer ? 20 : 50;	//30: 50;
+	int	   damage = deathmatch->integer ? (ruleset->integer == 1) ? 20 : 30 : 50;
 
 	if (is_quad)
 		damage *= damage_multiplier;
@@ -2494,7 +2512,7 @@ static void Weapon_IonRipper_Fire(edict_t *ent) {
 
 	P_AddWeaponKick(ent, ent->client->v_forward * -3, { -3.f, 0.f, 0.f });
 
-	fire_ionripper(ent, start, dir, damage, 800, EF_IONRIPPER);	//500
+	fire_ionripper(ent, start, dir, damage, (ruleset->integer == 1) ? 800 : 500, EF_IONRIPPER);	//500
 
 	// send muzzle flash
 	gi.WriteByte(svc_muzzleflash);

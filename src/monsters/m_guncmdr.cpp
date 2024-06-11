@@ -1297,7 +1297,7 @@ MONSTERINFO_BLOCKED(guncmdr_blocked) (edict_t *self, float dist) -> bool {
 	return false;
 }
 
-/*QUAKED monster_guncmdr (1 .5 0) (-16 -16 -24) (16 16 32) AMBUSH TRIGGER_SPAWN SIGHT NOJUMPING
+/*QUAKED monster_guncmdr (1 .5 0) (-16 -16 -24) (16 16 32) AMBUSH TRIGGER_SPAWN SIGHT NOJUMPING x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
 model="models/monsters/guncmdr/tris.md2"
 */
 void SP_monster_guncmdr(edict_t *self) {

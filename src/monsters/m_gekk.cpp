@@ -1387,7 +1387,7 @@ MONSTERINFO_BLOCKED(gekk_blocked) (edict_t *self, float dist) -> bool {
 	return false;
 }
 
-/*QUAKED monster_gekk (1 .5 0) (-16 -16 -24) (16 16 24) AMBUSH TRIGGER_SPAWN SIGHT CHANT NOJUMPING
+/*QUAKED monster_gekk (1 .5 0) (-16 -16 -24) (16 16 24) AMBUSH TRIGGER_SPAWN SIGHT CHANT NOJUMPING x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
  */
 void SP_monster_gekk(edict_t *self) {
 	if (!M_AllowSpawn(self)) {

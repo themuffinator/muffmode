@@ -392,8 +392,8 @@ static USE(info_nav_lock_use) (edict_t *self, edict_t *other, edict_t *activator
 	}
 }
 
-/*QUAKED info_nav_lock (1.0 1.0 0.0) (-16 -16 0) (16 16 32)
-toggle locked state on linked entity
+/*QUAKED info_nav_lock (1.0 1.0 0.0) (-16 -16 0) (16 16 32) x x x x x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
+Toggles locked state on linked entity.
 */
 void SP_info_nav_lock(edict_t *self) {
 	if (!self->targetname) {

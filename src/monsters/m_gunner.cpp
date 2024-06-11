@@ -779,7 +779,7 @@ MONSTERINFO_SIDESTEP(gunner_sidestep) (edict_t *self) -> bool {
 
 constexpr spawnflags_t SPAWNFLAG_GUNNER_NOJUMPING = 8_spawnflag;
 
-/*QUAKED monster_gunner (1 .5 0) (-16 -16 -24) (16 16 32) AMBUSH TRIGGER_SPAWN SIGHT NOJUMPING
+/*QUAKED monster_gunner (1 .5 0) (-16 -16 -24) (16 16 32) AMBUSH TRIGGER_SPAWN SIGHT NOJUMPING x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
 model="models/monsters/gunner/tris.md2"
 */
 void SP_monster_gunner(edict_t *self) {

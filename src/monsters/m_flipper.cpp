@@ -319,7 +319,7 @@ static void flipper_set_fly_parameters(edict_t *self) {
 	self->monsterinfo.fly_max_distance = 10.f;
 }
 
-/*QUAKED monster_flipper (1 .5 0) (-16 -16 -24) (16 16 32) AMBUSH TRIGGER_SPAWN SIGHT
+/*QUAKED monster_flipper (1 .5 0) (-16 -16 -24) (16 16 32) AMBUSH TRIGGER_SPAWN SIGHT x x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
  */
 void SP_monster_flipper(edict_t *self) {
 	if (!M_AllowSpawn(self)) {

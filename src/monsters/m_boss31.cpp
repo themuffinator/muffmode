@@ -510,7 +510,7 @@ MONSTERINFO_CHECKATTACK(Jorg_CheckAttack) (edict_t *self) -> bool {
 
 void MakronPrecache();
 
-/*QUAKED monster_jorg (1 .5 0) (-80 -80 0) (90 90 140) AMBUSH TRIGGER_SPAWN SIGHT
+/*QUAKED monster_jorg (1 .5 0) (-80 -80 0) (90 90 140) AMBUSH TRIGGER_SPAWN SIGHT x x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
  */
 void SP_monster_jorg(edict_t *self) {
 	if (!M_AllowSpawn(self)) {

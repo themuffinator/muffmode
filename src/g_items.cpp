@@ -1096,7 +1096,8 @@ void Tech_ApplyAutoDoc(edict_t *ent) {
 	gclient_t	*cl;
 	int			index;
 	float		volume = 1.0;
-	bool		mod = g_instagib->integer || g_nadefest->integer ? true : false;
+	bool		mod = g_instagib->integer || g_nadefest->integer;
+	bool		no_health = mod || clanarena->integer || g_no_health->integer;
 	int			max = g_vampiric_damage->integer ? ceil(g_vampiric_health_max->integer/2) : mod ? 100 : 150;
 
 	cl = ent->client;
@@ -1118,18 +1119,21 @@ void Tech_ApplyAutoDoc(edict_t *ent) {
 		return;
 
 	if (cl->tech_regen_time < level.time) {
+		bool mm = !!(ruleset->integer == 1);
+		gtime_t delay = mm ? 1_sec : 500_ms;
+
 		cl->tech_regen_time = level.time;
 		if (!g_vampiric_damage->integer) {
 			if (ent->health < max) {
 				ent->health += 5;
 				if (ent->health > max)
 					ent->health = max;
-				cl->tech_regen_time += 1_sec;
+				cl->tech_regen_time += delay;
 				noise = true;
 			}
 		}
 		//muff: don't regen armor at the same time as health
-		if (!mod && !noise) {
+		if (!no_health && (!mm || (!noise && mm))) {
 			index = ArmorIndex(ent);
 			if (index && cl->pers.inventory[index] < max) {
 				cl->pers.inventory[index] += g_vampiric_damage->integer ? 10 : 5;
@@ -1239,6 +1243,10 @@ static inline item_flags_t GetSubstituteItemFlags(item_id_t id) {
 static inline item_id_t FindSubstituteItem(edict_t *ent) {
 	// never replace flags
 	if (ent->item->id == IT_FLAG_RED || ent->item->id == IT_FLAG_BLUE || ent->item->id == IT_TAG_TOKEN)
+		return IT_NULL;
+
+	// never replace meaty goodness
+	if (ent->item->id == IT_FOODCUBE)
 		return IT_NULL;
 
 	// stimpack/shard randomizes
@@ -1464,7 +1472,7 @@ static bool Pickup_AllowPowerupPickup(edict_t *ent, edict_t *other) {
 		if (g_quadhog->integer && ent->item->id == IT_POWERUP_QUAD)
 			return true;
 
-		if (g_dm_powerups_minplayers->integer > level.num_playing_clients) {
+		if (g_dm_powerups_minplayers->integer > 0 && level.num_playing_clients < g_dm_powerups_minplayers->integer) {
 			if (level.time - other->client->pu_last_message_time > 5_sec) {
 				gi.LocClient_Print(other, PRINT_CENTER, "There must be {}+ players in the match\nto pick this up :(", g_dm_powerups_minplayers->integer);
 				other->client->pu_last_message_time = level.time;
@@ -1520,11 +1528,16 @@ static bool Pickup_Powerup(edict_t *ent, edict_t *other) {
 		G_FreeEdict(ent);
 	}
 
+	int count = ent->item->quantity;
+
 	if (deathmatch->integer && g_dm_powerups_style->integer && !ent->spawnflags.has(SPAWNFLAG_ITEM_DROPPED | SPAWNFLAG_ITEM_DROPPED_PLAYER))
-		ent->item->quantity = 120;
+		count = 120;
+
+	if (!!(ruleset->integer != 1) && (ent->item->id == IT_POWERUP_PROTECTION || ent->item->id == IT_POWERUP_INVISIBILITY))
+		count = 300;
 
 	if (!is_dropped_from_death)
-		SetRespawn(ent, gtime_t::from_sec(ent->item->quantity));
+		SetRespawn(ent, gtime_t::from_sec(count));
 
 	return true;
 }
@@ -1760,7 +1773,7 @@ static void Drop_General(edict_t *ent, gitem_t *item) {
 
 static void Use_Adrenaline(edict_t *ent, gitem_t *item) {
 	//muff mode: now also adds to max health in dm
-	ent->max_health += deathmatch->integer ? 5 : 1;
+	ent->max_health += (ruleset->integer == 1) ? (deathmatch->integer ? 5 : 1) : (deathmatch->integer ? 0 : 1);
 
 	if (ent->health < ent->max_health)
 		ent->health = ent->max_health;
@@ -1790,8 +1803,9 @@ void G_CheckPowerArmor(edict_t *ent) {
 		has_enough_cells = true;
 
 	if (ent->flags & FL_POWER_ARMOR) {
-		if (!has_enough_cells) {
-			// ran out of cells for power armor
+		// ran out of cells for power armor / lost power armor
+		if (!has_enough_cells || (!ent->client->pers.inventory[IT_POWER_SCREEN] &&
+				!ent->client->pers.inventory[IT_POWER_SHIELD])) {
 			ent->flags &= ~FL_POWER_ARMOR;
 			gi.sound(ent, CHAN_AUTO, gi.soundindex("misc/power2.wav"), 1, ATTN_NORM, 0);
 		}
@@ -1942,7 +1956,7 @@ static void Use_Double(edict_t *ent, gitem_t *item) {
 
 static void Use_Breather(edict_t *ent, gitem_t *item) {
 	ent->client->pers.inventory[item->id]--;
-	ent->client->pu_time_rebreather = max(level.time, ent->client->pu_time_rebreather) + 45_sec;
+	ent->client->pu_time_rebreather = max(level.time, ent->client->pu_time_rebreather) + (ruleset->integer == 1 ? 45_sec : 30_sec);
 }
 
 //======================================================================
@@ -2046,14 +2060,36 @@ void G_CheckAutoSwitch(edict_t *ent, gitem_t *item, bool is_new) {
 	else if ((item->flags & IF_AMMO) && ent->client->pers.autoswitch == auto_switch_t::ALWAYS_NO_AMMO)
 		return;
 	else if (ent->client->pers.autoswitch == auto_switch_t::SMART) {
-		bool using_blaster = ent->client->pers.weapon && ent->client->pers.weapon->id == IT_WEAPON_BLASTER;
-
 		// smartness algorithm: in DM, we will always switch if we have the blaster out
 		// otherwise leave our active weapon alone
-		if (deathmatch->integer && !using_blaster)
-			return;
+		if (deathmatch->integer) {
+			// muff mode: make it smarter!
+			// switch to better weapons
+			if (ent->client->pers.weapon) {
+				switch (ent->client->pers.weapon->id) {
+				case IT_WEAPON_BLASTER:
+					// should never auto switch to chainfist
+					if (item->id == IT_WEAPON_CHAINFIST)
+						return;
+					break;
+				case IT_WEAPON_SHOTGUN:
+					// switch only to SSG
+					if (item->id != IT_WEAPON_SSHOTGUN) 
+						return;
+					break;
+				case IT_WEAPON_MACHINEGUN:
+					// switch only to CG
+					if (item->id != IT_WEAPON_CHAINGUN) 
+						return;
+					break;
+				default:
+					// otherwise don't switch!
+					return;
+				}
+			}
+		}
 		// in SP, only switch if it's a new weapon, or we have the blaster out
-		else if (!deathmatch->integer && !using_blaster && !is_new)
+		else if (!deathmatch->integer && !(ent->client->pers.weapon && ent->client->pers.weapon->id == IT_WEAPON_BLASTER) && !is_new)
 			return;
 	}
 
@@ -2062,8 +2098,7 @@ void G_CheckAutoSwitch(edict_t *ent, gitem_t *item, bool is_new) {
 }
 
 static bool Pickup_Ammo(edict_t *ent, edict_t *other) {
-	int	 oldcount;
-	int	 count;
+	int	 count, oldcount;
 	bool weapon;
 
 	weapon = !!(ent->item->flags & IF_WEAPON);
@@ -2071,8 +2106,13 @@ static bool Pickup_Ammo(edict_t *ent, edict_t *other) {
 		count = AMMO_INFINITE;
 	else if (ent->count)
 		count = ent->count;
-	else
+	else {
 		count = ent->item->quantity;
+
+		if (ent->item->id == IT_AMMO_SLUGS)
+			if (ruleset->integer != 1)
+				count *= 2;
+	}
 
 	oldcount = other->client->pers.inventory[ent->item->id];
 
@@ -2114,7 +2154,7 @@ static void Drop_Ammo(edict_t *ent, gitem_t *item) {
 
 //======================================================================
 
-static THINK(MegaHealth_think) (edict_t *self) -> void {
+THINK(MegaHealth_think) (edict_t *self) -> void {
 	int32_t health = self->max_health;
 	if (health < self->owner->max_health)
 		health = self->owner->max_health;
@@ -2359,7 +2399,7 @@ TOUCH(Touch_Item) (edict_t *ent, edict_t *other, const trace_t &tr, bool other_t
 	}
 
 	// can't pickup during match countdown
-	if (level.match_state == MATCH_COUNTDOWN)
+	if (IsCombatDisabled())
 		return;
 
 	taken = ent->item->pickup(ent, other);
@@ -2544,9 +2584,6 @@ previously 'droptofloor'
 ================
 */
 static THINK(FinishSpawningItem) (edict_t *ent) -> void {
-	trace_t tr;
-	vec3_t	dest;
-
 	// [Paril-KEX] scale foodcube based on how much we ingested
 	if (strcmp(ent->classname, "item_foodcube") == 0) {
 		ent->mins = vec3_t{ -8, -8, -8 } *ent->s.scale;
@@ -2560,25 +2597,31 @@ static THINK(FinishSpawningItem) (edict_t *ent) -> void {
 		gi.setmodel(ent, ent->model);
 	else
 		gi.setmodel(ent, ent->item->world_model);
+
 	ent->solid = SOLID_TRIGGER;
-	ent->movetype = MOVETYPE_TOSS;
 	ent->touch = Touch_Item;
 
-	dest = ent->s.origin + vec3_t{ 0, 0, -128 };
+	if (ent->spawnflags.has(SPAWNFLAG_ITEM_SUSPENDED)) {
+		ent->movetype = MOVETYPE_NONE;
+	} else {
+		ent->movetype = MOVETYPE_TOSS;
 
-	tr = gi.trace(ent->s.origin, ent->mins, ent->maxs, dest, ent, MASK_SOLID);
-	if (tr.startsolid) {
-		if (G_FixStuckObject(ent, ent->s.origin) == stuck_result_t::NO_GOOD_POSITION) {
-			if (strcmp(ent->classname, "item_foodcube") == 0)
-				ent->velocity[2] = 0;
-			else {
-				gi.Com_PrintFmt("{}: {}: startsolid\n", __FUNCTION__, *ent);
-				G_FreeEdict(ent);
-				return;
+		vec3_t	dest = ent->s.origin + vec3_t{ 0, 0, -4096 };
+		trace_t tr = gi.trace(ent->s.origin, ent->mins, ent->maxs, dest, ent, MASK_SOLID);
+		
+		if (tr.startsolid) {
+			if (G_FixStuckObject(ent, ent->s.origin) == stuck_result_t::NO_GOOD_POSITION) {
+				if (strcmp(ent->classname, "item_foodcube") == 0)
+					ent->velocity[2] = 0;
+				else {
+					gi.Com_PrintFmt("{}: {}: startsolid\n", __FUNCTION__, *ent);
+					G_FreeEdict(ent);
+					return;
+				}
 			}
-		}
-	} else
-		ent->s.origin = tr.endpos;
+		} else
+			ent->s.origin = tr.endpos;
+	}
 
 	if (ent->team) {
 		ent->flags &= ~FL_TEAMSLAVE;
@@ -2587,12 +2630,12 @@ static THINK(FinishSpawningItem) (edict_t *ent) -> void {
 
 		ent->svflags |= SVF_NOCLIENT;
 		ent->solid = SOLID_NOT;
-	//
+	/*
 		if (ent == ent->teammaster) {
 			ent->nextthink = level.time + 10_hz;
 			ent->think = RespawnItem;
 		}
-	//
+	*/
 	}
 
 	if (ent->spawnflags.has(SPAWNFLAG_ITEM_NO_TOUCH)) {
@@ -2816,8 +2859,7 @@ static USE(Item_TriggeredSpawn) (edict_t *self, edict_t *other, edict_t *activat
 	if (self->item->id != IT_KEY_POWER_CUBE && self->item->id != IT_KEY_EXPLOSIVE_CHARGES) // leave them be on key_power_cube
 		self->spawnflags &= SPAWNFLAG_ITEM_NO_TOUCH;
 
-	if (!self->spawnflags.has(SPAWNFLAG_ITEM_SUSPENDED))
-		FinishSpawningItem(self);
+	FinishSpawningItem(self);
 }
 
 /*
@@ -2914,12 +2956,8 @@ bool SpawnItem(edict_t *ent, gitem_t *item) {
 	if (item->flags & IF_WEAPON && item->id >= FIRST_WEAPON)
 		level.weapon_count[item->id - FIRST_WEAPON]++;
 
-	if (item->flags & IF_POWERUP) {
-		bool enable = !!(g_dm_powerups_minplayers->integer && (level.num_playing_clients >= g_dm_powerups_minplayers->integer));
-		if (enable) {
-			ent->s.renderfx &= ~(RF_SHELL_RED | RF_SHELL_GREEN | RF_SHELL_BLUE);
-			ent->s.effects &= ~EF_COLOR_SHELL;
-		} else {
+	if (item->flags & IF_POWERUP && g_dm_powerups_minplayers->integer > 0) {
+		if (level.num_playing_clients < g_dm_powerups_minplayers->integer) {
 			ent->s.renderfx |= (RF_SHELL_RED | RF_SHELL_GREEN | RF_SHELL_BLUE);
 			ent->s.effects |= EF_COLOR_SHELL;
 		}
@@ -2928,43 +2966,19 @@ bool SpawnItem(edict_t *ent, gitem_t *item) {
 	if (!g_item_bobbing->integer)
 		ent->s.effects &= ~EF_BOB;
 
+	if (item->id == IT_FOODCUBE) {
+		// Paril: set pickup noise for foodcube based on amount
+		if (ent->count < 10)
+			ent->noise_index = gi.soundindex("items/s_health.wav");
+		else if (ent->count < 25)
+			ent->noise_index = gi.soundindex("items/n_health.wav");
+		else if (ent->count < 50)
+			ent->noise_index = gi.soundindex("items/l_health.wav");
+		else
+			ent->noise_index = gi.soundindex("items/m_health.wav");
+	}
+
 	return true;
-}
-
-/*
-============
-DelayPowerup
-
-============
-*/
-static THINK(DelayPowerup_Think) (edict_t *ent) -> void {
-	if (!SpawnItem(ent, ent->item))
-		return;
-
-	ent->svflags &= ~SVF_NOCLIENT;
-	ent->svflags &= ~SVF_RESPAWNING;
-	ent->solid = SOLID_TRIGGER;
-	gi.linkentity(ent);
-
-	// send an effect
-	ent->s.event = EV_ITEM_RESPAWN;
-
-	bool enable = !!(g_dm_powerups_minplayers->integer && (level.num_playing_clients >= g_dm_powerups_minplayers->integer));
-	if (enable) {
-		ent->s.renderfx &= ~(RF_SHELL_RED | RF_SHELL_GREEN | RF_SHELL_BLUE);
-		ent->s.effects &= ~EF_COLOR_SHELL;
-	} else {
-		ent->s.renderfx |= (RF_SHELL_RED | RF_SHELL_GREEN | RF_SHELL_BLUE);
-		ent->s.effects |= EF_COLOR_SHELL;
-	}
-
-	if (g_dm_powerups_style->integer && deathmatch->integer) {
-		if (ent->item->flags & IF_POWERUP) {
-			gi.LocBroadcast_Print(PRINT_HIGH, "{} has spawned!\n", ent->item->pickup_name);
-
-			gi.sound(ent, CHAN_RELIABLE | CHAN_NO_PHS_ADD | CHAN_AUX, gi.soundindex("misc/alarm.wav"), 1, ATTN_NONE, 0);
-		}
-	}
 }
 
 void P_ToggleFlashlight(edict_t *ent, bool state) {
@@ -3113,7 +3127,7 @@ gitem_t	itemlist[] =
 	// ARMOR
 	//
 
-/*QUAKED item_armor_body (.3 .3 1) (-16 -16 -16) (16 16 16)
+/*QUAKED item_armor_body (.3 .3 1) (-16 -16 -16) (16 16 16) TRIGGER_SPAWN x x SUSPENDED x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
 -------- MODEL FOR RADIANT ONLY - DO NOT SET THIS AS A KEY --------
 model="models/items/armor/body/tris.md2"
 */
@@ -3140,7 +3154,7 @@ model="models/items/armor/body/tris.md2"
 		/* armor_info */ &bodyarmor_info
 	},
 
-/*QUAKED item_armor_combat (.3 .3 1) (-16 -16 -16) (16 16 16)
+/*QUAKED item_armor_combat (.3 .3 1) (-16 -16 -16) (16 16 16) TRIGGER_SPAWN x x SUSPENDED x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
 */
 	{
 		/* id */ IT_ARMOR_COMBAT,
@@ -3165,7 +3179,7 @@ model="models/items/armor/body/tris.md2"
 		/* armor_info */ &combatarmor_info
 	},
 
-/*QUAKED item_armor_jacket (.3 .3 1) (-16 -16 -16) (16 16 16)
+/*QUAKED item_armor_jacket (.3 .3 1) (-16 -16 -16) (16 16 16) TRIGGER_SPAWN x x SUSPENDED x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
 */
 	{
 		/* id */ IT_ARMOR_JACKET,
@@ -3190,7 +3204,7 @@ model="models/items/armor/body/tris.md2"
 		/* armor_info */ &jacketarmor_info
 	},
 
-/*QUAKED item_armor_shard (.3 .3 1) (-16 -16 -16) (16 16 16)
+/*QUAKED item_armor_shard (.3 .3 1) (-16 -16 -16) (16 16 16) TRIGGER_SPAWN x x SUSPENDED x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
 */
 	{
 		/* id */ IT_ARMOR_SHARD,
@@ -3213,7 +3227,7 @@ model="models/items/armor/body/tris.md2"
 		/* flags */ IF_ARMOR
 	},
 
-/*QUAKED item_power_screen (.3 .3 1) (-16 -16 -16) (16 16 16)
+/*QUAKED item_power_screen (.3 .3 1) (-16 -16 -16) (16 16 16) TRIGGER_SPAWN x x SUSPENDED x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
 */
 	{
 		/* id */ IT_POWER_SCREEN,
@@ -3240,7 +3254,7 @@ model="models/items/armor/body/tris.md2"
 		/* precaches */ "misc/power2.wav misc/power1.wav"
 	},
 
-/*QUAKED item_power_shield (.3 .3 1) (-16 -16 -16) (16 16 16)
+/*QUAKED item_power_shield (.3 .3 1) (-16 -16 -16) (16 16 16) TRIGGER_SPAWN x x SUSPENDED x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
 */
 	{
 		/* id */ IT_POWER_SHIELD,
@@ -3271,19 +3285,18 @@ model="models/items/armor/body/tris.md2"
 	// WEAPONS 
 	//
 
-/* weapon_grapple (.3 .3 1) (-16 -16 -16) (16 16 16)
-always owned, never in the world
+/* weapon_grapple (.3 .3 1) (-16 -16 -16) (16 16 16) TRIGGER_SPAWN x x SUSPENDED x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
 */
 	{
 		/* id */ IT_WEAPON_GRAPPLE,
 		/* classname */ "weapon_grapple",
-		/* pickup */ nullptr,
+		/* pickup */ Pickup_Weapon,
 		/* use */ Use_Weapon,
-		/* drop */ nullptr,
+		/* drop */ Drop_Weapon,
 		/* weaponthink */ Weapon_Grapple,
-		/* pickup_sound */ nullptr,
-		/* world_model */ nullptr,
-		/* world_model_flags */ EF_NONE,
+		/* pickup_sound */ "misc/w_pkup.wav",
+		/* world_model */ "models/weapons/g_flareg/tris.md2",
+		/* world_model_flags */ EF_ROTATE | EF_BOB,
 		/* view_model */ "models/weapons/grapple/tris.md2",
 		/* icon */ "w_grapple",
 		/* use_name */  "Grapple",
@@ -3299,15 +3312,14 @@ always owned, never in the world
 		/* precaches */ "weapons/grapple/grfire.wav weapons/grapple/grpull.wav weapons/grapple/grhang.wav weapons/grapple/grreset.wav weapons/grapple/grhit.wav weapons/grapple/grfly.wav"
 	},
 
-/* weapon_blaster (.3 .3 1) (-16 -16 -16) (16 16 16)
-always owned, never in the world
+/* weapon_blaster (.3 .3 1) (-16 -16 -16) (16 16 16) TRIGGER_SPAWN x x SUSPENDED x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
 */
 	{
 		/* id */ IT_WEAPON_BLASTER,
 		/* classname */ "weapon_blaster",
 		/* pickup */ Pickup_Weapon,
 		/* use */ Use_Weapon,
-		/* drop */ nullptr,
+		/* drop */ Drop_Weapon,
 		/* weaponthink */ Weapon_Blaster,
 		/* pickup_sound */ "misc/w_pkup.wav",
 		/* world_model */ "models/weapons/g_blast/tris.md2",
@@ -3327,7 +3339,7 @@ always owned, never in the world
 		/* precaches */ "weapons/blastf1a.wav misc/lasfly.wav"
 	},
 
-/*QUAKED weapon_chainfist (.3 .3 1) (-16 -16 -16) (16 16 16) TRIGGER_SPAWN
+/*QUAKED weapon_chainfist (.3 .3 1) (-16 -16 -16) (16 16 16) TRIGGER_SPAWN x x SUSPENDED x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
 */
 	{
 		/* id */ IT_WEAPON_CHAINFIST,
@@ -3354,7 +3366,7 @@ always owned, never in the world
 		/* precaches */ "weapons/sawidle.wav weapons/sawhit.wav weapons/sawslice.wav",
 	},
 
-/*QUAKED weapon_shotgun (.3 .3 1) (-16 -16 -16) (16 16 16)
+/*QUAKED weapon_shotgun (.3 .3 1) (-16 -16 -16) (16 16 16) TRIGGER_SPAWN x x SUSPENDED x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
 -------- MODEL FOR RADIANT ONLY - DO NOT SET THIS AS A KEY --------
 model="models/weapons/g_shotg/tris.md2"
 */
@@ -3383,7 +3395,7 @@ model="models/weapons/g_shotg/tris.md2"
 		/* precaches */ "weapons/shotgf1b.wav weapons/shotgr1b.wav"
 	},
 
-/*QUAKED weapon_supershotgun (.3 .3 1) (-16 -16 -16) (16 16 16)
+/*QUAKED weapon_supershotgun (.3 .3 1) (-16 -16 -16) (16 16 16) TRIGGER_SPAWN x x SUSPENDED x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
 */
 	{
 		/* id */ IT_WEAPON_SSHOTGUN,
@@ -3412,7 +3424,7 @@ model="models/weapons/g_shotg/tris.md2"
 		/* quantity_warn */ 10
 	},
 
-/*QUAKED weapon_machinegun (.3 .3 1) (-16 -16 -16) (16 16 16)
+/*QUAKED weapon_machinegun (.3 .3 1) (-16 -16 -16) (16 16 16) TRIGGER_SPAWN x x SUSPENDED x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
 */
 	{
 		/* id */ IT_WEAPON_MACHINEGUN,
@@ -3441,7 +3453,7 @@ model="models/weapons/g_shotg/tris.md2"
 		/* quantity_warn */ 30
 	},
 
-/*QUAKED weapon_etf_rifle (.3 .3 1) (-16 -16 -16) (16 16 16) TRIGGER_SPAWN
+/*QUAKED weapon_etf_rifle (.3 .3 1) (-16 -16 -16) (16 16 16) TRIGGER_SPAWN x x SUSPENDED x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
 */
 	{
 		/* id */ IT_WEAPON_ETF_RIFLE,
@@ -3470,7 +3482,7 @@ model="models/weapons/g_shotg/tris.md2"
 		/* quantity_warn */ 30
 	},
 
-/*QUAKED weapon_chaingun (.3 .3 1) (-16 -16 -16) (16 16 16)
+/*QUAKED weapon_chaingun (.3 .3 1) (-16 -16 -16) (16 16 16) TRIGGER_SPAWN x x SUSPENDED x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
 */
 	{
 		/* id */ IT_WEAPON_CHAINGUN,
@@ -3499,7 +3511,7 @@ model="models/weapons/g_shotg/tris.md2"
 		/* quantity_warn */ 60
 	},
 
-/*QUAKED ammo_grenades (.3 .3 1) (-16 -16 -16) (16 16 16)
+/*QUAKED ammo_grenades (.3 .3 1) (-16 -16 -16) (16 16 16) TRIGGER_SPAWN x x SUSPENDED x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
 */
 	{
 		/* id */ IT_AMMO_GRENADES,
@@ -3528,7 +3540,7 @@ model="models/weapons/g_shotg/tris.md2"
 		/* quantity_warn */ 2
 	},
 
-/*QUAKED ammo_trap (.3 .3 1) (-16 -16 -16) (16 16 16)
+/*QUAKED ammo_trap (.3 .3 1) (-16 -16 -16) (16 16 16) TRIGGER_SPAWN x x SUSPENDED x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
 */
 	{
 		/* id */ IT_AMMO_TRAP,
@@ -3557,7 +3569,7 @@ model="models/weapons/g_shotg/tris.md2"
 		/* quantity_warn */ 1
 	},
 
-/*QUAKED ammo_tesla (.3 .3 1) (-16 -16 -16) (16 16 16) TRIGGER_SPAWN
+/*QUAKED ammo_tesla (.3 .3 1) (-16 -16 -16) (16 16 16) TRIGGER_SPAWN x x SUSPENDED x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
 */
 	{
 		/* id */ IT_AMMO_TESLA,
@@ -3586,7 +3598,7 @@ model="models/weapons/g_shotg/tris.md2"
 		/* quantity_warn */ 1
 	},
 
-/*QUAKED weapon_grenadelauncher (.3 .3 1) (-16 -16 -16) (16 16 16)
+/*QUAKED weapon_grenadelauncher (.3 .3 1) (-16 -16 -16) (16 16 16) TRIGGER_SPAWN x x SUSPENDED x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
 -------- MODEL FOR RADIANT ONLY - DO NOT SET THIS AS A KEY --------
 model="models/weapons/g_launch/tris.md2"
 */
@@ -3615,7 +3627,7 @@ model="models/weapons/g_launch/tris.md2"
 		/* precaches */ "models/objects/grenade4/tris.md2 weapons/grenlf1a.wav weapons/grenlr1b.wav weapons/grenlb1b.wav"
 	},
 
-/*QUAKED weapon_proxlauncher (.3 .3 1) (-16 -16 -16) (16 16 16) TRIGGER_SPAWN
+/*QUAKED weapon_proxlauncher (.3 .3 1) (-16 -16 -16) (16 16 16) TRIGGER_SPAWN x x SUSPENDED x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
 */
 	{
 		/* id */ IT_WEAPON_PROXLAUNCHER,
@@ -3642,7 +3654,7 @@ model="models/weapons/g_launch/tris.md2"
 		/* precaches */ "weapons/grenlf1a.wav weapons/grenlr1b.wav weapons/grenlb1b.wav weapons/proxwarn.wav weapons/proxopen.wav",
 	},
 
-/*QUAKED weapon_rocketlauncher (.3 .3 1) (-16 -16 -16) (16 16 16)
+/*QUAKED weapon_rocketlauncher (.3 .3 1) (-16 -16 -16) (16 16 16) TRIGGER_SPAWN x x SUSPENDED x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
 */
 	{
 		/* id */ IT_WEAPON_RLAUNCHER,
@@ -3669,7 +3681,7 @@ model="models/weapons/g_launch/tris.md2"
 		/* precaches */ "models/objects/rocket/tris.md2 weapons/rockfly.wav weapons/rocklf1a.wav weapons/rocklr1b.wav models/objects/debris2/tris.md2"
 	},
 
-/*QUAKED weapon_hyperblaster (.3 .3 1) (-16 -16 -16) (16 16 16)
+/*QUAKED weapon_hyperblaster (.3 .3 1) (-16 -16 -16) (16 16 16) TRIGGER_SPAWN x x SUSPENDED x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
 */
 	{
 		/* id */ IT_WEAPON_HYPERBLASTER,
@@ -3698,7 +3710,7 @@ model="models/weapons/g_launch/tris.md2"
 		/* quantity_warn */ 30
 	},
 
-/*QUAKED weapon_boomer (.3 .3 1) (-16 -16 -16) (16 16 16)
+/*QUAKED weapon_boomer (.3 .3 1) (-16 -16 -16) (16 16 16) TRIGGER_SPAWN x x SUSPENDED x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
 */
 	{
 		/* id */ IT_WEAPON_IONRIPPER,
@@ -3727,7 +3739,7 @@ model="models/weapons/g_launch/tris.md2"
 		/* quantity_warn */ 30
 	},
 
-/*QUAKED weapon_plasmabeam (.3 .3 1) (-16 -16 -16) (16 16 16) TRIGGER_SPAWN
+/*QUAKED weapon_plasmabeam (.3 .3 1) (-16 -16 -16) (16 16 16) TRIGGER_SPAWN x x SUSPENDED x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
 */
 	{
 		/* id */ IT_WEAPON_PLASMABEAM,
@@ -3756,7 +3768,7 @@ model="models/weapons/g_launch/tris.md2"
 		/* quantity_warn */ 50
 	},
 
-/*QUAKED weapon_railgun (.3 .3 1) (-16 -16 -16) (16 16 16)
+/*QUAKED weapon_railgun (.3 .3 1) (-16 -16 -16) (16 16 16) TRIGGER_SPAWN x x SUSPENDED x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
 */
 	{
 		/* id */ IT_WEAPON_RAILGUN,
@@ -3783,7 +3795,7 @@ model="models/weapons/g_launch/tris.md2"
 		/* precaches */ "weapons/rg_hum.wav"
 	},
 
-/*QUAKED weapon_phalanx (.3 .3 1) (-16 -16 -16) (16 16 16)
+/*QUAKED weapon_phalanx (.3 .3 1) (-16 -16 -16) (16 16 16) TRIGGER_SPAWN x x SUSPENDED x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
 */
 	{
 		/* id */ IT_WEAPON_PHALANX,
@@ -3810,7 +3822,7 @@ model="models/weapons/g_launch/tris.md2"
 		/* precaches */ "weapons/plasshot.wav sprites/s_photon.sp2 weapons/rockfly.wav"
 	},
 
-/*QUAKED weapon_bfg (.3 .3 1) (-16 -16 -16) (16 16 16)
+/*QUAKED weapon_bfg (.3 .3 1) (-16 -16 -16) (16 16 16) TRIGGER_SPAWN x x SUSPENDED x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
 */
 	{
 		/* id */ IT_WEAPON_BFG,
@@ -3839,7 +3851,7 @@ model="models/weapons/g_launch/tris.md2"
 		/* quantity_warn */ 50
 	},
 
-/*QUAKED weapon_disintegrator (.3 .3 1) (-16 -16 -16) (16 16 16) TRIGGER_SPAWN
+/*QUAKED weapon_disintegrator (.3 .3 1) (-16 -16 -16) (16 16 16) TRIGGER_SPAWN x x SUSPENDED x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
 */
 	{
 		/* id */ IT_WEAPON_DISRUPTOR,
@@ -3870,7 +3882,7 @@ model="models/weapons/g_launch/tris.md2"
 	// AMMO ITEMS
 	//
 
-/*QUAKED ammo_shells (.3 .3 1) (-16 -16 -16) (16 16 16)
+/*QUAKED ammo_shells (.3 .3 1) (-16 -16 -16) (16 16 16) TRIGGER_SPAWN x x SUSPENDED x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
 model="models/items/ammo/shells/medium/tris.md2"
 */
 	{
@@ -3897,7 +3909,7 @@ model="models/items/ammo/shells/medium/tris.md2"
 		/* tag */ AMMO_SHELLS
 	},
 
-/*QUAKED ammo_bullets (.3 .3 1) (-16 -16 -16) (16 16 16)
+/*QUAKED ammo_bullets (.3 .3 1) (-16 -16 -16) (16 16 16) TRIGGER_SPAWN x x SUSPENDED x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
 model="models/items/ammo/bullets/medium/tris.md2"
 */
 	{
@@ -3924,7 +3936,7 @@ model="models/items/ammo/bullets/medium/tris.md2"
 		/* tag */ AMMO_BULLETS
 	},
 
-/*QUAKED ammo_cells (.3 .3 1) (-16 -16 -16) (16 16 16)
+/*QUAKED ammo_cells (.3 .3 1) (-16 -16 -16) (16 16 16) TRIGGER_SPAWN x x SUSPENDED x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
 model="models/items/ammo/cells/medium/tris.md2"
 */
 	{
@@ -3951,7 +3963,7 @@ model="models/items/ammo/cells/medium/tris.md2"
 		/* tag */ AMMO_CELLS
 	},
 
-/*QUAKED ammo_rockets (.3 .3 1) (-16 -16 -16) (16 16 16)
+/*QUAKED ammo_rockets (.3 .3 1) (-16 -16 -16) (16 16 16) TRIGGER_SPAWN x x SUSPENDED x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
 model="models/items/ammo/rockets/medium/tris.md2"
 */
 	{
@@ -3978,7 +3990,7 @@ model="models/items/ammo/rockets/medium/tris.md2"
 		/* tag */ AMMO_ROCKETS
 	},
 
-/*QUAKED ammo_slugs (.3 .3 1) (-16 -16 -16) (16 16 16)
+/*QUAKED ammo_slugs (.3 .3 1) (-16 -16 -16) (16 16 16) TRIGGER_SPAWN x x SUSPENDED x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
 model="models/items/ammo/slugs/medium/tris.md2"
 */
 	{
@@ -4005,7 +4017,7 @@ model="models/items/ammo/slugs/medium/tris.md2"
 		/* tag */ AMMO_SLUGS
 	},
 
-/*QUAKED ammo_magslug (.3 .3 1) (-16 -16 -16) (16 16 16)
+/*QUAKED ammo_magslug (.3 .3 1) (-16 -16 -16) (16 16 16) TRIGGER_SPAWN x x SUSPENDED x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
 model="models/objects/ammo/tris.md2"
 */
 	{
@@ -4032,7 +4044,7 @@ model="models/objects/ammo/tris.md2"
 		/* tag */ AMMO_MAGSLUG
 	},
 
-/*QUAKED ammo_flechettes (.3 .3 1) (-16 -16 -16) (16 16 16) TRIGGER_SPAWN
+/*QUAKED ammo_flechettes (.3 .3 1) (-16 -16 -16) (16 16 16) TRIGGER_SPAWN x x SUSPENDED x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
 model="models/ammo/am_flechette/tris.md2"
 */
 	{
@@ -4059,7 +4071,7 @@ model="models/ammo/am_flechette/tris.md2"
 		/* tag */ AMMO_FLECHETTES
 	},
 
-/*QUAKED ammo_prox (.3 .3 1) (-16 -16 -16) (16 16 16) TRIGGER_SPAWN
+/*QUAKED ammo_prox (.3 .3 1) (-16 -16 -16) (16 16 16) TRIGGER_SPAWN x x SUSPENDED x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
 model="models/ammo/am_prox/tris.md2"
 */
 	{
@@ -4087,7 +4099,7 @@ model="models/ammo/am_prox/tris.md2"
 		/* precaches */ "models/weapons/g_prox/tris.md2 weapons/proxwarn.wav"
 	},
 
-/*QUAKED ammo_nuke (.3 .3 1) (-16 -16 -16) (16 16 16) TRIGGER_SPAWN
+/*QUAKED ammo_nuke (.3 .3 1) (-16 -16 -16) (16 16 16) TRIGGER_SPAWN x x SUSPENDED x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
 model="models/ammo/g_nuke/tris.md2"
 */
 	{
@@ -4115,7 +4127,7 @@ model="models/ammo/g_nuke/tris.md2"
 		/* precaches */ "weapons/nukewarn2.wav world/rumble.wav"
 	},
 
-/*QUAKED ammo_disruptor (.3 .3 1) (-16 -16 -16) (16 16 16) TRIGGER_SPAWN
+/*QUAKED ammo_disruptor (.3 .3 1) (-16 -16 -16) (16 16 16) TRIGGER_SPAWN x x SUSPENDED x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
 model="models/ammo/am_disr/tris.md2"
 */
 	{
@@ -4145,7 +4157,7 @@ model="models/ammo/am_disr/tris.md2"
 //
 // POWERUP ITEMS
 //
-/*QUAKED item_quad (.3 .3 1) (-16 -16 -16) (16 16 16)
+/*QUAKED item_quad (.3 .3 1) (-16 -16 -16) (16 16 16) TRIGGER_SPAWN x x SUSPENDED x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
 model="models/items/quaddama/tris.md2"
 */
 	{
@@ -4173,7 +4185,7 @@ model="models/items/quaddama/tris.md2"
 		/* precaches */ "items/damage.wav items/damage2.wav items/damage3.wav ctf/tech2x.wav"
 	},
 
-/*QUAKED item_quadfire (.3 .3 1) (-16 -16 -16) (16 16 16)
+/*QUAKED item_quadfire (.3 .3 1) (-16 -16 -16) (16 16 16) TRIGGER_SPAWN x x SUSPENDED x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
 model="models/items/quadfire/tris.md2"
 */
 	{
@@ -4201,7 +4213,7 @@ model="models/items/quadfire/tris.md2"
 		/* precaches */ "items/quadfire1.wav items/quadfire2.wav items/quadfire3.wav"
 	},
 
-/*QUAKED item_invulnerability (.3 .3 1) (-16 -16 -16) (16 16 16)
+/*QUAKED item_invulnerability (.3 .3 1) (-16 -16 -16) (16 16 16) TRIGGER_SPAWN x x SUSPENDED x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
 model="models/items/invulner/tris.md2"
 */
 	{
@@ -4229,7 +4241,7 @@ model="models/items/invulner/tris.md2"
 		/* precaches */ "items/protect.wav items/protect2.wav items/protect4.wav"
 	},
 
-/*QUAKED item_invisibility (.3 .3 1) (-16 -16 -16) (16 16 16)
+/*QUAKED item_invisibility (.3 .3 1) (-16 -16 -16) (16 16 16) TRIGGER_SPAWN x x SUSPENDED x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
 model="models/items/cloaker/tris.md2"
 */
 	{
@@ -4256,7 +4268,7 @@ model="models/items/cloaker/tris.md2"
 		/* tag */ POWERUP_INVISIBILITY,
 	},
 
-/*QUAKED item_silencer (.3 .3 1) (-16 -16 -16) (16 16 16)
+/*QUAKED item_silencer (.3 .3 1) (-16 -16 -16) (16 16 16) TRIGGER_SPAWN x x SUSPENDED x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
 model="models/items/silencer/tris.md2"
 */
 	{
@@ -4283,7 +4295,7 @@ model="models/items/silencer/tris.md2"
 		/* tag */ POWERUP_SILENCER,
 	},
 
-/*QUAKED item_breather (.3 .3 1) (-16 -16 -16) (16 16 16)
+/*QUAKED item_breather (.3 .3 1) (-16 -16 -16) (16 16 16) TRIGGER_SPAWN x x SUSPENDED x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
 model="models/items/breather/tris.md2"
 */
 	{
@@ -4311,7 +4323,7 @@ model="models/items/breather/tris.md2"
 		/* precaches */ "items/airout.wav"
 	},
 
-/*QUAKED item_enviro (.3 .3 1) (-16 -16 -16) (16 16 16)
+/*QUAKED item_enviro (.3 .3 1) (-16 -16 -16) (16 16 16) TRIGGER_SPAWN x x SUSPENDED x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
 model="models/items/enviro/tris.md2"
 */
 	{
@@ -4339,7 +4351,7 @@ model="models/items/enviro/tris.md2"
 		/* precaches */ "items/airout.wav"
 	},
 
-/*QUAKED item_ancient_head (.3 .3 1) (-16 -16 -16) (16 16 16)
+/*QUAKED item_ancient_head (.3 .3 1) (-16 -16 -16) (16 16 16) TRIGGER_SPAWN x x SUSPENDED x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
 Special item that gives +2 to maximum health
 model="models/items/c_head/tris.md2"
 */
@@ -4364,7 +4376,7 @@ model="models/items/c_head/tris.md2"
 		/* flags */ IF_HEALTH | IF_NOT_RANDOM,
 	},
 
-/*QUAKED item_legacy_head (.3 .3 1) (-16 -16 -16) (16 16 16)
+/*QUAKED item_legacy_head (.3 .3 1) (-16 -16 -16) (16 16 16) TRIGGER_SPAWN x x SUSPENDED x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
 Special item that gives +5 to maximum health.
 model="models/items/legacyhead/tris.md2"
 */
@@ -4389,7 +4401,7 @@ model="models/items/legacyhead/tris.md2"
 		/* flags */ IF_HEALTH | IF_NOT_RANDOM,
 	},
 
-/*QUAKED item_adrenaline (.3 .3 1) (-16 -16 -16) (16 16 16)
+/*QUAKED item_adrenaline (.3 .3 1) (-16 -16 -16) (16 16 16) TRIGGER_SPAWN x x SUSPENDED x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
 Gives +1 to maximum health, +5 in deathmatch.
 model="models/items/adrenal/tris.md2"
 */
@@ -4418,7 +4430,7 @@ model="models/items/adrenal/tris.md2"
 		/* precache */ "items/n_health.wav"
 	},
 
-/*QUAKED item_bandolier (.3 .3 1) (-16 -16 -16) (16 16 16)
+/*QUAKED item_bandolier (.3 .3 1) (-16 -16 -16) (16 16 16) TRIGGER_SPAWN x x SUSPENDED x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
 model="models/items/band/tris.md2"
 */
 	{
@@ -4442,7 +4454,7 @@ model="models/items/band/tris.md2"
 		/* flags */ IF_TIMED
 	},
 
-/*QUAKED item_pack (.3 .3 1) (-16 -16 -16) (16 16 16)
+/*QUAKED item_pack (.3 .3 1) (-16 -16 -16) (16 16 16) TRIGGER_SPAWN x x SUSPENDED x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
 model="models/items/pack/tris.md2"
 */
 	{
@@ -4466,7 +4478,7 @@ model="models/items/pack/tris.md2"
 		/* flags */ IF_TIMED
 	},
 
-/*QUAKED item_ir_goggles (.3 .3 1) (-16 -16 -16) (16 16 16) TRIGGER_SPAWN
+/*QUAKED item_ir_goggles (.3 .3 1) (-16 -16 -16) (16 16 16) TRIGGER_SPAWN x x SUSPENDED x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
 Gives +1 to maximum health.
 model="models/items/goggles/tris.md2"
 */
@@ -4495,7 +4507,7 @@ model="models/items/goggles/tris.md2"
 		/* precaches */ "misc/ir_start.wav"
 	},
 
-/*QUAKED item_double (.3 .3 1) (-16 -16 -16) (16 16 16) TRIGGER_SPAWN
+/*QUAKED item_double (.3 .3 1) (-16 -16 -16) (16 16 16) TRIGGER_SPAWN x x SUSPENDED x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
 model="models/items/ddamage/tris.md2"
 */
 	{
@@ -4523,7 +4535,7 @@ model="models/items/ddamage/tris.md2"
 		/* precaches */ "misc/ddamage1.wav misc/ddamage2.wav misc/ddamage3.wav ctf/tech2x.wav"
 	},
 
-/*QUAKED item_sphere_vengeance (.3 .3 1) (-16 -16 -16) (16 16 16) TRIGGER_SPAWN
+/*QUAKED item_sphere_vengeance (.3 .3 1) (-16 -16 -16) (16 16 16) TRIGGER_SPAWN x x SUSPENDED x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
 model="models/items/vengnce/tris.md2"
 */
 	{
@@ -4551,7 +4563,7 @@ model="models/items/vengnce/tris.md2"
 		/* precaches */ "spheres/v_idle.wav"
 	},
 
-/*QUAKED item_sphere_hunter (.3 .3 1) (-16 -16 -16) (16 16 16) TRIGGER_SPAWN
+/*QUAKED item_sphere_hunter (.3 .3 1) (-16 -16 -16) (16 16 16) TRIGGER_SPAWN x x SUSPENDED x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
 model="models/items/hunter/tris.md2"
 */
 	{
@@ -4579,7 +4591,7 @@ model="models/items/hunter/tris.md2"
 		/* precaches */ "spheres/h_idle.wav spheres/h_active.wav spheres/h_lurk.wav"
 	},
 
-/*QUAKED item_sphere_defender (.3 .3 1) (-16 -16 -16) (16 16 16) TRIGGER_SPAWN
+/*QUAKED item_sphere_defender (.3 .3 1) (-16 -16 -16) (16 16 16) TRIGGER_SPAWN x x SUSPENDED x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
 model="models/items/defender/tris.md2"
 */
 	{
@@ -4607,7 +4619,7 @@ model="models/items/defender/tris.md2"
 		/* precaches */ "models/objects/laser/tris.md2 models/items/shell/tris.md2 spheres/d_idle.wav"
 	},
 
-/*QUAKED item_doppleganger (.3 .3 1) (-16 -16 -16) (16 16 16) TRIGGER_SPAWN
+/*QUAKED item_doppleganger (.3 .3 1) (-16 -16 -16) (16 16 16) TRIGGER_SPAWN x x SUSPENDED x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
 model="models/items/dopple/tris.md2"
 */
 	{
@@ -4660,7 +4672,7 @@ model="models/items/dopple/tris.md2"
 	//
 	// KEYS
 	//
-/*QUAKED key_data_cd (0 .5 .8) (-16 -16 -16) (16 16 16)
+/*QUAKED key_data_cd (0 .5 .8) (-16 -16 -16) (16 16 16) TRIGGER_SPAWN x x SUSPENDED x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
 Key for computer centers.
 model="models/items/keys/data_cd/tris.md2"
 */
@@ -4685,7 +4697,7 @@ model="models/items/keys/data_cd/tris.md2"
 		/* flags */ IF_STAY_COOP | IF_KEY
 	},
 
-/*QUAKED key_power_cube (0 .5 .8) (-16 -16 -16) (16 16 16) TRIGGER_SPAWN NO_TOUCH
+/*QUAKED key_power_cube (0 .5 .8) (-16 -16 -16) (16 16 16) TRIGGER_SPAWN NO_TOUCH x x x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
 Power Cubes for warehouse.
 model="models/items/keys/power/tris.md2"
 */
@@ -4710,7 +4722,7 @@ model="models/items/keys/power/tris.md2"
 		/* flags */ IF_STAY_COOP | IF_KEY
 	},
 
-/*QUAKED key_explosive_charges (0 .5 .8) (-16 -16 -16) (16 16 16) TRIGGER_SPAWN NO_TOUCH
+/*QUAKED key_explosive_charges (0 .5 .8) (-16 -16 -16) (16 16 16) TRIGGER_SPAWN NO_TOUCH x x x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
 Explosive Charges - for N64.
 model="models/items/n64/charge/tris.md2"
 */
@@ -4735,7 +4747,7 @@ model="models/items/n64/charge/tris.md2"
 		/* flags */ IF_STAY_COOP | IF_KEY
 	},
 
-/*QUAKED key_yellow_key (0 .5 .8) (-16 -16 -16) (16 16 16)
+/*QUAKED key_yellow_key (0 .5 .8) (-16 -16 -16) (16 16 16) TRIGGER_SPAWN x x SUSPENDED x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
 Normal door key - Yellow - for N64.
 model="models/items/n64/yellow_key/tris.md2"
 */
@@ -4760,7 +4772,7 @@ model="models/items/n64/yellow_key/tris.md2"
 		/* flags */ IF_STAY_COOP | IF_KEY
 	},
 
-/*QUAKED key_power_core (0 .5 .8) (-16 -16 -16) (16 16 16)
+/*QUAKED key_power_core (0 .5 .8) (-16 -16 -16) (16 16 16) TRIGGER_SPAWN x x SUSPENDED x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
 Power Core key - for N64.
 model="models/items/n64/power_core/tris.md2"
 */
@@ -4785,7 +4797,7 @@ model="models/items/n64/power_core/tris.md2"
 		/* flags */ IF_STAY_COOP | IF_KEY
 	},
 
-/*QUAKED key_pyramid (0 .5 .8) (-16 -16 -16) (16 16 16)
+/*QUAKED key_pyramid (0 .5 .8) (-16 -16 -16) (16 16 16) TRIGGER_SPAWN x x SUSPENDED x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
 Key for the entrance of jail3.
 model="models/items/keys/pyramid/tris.md2"
 */
@@ -4810,7 +4822,7 @@ model="models/items/keys/pyramid/tris.md2"
 		/* flags */ IF_STAY_COOP | IF_KEY
 	},
 
-/*QUAKED key_data_spinner (0 .5 .8) (-16 -16 -16) (16 16 16)
+/*QUAKED key_data_spinner (0 .5 .8) (-16 -16 -16) (16 16 16) TRIGGER_SPAWN x x SUSPENDED x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
 Key for the city computer.
 model="models/items/keys/spinner/tris.md2"
 */
@@ -4835,7 +4847,7 @@ model="models/items/keys/spinner/tris.md2"
 		/* flags */ IF_STAY_COOP | IF_KEY
 	},
 
-/*QUAKED key_pass (0 .5 .8) (-16 -16 -16) (16 16 16)
+/*QUAKED key_pass (0 .5 .8) (-16 -16 -16) (16 16 16) TRIGGER_SPAWN x x SUSPENDED x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
 Security pass for the security level.
 model="models/items/keys/pass/tris.md2"
 */
@@ -4860,7 +4872,7 @@ model="models/items/keys/pass/tris.md2"
 		/* flags */ IF_STAY_COOP | IF_KEY
 	},
 
-/*QUAKED key_blue_key (0 .5 .8) (-16 -16 -16) (16 16 16)
+/*QUAKED key_blue_key (0 .5 .8) (-16 -16 -16) (16 16 16) TRIGGER_SPAWN x x SUSPENDED x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
 Normal door key - Blue.
 model="models/items/keys/key/tris.md2"
 */
@@ -4885,7 +4897,7 @@ model="models/items/keys/key/tris.md2"
 		/* flags */ IF_STAY_COOP | IF_KEY
 	},
 
-/*QUAKED key_red_key (0 .5 .8) (-16 -16 -16) (16 16 16)
+/*QUAKED key_red_key (0 .5 .8) (-16 -16 -16) (16 16 16) TRIGGER_SPAWN x x SUSPENDED x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
 Normal door key - Red.
 model="models/items/keys/red_key/tris.md2"
 */
@@ -4910,7 +4922,7 @@ model="models/items/keys/red_key/tris.md2"
 		/* flags */ IF_STAY_COOP | IF_KEY
 	},
 
-/*QUAKED key_green_key (0 .5 .8) (-16 -16 -16) (16 16 16)
+/*QUAKED key_green_key (0 .5 .8) (-16 -16 -16) (16 16 16) TRIGGER_SPAWN x x SUSPENDED x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
 Normal door key - Green.
 model="models/items/keys/green_key/tris.md2"
 */
@@ -4935,7 +4947,7 @@ model="models/items/keys/green_key/tris.md2"
 		/* flags */ IF_STAY_COOP | IF_KEY
 	},
 
-/*QUAKED key_commander_head (0 .5 .8) (-16 -16 -16) (16 16 16)
+/*QUAKED key_commander_head (0 .5 .8) (-16 -16 -16) (16 16 16) TRIGGER_SPAWN x x SUSPENDED x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
 Key - Tank Commander's Head.
 model="models/monsters/commandr/head/tris.md2"
 */
@@ -4960,7 +4972,7 @@ model="models/monsters/commandr/head/tris.md2"
 		/* flags */ IF_STAY_COOP | IF_KEY
 	},
 
-/*QUAKED key_airstrike_target (0 .5 .8) (-16 -16 -16) (16 16 16)
+/*QUAKED key_airstrike_target (0 .5 .8) (-16 -16 -16) (16 16 16) TRIGGER_SPAWN x x SUSPENDED x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
 Key - Airstrike Target for strike.
 model="models/items/keys/target/tris.md2"
 */
@@ -4985,7 +4997,7 @@ model="models/items/keys/target/tris.md2"
 		/* flags */ IF_STAY_COOP | IF_KEY
 	},
 
-/*QUAKED key_nuke_container (.3 .3 1) (-16 -16 -16) (16 16 16) TRIGGER_SPAWN
+/*QUAKED key_nuke_container (.3 .3 1) (-16 -16 -16) (16 16 16) TRIGGER_SPAWN x x SUSPENDED x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
 model="models/weapons/g_nuke/tris.md2"
 */
 	{
@@ -5009,7 +5021,7 @@ model="models/weapons/g_nuke/tris.md2"
 		/* flags */ IF_STAY_COOP | IF_KEY,
 	},
 
-/*QUAKED key_nuke (.3 .3 1) (-16 -16 -16) (16 16 16) TRIGGER_SPAWN
+/*QUAKED key_nuke (.3 .3 1) (-16 -16 -16) (16 16 16) TRIGGER_SPAWN x x SUSPENDED x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
 model="models/weapons/g_nuke/tris.md2"
 */
 	{
@@ -5033,7 +5045,7 @@ model="models/weapons/g_nuke/tris.md2"
 		/* flags */ IF_STAY_COOP | IF_KEY,
 	},
 
-/*QUAKED item_health_small (.3 .3 1) (-16 -16 -16) (16 16 16)
+/*QUAKED item_health_small (.3 .3 1) (-16 -16 -16) (16 16 16) TRIGGER_SPAWN x x SUSPENDED x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
 Health - Stimpack.
 model="models/items/healing/stimpack/tris.md2"
 */
@@ -5062,7 +5074,7 @@ model="models/items/healing/stimpack/tris.md2"
 		/* tag */ HEALTH_IGNORE_MAX
 	},
 
-/*QUAKED item_health (.3 .3 1) (-16 -16 -16) (16 16 16)
+/*QUAKED item_health (.3 .3 1) (-16 -16 -16) (16 16 16) TRIGGER_SPAWN x x SUSPENDED x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
 Health - First Aid.
 model="models/items/healing/medium/tris.md2"
 */
@@ -5087,7 +5099,7 @@ model="models/items/healing/medium/tris.md2"
 		/* flags */ IF_HEALTH
 	},
 
-/*QUAKED item_health_large (.3 .3 1) (-16 -16 -16) (16 16 16)
+/*QUAKED item_health_large (.3 .3 1) (-16 -16 -16) (16 16 16) TRIGGER_SPAWN x x SUSPENDED x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
 Health - Medkit.
 model="models/items/healing/large/tris.md2"
 */
@@ -5112,7 +5124,7 @@ model="models/items/healing/large/tris.md2"
 		/* flags */ IF_HEALTH
 	},
 
-/*QUAKED item_health_mega (.3 .3 1) (-16 -16 -16) (16 16 16)
+/*QUAKED item_health_mega (.3 .3 1) (-16 -16 -16) (16 16 16) TRIGGER_SPAWN x x SUSPENDED x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
 Health - Mega Health.
 model="models/items/mega_h/tris.md2"
 */
@@ -5140,7 +5152,7 @@ model="models/items/mega_h/tris.md2"
 		/* tag */ HEALTH_IGNORE_MAX | HEALTH_TIMED
 	},
 
-/*QUAKED item_flag_team_red (1 0.2 0) (-16 -16 -24) (16 16 32)
+/*QUAKED item_flag_team_red (1 0.2 0) (-16 -16 -24) (16 16 32) TRIGGER_SPAWN x x SUSPENDED x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
 Red Flag for CTF.
 model="players/male/flag1.md2"
 */
@@ -5169,7 +5181,7 @@ model="players/male/flag1.md2"
 		/* precaches */ "ctf/flagcap.wav"
 	},
 
-/*QUAKED item_flag_team_blue (1 0.2 0) (-16 -16 -24) (16 16 32)
+/*QUAKED item_flag_team_blue (1 0.2 0) (-16 -16 -24) (16 16 32) TRIGGER_SPAWN x x SUSPENDED x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
 Blue Flag for CTF.
 model="players/male/flag2.md2"
 */
@@ -5354,7 +5366,35 @@ model="players/male/flag2.md2"
 		/* tag */ POWERUP_COMPASS,
 		/* precaches */ "misc/help_marker.wav",
 		/* sort_id */ -2
-	}
+	},
+
+/*QUAKED item_foodcube (.3 .3 1) (-16 -16 -16) (16 16 16) TRIGGER_SPAWN x x SUSPENDED x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
+Meaty cube o' health
+model="models/objects/trapfx/tris.md2"
+*/
+	{
+		/* id */ IT_FOODCUBE,
+		/* classname */ "item_foodcube",
+		/* pickup */ Pickup_Health,
+		/* use */ nullptr,
+		/* drop */ nullptr,
+		/* weaponthink */ nullptr,
+		/* pickup_sound */ "items/n_health.wav",
+		/* world_model */ "models/objects/trapfx/tris.md2",
+		/* world_model_flags */ EF_GIB,
+		/* view_model */ nullptr,
+		/* icon */ "i_health",
+		/* use_name */  "Meaty Cube",
+		/* pickup_name */  "Meaty Cube",
+		/* pickup_name_definite */ "Meaty Cube",
+		/* quantity */ 50,
+		/* ammo */ IT_NULL,
+		/* chain */ IT_NULL,
+		/* flags */ IF_HEALTH,
+		/* vwep_model */ nullptr,
+		/* armor_info */ nullptr,
+		/* tag */ HEALTH_IGNORE_MAX
+	},
 };
 // clang-format on
 

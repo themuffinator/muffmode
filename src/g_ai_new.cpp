@@ -644,7 +644,6 @@ bool monsterlost_checkhint(edict_t *self) {
 // =============
 static TOUCH(hint_path_touch) (edict_t *self, edict_t *other, const trace_t &tr, bool other_touching_self) -> void {
 	edict_t *e, *goal, *next = nullptr;
-	//	int			chain;			 // direction - (-1) = upstream, (1) = downstream, (0) = done
 	bool goalFound = false;
 
 	// make sure we're the target of it's obsession
@@ -692,7 +691,7 @@ static TOUCH(hint_path_touch) (edict_t *self, edict_t *other, const trace_t &tr,
 	}
 }
 
-/*QUAKED hint_path (.5 .3 0) (-8 -8 -8) (8 8 8) END
+/*QUAKED hint_path (.5 .3 0) (-8 -8 -8) (8 8 8) END x x x x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
 Target: next hint path
 
 END - set this flag on the endpoints of each hintpath.

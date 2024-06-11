@@ -201,14 +201,11 @@ Give items to a client
 ==================
 */
 static void Cmd_Give_f(edict_t *ent) {
-	const char	*name;
+	const char	*name = gi.args();
 	gitem_t		*it;
-	item_id_t	index;
-	int			i;
+	size_t		i;
 	bool		give_all;
 	edict_t		*it_ent;
-
-	name = gi.args();
 
 	if (Q_strcasecmp(name, "all") == 0)
 		give_all = true;
@@ -321,30 +318,25 @@ static void Cmd_Give_f(edict_t *ent) {
 		return;
 	}
 
-	index = it->id;
-
 	if (!it->pickup) {
-		ent->client->pers.inventory[index] = 1;
+		ent->client->pers.inventory[it->id] = 1;
 		return;
 	}
 
-	if (it->flags & IF_AMMO) {
-		if (gi.argc() == 3)
-			ent->client->pers.inventory[index] = atoi(gi.argv(2));
-		else
-			ent->client->pers.inventory[index] += it->quantity;
-	} else {
-		it_ent = G_Spawn();
-		it_ent->classname = it->classname;
-		SpawnItem(it_ent, it);
-		// PMM - since some items don't actually spawn when you say to ..
-		if (!it_ent->inuse)
-			return;
-		// pmm
-		Touch_Item(it_ent, ent, null_trace, true);
-		if (it_ent->inuse)
-			G_FreeEdict(it_ent);
-	}
+	it_ent = G_Spawn();
+	it_ent->classname = it->classname;
+	SpawnItem(it_ent, it);
+	if (it->flags & IF_AMMO && gi.argc() == 3)
+		it_ent->count = atoi(gi.argv(2));
+
+	// PMM - since some items don't actually spawn when you say to ..
+	if (!it_ent->inuse)
+		return;
+	// pmm
+
+	Touch_Item(it_ent, ent, null_trace, true);
+	if (it_ent->inuse)
+		G_FreeEdict(it_ent);
 }
 
 static void Cmd_SetPOI_f(edict_t *self) {
@@ -693,16 +685,9 @@ static void Cmd_Drop_f(edict_t *ent) {
 	if (ent->health <= 0 || ent->deadflag)
 		return;
 
-	if (!Q_strcasecmp(gi.args(), "tech")) {
-		it = Tech_Held(ent);
-
-		if (it) {
-			it->drop(ent, it);
-			ValidateSelectedItem(ent);
-		}
-
+	// don't drop anything when combat is disabled
+	if (IsCombatDisabled())
 		return;
-	}
 
 	s = gi.args();
 
@@ -722,16 +707,62 @@ static void Cmd_Drop_f(edict_t *ent) {
 		gi.LocClient_Print(ent, PRINT_HIGH, "$g_item_not_droppable");
 		return;
 	}
+
+	const char *t = nullptr;
+	if (it->id == IT_FLAG_RED || it->id == IT_FLAG_BLUE) {
+		if (!(g_drop_cmds->integer & 1))
+			t = "Flag";
+	} else if (it->flags & IF_POWERUP) {
+		if (!(g_drop_cmds->integer & 2))
+			t = "Powerup";
+	} else if (it->flags & IF_WEAPON || it->flags & IF_AMMO) {
+		if (!(g_drop_cmds->integer & 4))
+			t = "Weapon and ammo";
+		else if (!ItemSpawnsEnabled()) {
+			gi.Client_Print(ent, PRINT_HIGH, "Weapon and ammo dropping is not available in this mode.\n");
+			return;
+		}
+	}
+
+	if (t != nullptr) {
+		gi.LocClient_Print(ent, PRINT_HIGH, "{} dropping has been disabled on this server.\n", t);
+		return;
+	}
+
 	index = it->id;
 	if (!ent->client->pers.inventory[index]) {
 		gi.LocClient_Print(ent, PRINT_HIGH, "$g_out_of_item", it->pickup_name);
 		return;
 	}
 
+	if (!Q_strcasecmp(gi.args(), "tech")) {
+		it = Tech_Held(ent);
+
+		if (it) {
+			it->drop(ent, it);
+			ValidateSelectedItem(ent);
+		}
+
+		return;
+	}
+
+	if (!Q_strcasecmp(gi.args(), "weapon")) {
+		it = ent->client->pers.weapon;
+
+		if (it) {
+			it->drop(ent, it);
+			ValidateSelectedItem(ent);
+		}
+
+		return;
+	}
+
 	it->drop(ent, it);
-	if (Teams()) {
+	if (Teams() && g_teamplay_item_drop_notice->integer) {
 		// add drop notice to all team mates
 		BroadcastTeamMessage(ent->client->resp.team, G_Fmt("[TEAM]: {} drops {}\n", ent->client->resp.netname, it->use_name).data());
+
+		//TODO: add POI
 	}
 
 	ValidateSelectedItem(ent);
@@ -986,7 +1017,7 @@ static void Cmd_Forfeit_f(edict_t *ent) {
 		gi.LocClient_Print(ent, PRINT_HIGH, "Forfeit is only available in a duel.\n");
 		return;
 	}
-	if (level.match_state < MATCH_IN_PROGRESS) {
+	if (level.match_state < matchst_t::MATCH_IN_PROGRESS) {
 		gi.LocClient_Print(ent, PRINT_HIGH, "Forfeit is not available during warmup.\n");
 		return;
 	}
@@ -1011,6 +1042,9 @@ static void Cmd_Kill_f(edict_t *ent) {
 	if ((level.time - ent->client->respawn_time) < 5_sec)
 		return;
 
+	if (IsCombatDisabled())
+		return;
+
 	ent->flags &= ~FL_GODMODE;
 	ent->health = 0;
 
@@ -1033,7 +1067,6 @@ Cmd_Kill_AI_f
 =================
 */
 static void Cmd_Kill_AI_f(edict_t *ent) {
-
 	// except the one we're looking at...
 	edict_t *looked_at = nullptr;
 
@@ -1168,7 +1201,7 @@ static void PlayersList(edict_t *ent, bool ranked) {
 
 			fmt::format_to(std::back_inserter(small), FMT_STRING("{:9} {:32} {:32} {:02}:{:02} {:4} {:5} {}{}\n"), index[i], cl->pers.social_id, value, (level.time - cl->resp.entertime).milliseconds() / 60000,
 				((level.time - cl->resp.entertime).milliseconds() % 60000) / 1000, cl->ping,
-				cl->resp.score, Teams_TeamName(cl->resp.team), cl->resp.admin ? " (admin)" : cl->resp.inactive ? " (inactive)" : "");
+				cl->resp.score, cl->resp.duel_queued ? "QUEUE" : Teams_TeamName(cl->resp.team), cl->resp.admin ? " (admin)" : cl->resp.inactive ? " (inactive)" : "");
 
 			if (small.length() + large.length() > MAX_IDEAL_PACKET_SIZE - 50) { // can't print all of them in one packet
 				large += "...\n";
@@ -1681,14 +1714,15 @@ void BroadcastTeamChange(edict_t *ent, int old_team, bool inactive, bool silent)
 		}
 		gi.Com_Print(s);
 	}
-	
+	/*
 	if (g_motd->string[0]) {
-		gi.LocCenter_Print(ent, g_motd->string);
+		gi.LocCenter_Print(ent, "{}", g_motd->string);
 		return;
 	}
-
-	if (g_dm_do_readyup->integer && level.match_state == MATCH_WARMUP_READYUP) {
-		gi.LocClient_Print(ent, PRINT_CENTER, G_Fmt("%bind:use compass:Use Compass to toggle your ready status.%{}", " ").data());
+	*/
+	if (g_dm_do_readyup->integer && level.match_state == matchst_t::MATCH_WARMUP_READYUP) {
+		//gi.LocClient_Print(ent, PRINT_CENTER, G_Fmt("%bind:+wheel2:Use Compass to toggle your ready status.%{}", " ").data());
+		gi.LocCenter_Print(ent, "%bind:+wheel2:Use Compass to toggle your ready status.%You are {}ready.", ent->client->resp.ready ? "" : "NOT ");
 	} else if (t) {
 		gi.LocClient_Print(ent, PRINT_CENTER, G_Fmt("%bind:inven:Toggles Menu%{}", t).data() );
 	}
@@ -2008,7 +2042,7 @@ bool SetTeam(edict_t *ent, team_t desired_team, bool inactive, bool force, bool 
 	bool queue = false;
 
 	if (!force) {
-		if (level.match_state == MATCH_IN_PROGRESS && g_match_lock->integer) {
+		if (level.match_state == matchst_t::MATCH_IN_PROGRESS && g_match_lock->integer) {
 			if (desired_team != TEAM_SPECTATOR) {
 				gi.LocClient_Print(ent, PRINT_HIGH, "Match is locked whilst in progress, no joining permitted now.\n");
 				P_Menu_Close(ent);
@@ -2066,12 +2100,12 @@ bool SetTeam(edict_t *ent, team_t desired_team, bool inactive, bool force, bool 
 	ent->client->resp.inactive = inactive;
 	ent->client->resp.inactivity_time = 0_ms;
 	ent->client->resp.team_join_time = level.time;
-	ent->client->resp.team_delay_time = force ? level.time : level.time + 5_sec;
+	ent->client->resp.team_delay_time = force || !ent->client->resp.initialised ? level.time : level.time + 5_sec;
 	ent->client->resp.spectator_state = desired_team == TEAM_SPECTATOR ? SPECTATOR_FREE : SPECTATOR_NOT;
 	ent->client->resp.spectator_client = 0;
 	ent->client->resp.spectator_time = 0;
 	ent->client->resp.duel_queued = queue;
-
+	
 	if (desired_team != TEAM_SPECTATOR) {
 		if (Teams())
 			G_AssignPlayerSkin(ent, ent->client->pers.skin);
@@ -2085,21 +2119,22 @@ bool SetTeam(edict_t *ent, team_t desired_team, bool inactive, bool force, bool 
 		FreeClientFollowers(ent);
 	}
 
-	if (!force) {
-		ent->client->resp.initialised = true;
-	}
+	ent->client->resp.initialised = true;
 
 	// if they are playing a duel, count as a loss
 	if (duel->integer && old_team == TEAM_FREE)
 		ent->client->resp.losses++;
 
-	ClientSpawn(ent);
-
-	G_PostRespawn(ent);
+	if (IsRoundBased() && level.round_state == roundst_t::ROUND_IN_PROGRESS) {
+		ClientSetEliminated(ent);
+	} else {
+		ClientSpawn(ent);
+		G_PostRespawn(ent);
+	}
 
 	BroadcastTeamChange(ent, old_team, inactive, silent);
 
-	ent->client->ps.stats[STAT_SHOW_STATUSBAR] = desired_team == TEAM_SPECTATOR ? 0 : 1;
+	ent->client->ps.stats[STAT_SHOW_STATUSBAR] = desired_team == TEAM_SPECTATOR || ent->client->eliminated ? 0 : 1;
 
 	// if anybody has a menu open, update it immediately
 	P_Menu_Dirty();
@@ -2198,8 +2233,7 @@ Cmd_Ghost_f
 =================
 */
 static void Cmd_Ghost_f(edict_t *ent) {
-	int i;
-	int n;
+	int i, n;
 
 	if (gi.argc() < 2) {
 		gi.LocClient_Print(ent, PRINT_HIGH, "Usage: {} <code>\n", gi.argv(0));
@@ -2210,7 +2244,7 @@ static void Cmd_Ghost_f(edict_t *ent) {
 		gi.LocClient_Print(ent, PRINT_HIGH, "You are already in the game.\n");
 		return;
 	}
-	if (level.match_state != MATCH_IN_PROGRESS) {
+	if (level.match_state != matchst_t::MATCH_IN_PROGRESS) {
 		gi.LocClient_Print(ent, PRINT_HIGH, "No match is in progress.\n");
 		return;
 	}
@@ -2247,7 +2281,7 @@ static void Cmd_Stats_f(edict_t *ent) {
 
 	text.clear();
 
-	if (level.match_state == MATCH_WARMUP_READYUP) {
+	if (level.match_state == matchst_t::MATCH_WARMUP_READYUP) {
 		for (auto ec : active_clients()) {
 			if (!ClientIsPlaying(ec->client))
 				continue;
@@ -2347,19 +2381,18 @@ static bool Vote_Val_None(edict_t *ent) {
 	return true;
 }
 
-static void Vote_Pass_Map() {
+void Vote_Pass_Map() {
 	level.changemap = level.vote_arg.data();
 	ExitLevel();
 }
 
 static bool Vote_Val_Map(edict_t *ent) {
-	char *token;
-
 	if (gi.argc() < 3) {
 		gi.LocClient_Print(ent, PRINT_HIGH, "Valid maps are: {}\n", g_map_list->string);
 		return false;
 	}
 
+	char *token;
 	const char *mlist = g_map_list->string;
 
 	while (*(token = COM_Parse(&mlist))) {
@@ -2376,39 +2409,32 @@ static bool Vote_Val_Map(edict_t *ent) {
 	return true;
 }
 
-static void Vote_Pass_RestartMatch() {
-	Q_strlcpy(level.forcemap, level.mapname, sizeof(level.forcemap));
-	Match_End();
+void Vote_Pass_RestartMatch() {
+	Match_Reset();
 }
 
-static void Vote_Pass_Gametype() {
-	const char *arg = level.vote_arg.data();
-
-	for (size_t i = 0; i < GT_NUM_GAMETYPES; i++) {
-		if (!Q_strcasecmp(arg, gt_short_name[i])) {
-			GT_Change(i);
-			break;
-		}
-	}
+void Vote_Pass_Gametype() {
+	gametype_t gt = GT_IndexFromString(level.vote_arg.data());
+	if (!gt)
+		return;
+	GT_Change(gt);
 }
 
 static bool Vote_Val_Gametype(edict_t *ent) {
-	const char *arg = gi.argv(2);
-
-	for (size_t i = 0; i < GT_NUM_GAMETYPES; i++) {
-		if (!Q_strcasecmp(arg, gt_short_name[i]))
-			return true;
+	if (GT_IndexFromString(gi.argv(2)) == gametype_t::GT_NONE) {
+		gi.LocClient_Print(ent, PRINT_HIGH, "Invalid gametype.\n");
+		return false;
 	}
 
-	return false;
+	return true;
 }
 
-static void Vote_Pass_NextMap() {
+void Vote_Pass_NextMap() {
 	Match_End();
 	level.intermission_exit = true;
 }
 
-static void Vote_Pass_ShuffleTeams() {
+void Vote_Pass_ShuffleTeams() {
 	TeamShuffle();
 }
 
@@ -2429,7 +2455,12 @@ static void Vote_Pass_Unlagged() {
 
 static bool Vote_Val_Unlagged(edict_t *ent) {
 	int arg = atoi(gi.argv(2));
-
+	
+	if ((g_lag_compensation->integer && arg)
+			|| (!g_lag_compensation->integer && !arg)) {
+		gi.LocClient_Print(ent, PRINT_HIGH, "Lag compensation is already {}.\n", arg ? "ENABLED" : "DISABLED");
+		return false;
+	}
 
 	return true;
 }
@@ -2443,15 +2474,15 @@ static bool Vote_Val_Random(edict_t *ent) {
 	return true;
 }
 
-static void Vote_Pass_Cointoss() {
+void Vote_Pass_Cointoss() {
 	gi.LocBroadcast_Print(PRINT_HIGH, "The coin is: {}\n", brandom() ? "HEADS" : "TAILS");
 }
 
-static void Vote_Pass_Random() {
+void Vote_Pass_Random() {
 	gi.LocBroadcast_Print(PRINT_HIGH, "The random number is: {}\n", irandom(2, atoi(level.vote_arg.data())));
 }
 
-static void Vote_Pass_Timelimit() {
+void Vote_Pass_Timelimit() {
 	const char *s = level.vote_arg.data();
 	int argi = atoi(s);
 
@@ -2478,7 +2509,7 @@ static bool Vote_Val_Timelimit(edict_t *ent) {
 	return true;
 }
 
-static void Vote_Pass_Scorelimit() {
+void Vote_Pass_Scorelimit() {
 	int argi = atoi(level.vote_arg.data());
 
 	if (argi)
@@ -2505,7 +2536,7 @@ static bool Vote_Val_Scorelimit(edict_t *ent) {
 	return true;
 }
 
-static void Vote_Pass_BalanceTeams() {
+void Vote_Pass_BalanceTeams() {
 	TeamBalance();
 }
 
@@ -2536,7 +2567,7 @@ FindVoteCmdByName
 
 ===============
 */
-static vcmds_t *FindVoteCmdByName(const char *name) {
+vcmds_t *FindVoteCmdByName(const char *name) {
 	vcmds_t *cc = vote_cmds;
 
 	for (size_t i = 0; i < ARRAY_LEN(vote_cmds); i++, cc++) {
@@ -2595,6 +2626,32 @@ static bool ValidVoteCommand(edict_t *ent) {
 }
 
 /*
+=================
+VoteCommandStore
+=================
+*/
+void VoteCommandStore(edict_t *ent) {
+	gi.LocBroadcast_Print(PRINT_CENTER, "{} called a vote:\n{}{}\n", ent->client->resp.netname, gi.argv(1), (gi.argc() > 2 && strlen(level.vote->args)) ? G_Fmt(" {}", gi.argv(2)).data() : "");
+
+	// start the voting, the caller automatically votes yes
+	level.vote_time = level.time;
+	level.vote_yes = 1;
+	level.vote_no = 0;
+
+	for (auto ec : active_clients())
+		ec->client->pers.voted = 0;
+
+	ent->client->pers.voted = 1;
+
+	ent->client->pers.vote_count++;
+
+	//trap_SetConfigstring(CS_VOTE_TIME, va("%i", level.vote_time));
+	//trap_SetConfigstring(CS_VOTE_STRING, level.vote_display_string);
+	//trap_SetConfigstring(CS_VOTE_YES, va("%i", level.vote_yes));
+	//trap_SetConfigstring(CS_VOTE_NO, va("%i", level.vote_no));
+}
+
+/*
 ==================
 Cmd_CallVote_f
 ==================
@@ -2622,7 +2679,7 @@ static void Cmd_CallVote_f(edict_t *ent) {
 		return;
 	}
 
-	if (!g_allow_vote_midgame->integer && level.match_state >= MATCH_COUNTDOWN) {
+	if (!g_allow_vote_midgame->integer && level.match_state >= matchst_t::MATCH_COUNTDOWN) {
 		gi.LocClient_Print(ent, PRINT_HIGH, "Voting is only allowed during the warm up period.\n\"");
 		return;
 	}
@@ -2657,24 +2714,7 @@ static void Cmd_CallVote_f(edict_t *ent) {
 	if (!ValidVoteCommand(ent))
 		return;
 
-	gi.LocBroadcast_Print(PRINT_CENTER, "{} called a vote:\n{}{}\n", ent->client->resp.netname, gi.argv(1), (gi.argc() > 2 && strlen(level.vote->args)) ? G_Fmt(" {}", gi.argv(2)).data() : "");
-
-	// start the voting, the caller automatically votes yes
-	level.vote_time = level.time;
-	level.vote_yes = 1;
-	level.vote_no = 0;
-
-	for (auto ec : active_clients())
-		ec->client->pers.voted = 0;
-
-	ent->client->pers.voted = 1;
-
-	ent->client->pers.vote_count++;
-
-	//trap_SetConfigstring(CS_VOTE_TIME, va("%i", level.vote_time));
-	//trap_SetConfigstring(CS_VOTE_STRING, level.vote_display_string);
-	//trap_SetConfigstring(CS_VOTE_YES, va("%i", level.vote_yes));
-	//trap_SetConfigstring(CS_VOTE_NO, va("%i", level.vote_no));
+	VoteCommandStore(ent);
 }
 
 /*
@@ -2921,7 +2961,7 @@ Cmd_StartMatch_f
 =================
 */
 static void Cmd_StartMatch_f(edict_t *ent) {
-	if (level.match_state > MATCH_WARMUP_READYUP) {
+	if (level.match_state > matchst_t::MATCH_WARMUP_READYUP) {
 		gi.LocClient_Print(ent, PRINT_HIGH, "Match has already started.\n");
 		return;
 	}
@@ -2936,7 +2976,7 @@ Cmd_EndMatch_f
 =================
 */
 static void Cmd_EndMatch_f(edict_t *ent) {
-	if (level.match_state < MATCH_IN_PROGRESS) {
+	if (level.match_state < matchst_t::MATCH_IN_PROGRESS) {
 		gi.LocClient_Print(ent, PRINT_HIGH, "Match has not yet begun.\n");
 		return;
 	}
@@ -2953,7 +2993,7 @@ Cmd_ResetMatch_f
 =================
 */
 static void Cmd_ResetMatch_f(edict_t *ent) {
-	if (level.match_state < MATCH_IN_PROGRESS) {
+	if (level.match_state < matchst_t::MATCH_IN_PROGRESS) {
 		gi.LocClient_Print(ent, PRINT_HIGH, "Match has not yet begun.\n");
 		return;
 	}
@@ -2989,6 +3029,29 @@ static void Cmd_ForceVote_f(edict_t *ent) {
 		gi.Broadcast_Print(PRINT_HIGH, "[ADMIN]: Failed the vote.\n");
 		level.vote_time = 0_sec;
 	}
+}
+
+/*
+=================
+Cmd_Gametype_f
+=================
+*/
+static void Cmd_Gametype_f(edict_t *ent) {
+	if (!deathmatch->integer)
+		return;
+
+	if (gi.argc() < 2) {
+		gi.LocClient_Print(ent, PRINT_HIGH, "Usage: gametype <ffa|duel|tdm|ctf|ca|ft|horde>\nChanges current gametype.\n", gi.argv(0));
+		return;
+	}
+
+	gametype_t gt = GT_IndexFromString(gi.argv(1));
+	if (!gt) {
+		gi.LocClient_Print(ent, PRINT_HIGH, "Invalid gametype.\n");
+		return;
+	}
+
+	GT_Change(GT_FFA);
 }
 
 static void Cmd_SetMap_f(edict_t *ent) {
@@ -3048,19 +3111,23 @@ static void Cmd_Admin_f(edict_t *ent) {
 
 /*----------------------------------------------------------------*/
 
+static void BroadcastReadyStatus(edict_t *ent) {
+	gi.LocBroadcast_Print(PRINT_CENTER, "%bind:+wheel2:Use Compass to toggle your ready status.%{} is {}ready.\n", ent->client->resp.netname, ent->client->resp.ready ? "" : "NOT ");
+}
+
 static void Cmd_Ready_f(edict_t *ent) {
-	if (level.match_state != MATCH_WARMUP_READYUP) {
+	if (level.match_state != matchst_t::MATCH_WARMUP_READYUP) {
 		const char *s = "You cannot ready until ";
 
 		switch (level.warmup_requisite) {
-		case WARMUP_REQ_MORE_PLAYERS:
+		case warmupreq_t::WARMUP_REQ_MORE_PLAYERS:
 		{
 			int minp = duel->integer ? 2 : minplayers->integer;
 			int req = minp - level.num_playing_clients;
 			gi.LocClient_Print(ent, PRINT_HIGH, "{}{} more player{} are present.\n", s, req, req > 1 ? "s" : "");
 			break;
 		}
-		case WARMUP_REQ_BALANCE:
+		case warmupreq_t::WARMUP_REQ_BALANCE:
 			gi.LocClient_Print(ent, PRINT_HIGH, "{}teams are balanced.\n", s);
 			break;
 		default:
@@ -3070,7 +3137,7 @@ static void Cmd_Ready_f(edict_t *ent) {
 		return;
 	}
 
-	if (level.match_state != MATCH_WARMUP_READYUP) {
+	if (level.match_state != matchst_t::MATCH_WARMUP_READYUP) {
 		gi.LocClient_Print(ent, PRINT_HIGH, "You cannot ready at this stage of the match.\n");
 		return;
 	}
@@ -3081,22 +3148,22 @@ static void Cmd_Ready_f(edict_t *ent) {
 	}
 
 	ent->client->resp.ready = true;
-	gi.LocBroadcast_Print(PRINT_CENTER, "{} is ready.\n", ent->client->resp.netname);
+	BroadcastReadyStatus(ent);
 }
 
 static void Cmd_NotReady_f(edict_t *ent) {
-	if (level.match_state != MATCH_WARMUP_READYUP) {
+	if (level.match_state != matchst_t::MATCH_WARMUP_READYUP) {
 		const char *s = "You cannot unready until ";
 
 		switch (level.warmup_requisite) {
-		case WARMUP_REQ_MORE_PLAYERS:
+		case warmupreq_t::WARMUP_REQ_MORE_PLAYERS:
 		{
 			int minp = duel->integer ? 2 : minplayers->integer;
 			int req = minp - level.num_playing_clients;
 			gi.LocClient_Print(ent, PRINT_HIGH, "{}{} more player{} are present.\n", s, req, req > 1 ? "s" : "");
 			break;
 		}
-		case WARMUP_REQ_BALANCE:
+		case warmupreq_t::WARMUP_REQ_BALANCE:
 			gi.LocClient_Print(ent, PRINT_HIGH, "{}teams are balanced.\n", s);
 			break;
 		default:
@@ -3112,22 +3179,22 @@ static void Cmd_NotReady_f(edict_t *ent) {
 	}
 
 	ent->client->resp.ready = false;
-	gi.LocBroadcast_Print(PRINT_CENTER, "{} is NOT ready.\n", ent->client->resp.netname);
+	BroadcastReadyStatus(ent);
 }
 
 void Cmd_ReadyUp_f(edict_t *ent) {
-	if (level.match_state != MATCH_WARMUP_READYUP) {
+	if (level.match_state != matchst_t::MATCH_WARMUP_READYUP) {
 		const char *s = "You cannot ready until ";
 
 		switch (level.warmup_requisite) {
-		case WARMUP_REQ_MORE_PLAYERS:
+		case warmupreq_t::WARMUP_REQ_MORE_PLAYERS:
 		{
 			int minp = duel->integer ? 2 : minplayers->integer;
 			int req = minp - level.num_playing_clients;
 			gi.LocClient_Print(ent, PRINT_HIGH, "{}{} more player{} are present.\n", s, req, req > 1 ? "s" : "");
 			break;
 		}
-		case WARMUP_REQ_BALANCE:
+		case warmupreq_t::WARMUP_REQ_BALANCE:
 			gi.LocClient_Print(ent, PRINT_HIGH, "{}teams are balanced.\n", s);
 			break;
 		default:
@@ -3138,7 +3205,7 @@ void Cmd_ReadyUp_f(edict_t *ent) {
 	}
 
 	ent->client->resp.ready ^= true;
-	gi.LocBroadcast_Print(PRINT_CENTER, "%bind:use compass:Use Compass to toggle your ready status.%{} is {}ready.\n", ent->client->resp.netname, ent->client->resp.ready ? "" : "NOT ");
+	BroadcastReadyStatus(ent);
 }
 
 static void Cmd_Hook_f(edict_t *ent) {
@@ -3223,12 +3290,12 @@ static void Cmd_MyMap_f(edict_t *ent) {
 }
 
 static void Cmd_Motd_f(edict_t *ent) {
-	const char *s = g_motd->string;
-	if (g_motd->string[0])
-		s = G_Fmt("Message of the Day:\n{}\n", g_motd->string).data();
+	const char *s = G_Fmt("{}", g_motd->string).data();
+	if (s[0])
+		s = G_Fmt("Message of the Day:\n{}\n", s).data();
 	else
 		s = "No Message of the Day set.\n";
-	gi.LocClient_Print(ent, PRINT_HIGH, s);
+	gi.LocClient_Print(ent, PRINT_HIGH, "{}", s);
 }
 
 // =========================================
@@ -3249,6 +3316,7 @@ cmds_t client_cmds[] = {
 	{"follow",			Cmd_Follow_f,			CF_ALLOW_SPEC | CF_ALLOW_DEAD},
 	{"forcevote",		Cmd_ForceVote_f,		CF_ADMIN_ONLY | CF_ALLOW_INT | CF_ALLOW_SPEC},
 	{"forfeit",			Cmd_Forfeit_f,			CF_ALLOW_DEAD},
+	{"gametype",		Cmd_Gametype_f,			CF_ADMIN_ONLY | CF_ALLOW_INT | CF_ALLOW_SPEC},
 	{"ghost",			Cmd_Ghost_f,			CF_ALLOW_DEAD | CF_ALLOW_INT | CF_ALLOW_SPEC},
 	{"give",			Cmd_Give_f,				CF_ALLOW_SPEC | CF_CHEAT_PROTECT},
 	{"god",				Cmd_God_f,				CF_ALLOW_SPEC | CF_CHEAT_PROTECT},

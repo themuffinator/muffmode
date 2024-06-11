@@ -1161,7 +1161,7 @@ static DIE(fixbot_die) (edict_t *self, edict_t *inflictor, edict_t *attacker, in
 	// shards
 }
 
-/*QUAKED monster_fixbot (1 .5 0) (-32 -32 -24) (32 32 24) AMBUSH TRIGGER_SPAWN FIXIT TAKEOFF LANDING
+/*QUAKED monster_fixbot (1 .5 0) (-32 -32 -24) (32 32 24) AMBUSH TRIGGER_SPAWN FIXIT TAKEOFF LANDING x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
  */
 void SP_monster_fixbot(edict_t *self) {
 	if (!M_AllowSpawn(self)) {

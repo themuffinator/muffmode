@@ -612,7 +612,7 @@ edict_t *plat_spawn_inside_trigger(edict_t *ent) {
 	return trigger; // PGM 11/17/97
 }
 
-/*QUAKED func_plat (0 .5 .8) ? PLAT_LOW_TRIGGER
+/*QUAKED func_plat (0 .5 .8) ? PLAT_LOW_TRIGGER x x x x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
 speed	default 150
 
 Plats are always drawn in the extended position, so they will light correctly.
@@ -700,7 +700,7 @@ void SP_func_plat(edict_t *ent) {
 	G_SetMoveinfoSounds(ent, "plats/pt1_strt.wav", "plats/pt1_mid.wav", "plats/pt1_end.wav");
 }
 
-/*QUAKED func_plat2 (0 .5 .8) ? PLAT_LOW_TRIGGER PLAT2_TOGGLE PLAT2_TOP PLAT2_START_ACTIVE x BOX_LIFT
+/*QUAKED func_plat2 (0 .5 .8) ? PLAT_LOW_TRIGGER PLAT2_TOGGLE PLAT2_TOP PLAT2_START_ACTIVE x BOX_LIFT x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
 speed	default 150
 
 PLAT_LOW_TRIGGER - creates a short trigger field at the bottom
@@ -1111,11 +1111,8 @@ constexpr spawnflags_t SPAWNFLAG_ROTATING_ANIMATED_FAST = 128_spawnflag;
 constexpr spawnflags_t SPAWNFLAG_ROTATING_ACCEL = 0x00010000_spawnflag;
 
 static THINK(rotating_accel) (edict_t *self) -> void {
-	float current_speed;
-
-	current_speed = self->avelocity.length();
-	if (current_speed >= (self->speed - self->accel)) // done
-	{
+	float current_speed = self->avelocity.length();
+	if (current_speed >= (self->speed - self->accel)) { // done
 		self->avelocity = self->movedir * self->speed;
 		G_UseTargets(self, self);
 	} else {
@@ -1127,11 +1124,8 @@ static THINK(rotating_accel) (edict_t *self) -> void {
 }
 
 static THINK(rotating_decel) (edict_t *self) -> void {
-	float current_speed;
-
-	current_speed = self->avelocity.length();
-	if (current_speed <= self->decel) // done
-	{
+	float current_speed = self->avelocity.length();
+	if (current_speed <= self->decel) { // done
 		self->avelocity = {};
 		G_UseTargets(self, self);
 		self->touch = nullptr;
@@ -1170,7 +1164,7 @@ static TOUCH(rotating_touch) (edict_t *self, edict_t *other, const trace_t &tr, 
 static USE(rotating_use) (edict_t *self, edict_t *other, edict_t *activator) -> void {
 	if (self->avelocity) {
 		self->s.sound = 0;
-		
+
 		if (self->spawnflags.has(SPAWNFLAG_ROTATING_ACCEL)) // Decelerate
 			rotating_decel(self);
 		else {
@@ -1223,7 +1217,7 @@ void SP_func_rotating(edict_t *ent) {
 		ent->movedir[0] = 1.0;
 	else // Z_AXIS
 		ent->movedir[1] = 1.0;
-	
+
 	// check for reverse rotation
 	if (ent->spawnflags.has(SPAWNFLAG_ROTATING_REVERSE))
 		ent->movedir = -ent->movedir;
@@ -1320,7 +1314,7 @@ BUTTONS
 ======================================================================
 */
 
-/*QUAKED func_button (0 .5 .8) ?
+/*QUAKED func_button (0 .5 .8) ? x x x x x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
 When a button is touched, it moves some distance in the direction of it's angle, triggers all of it's targets, waits some time, then returns to it's original position where it can be triggered again.
 
 "angle"		determines the opening direction
@@ -1487,7 +1481,7 @@ DOORS
 ======================================================================
 */
 
-/*QUAKED func_door (0 .5 .8) ? START_OPEN x CRUSHER NOMONSTER ANIMATED TOGGLE ANIMATED_FAST
+/*QUAKED func_door (0 .5 .8) ? START_OPEN x CRUSHER NOMONSTER ANIMATED TOGGLE ANIMATED_FAST x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
 START_OPEN	the door to moves to its destination when spawned, and operate in reverse.  It is used to temporarily or permanently close off an area when triggered (not useful for touch or takedamage doors).
 NOMONSTER	monsters will not trigger this door
 TOGGLE		wait in both the start and end states for a trigger event.
@@ -1639,7 +1633,7 @@ static void door_go_up(edict_t *self, edict_t *activator) {
 
 static THINK(smart_water_go_up) (edict_t *self) -> void {
 	float	distance;
-	edict_t	*lowestPlayer;
+	edict_t *lowestPlayer;
 	float	lowestPlayerPt;
 
 	if (self->moveinfo.state == STATE_TOP) { // reset top wait time
@@ -2218,7 +2212,7 @@ MOVEINFO_BLOCKED(smart_water_blocked) (edict_t *self, edict_t *other) -> void {
 	T_Damage(other, self, self, vec3_origin, other->s.origin, vec3_origin, 100, 1, DAMAGE_NONE, MOD_LAVA);
 }
 
-/*QUAKED func_water (0 .5 .8) ? START_OPEN SMART
+/*QUAKED func_water (0 .5 .8) ? START_OPEN SMART x x x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
 func_water is a moveable water brush.  It must be targeted to operate.  Use a non-water texture at your own risk.
 
 START_OPEN causes the water to move to its destination when spawned and operate in reverse.
@@ -2319,7 +2313,7 @@ constexpr spawnflags_t SPAWNFLAG_TRAIN_BLOCK_STOPS = 4_spawnflag;
 constexpr spawnflags_t SPAWNFLAG_TRAIN_FIX_OFFSET = 16_spawnflag;
 constexpr spawnflags_t SPAWNFLAG_TRAIN_USE_ORIGIN = 32_spawnflag;
 
-/*QUAKED func_train (0 .5 .8) ? START_ON TOGGLE BLOCK_STOPS MOVE_TEAMCHAIN FIX_OFFSET USE_ORIGIN
+/*QUAKED func_train (0 .5 .8) ? START_ON TOGGLE BLOCK_STOPS MOVE_TEAMCHAIN FIX_OFFSET USE_ORIGIN x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
 Trains are moving platforms that players can ride.
 The targets origin specifies the min point of the train at each corner.
 The train spawns at the first target it is pointing at.
@@ -2630,7 +2624,7 @@ void SP_func_train(edict_t *self) {
 	}
 }
 
-/*QUAKED trigger_elevator (0.3 0.1 0.6) (-8 -8 -8) (8 8 8)
+/*QUAKED trigger_elevator (0.3 0.1 0.6) (-8 -8 -8) (8 8 8) x x x x x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
  */
 static USE(trigger_elevator_use) (edict_t *self, edict_t *other, edict_t *activator) -> void {
 	edict_t *target;
@@ -2677,7 +2671,7 @@ void SP_trigger_elevator(edict_t *self) {
 	self->nextthink = level.time + FRAME_TIME_S;
 }
 
-/*QUAKED func_timer (0.3 0.1 0.6) (-8 -8 -8) (8 8 8) START_ON
+/*QUAKED func_timer (0.3 0.1 0.6) (-8 -8 -8) (8 8 8) START_ON x x x x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
 "wait"			base time between triggering all targets, default is 1
 "random"		wait variance, default is 0
 
@@ -2738,7 +2732,7 @@ void SP_func_timer(edict_t *self) {
 constexpr spawnflags_t SPAWNFLAG_CONVEYOR_START_ON = 1_spawnflag;
 constexpr spawnflags_t SPAWNFLAG_CONVEYOR_TOGGLE = 2_spawnflag;
 
-/*QUAKED func_conveyor (0 .5 .8) ? START_ON TOGGLE
+/*QUAKED func_conveyor (0 .5 .8) ? START_ON TOGGLE x x x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
 Conveyors are stationary brushes that move what's on them.
 The brush should be have a surface with at least one current content enabled.
 speed	default 100
@@ -2781,7 +2775,7 @@ SECRET DOOR 1
 =============================================================================
 */
 
-/*QUAKED func_door_secret (0 .5 .8) ? ALWAYS_SHOOT 1ST_LEFT 1ST_DOWN
+/*QUAKED func_door_secret (0 .5 .8) ? ALWAYS_SHOOT 1ST_LEFT 1ST_DOWN x x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
 A secret door.  Slide back and then to the side.
 
 ALWAYS_SHOOT	door is shootable even if targeted
@@ -2794,9 +2788,9 @@ OPEN_ONCE		doors never closes
 "wait"		how long to hold in the open position (default 5, -1 means hold)
 */
 
-constexpr spawnflags_t SPAWNFLAG_SECRET_ALWAYS_SHOOT	= 1_spawnflag;
-constexpr spawnflags_t SPAWNFLAG_SECRET_1ST_LEFT		= 2_spawnflag;
-constexpr spawnflags_t SPAWNFLAG_SECRET_1ST_DOWN		= 4_spawnflag;
+constexpr spawnflags_t SPAWNFLAG_SECRET_ALWAYS_SHOOT = 1_spawnflag;
+constexpr spawnflags_t SPAWNFLAG_SECRET_1ST_LEFT = 2_spawnflag;
+constexpr spawnflags_t SPAWNFLAG_SECRET_1ST_DOWN = 4_spawnflag;
 
 void door_secret_move1(edict_t *self);
 void door_secret_move2(edict_t *self);
@@ -2941,7 +2935,7 @@ SECRET DOOR 2
 =============================================================================
 */
 
-/*QUAKED func_door_secret2 (0 .5 .8) ? OPEN_ONCE x 1ST_DOWN x ALWAYS_SHOOT SLIDE_RIGHT SLIDE_FORWARD
+/*QUAKED func_door_secret2 (0 .5 .8) ? OPEN_ONCE x 1ST_DOWN x ALWAYS_SHOOT SLIDE_RIGHT SLIDE_FORWARD x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
 Basic secret door. Slides back, then to the left. Angle determines direction.
 
 FLAGS:
@@ -3125,7 +3119,7 @@ void SP_func_door_secret2(edict_t *ent) {
 
 // ==================================================
 
-/*QUAKED func_force_wall (1 0 1) ? START_ON
+/*QUAKED func_force_wall (1 0 1) ? START_ON x x x x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
 A vertical particle force wall. Turns on and solid when triggered.
 If someone is in the force wall when it turns on, they're telefragged.
 
@@ -3211,7 +3205,7 @@ void SP_func_force_wall(edict_t *ent) {
 
 // -----------------
 
-/*QUAKED func_killbox (1 0 0) ? x DEADLY_COOP EXACT_COLLISION
+/*QUAKED func_killbox (1 0 0) ? x DEADLY_COOP EXACT_COLLISION x x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
 Kills everything inside when fired, irrespective of protection.
 */
 constexpr spawnflags_t SPAWNFLAG_KILLBOX_DEADLY_COOP = 2_spawnflag;
@@ -3238,7 +3232,7 @@ void SP_func_killbox(edict_t *ent) {
 	ent->svflags = SVF_NOCLIENT;
 }
 
-/*QUAKED func_eye (0 1 0) ?
+/*QUAKED func_eye (0 1 0) ? x x x x x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
 Camera-like eye that can track entities.
 "pathtarget" point to an info_notnull (which gets freed after spawn) to automatically set
 the eye_position
@@ -3391,7 +3385,7 @@ void SP_func_eye(edict_t *ent) {
 }
 
 
-/*QUAKED rotating_light (0 .5 .8) (-8 -8 -8) (8 8 8) START_OFF ALARM
+/*QUAKED rotating_light (0 .5 .8) (-8 -8 -8) (8 8 8) START_OFF ALARM x x x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
 "health"	if set, the light may be killed.
 */
 
@@ -3479,7 +3473,7 @@ void SP_rotating_light(edict_t *self) {
 	gi.linkentity(self);
 }
 
-/*QUAKED func_object_repair (1 .5 0) (-8 -8 -8) (8 8 8)
+/*QUAKED func_object_repair (1 .5 0) (-8 -8 -8) (8 8 8) x x x x x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
 object to be repaired.
 The default delay is 1 second
 "delay" the delay in seconds for spark to occur
@@ -3537,3 +3531,114 @@ void SP_object_repair(edict_t *ent) {
 	if (!ent->delay)
 		ent->delay = 1.0;
 }
+
+#if 0
+/*
+===============================================================================
+
+BOBBING
+
+===============================================================================
+*/
+
+
+/*QUAKED func_bobbing (0 .5 .8) ? X_AXIS Y_AXIS
+Normally bobs on the Z axis
+"model2"	.md3 model to also draw
+"height"	amplitude of bob (32 default)
+"speed"		seconds to complete a bob cycle (4 default)
+"phase"		the 0.0 to 1.0 offset in the cycle to start at
+"dmg"		damage to inflict when blocked (2 default)
+"color"		constantLight color
+"light"		constantLight radius
+*/
+void SP_func_bobbing(edict_t *ent) {
+
+	if (!ent->speed)
+		ent->speed = 4;
+	if (!ent->height)
+		ent->height = 32;
+	if (!ent->dmg)
+		ent->dmg = 2;
+	if (!ent->phase)
+		ent->phase = 0;
+
+	ent->solid = SOLID_BSP;
+	gi.setmodel(ent, ent->model);
+	
+	VectorCopy(ent->s.origin, ent->s.pos.trBase);
+	VectorCopy(ent->s.origin, ent->r.currentOrigin);
+
+	ent->s.pos.trDuration = ent->speed * 1000;
+	ent->s.pos.trTime = ent->s.pos.trDuration * ent->phase;
+	ent->s.pos.trType = TR_SINE;
+
+	// set the axis of bobbing
+	if (ent->spawnflags.has(1_spawnflag)) {
+		ent->s.pos.trDelta[0] = ent->height;
+	} else if (ent->spawnflags.has(2_spawnflag)) {
+		ent->s.pos.trDelta[1] = ent->height;
+	} else {
+		ent->s.pos.trDelta[2] = ent->height;
+	}
+}
+
+/*
+===============================================================================
+
+PENDULUM
+
+===============================================================================
+*/
+
+
+/*QUAKED func_pendulum (0 .5 .8) ?
+You need to have an origin brush as part of this entity.
+Pendulums always swing north / south on unrotated models.  Add an angles field to the model to allow rotation in other directions.
+Pendulum frequency is a physical constant based on the length of the beam and gravity.
+"model2"	.md3 model to also draw
+"speed"		the number of degrees each way the pendulum swings, (30 default)
+"phase"		the 0.0 to 1.0 offset in the cycle to start at
+"dmg"		damage to inflict when blocked (2 default)
+"color"		constantLight color
+"light"		constantLight radius
+*/
+void SP_func_pendulum(edict_t *ent) {
+	float freq, length;
+
+	if (!ent->speed)
+		ent->speed = 30;
+	if (!ent->dmg)
+		ent->dmg = 2;
+	if (!ent->phase)
+		ent->phase = 0;
+
+	ent->solid = SOLID_BSP;
+	gi.setmodel(ent, ent->model);
+
+	// find pendulum length
+	length = fabs(ent->mins[2]);
+	if (length < 8)
+		length = 8;
+
+	freq = 1 / (PI * 2) * sqrt(g_gravity->value / (3 * length));
+
+	ent->s.pos.trDuration = (1000 / freq);
+
+	//ent->moveinfo.
+	InitMover(ent);
+
+	VectorCopy(ent->s.origin, ent->s.pos.trBase);
+	VectorCopy(ent->s.origin, ent->r.currentOrigin);
+
+	VectorCopy(ent->s.angles, ent->s.apos.trBase);
+
+	ent->s.apos.trDuration = 1000 / freq;
+	ent->s.apos.trTime = ent->s.apos.trDuration * phase;
+	ent->s.apos.trType = TR_SINE;
+	ent->s.apos.trDelta[2] = speed;
+
+	//Move_Calc(ent, ent->moveinfo.end_origin, 
+
+}
+#endif

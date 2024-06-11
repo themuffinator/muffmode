@@ -222,10 +222,10 @@ static void G_Menu_Admin_Settings(edict_t *ent, menu_hnd_t *p) {
 static void G_Menu_Admin_MatchSet(edict_t *ent, menu_hnd_t *p) {
 	P_Menu_Close(ent);
 
-	if (level.match_state <= MATCH_COUNTDOWN) {
+	if (level.match_state <= matchst_t::MATCH_COUNTDOWN) {
 		gi.LocBroadcast_Print(PRINT_CHAT, "Match has been forced to start.\n");
 		Match_Start();
-	} else if (level.match_state == MATCH_IN_PROGRESS) {
+	} else if (level.match_state == matchst_t::MATCH_IN_PROGRESS) {
 		gi.LocBroadcast_Print(PRINT_CHAT, "Match has been forced to terminate.\n");
 		Match_Reset();
 	}
@@ -262,11 +262,11 @@ void G_Menu_Admin(edict_t *ent, menu_hnd_t *p) {
 	adminmenu[4].text[0] = '\0';
 	adminmenu[4].SelectFunc = nullptr;
 
-	if (level.match_state <= MATCH_COUNTDOWN) {
+	if (level.match_state <= matchst_t::MATCH_COUNTDOWN) {
 		Q_strlcpy(adminmenu[3].text, "Force start match", sizeof(adminmenu[3].text));
 		adminmenu[3].SelectFunc = G_Menu_Admin_MatchSet;
 
-	} else if (level.match_state == MATCH_IN_PROGRESS) {
+	} else if (level.match_state == matchst_t::MATCH_IN_PROGRESS) {
 		Q_strlcpy(adminmenu[3].text, "Reset match", sizeof(adminmenu[3].text));
 		adminmenu[3].SelectFunc = G_Menu_Admin_MatchSet;
 	}
@@ -355,6 +355,187 @@ static void G_Menu_PMStats(edict_t *ent, menu_hnd_t *p) {
 	P_Menu_Open(ent, pmstatsmenu, -1, sizeof(pmstatsmenu) / sizeof(menu_t), nullptr, G_Menu_PMStats_Update);
 }
 
+/*-----------------------------------------------------------------------*/
+#if 0
+static const int cvmenu_map = 3;
+static const int cvmenu_nextmap = 4;
+static const int cvmenu_restart = 5;
+static const int cvmenu_gametype = 6;
+static const int cvmenu_timelimit = 7;
+static const int cvmenu_scorelimit = 8;
+static const int cvmenu_shuffle = 9;
+static const int cvmenu_balance = 10;
+static const int cvmenu_unlagged = 11;
+static const int cvmenu_cointoss = 12;
+static const int cvmenu_random = 13;
+
+const menu_t pmcallvotemenu[] = {
+	{ "Call a Vote", MENU_ALIGN_CENTER, nullptr },
+	{ "", MENU_ALIGN_CENTER, nullptr },
+	{ "", MENU_ALIGN_LEFT, nullptr },
+	{ "", MENU_ALIGN_LEFT, nullptr },
+	{ "", MENU_ALIGN_LEFT, nullptr },
+	{ "", MENU_ALIGN_LEFT, nullptr },
+	{ "", MENU_ALIGN_LEFT, nullptr },
+	{ "", MENU_ALIGN_LEFT, nullptr },
+	{ "", MENU_ALIGN_LEFT, nullptr },
+	{ "", MENU_ALIGN_LEFT, nullptr },
+	{ "", MENU_ALIGN_LEFT, nullptr },
+	{ "", MENU_ALIGN_LEFT, nullptr },
+	{ "", MENU_ALIGN_LEFT, nullptr },
+	{ "", MENU_ALIGN_LEFT, nullptr },
+	{ "", MENU_ALIGN_LEFT, nullptr },
+	{ "", MENU_ALIGN_LEFT, nullptr },
+	{ "", MENU_ALIGN_LEFT, nullptr },
+	{ "$g_pc_return", MENU_ALIGN_LEFT, G_Menu_ReturnToMain }
+};
+
+const menu_t pmcallvotemenu_map[] = {
+	{ "Choose a Map", MENU_ALIGN_CENTER, nullptr },
+	{ "", MENU_ALIGN_CENTER, nullptr },
+	{ "", MENU_ALIGN_LEFT, nullptr },
+	{ "", MENU_ALIGN_LEFT, nullptr },
+	{ "", MENU_ALIGN_LEFT, nullptr },
+	{ "", MENU_ALIGN_LEFT, nullptr },
+	{ "", MENU_ALIGN_LEFT, nullptr },
+	{ "", MENU_ALIGN_LEFT, nullptr },
+	{ "", MENU_ALIGN_LEFT, nullptr },
+	{ "", MENU_ALIGN_LEFT, nullptr },
+	{ "", MENU_ALIGN_LEFT, nullptr },
+	{ "", MENU_ALIGN_LEFT, nullptr },
+	{ "", MENU_ALIGN_LEFT, nullptr },
+	{ "", MENU_ALIGN_LEFT, nullptr },
+	{ "", MENU_ALIGN_LEFT, nullptr },
+	{ "", MENU_ALIGN_LEFT, nullptr },
+	{ "", MENU_ALIGN_LEFT, nullptr },
+	{ "$g_pc_return", MENU_ALIGN_LEFT, G_Menu_ReturnToMain }
+};
+
+const menu_t pmcallvotemenu_timelimit[] = {
+	{ "Select Time Limit (mins)", MENU_ALIGN_CENTER, nullptr },
+	{ "", MENU_ALIGN_CENTER, nullptr },
+	{ "5", MENU_ALIGN_LEFT, nullptr },
+	{ "10", MENU_ALIGN_LEFT, nullptr },
+	{ "15", MENU_ALIGN_LEFT, nullptr },
+	{ "20", MENU_ALIGN_LEFT, nullptr },
+	{ "25", MENU_ALIGN_LEFT, nullptr },
+	{ "30", MENU_ALIGN_LEFT, nullptr },
+	{ "35", MENU_ALIGN_LEFT, nullptr },
+	{ "40", MENU_ALIGN_LEFT, nullptr },
+	{ "45", MENU_ALIGN_LEFT, nullptr },
+	{ "50", MENU_ALIGN_LEFT, nullptr },
+	{ "55", MENU_ALIGN_LEFT, nullptr },
+	{ "60", MENU_ALIGN_LEFT, nullptr },
+	{ "120", MENU_ALIGN_LEFT, nullptr },
+	{ "150", MENU_ALIGN_LEFT, nullptr },
+	{ "", MENU_ALIGN_LEFT, nullptr },
+	{ "$g_pc_return", MENU_ALIGN_LEFT, G_Menu_ReturnToMain }
+};
+
+static void G_Menu_CallVote_Map(edict_t *ent, menu_hnd_t *p) {
+	
+}
+
+static void G_Menu_CallVote_NextMap(edict_t *ent, menu_hnd_t *p) {
+	level.vote = FindVoteCmdByName("nextmap");
+	level.vote_arg = nullptr;
+	VoteCommandStore(ent);
+	P_Menu_Close(ent);
+}
+
+static void G_Menu_CallVote_Restart(edict_t *ent, menu_hnd_t *p) {
+	level.vote = FindVoteCmdByName("restart");
+	level.vote_arg = nullptr;
+	VoteCommandStore(ent);
+	P_Menu_Close(ent);
+}
+
+static void G_Menu_CallVote_GameType(edict_t *ent, menu_hnd_t *p) {
+	
+}
+
+static void G_Menu_CallVote_TimeLimit_Update(edict_t *ent) {
+
+	level.vote_arg = nullptr;
+}
+
+static void G_Menu_CallVote_TimeLimit(edict_t *ent, menu_hnd_t *p) {
+	level.vote = FindVoteCmdByName("timelimit");
+	level.vote_arg = nullptr;
+	VoteCommandStore(ent);
+	P_Menu_Close(ent);
+	P_Menu_Open(ent, pmcallvotemenu_timelimit, -1, sizeof(pmcallvotemenu_timelimit) / sizeof(menu_t), nullptr, G_Menu_CallVote_TimeLimit_Update);
+}
+
+static void G_Menu_CallVote_ScoreLimit(edict_t *ent, menu_hnd_t *p) {
+}
+
+static void G_Menu_CallVote_ShuffleTeams(edict_t *ent, menu_hnd_t *p) {
+	level.vote = FindVoteCmdByName("shuffle");
+	level.vote_arg = nullptr;
+	VoteCommandStore(ent);
+	P_Menu_Close(ent);
+}
+
+static void G_Menu_CallVote_BalanceTeams(edict_t *ent, menu_hnd_t *p) {
+	level.vote = FindVoteCmdByName("balance");
+	level.vote_arg = nullptr;
+	VoteCommandStore(ent);
+	P_Menu_Close(ent);
+	
+}
+
+static void G_Menu_CallVote_Unlagged(edict_t *ent, menu_hnd_t *p) {
+	
+}
+
+static void G_Menu_CallVote_Cointoss(edict_t *ent, menu_hnd_t *p) {
+	level.vote = FindVoteCmdByName("cointoss");
+	level.vote_arg = nullptr;
+	VoteCommandStore(ent);
+	P_Menu_Close(ent);
+}
+
+static void G_Menu_CallVote_Random(edict_t *ent, menu_hnd_t *p) {
+	
+}
+
+static void G_Menu_CallVote_Update(edict_t *ent) {
+	menu_t *entries = ent->client->menu->entries;
+	int i = 0;
+
+	Q_strlcpy(entries[i].text, "Call a Vote", sizeof(entries[i].text));
+	i++;
+	i++;
+
+	entries[cvmenu_map].SelectFunc = G_Menu_CallVote_Map;
+	i++;
+	entries[cvmenu_nextmap].SelectFunc = G_Menu_CallVote_NextMap;
+	i++;
+	entries[cvmenu_restart].SelectFunc = G_Menu_CallVote_Restart;
+	i++;
+	entries[cvmenu_gametype].SelectFunc = G_Menu_CallVote_GameType;
+	i++;
+	entries[cvmenu_timelimit].SelectFunc = G_Menu_CallVote_TimeLimit;
+	i++;
+	entries[cvmenu_scorelimit].SelectFunc = G_Menu_CallVote_ScoreLimit;
+	i++;
+	entries[cvmenu_shuffle].SelectFunc = G_Menu_CallVote_ShuffleTeams;
+	i++;
+	entries[cvmenu_balance].SelectFunc = G_Menu_CallVote_BalanceTeams;
+	i++;
+	entries[cvmenu_unlagged].SelectFunc = G_Menu_CallVote_Unlagged;
+	i++;
+	entries[cvmenu_cointoss].SelectFunc = G_Menu_CallVote_Cointoss;
+	i++;
+	entries[cvmenu_random].SelectFunc = G_Menu_CallVote_Random;
+}
+
+static void G_Menu_CallVote(edict_t *ent, menu_hnd_t *p) {
+	P_Menu_Close(ent);
+	P_Menu_Open(ent, pmcallvotemenu, -1, sizeof(pmcallvotemenu) / sizeof(menu_t), nullptr, G_Menu_CallVote_Update);
+}
+#endif
 /*-----------------------------------------------------------------------*/
 
 const menu_t votemenu[] = {
@@ -470,20 +651,20 @@ static const int jmenu_teams_join_red = 5;
 static const int jmenu_teams_join_blue = 6;
 static const int jmenu_teams_spec = 7;
 static const int jmenu_teams_chase = 8;
-static const int jmenu_teams_reqmatch = 10;
-static const int jmenu_teams_hostinfo = 11;
-static const int jmenu_teams_svinfo = 12;
-static const int jmenu_teams_player = 13;
+static const int jmenu_teams_hostinfo = 10;
+static const int jmenu_teams_svinfo = 11;
+static const int jmenu_teams_player = 12;
+static const int jmenu_teams_callvote = 13;
 static const int jmenu_teams_admin = 14;
 
 static const int jmenu_free_join = 5;
-static const int jmenu_free_spec = 6;
-static const int jmenu_free_chase = 7;
-static const int jmenu_free_reqmatch = 9;
+static const int jmenu_free_spec = 7;
+static const int jmenu_free_chase = 8;
 static const int jmenu_free_hostinfo = 10;
 static const int jmenu_free_svinfo = 11;
 static const int jmenu_free_player = 12;
-static const int jmenu_free_admin = 13;
+static const int jmenu_free_callvote = 13;
+static const int jmenu_free_admin = 14;
 
 static const int jmenu_gamemod = 16;
 static const int jmenu_notice = 17;
@@ -499,12 +680,13 @@ const menu_t teams_join_menu[] = {
 	{ "Spectate", MENU_ALIGN_LEFT, G_Menu_Join_Team_Spec },
 	{ "$g_pc_chase_camera", MENU_ALIGN_LEFT, G_Menu_ChaseCam },
 	{ "", MENU_ALIGN_LEFT, nullptr },
-	{ "", MENU_ALIGN_LEFT, nullptr },
 	{ "Host Info", MENU_ALIGN_LEFT, G_Menu_HostInfo },
 	{ "Match Info", MENU_ALIGN_LEFT, G_Menu_ServerInfo },
 	//{ "Game Rules", MENU_ALIGN_LEFT, G_Menu_GameRules },
 	{ "Player Stats", MENU_ALIGN_LEFT, G_Menu_PMStats },
+	//{ "Call a Vote", MENU_ALIGN_LEFT, G_Menu_CallVote },
 	{ "", MENU_ALIGN_LEFT, nullptr },
+	{ "Admin", MENU_ALIGN_LEFT, nullptr },
 	{ "", MENU_ALIGN_LEFT, nullptr },
 	{ "", MENU_ALIGN_CENTER, nullptr },
 	{ "", MENU_ALIGN_CENTER, nullptr }
@@ -517,16 +699,17 @@ const menu_t free_join_menu[] = {
 	{ "", MENU_ALIGN_CENTER, nullptr },
 	{ "", MENU_ALIGN_LEFT, nullptr },
 	{ "Join Game", MENU_ALIGN_LEFT, G_Menu_Join_Team_Free },
+	{ "", MENU_ALIGN_LEFT, nullptr },
 	{ "Spectate", MENU_ALIGN_LEFT, G_Menu_Join_Team_Spec },
 	{ "$g_pc_chase_camera", MENU_ALIGN_LEFT, G_Menu_ChaseCam },
-	{ "", MENU_ALIGN_LEFT, nullptr },
 	{ "", MENU_ALIGN_LEFT, nullptr },
 	{ "Host Info", MENU_ALIGN_LEFT, G_Menu_HostInfo },
 	{ "Match Info", MENU_ALIGN_LEFT, G_Menu_ServerInfo },
 	//{ "Game Rules", MENU_ALIGN_LEFT, G_Menu_GameRules },
 	{ "Player Stats", MENU_ALIGN_LEFT, G_Menu_PMStats },
+	//{ "Call a Vote", MENU_ALIGN_LEFT,  G_Menu_CallVote },
 	{ "", MENU_ALIGN_LEFT, nullptr },
-	{ "", MENU_ALIGN_LEFT, nullptr },
+	{ "Admin", MENU_ALIGN_LEFT, nullptr },
 	{ "", MENU_ALIGN_LEFT, nullptr },
 	{ "", MENU_ALIGN_CENTER, nullptr },
 	{ "", MENU_ALIGN_CENTER, nullptr }
@@ -646,7 +829,7 @@ static void G_Menu_HostInfo_Update(edict_t *ent) {
 		// 9 lines
 		// = 234
 
-		Q_strlcpy(entries[i].text, g_motd->string, sizeof(entries[i].text));
+		Q_strlcpy(entries[i].text, G_Fmt("{}", g_motd->string).data(), sizeof(entries[i].text));
 	}
 }
 
@@ -912,25 +1095,25 @@ static void G_Menu_Join_Update(edict_t *ent) {
 			entries[jmenu_teams_join_red].SelectFunc = G_Menu_Join_Team_Red;
 			entries[jmenu_teams_join_blue].SelectFunc = nullptr;
 		} else {
-			if (level.locked[TEAM_RED] || level.match_state == MATCH_IN_PROGRESS && g_match_lock->integer) {
-				Q_strlcpy(entries[jmenu_teams_join_red].text, "Red Team is LOCKED", sizeof(entries[jmenu_teams_join_red].text));
+			if (level.locked[TEAM_RED] || level.match_state == matchst_t::MATCH_IN_PROGRESS && g_match_lock->integer) {
+				Q_strlcpy(entries[jmenu_teams_join_red].text, G_Fmt("{} is LOCKED during play", Teams_TeamName(TEAM_RED)).data(), sizeof(entries[jmenu_teams_join_red].text));
 				entries[jmenu_teams_join_red].SelectFunc = nullptr;
 			} else {
-				Q_strlcpy(entries[jmenu_teams_join_red].text, G_Fmt("Join Red Team ({}/{})", num_red, floor(pmax / 2)).data(), sizeof(entries[jmenu_teams_join_red].text));
+				Q_strlcpy(entries[jmenu_teams_join_red].text, G_Fmt("Join {} ({}/{})", Teams_TeamName(TEAM_RED), num_red, floor(pmax / 2)).data(), sizeof(entries[jmenu_teams_join_red].text));
 				entries[jmenu_teams_join_red].SelectFunc = G_Menu_Join_Team_Red;
 			}
-			if (level.locked[TEAM_BLUE] || level.match_state == MATCH_IN_PROGRESS && g_match_lock->integer) {
-				Q_strlcpy(entries[jmenu_teams_join_blue].text, "Blue Team is LOCKED", sizeof(entries[jmenu_teams_join_blue].text));
+			if (level.locked[TEAM_BLUE] || level.match_state == matchst_t::MATCH_IN_PROGRESS && g_match_lock->integer) {
+				Q_strlcpy(entries[jmenu_teams_join_blue].text, G_Fmt("{} is LOCKED during play", Teams_TeamName(TEAM_BLUE)).data(), sizeof(entries[jmenu_teams_join_blue].text));
 				entries[jmenu_teams_join_blue].SelectFunc = nullptr;
 			} else {
-				Q_strlcpy(entries[jmenu_teams_join_blue].text, G_Fmt("Join Blue Team ({}/{})", num_blue, floor(pmax / 2)).data(), sizeof(entries[jmenu_teams_join_blue].text));
+				Q_strlcpy(entries[jmenu_teams_join_blue].text, G_Fmt("Join {} ({}/{})", Teams_TeamName(TEAM_BLUE), num_blue, floor(pmax / 2)).data(), sizeof(entries[jmenu_teams_join_blue].text));
 				entries[jmenu_teams_join_blue].SelectFunc = G_Menu_Join_Team_Blue;
 			}
 
 		}
 	} else {
-		if (level.locked[TEAM_FREE] || level.match_state == MATCH_IN_PROGRESS && g_match_lock->integer) {
-			Q_strlcpy(entries[jmenu_free_join].text, "Match is LOCKED", sizeof(entries[jmenu_free_join].text));
+		if (level.locked[TEAM_FREE] || level.match_state == matchst_t::MATCH_IN_PROGRESS && g_match_lock->integer) {
+			Q_strlcpy(entries[jmenu_free_join].text, "Match LOCKED during play", sizeof(entries[jmenu_free_join].text));
 			entries[jmenu_free_join].SelectFunc = nullptr;
 		} else if (duel->integer && level.num_playing_clients == 2) {
 			Q_strlcpy(entries[jmenu_free_join].text, G_Fmt("Join Queue to Play ({}/{})", num_queue, pmax - 2).data(), sizeof(entries[jmenu_free_join].text));
@@ -977,21 +1160,21 @@ static void G_Menu_Join_Update(edict_t *ent) {
 	G_Menu_SetGamemodName(entries + jmenu_gamemod);
 
 	switch (level.match_state) {
-	case MATCH_NONE:
+	case matchst_t::MATCH_NONE:
 		entries[jmenu_match].text[0] = '\0';
 		break;
 
-	case MATCH_WARMUP_DELAYED:
-	case MATCH_WARMUP_DEFAULT:
-	case MATCH_WARMUP_READYUP:
+	case matchst_t::MATCH_WARMUP_DELAYED:
+	case matchst_t::MATCH_WARMUP_DEFAULT:
+	case matchst_t::MATCH_WARMUP_READYUP:
 		Q_strlcpy(entries[jmenu_match].text, "*MATCH WARMUP", sizeof(entries[jmenu_match].text));
 		break;
 
-	case MATCH_COUNTDOWN:
+	case matchst_t::MATCH_COUNTDOWN:
 		Q_strlcpy(entries[jmenu_match].text, "*MATCH IS STARTING", sizeof(entries[jmenu_match].text));
 		break;
 
-	case MATCH_IN_PROGRESS:
+	case matchst_t::MATCH_IN_PROGRESS:
 		Q_strlcpy(entries[jmenu_match].text, "*MATCH IN PROGRESS", sizeof(entries[jmenu_match].text));
 		break;
 

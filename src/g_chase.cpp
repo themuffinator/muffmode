@@ -38,20 +38,18 @@ void FreeClientFollowers(edict_t *ent) {
 
 void UpdateChaseCam(edict_t *ent) {
 	vec3_t	o, ownerv, goal;
-	edict_t	*targ;
+	edict_t	*targ = ent->client->follow_target;
 	vec3_t	forward, right;
 	trace_t	trace;
 	vec3_t	oldgoal;
 	vec3_t	angles;
-
+	
 	// is our follow target gone?
-	if (!ent->client->follow_target->inuse || !ent->client->follow_target->client || ent->client->follow_target->client->resp.team == TEAM_SPECTATOR) {
-		SetTeam(ent, TEAM_SPECTATOR, false, false, false);
-		FreeClientFollowers(ent);
+	if (!targ || !targ->inuse || !targ->client || !ClientIsPlaying(targ->client) || targ->client->eliminated) {
+		//SetTeam(ent, TEAM_SPECTATOR, false, false, false);
+		FreeClientFollowers(targ);
 		return;
 	}
-
-	targ = ent->client->follow_target;
 
 	ownerv = targ->s.origin;
 	oldgoal = ent->s.origin;
@@ -83,8 +81,8 @@ void UpdateChaseCam(edict_t *ent) {
 		ent->client->ps.pmove.delta_angles = targ->client->ps.pmove.delta_angles;
 		ent->client->ps.pmove.viewheight = targ->client->ps.pmove.viewheight;
 		
-		ent->client->pers.hand = ent->client->follow_target->client->pers.hand;
-		ent->client->pers.weapon = ent->client->follow_target->client->pers.weapon;
+		ent->client->pers.hand = targ->client->pers.hand;
+		ent->client->pers.weapon = targ->client->pers.weapon;
 		
 		//FIXME: color shells and damage blends not working
 
@@ -157,7 +155,7 @@ void UpdateChaseCam(edict_t *ent) {
 	}
 
 	edict_t *e = targ ? targ : ent;
-	ent->client->ps.stats[STAT_SHOW_STATUSBAR] = e->client->resp.team == TEAM_SPECTATOR ? 0 : 1;
+	ent->client->ps.stats[STAT_SHOW_STATUSBAR] = e->client->resp.team == TEAM_SPECTATOR || e->client->eliminated ? 0 : 1;
 
 	ent->viewheight = 0;
 	if (!g_eyecam->integer)
@@ -246,7 +244,9 @@ void FollowNext(edict_t *ent) {
 		e = g_edicts + i;
 		if (!e->inuse)
 			continue;
-		if (ClientIsPlaying(e->client))
+		if (ent->client->eliminated && ent->client->resp.team != e->client->resp.team)
+			continue;
+		if (ClientIsPlaying(e->client) && !e->client->eliminated)
 			break;
 	} while (e != ent->client->follow_target);
 
@@ -269,7 +269,9 @@ void FollowPrev(edict_t *ent) {
 		e = g_edicts + i;
 		if (!e->inuse)
 			continue;
-		if (ClientIsPlaying(e->client))
+		if (ent->client->eliminated && ent->client->resp.team != e->client->resp.team)
+			continue;
+		if (ClientIsPlaying(e->client) && !e->client->eliminated)
 			break;
 	} while (e != ent->client->follow_target);
 
@@ -288,7 +290,7 @@ void FollowCycle(edict_t *ent, int dir) {
 		ent->client->resp.losses++;
 
 	// first set them to spectator
-	if (cl->resp.spectator_state == SPECTATOR_NOT)
+	if (cl->resp.spectator_state == SPECTATOR_NOT && !cl->eliminated)
 		SetTeam(ent, TEAM_SPECTATOR, false, false, false);
 
 	clientnum = cl->resp.spectator_client;
@@ -303,6 +305,12 @@ void FollowCycle(edict_t *ent, int dir) {
 		
 		// can't follow another spectator
 		if (!ClientIsPlaying(follow_ent->client))
+			continue;
+
+		if (follow_ent->client->eliminated)
+			continue;
+
+		if (ent->client->eliminated && ent->client->resp.team != follow_ent->client->resp.team)
 			continue;
 
 		// this is good, we can use it
@@ -322,14 +330,16 @@ void FollowCycle(edict_t *ent, int dir) {
 
 void GetFollowTarget(edict_t *ent) {
 	for (auto ec : active_clients()) {
-		if (ec->inuse && ClientIsPlaying(ec->client)) {
+		if (ec->inuse && ClientIsPlaying(ec->client) && !ec->client->eliminated) {
+			if (ent->client->eliminated && ent->client->resp.team != ec->client->resp.team)
+				continue;
 			ent->client->follow_target = ec;
 			ent->client->follow_update = true;
 			UpdateChaseCam(ent);
 			return;
 		}
 	}
-
+	/*
 	if (ent->client->chase_msg_time <= level.time) {
 		if (ent->client->resp.initialised) {
 			gi.LocCenter_Print(ent, "$g_no_players_chase");
@@ -338,4 +348,5 @@ void GetFollowTarget(edict_t *ent) {
 			G_Menu_Join_Open(ent);
 		}
 	}
+	*/
 }

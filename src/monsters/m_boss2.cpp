@@ -582,7 +582,7 @@ MONSTERINFO_CHECKATTACK(Boss2_CheckAttack) (edict_t *self) -> bool {
 	return M_CheckAttack_Base(self, 0.4f, 0.8f, 0.8f, 0.8f, 0.f, 0.f);
 }
 
-/*QUAKED monster_boss2 (1 .5 0) (-56 -56 0) (56 56 80) AMBUSH TRIGGER_SPAWN SIGHT HYPERBLASTER
+/*QUAKED monster_boss2 (1 .5 0) (-56 -56 0) (56 56 80) AMBUSH TRIGGER_SPAWN SIGHT HYPERBLASTER x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
  */
 void SP_monster_boss2(edict_t *self) {
 	if (!M_AllowSpawn(self)) {
