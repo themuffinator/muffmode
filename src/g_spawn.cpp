@@ -5,227 +5,227 @@
 
 struct spawn_t {
 	const char *name;
-	void (*spawn)(edict_t *ent);
+	void (*spawn)(gentity_t *ent);
 };
 
-void SP_info_player_start(edict_t *ent);
-void SP_info_player_deathmatch(edict_t *ent);
-void SP_info_player_team_red(edict_t *self);
-void SP_info_player_team_blue(edict_t *self);
-void SP_info_player_coop(edict_t *ent);
-void SP_info_player_coop_lava(edict_t *self);
-void SP_info_player_intermission(edict_t *ent);
-void SP_info_teleport_destination(edict_t *self);
-void SP_info_ctf_teleport_destination(edict_t *self);
-void SP_info_landmark(edict_t *self); // [Paril-KEX]
-void SP_info_world_text(edict_t *self);
-void SP_info_nav_lock(edict_t *self); // [Paril-KEX]
+void SP_info_player_start(gentity_t *ent);
+void SP_info_player_deathmatch(gentity_t *ent);
+void SP_info_player_team_red(gentity_t *self);
+void SP_info_player_team_blue(gentity_t *self);
+void SP_info_player_coop(gentity_t *ent);
+void SP_info_player_coop_lava(gentity_t *self);
+void SP_info_player_intermission(gentity_t *ent);
+void SP_info_teleport_destination(gentity_t *self);
+void SP_info_ctf_teleport_destination(gentity_t *self);
+void SP_info_landmark(gentity_t *self); // [Paril-KEX]
+void SP_info_world_text(gentity_t *self);
+void SP_info_nav_lock(gentity_t *self); // [Paril-KEX]
 
-void SP_func_plat(edict_t *ent);
-void SP_func_plat2(edict_t *ent);
-void SP_func_rotating(edict_t *ent);
-void SP_func_button(edict_t *ent);
-void SP_func_door(edict_t *ent);
-void SP_func_door_secret(edict_t *ent);
-void SP_func_door_secret2(edict_t *ent);
-void SP_func_door_rotating(edict_t *ent);
-void SP_func_water(edict_t *ent);
-void SP_func_train(edict_t *ent);
-void SP_func_conveyor(edict_t *self);
-void SP_func_wall(edict_t *self);
-void SP_func_force_wall(edict_t *ent);
-void SP_func_object(edict_t *self);
-void SP_func_explosive(edict_t *self);
-void SP_func_timer(edict_t *self);
-void SP_func_areaportal(edict_t *ent);
-void SP_func_clock(edict_t *ent);
-void SP_func_killbox(edict_t *ent);
-void SP_func_eye(edict_t *ent); // [Paril-KEX]
-void SP_func_animation(edict_t *ent); // [Paril-KEX]
-void SP_func_spinning(edict_t *ent); // [Paril-KEX]
-void SP_object_repair(edict_t *self);
+void SP_func_plat(gentity_t *ent);
+void SP_func_plat2(gentity_t *ent);
+void SP_func_rotating(gentity_t *ent);
+void SP_func_button(gentity_t *ent);
+void SP_func_door(gentity_t *ent);
+void SP_func_door_secret(gentity_t *ent);
+void SP_func_door_secret2(gentity_t *ent);
+void SP_func_door_rotating(gentity_t *ent);
+void SP_func_water(gentity_t *ent);
+void SP_func_train(gentity_t *ent);
+void SP_func_conveyor(gentity_t *self);
+void SP_func_wall(gentity_t *self);
+void SP_func_force_wall(gentity_t *ent);
+void SP_func_object(gentity_t *self);
+void SP_func_explosive(gentity_t *self);
+void SP_func_timer(gentity_t *self);
+void SP_func_areaportal(gentity_t *ent);
+void SP_func_clock(gentity_t *ent);
+void SP_func_killbox(gentity_t *ent);
+void SP_func_eye(gentity_t *ent); // [Paril-KEX]
+void SP_func_animation(gentity_t *ent); // [Paril-KEX]
+void SP_func_spinning(gentity_t *ent); // [Paril-KEX]
+void SP_object_repair(gentity_t *self);
 
-void SP_trigger_always(edict_t *ent);
-void SP_trigger_once(edict_t *ent);
-void SP_trigger_multiple(edict_t *ent);
-void SP_trigger_relay(edict_t *ent);
-void SP_trigger_push(edict_t *ent);
-void SP_trigger_hurt(edict_t *ent);
-void SP_trigger_key(edict_t *ent);
-void SP_trigger_counter(edict_t *ent);
-void SP_trigger_elevator(edict_t *ent);
-void SP_trigger_gravity(edict_t *ent);
-void SP_trigger_monsterjump(edict_t *ent);
-void SP_trigger_flashlight(edict_t *self); // [Paril-KEX]
-void SP_trigger_fog(edict_t *self); // [Paril-KEX]
-void SP_trigger_coop_relay(edict_t *self); // [Paril-KEX]
-void SP_trigger_health_relay(edict_t *self); // [Paril-KEX]
-void SP_trigger_teleport(edict_t *self);
-void SP_trigger_ctf_teleport(edict_t *self);
-void SP_trigger_disguise(edict_t *self);
+void SP_trigger_always(gentity_t *ent);
+void SP_trigger_once(gentity_t *ent);
+void SP_trigger_multiple(gentity_t *ent);
+void SP_trigger_relay(gentity_t *ent);
+void SP_trigger_push(gentity_t *ent);
+void SP_trigger_hurt(gentity_t *ent);
+void SP_trigger_key(gentity_t *ent);
+void SP_trigger_counter(gentity_t *ent);
+void SP_trigger_elevator(gentity_t *ent);
+void SP_trigger_gravity(gentity_t *ent);
+void SP_trigger_monsterjump(gentity_t *ent);
+void SP_trigger_flashlight(gentity_t *self); // [Paril-KEX]
+void SP_trigger_fog(gentity_t *self); // [Paril-KEX]
+void SP_trigger_coop_relay(gentity_t *self); // [Paril-KEX]
+void SP_trigger_health_relay(gentity_t *self); // [Paril-KEX]
+void SP_trigger_teleport(gentity_t *self);
+void SP_trigger_ctf_teleport(gentity_t *self);
+void SP_trigger_disguise(gentity_t *self);
 
-void SP_trigger_teleport(edict_t *self);	//q3
-void SP_trigger_deathcount(edict_t *ent);	//mm
-void SP_trigger_no_monsters(edict_t *ent);	//mm
-void SP_trigger_monsters(edict_t *ent);	//mm
+void SP_trigger_teleport(gentity_t *self);	//q3
+void SP_trigger_deathcount(gentity_t *ent);	//mm
+void SP_trigger_no_monsters(gentity_t *ent);	//mm
+void SP_trigger_monsters(gentity_t *ent);	//mm
 
-void SP_target_temp_entity(edict_t *ent);
-void SP_target_speaker(edict_t *ent);
-void SP_target_explosion(edict_t *ent);
-void SP_target_changelevel(edict_t *ent);
-void SP_target_secret(edict_t *ent);
-void SP_target_goal(edict_t *ent);
-void SP_target_splash(edict_t *ent);
-void SP_target_spawner(edict_t *ent);
-void SP_target_blaster(edict_t *ent);
-void SP_target_crosslevel_trigger(edict_t *ent);
-void SP_target_crosslevel_target(edict_t *ent);
-void SP_target_crossunit_trigger(edict_t *ent); // [Paril-KEX]
-void SP_target_crossunit_target(edict_t *ent); // [Paril-KEX]
-void SP_target_laser(edict_t *self);
-void SP_target_help(edict_t *ent);
-void SP_target_actor(edict_t *ent);
-void SP_target_lightramp(edict_t *self);
-void SP_target_earthquake(edict_t *ent);
-void SP_target_character(edict_t *ent);
-void SP_target_string(edict_t *ent);
-void SP_target_camera(edict_t *self); // [Sam-KEX]
-void SP_target_gravity(edict_t *self); // [Sam-KEX]
-void SP_target_soundfx(edict_t *self); // [Sam-KEX]
-void SP_target_light(edict_t *self); // [Paril-KEX]
-void SP_target_poi(edict_t *ent); // [Paril-KEX]
-void SP_target_music(edict_t *ent);
-void SP_target_healthbar(edict_t *self); // [Paril-KEX]
-void SP_target_autosave(edict_t *self); // [Paril-KEX]
-void SP_target_sky(edict_t *self); // [Paril-KEX]
-void SP_target_achievement(edict_t *self); // [Paril-KEX]
-void SP_target_story(edict_t *self); // [Paril-KEX]
-void SP_target_mal_laser(edict_t *ent);
-void SP_target_steam(edict_t *self);
-void SP_target_anger(edict_t *self);
-void SP_target_killplayers(edict_t *self);
+void SP_target_temp_entity(gentity_t *ent);
+void SP_target_speaker(gentity_t *ent);
+void SP_target_explosion(gentity_t *ent);
+void SP_target_changelevel(gentity_t *ent);
+void SP_target_secret(gentity_t *ent);
+void SP_target_goal(gentity_t *ent);
+void SP_target_splash(gentity_t *ent);
+void SP_target_spawner(gentity_t *ent);
+void SP_target_blaster(gentity_t *ent);
+void SP_target_crosslevel_trigger(gentity_t *ent);
+void SP_target_crosslevel_target(gentity_t *ent);
+void SP_target_crossunit_trigger(gentity_t *ent); // [Paril-KEX]
+void SP_target_crossunit_target(gentity_t *ent); // [Paril-KEX]
+void SP_target_laser(gentity_t *self);
+void SP_target_help(gentity_t *ent);
+void SP_target_actor(gentity_t *ent);
+void SP_target_lightramp(gentity_t *self);
+void SP_target_earthquake(gentity_t *ent);
+void SP_target_character(gentity_t *ent);
+void SP_target_string(gentity_t *ent);
+void SP_target_camera(gentity_t *self); // [Sam-KEX]
+void SP_target_gravity(gentity_t *self); // [Sam-KEX]
+void SP_target_soundfx(gentity_t *self); // [Sam-KEX]
+void SP_target_light(gentity_t *self); // [Paril-KEX]
+void SP_target_poi(gentity_t *ent); // [Paril-KEX]
+void SP_target_music(gentity_t *ent);
+void SP_target_healthbar(gentity_t *self); // [Paril-KEX]
+void SP_target_autosave(gentity_t *self); // [Paril-KEX]
+void SP_target_sky(gentity_t *self); // [Paril-KEX]
+void SP_target_achievement(gentity_t *self); // [Paril-KEX]
+void SP_target_story(gentity_t *self); // [Paril-KEX]
+void SP_target_mal_laser(gentity_t *ent);
+void SP_target_steam(gentity_t *self);
+void SP_target_anger(gentity_t *self);
+void SP_target_killplayers(gentity_t *self);
 // PMM - still experimental!
-void SP_target_blacklight(edict_t *self);
-void SP_target_orb(edict_t *self);
+void SP_target_blacklight(gentity_t *self);
+void SP_target_orb(gentity_t *self);
 // pmm
-void SP_target_remove_powerups(edict_t *ent);	//q3
-void SP_target_give(edict_t *ent);	//q3
-void SP_target_delay(edict_t *ent);	//q3
-void SP_target_print(edict_t *ent);	//q3
-void SP_target_teleporter(edict_t *ent);	//q3
-void SP_target_kill(edict_t *self);	//q3
-void SP_target_cvar(edict_t *ent);	//ql
-void SP_target_setskill(edict_t *ent);
-void SP_target_score(edict_t *ent);	//q3
-void SP_target_remove_weapons(edict_t *ent);
+void SP_target_remove_powerups(gentity_t *ent);	//q3
+void SP_target_give(gentity_t *ent);	//q3
+void SP_target_delay(gentity_t *ent);	//q3
+void SP_target_print(gentity_t *ent);	//q3
+void SP_target_teleporter(gentity_t *ent);	//q3
+void SP_target_kill(gentity_t *self);	//q3
+void SP_target_cvar(gentity_t *ent);	//ql
+void SP_target_setskill(gentity_t *ent);
+void SP_target_score(gentity_t *ent);	//q3
+void SP_target_remove_weapons(gentity_t *ent);
 
-void SP_target_shooter_grenade(edict_t *ent);
-void SP_target_shooter_rocket(edict_t *ent);
-void SP_target_shooter_bfg(edict_t *ent);
-void SP_target_shooter_prox(edict_t *ent);
-void SP_target_shooter_ionripper(edict_t *ent);
-void SP_target_shooter_phalanx(edict_t *ent);
-void SP_target_shooter_flechette(edict_t *ent);
+void SP_target_shooter_grenade(gentity_t *ent);
+void SP_target_shooter_rocket(gentity_t *ent);
+void SP_target_shooter_bfg(gentity_t *ent);
+void SP_target_shooter_prox(gentity_t *ent);
+void SP_target_shooter_ionripper(gentity_t *ent);
+void SP_target_shooter_phalanx(gentity_t *ent);
+void SP_target_shooter_flechette(gentity_t *ent);
 
-void SP_worldspawn(edict_t *ent);
+void SP_worldspawn(gentity_t *ent);
 
-void SP_dynamic_light(edict_t *self);
-void SP_rotating_light(edict_t *self);
-void SP_light(edict_t *self);
-void SP_light_mine1(edict_t *ent);
-void SP_light_mine2(edict_t *ent);
-void SP_info_null(edict_t *self);
-void SP_info_notnull(edict_t *self);
-void SP_misc_player_mannequin(edict_t *self);
-void SP_misc_model(edict_t *self); // [Paril-KEX]
-void SP_path_corner(edict_t *self);
-void SP_point_combat(edict_t *self);
+void SP_dynamic_light(gentity_t *self);
+void SP_rotating_light(gentity_t *self);
+void SP_light(gentity_t *self);
+void SP_light_mine1(gentity_t *ent);
+void SP_light_mine2(gentity_t *ent);
+void SP_info_null(gentity_t *self);
+void SP_info_notnull(gentity_t *self);
+void SP_misc_player_mannequin(gentity_t *self);
+void SP_misc_model(gentity_t *self); // [Paril-KEX]
+void SP_path_corner(gentity_t *self);
+void SP_point_combat(gentity_t *self);
 
-void SP_misc_explobox(edict_t *self);
-void SP_misc_banner(edict_t *self);
-void SP_misc_ctf_banner(edict_t *ent);
-void SP_misc_ctf_small_banner(edict_t *ent);
-void SP_misc_satellite_dish(edict_t *self);
-void SP_misc_actor(edict_t *self);
-void SP_misc_gib_arm(edict_t *self);
-void SP_misc_gib_leg(edict_t *self);
-void SP_misc_gib_head(edict_t *self);
-void SP_misc_insane(edict_t *self);
-void SP_misc_deadsoldier(edict_t *self);
-void SP_misc_viper(edict_t *self);
-void SP_misc_viper_bomb(edict_t *self);
-void SP_misc_bigviper(edict_t *self);
-void SP_misc_strogg_ship(edict_t *self);
-void SP_misc_teleporter(edict_t *self);
-void SP_misc_teleporter_dest(edict_t *self);
-void SP_misc_blackhole(edict_t *self);
-void SP_misc_eastertank(edict_t *self);
-void SP_misc_easterchick(edict_t *self);
-void SP_misc_easterchick2(edict_t *self);
-void SP_misc_crashviper(edict_t *ent);
-void SP_misc_viper_missile(edict_t *self);
-void SP_misc_amb4(edict_t *ent);
-void SP_misc_transport(edict_t *ent);
-void SP_misc_nuke(edict_t *ent);
-void SP_misc_flare(edict_t *ent); // [Sam-KEX]
-void SP_misc_hologram(edict_t *ent);
-void SP_misc_lavaball(edict_t *ent);
-void SP_misc_nuke_core(edict_t *self);
+void SP_misc_explobox(gentity_t *self);
+void SP_misc_banner(gentity_t *self);
+void SP_misc_ctf_banner(gentity_t *ent);
+void SP_misc_ctf_small_banner(gentity_t *ent);
+void SP_misc_satellite_dish(gentity_t *self);
+void SP_misc_actor(gentity_t *self);
+void SP_misc_gib_arm(gentity_t *self);
+void SP_misc_gib_leg(gentity_t *self);
+void SP_misc_gib_head(gentity_t *self);
+void SP_misc_insane(gentity_t *self);
+void SP_misc_deadsoldier(gentity_t *self);
+void SP_misc_viper(gentity_t *self);
+void SP_misc_viper_bomb(gentity_t *self);
+void SP_misc_bigviper(gentity_t *self);
+void SP_misc_strogg_ship(gentity_t *self);
+void SP_misc_teleporter(gentity_t *self);
+void SP_misc_teleporter_dest(gentity_t *self);
+void SP_misc_blackhole(gentity_t *self);
+void SP_misc_eastertank(gentity_t *self);
+void SP_misc_easterchick(gentity_t *self);
+void SP_misc_easterchick2(gentity_t *self);
+void SP_misc_crashviper(gentity_t *ent);
+void SP_misc_viper_missile(gentity_t *self);
+void SP_misc_amb4(gentity_t *ent);
+void SP_misc_transport(gentity_t *ent);
+void SP_misc_nuke(gentity_t *ent);
+void SP_misc_flare(gentity_t *ent); // [Sam-KEX]
+void SP_misc_hologram(gentity_t *ent);
+void SP_misc_lavaball(gentity_t *ent);
+void SP_misc_nuke_core(gentity_t *self);
 
-void SP_monster_berserk(edict_t *self);
-void SP_monster_gladiator(edict_t *self);
-void SP_monster_gunner(edict_t *self);
-void SP_monster_infantry(edict_t *self);
-void SP_monster_soldier_light(edict_t *self);
-void SP_monster_soldier(edict_t *self);
-void SP_monster_soldier_ss(edict_t *self);
-void SP_monster_tank(edict_t *self);
-void SP_monster_medic(edict_t *self);
-void SP_monster_flipper(edict_t *self);
-void SP_monster_chick(edict_t *self);
-void SP_monster_parasite(edict_t *self);
-void SP_monster_flyer(edict_t *self);
-void SP_monster_brain(edict_t *self);
-void SP_monster_floater(edict_t *self);
-void SP_monster_hover(edict_t *self);
-void SP_monster_mutant(edict_t *self);
-void SP_monster_supertank(edict_t *self);
-void SP_monster_boss2(edict_t *self);
-void SP_monster_jorg(edict_t *self);
-void SP_monster_boss3_stand(edict_t *self);
-void SP_monster_makron(edict_t *self);
+void SP_monster_berserk(gentity_t *self);
+void SP_monster_gladiator(gentity_t *self);
+void SP_monster_gunner(gentity_t *self);
+void SP_monster_infantry(gentity_t *self);
+void SP_monster_soldier_light(gentity_t *self);
+void SP_monster_soldier(gentity_t *self);
+void SP_monster_soldier_ss(gentity_t *self);
+void SP_monster_tank(gentity_t *self);
+void SP_monster_medic(gentity_t *self);
+void SP_monster_flipper(gentity_t *self);
+void SP_monster_chick(gentity_t *self);
+void SP_monster_parasite(gentity_t *self);
+void SP_monster_flyer(gentity_t *self);
+void SP_monster_brain(gentity_t *self);
+void SP_monster_floater(gentity_t *self);
+void SP_monster_hover(gentity_t *self);
+void SP_monster_mutant(gentity_t *self);
+void SP_monster_supertank(gentity_t *self);
+void SP_monster_boss2(gentity_t *self);
+void SP_monster_jorg(gentity_t *self);
+void SP_monster_boss3_stand(gentity_t *self);
+void SP_monster_makron(gentity_t *self);
 
-void SP_monster_tank_stand(edict_t *self);
-void SP_monster_guardian(edict_t *self);
-void SP_monster_arachnid(edict_t *self);
-void SP_monster_guncmdr(edict_t *self);
+void SP_monster_tank_stand(gentity_t *self);
+void SP_monster_guardian(gentity_t *self);
+void SP_monster_arachnid(gentity_t *self);
+void SP_monster_guncmdr(gentity_t *self);
 
-void SP_monster_commander_body(edict_t *self);
+void SP_monster_commander_body(gentity_t *self);
 
-void SP_turret_breach(edict_t *self);
-void SP_turret_base(edict_t *self);
-void SP_turret_driver(edict_t *self);
+void SP_turret_breach(gentity_t *self);
+void SP_turret_base(gentity_t *self);
+void SP_turret_driver(gentity_t *self);
 
-void SP_monster_soldier_hypergun(edict_t *self);
-void SP_monster_soldier_lasergun(edict_t *self);
-void SP_monster_soldier_ripper(edict_t *self);
-void SP_monster_fixbot(edict_t *self);
-void SP_monster_gekk(edict_t *self);
-void SP_monster_chick_heat(edict_t *self);
-void SP_monster_gladb(edict_t *self);
-void SP_monster_boss5(edict_t *self);
+void SP_monster_soldier_hypergun(gentity_t *self);
+void SP_monster_soldier_lasergun(gentity_t *self);
+void SP_monster_soldier_ripper(gentity_t *self);
+void SP_monster_fixbot(gentity_t *self);
+void SP_monster_gekk(gentity_t *self);
+void SP_monster_chick_heat(gentity_t *self);
+void SP_monster_gladb(gentity_t *self);
+void SP_monster_boss5(gentity_t *self);
 
-void SP_monster_stalker(edict_t *self);
-void SP_monster_turret(edict_t *self);
+void SP_monster_stalker(gentity_t *self);
+void SP_monster_turret(gentity_t *self);
 
-void SP_hint_path(edict_t *self);
-void SP_monster_carrier(edict_t *self);
-void SP_monster_widow(edict_t *self);
-void SP_monster_widow2(edict_t *self);
-void SP_monster_kamikaze(edict_t *self);
-void SP_turret_invisible_brain(edict_t *self);
+void SP_hint_path(gentity_t *self);
+void SP_monster_carrier(gentity_t *self);
+void SP_monster_widow(gentity_t *self);
+void SP_monster_widow2(gentity_t *self);
+void SP_monster_kamikaze(gentity_t *self);
+void SP_turret_invisible_brain(gentity_t *self);
 
-void SP_monster_shambler(edict_t *self);
+void SP_monster_shambler(gentity_t *self);
 
 // clang-format off
 static const std::initializer_list<spawn_t> spawns = {
@@ -450,7 +450,7 @@ static const std::initializer_list<spawn_t> spawns = {
 // clang-format on
 
 
-static void SpawnEnt_MapFixes(edict_t *ent) {
+static void SpawnEnt_MapFixes(gentity_t *ent) {
 	if (!Q_strcasecmp(level.mapname, "bunk1")) {
 		if (!Q_strcasecmp(ent->classname, "func_button") && !Q_strcasecmp(ent->model, "*36")) {
 			ent->wait = -1;
@@ -488,13 +488,13 @@ ED_CallSpawn
 Finds the spawn function for the entity and calls it
 ===============
 */
-void ED_CallSpawn(edict_t *ent) {
-	gitem_t *item;
+void ED_CallSpawn(gentity_t *ent) {
+	gitem_t	*item;
 	int		 i;
 
 	if (!ent->classname) {
-		gi.Com_Print("ED_CallSpawn: nullptr classname\n");
-		G_FreeEdict(ent);
+		gi.Com_PrintFmt("{}: nullptr classname\n", __FUNCTION__);
+		G_FreeEntity(ent);
 		return;
 	}
 
@@ -505,10 +505,10 @@ void ED_CallSpawn(edict_t *ent) {
 
 	ent->sv.init = false;
 #if 0
-	if (horde->integer) {
+	if (GT(GT_HORDE)) {
 		// remove monsters from map, we will spawn them in during wave starts
 		if (!strnicmp(ent->classname, "monster_", 8)) {
-			G_FreeEdict(ent);
+			G_FreeEntity(ent);
 			return;
 		}
 	}
@@ -520,6 +520,8 @@ void ED_CallSpawn(edict_t *ent) {
 		ent->classname = GetItemByIndex(IT_AMMO_FLECHETTES)->classname;
 	else if (!strcmp(ent->classname, "weapon_heatbeam"))
 		ent->classname = GetItemByIndex(IT_WEAPON_PLASMABEAM)->classname;
+	else if (RS(RS_Q3A) && !strcmp(ent->classname, "weapon_supershotgun"))
+		ent->classname = GetItemByIndex(IT_WEAPON_SHOTGUN)->classname;
 	else if (!strcmp(ent->classname, "info_player_team1"))
 		ent->classname = "info_player_team_red";
 	else if (!strcmp(ent->classname, "info_player_team2"))
@@ -566,8 +568,8 @@ void ED_CallSpawn(edict_t *ent) {
 		}
 	}
 
-	gi.Com_PrintFmt("{} doesn't have a spawn function\n", *ent);
-	G_FreeEdict(ent);
+	gi.Com_PrintFmt("{}: {} doesn't have a spawn function.\n", __FUNCTION__, *ent);
+	G_FreeEntity(ent);
 }
 
 /*
@@ -606,7 +608,7 @@ char *ED_NewString(const char *string) {
 
 struct field_t {
 	const char *name;
-	void (*load_func) (edict_t *e, const char *s) = nullptr;
+	void (*load_func) (gentity_t *e, const char *s) = nullptr;
 };
 
 // utility template for getting the type of a field
@@ -661,7 +663,7 @@ struct type_loaders_t {
 };
 
 #define AUTO_LOADER_FUNC(M) \
-	[](edict_t *e, const char *s) { \
+	[](gentity_t *e, const char *s) { \
 		e->M = type_loaders_t::load<decltype(e->M)>(s); \
 	}
 
@@ -695,12 +697,12 @@ static int32_t ED_LoadColor(const char *value) {
 }
 
 #define FIELD_COLOR(n, x) \
-	{ n, [](edict_t *e, const char *s) { \
+	{ n, [](gentity_t *e, const char *s) { \
 		e->x = ED_LoadColor(s); \
 	} }
 
 // clang-format off
-// fields that get copied directly to edict_t
+// fields that get copied directly to gentity_t
 #define FIELD_AUTO(x) \
 	{ #x, AUTO_LOADER_FUNC(x) }
 
@@ -723,6 +725,8 @@ static const std::initializer_list<field_t> entity_fields = {
 	FIELD_AUTO(killtarget),
 	FIELD_AUTO(combattarget),
 	FIELD_AUTO(message),
+	FIELD_AUTO(author),
+	FIELD_AUTO(author2),
 	FIELD_AUTO(team),
 	FIELD_AUTO(wait),
 	FIELD_AUTO(delay),
@@ -744,7 +748,7 @@ static const std::initializer_list<field_t> entity_fields = {
 	FIELD_AUTO(map),
 	FIELD_AUTO_NAMED("origin", s.origin),
 	FIELD_AUTO_NAMED("angles", s.angles),
-	{ "angle", [](edict_t *e, const char *value) {
+	{ "angle", [](gentity_t *e, const char *value) {
 		e->s.angles = {};
 		e->s.angles[YAW] = atof(value);
 	} },
@@ -804,7 +808,7 @@ static const std::initializer_list<field_t> entity_fields = {
 
 	// [Paril-KEX] customizable power armor stuff
 	FIELD_AUTO_NAMED("power_armor_power", monsterinfo.power_armor_power),
-	{ "power_armor_type", [](edict_t *s, const char *v) {
+	{ "power_armor_type", [](gentity_t *s, const char *v) {
 			int32_t type = atoi(v);
 
 			if (type == 0)
@@ -893,45 +897,29 @@ static const std::initializer_list<temp_field_t> temp_fields = {
 };
 // clang-format on
 
-/*
-===============
-GT_SpawnString
-===============
-*/
-static const char *GT_SpawnString() {
-	if (!deathmatch->integer) {
-		return "campaign";
-	}
-	if (freeze->integer) {
-		return "freeze";
-	}
-	if (clanarena->integer) {
-		return "ca";
-	}
-	if (ctf->integer) {
-		return "ctf";
-	}
-	if (teamplay->integer) {
-		return "team";
-	}
-	if (horde->integer) {
-		return "horde";
-	}
-	if (duel->integer) {
-		return "tournament";
-	}
-	return "ffa";
-}
+static constexpr const char *gt_spawn_string[GT_NUM_GAMETYPES] = {
+	"campaign",
+	"ffa",
+	"tournament",
+	"team",
+	"ctf",
+	"ca",
+	"freeze",
+	"strike",
+	"rr",
+	"lms",
+	"horde"
+};
 
 /*
 ===============
 ED_ParseField
 
 Takes a key/value pair and sets the binary values
-in an edict
+in an entity
 ===============
 */
-void ED_ParseField(const char *key, const char *value, edict_t *ent) {
+void ED_ParseField(const char *key, const char *value, gentity_t *ent) {
 
 	// check st first
 	for (auto &f : temp_fields) {
@@ -965,18 +953,18 @@ void ED_ParseField(const char *key, const char *value, edict_t *ent) {
 		return;
 	}
 
-	gi.Com_PrintFmt("{} is not a valid field\n", key);
+	//gi.Com_PrintFmt("{} is not a valid field\n", key);
 }
 
 /*
 ====================
-ED_ParseEdict
+ED_ParseEntity
 
-Parses an edict out of the given string, returning the new position
-ed should be a properly initialized empty edict.
+Parses an entity out of the given string, returning the new position
+ed should be a properly initialized empty entity.
 ====================
 */
-const char *ED_ParseEdict(const char *data, edict_t *ent) {
+static const char *ED_ParseEntity(const char *data, gentity_t *ent) {
 	bool  init;
 	char  keyname[256];
 	const char *com_token;
@@ -1038,12 +1026,12 @@ All but the last will have the teamchain field set to the next one
 // adjusts teams so that trains that move their children
 // are in the front of the team
 static void G_FixTeams() {
-	edict_t *e, *e2, *chain;
+	gentity_t *e, *e2, *chain;
 	uint32_t i, j;
 	uint32_t c;
 
 	c = 0;
-	for (i = 1, e = g_edicts + i; i < globals.num_edicts; i++, e++) {
+	for (i = 1, e = g_entities + i; i < globals.num_entities; i++, e++) {
 		if (!e->inuse)
 			continue;
 		if (!e->team)
@@ -1056,7 +1044,7 @@ static void G_FixTeams() {
 				e->flags &= ~FL_TEAMSLAVE;
 				e->flags |= FL_TEAMMASTER;
 				c++;
-				for (j = 1, e2 = g_edicts + j; j < globals.num_edicts; j++, e2++) {
+				for (j = 1, e2 = g_entities + j; j < globals.num_entities; j++, e2++) {
 					if (e2 == e)
 						continue;
 					if (!e2->inuse)
@@ -1078,17 +1066,18 @@ static void G_FixTeams() {
 		}
 	}
 
-	gi.Com_PrintFmt("{} teams repaired\n", c);
+	if (c)
+		gi.Com_PrintFmt("{}: {} entity team{} repaired.\n", __FUNCTION__, c, c != 1 ? "s" : "");
 }
 
 static void G_FindTeams() {
-	edict_t *e, *e2, *chain;
+	gentity_t *e, *e2, *chain;
 	uint32_t i, j;
 	uint32_t c, c2;
 
 	c = 0;
 	c2 = 0;
-	for (i = 1, e = g_edicts + i; i < globals.num_edicts; i++, e++) {
+	for (i = 1, e = g_entities + i; i < globals.num_entities; i++, e++) {
 		if (!e->inuse)
 			continue;
 		if (!e->team)
@@ -1100,7 +1089,7 @@ static void G_FindTeams() {
 		e->flags |= FL_TEAMMASTER;
 		c++;
 		c2++;
-		for (j = i + 1, e2 = e + 1; j < globals.num_edicts; j++, e2++) {
+		for (j = i + 1, e2 = e + 1; j < globals.num_entities; j++, e2++) {
 			if (!e2->inuse)
 				continue;
 			if (!e2->team)
@@ -1119,18 +1108,19 @@ static void G_FindTeams() {
 
 	G_FixTeams();
 
-	gi.Com_PrintFmt("{} teams with {} entities\n", c, c2);
+	if (c)
+		gi.Com_PrintFmt("{}: {} entity team{} found with a total of {} entit{}.\n", __FUNCTION__, c, c != 1 ? "s" : "", c2, c2 != 1 ? "ies" : "y");
 }
 
 // inhibit entities from game based on cvars & spawnflags
-static inline bool G_InhibitEntity(edict_t *ent) {
+static inline bool G_InhibitEntity(gentity_t *ent) {
 	if (ent->gametype) {
-		const char *s = strstr(ent->gametype, GT_SpawnString());
+		const char *s = strstr(ent->gametype, gt_spawn_string[g_gametype->integer]);
 		if (!s) {
 			return true;
 		}
 	} else if (ent->not_gametype) {
-		const char *s = strstr(ent->not_gametype, GT_SpawnString());
+		const char *s = strstr(ent->not_gametype, gt_spawn_string[g_gametype->integer]);
 		if (s) {
 			return true;
 		}
@@ -1245,6 +1235,33 @@ static void PrecachePlayerSounds() {
 	gi.soundindex("*drown1.wav"); // [Paril-KEX]
 }
 
+void GT_PrecacheAssets() {
+	if (Teams()) {
+		if (notGT(GT_RR)) {
+			ii_teams_header_red = gi.imageindex("tag4");
+			ii_teams_header_blue = gi.imageindex("tag5");
+		}
+		ii_teams_red_default = gi.imageindex("i_ctf1");
+		ii_teams_blue_default = gi.imageindex("i_ctf2");
+		ii_teams_red_tiny = gi.imageindex("sbfctf1");
+		ii_teams_blue_tiny = gi.imageindex("sbfctf2");
+	} else {
+		level.pic_ping = gi.imageindex("loc_ping");
+	}
+
+	if (GT(GT_DUEL))
+		ii_duel_header = gi.imageindex("/tags/default");
+
+	if (GTF(GTF_CTF)) {
+		ii_ctf_red_dropped = gi.imageindex("i_ctf1d");
+		ii_ctf_blue_dropped = gi.imageindex("i_ctf2d");
+		ii_ctf_red_taken = gi.imageindex("i_ctf1t");
+		ii_ctf_blue_taken = gi.imageindex("i_ctf2t");
+		mi_ctf_red_flag = gi.modelindex("players/male/flag1.md2");
+		mi_ctf_blue_flag = gi.modelindex("players/male/flag2.md2");
+	}
+}
+
 // [Paril-KEX]
 static void PrecacheAssets() {
 	if (!deathmatch->integer) {
@@ -1280,27 +1297,7 @@ static void PrecacheAssets() {
 
 	ii_highlight = gi.imageindex("i_ctfj");
 
-	if (Teams()) {
-		ii_teams_red_default = gi.imageindex("i_ctf1");
-		ii_teams_blue_default = gi.imageindex("i_ctf2");
-		ii_teams_red_tiny = gi.imageindex("sbfctf1");
-		ii_teams_blue_tiny = gi.imageindex("sbfctf2");
-		ii_teams_header_red = gi.imageindex("tag4");
-		ii_teams_header_blue = gi.imageindex("tag5");
-	} else if (duel->integer) {
-		ii_duel_header = gi.imageindex("/tags/default");
-	} else {
-		level.pic_ping = gi.imageindex("loc_ping");
-	}
-
-	if (ctf->integer) {
-		ii_ctf_red_dropped = gi.imageindex("i_ctf1d");
-		ii_ctf_blue_dropped = gi.imageindex("i_ctf2d");
-		ii_ctf_red_taken = gi.imageindex("i_ctf1t");
-		ii_ctf_blue_taken = gi.imageindex("i_ctf2t");
-		mi_ctf_red_flag = gi.modelindex("players/male/flag1.md2");
-		mi_ctf_blue_flag = gi.modelindex("players/male/flag2.md2");
-	}
+	GT_PrecacheAssets();
 }
 
 #define	MAX_READ	0x10000		// read in blocks of 64k
@@ -1342,7 +1339,7 @@ VerifyEntityString
 */
 static bool VerifyEntityString(const char *entities) {
 	const char *or_token;
-	edict_t *or_ent = nullptr;
+	gentity_t *or_ent = nullptr;
 	const char *or_buf = entities;
 	bool		or_error = false;
 
@@ -1398,7 +1395,7 @@ static void PrecacheForRandomRespawn() {
 }
 
 static void G_LocateSpawnSpots(void) {
-	edict_t *ent;
+	gentity_t *ent;
 	int			n;
 	const char *s = nullptr;
 	size_t		sl = 0;
@@ -1409,7 +1406,7 @@ static void G_LocateSpawnSpots(void) {
 
 	// locate all spawn spots
 	n = 0;
-	for (ent = g_edicts; ent < &g_edicts[globals.num_edicts]; ent++) {
+	for (ent = g_entities; ent < &g_entities[globals.num_entities]; ent++) {
 
 		if (!ent->inuse || !ent->classname)
 			continue;
@@ -1457,21 +1454,12 @@ static void G_LocateSpawnSpots(void) {
 	level.num_spawn_spots = n;
 }
 
-/*
-==============
-SpawnEntities
-
-Creates a server's entity / program execution context by
-parsing textual entity definitions out of an ent file.
-==============
-*/
-void SpawnEntities(const char *mapname, const char *entities, const char *spawnpoint) {
-	//bool ent_file_loaded = false;
-	bool	ent_file_exists = false;
-	bool	ent_valid = true;
+static void ParseWorldEntityString(const char *mapname, bool try_q3) {
+	bool	ent_file_exists = false, ent_valid = true;
+	const char *entities = level.entstring.c_str();
 
 	// load up ent override
-	const char *name = G_Fmt("baseq2/maps/{}.ent", mapname).data();
+	const char *name = G_Fmt("baseq2/{}/{}.ent", g_entity_override_dir->string[0] ? g_entity_override_dir->string : "maps", mapname).data();
 	FILE *f = fopen(name, "rb");
 	if (f != NULL) {
 		char *buffer = nullptr;
@@ -1501,7 +1489,147 @@ void SpawnEntities(const char *mapname, const char *entities, const char *spawnp
 		fclose(f);
 
 		if (ent_valid) {
-			if (g_entity_override_load->integer) {
+			if (g_entity_override_load->integer && !strstr(level.mapname, ".dm2")) {
+
+				if (VerifyEntityString((const char *)buffer)) {
+					entities = (const char *)buffer;
+					//gi.Com_PrintFmt("Entities override: \"{}\"\n", name);
+				}
+			}
+		} else {
+			gi.Com_PrintFmt("{}: Entities override file load error for \"{}\", discarding.\n", __FUNCTION__, name);
+		}
+	}
+
+	// save ent override
+	if (g_entity_override_save->integer && !strstr(level.mapname, ".dm2")) {
+		if (!ent_file_exists) {
+			f = fopen(name, "w");
+			if (f) {
+				fwrite(entities, 1, strlen(entities), f);
+				gi.Com_PrintFmt("{}: Entities override file written to: \"{}\"\n", __FUNCTION__, name);
+				fclose(f);
+			}
+		} else {
+			gi.Com_PrintFmt("{}: Entities override file not saved as file already exists: \"{}\"\n", __FUNCTION__, name);
+		}
+	}
+	level.entstring = entities;
+}
+
+static void ParseWorldEntities() {
+	gentity_t		*ent = nullptr;
+	int			inhibit = 0;
+	const char	*com_token;
+	const char	*entities = level.entstring.c_str();
+
+	// parse entities
+	while (1) {
+		// parse the opening brace
+		com_token = COM_Parse(&entities);
+		if (!entities)
+			break;
+		if (com_token[0] != '{')
+			gi.Com_ErrorFmt("{}: Found \"{}\" when expecting {{ in entity string.", __FUNCTION__, com_token);
+
+		if (!ent)
+			ent = g_entities;
+		else
+			ent = G_Spawn();
+		entities = ED_ParseEntity(entities, ent);
+
+		// nasty hacks time!
+		if (!strcmp(level.mapname, "bunk1")) {
+			if (!strcmp(ent->classname, "func_button") && !Q_strcasecmp(ent->model, "*36")) {
+				ent->wait = -1;
+			}
+		}
+
+		// remove things (except the world) from different skill levels or deathmatch
+		if (ent != g_entities) {
+			if (G_InhibitEntity(ent)) {
+				G_FreeEntity(ent);
+				inhibit++;
+				continue;
+			}
+
+			ent->spawnflags &= ~SPAWNFLAG_EDITOR_MASK;
+		}
+
+		if (!ent)
+			gi.Com_ErrorFmt("{}: Invalid or empty entity string.", __FUNCTION__);
+
+		// do this before calling the spawn function so it can be overridden.
+		ent->gravityVector = { 0.0, 0.0, -1.0 };
+
+		ED_CallSpawn(ent);
+
+		ent->s.renderfx |= RF_IR_VISIBLE;
+	}
+
+	if (inhibit)
+		gi.Com_PrintFmt("{} entities inhibited.\n", inhibit);
+}
+
+void ClearWorldEntities() {
+	gentity_t *ent = nullptr;
+	//memset(g_entities, 0, game.maxentities * sizeof(g_entities[0]));
+
+	for (size_t i = MAX_CLIENTS; i < game.maxentities; i++) {
+		ent = &g_entities[i];
+
+		if (!ent || !ent->inuse || ent->client)
+			continue;
+
+		memset(&g_entities[i], 0, sizeof(g_entities[i]));
+	}
+}
+
+/*
+==============
+SpawnEntities
+
+Creates a server's entity / program execution context by
+parsing textual entity definitions out of an ent file.
+==============
+*/
+void SpawnEntities(const char *mapname, const char *entities, const char *spawnpoint) {
+	bool		ent_file_exists = false, ent_valid = true;
+	//const char	*entities = level.entstring.c_str();
+//#if 0
+	// load up ent override
+	//const char *name = G_Fmt("baseq2/maps/{}.ent", mapname).data();
+	const char *name = G_Fmt("baseq2/{}/{}.ent", g_entity_override_dir->string[0] ? g_entity_override_dir->string : "maps", mapname).data();
+	FILE *f = fopen(name, "rb");
+	if (f != NULL) {
+		char *buffer = nullptr;
+		size_t length;
+		size_t read_length;
+
+		fseek(f, 0, SEEK_END);
+		length = ftell(f);
+		fseek(f, 0, SEEK_SET);
+
+		if (length > 0x40000) {
+			//gi.Com_PrintFmt("{}: Entities override file length exceeds maximum: \"{}\"\n", __FUNCTION__, name);
+			ent_valid = false;
+		}
+		if (ent_valid) {
+			buffer = (char *)gi.TagMalloc(length + 1, '\0');
+			if (length) {
+				read_length = fread(buffer, 1, length, f);
+
+				if (length != read_length) {
+					//gi.Com_PrintFmt("{}: Entities override file read error: \"{}\"\n", __FUNCTION__, name);
+					ent_valid = false;
+				}
+			}
+		}
+		ent_file_exists = true;
+		fclose(f);
+
+		if (ent_valid) {
+			if (g_entity_override_load->integer && !strstr(level.mapname, ".dm2")) {
 
 				if (VerifyEntityString((const char *)buffer)) {
 					entities = (const char *)buffer;
@@ -1514,7 +1642,7 @@ void SpawnEntities(const char *mapname, const char *entities, const char *spawnp
 	}
 
 	// save ent override
-	if (g_entity_override_save->integer) {
+	if (g_entity_override_save->integer && !strstr(level.mapname, ".dm2")) {
 		if (!ent_file_exists) {
 			f = fopen(name, "w");
 			if (f) {
@@ -1523,20 +1651,19 @@ void SpawnEntities(const char *mapname, const char *entities, const char *spawnp
 				fclose(f);
 			}
 		} else {
-			gi.Com_PrintFmt("{}: Entities override file not saved as file already exists: \"{}\"\n", __FUNCTION__, name);
+			//gi.Com_PrintFmt("{}: Entities override file not saved as file already exists: \"{}\"\n", __FUNCTION__, name);
 		}
 	}
+	level.entstring = entities;
+//#endif
+	//ParseWorldEntityString(mapname, RS(RS_Q3A));
 
 	// clear cached indices
 	cached_soundindex::clear_all();
 	cached_modelindex::clear_all();
 	cached_imageindex::clear_all();
 
-	edict_t *ent;
-	int		 inhibit;
-	const char *com_token;
-
-	int skill_level = clamp(skill->integer, 0, 3);
+	int skill_level = clamp(skill->integer, 0, 4);
 	if (skill->integer != skill_level)
 		gi.cvar_forceset("skill", G_Fmt("{}", skill_level).data());
 
@@ -1545,8 +1672,8 @@ void SpawnEntities(const char *mapname, const char *entities, const char *spawnp
 	gi.FreeTags(TAG_LEVEL);
 
 	memset(&level, 0, sizeof(level));
-	memset(g_edicts, 0, game.maxentities * sizeof(g_edicts[0]));
-
+	memset(g_entities, 0, game.maxentities * sizeof(g_entities[0]));
+	
 	// all other flags are not important atm
 	globals.server_flags &= SERVER_FLAG_LOADING;
 
@@ -1564,18 +1691,20 @@ void SpawnEntities(const char *mapname, const char *entities, const char *spawnp
 
 	// set client fields on player entities
 	for (size_t i = 0; i < game.maxclients; i++) {
-		g_edicts[i + 1].client = game.clients + i;
+		g_entities[i + 1].client = game.clients + i;
 
 		// "disconnect" all players since the level is switching
 		game.clients[i].pers.connected = false;
 		game.clients[i].pers.spawned = false;
 	}
 
-	ent = nullptr;
-	inhibit = 0;
-
 	// reserve some spots for dead player bodies for coop / deathmatch
 	InitBodyQue();
+
+	gentity_t *ent = nullptr;
+	int			inhibit = 0;
+	const char *com_token;
+	//const char *entities = level.entstring.c_str();
 
 	// parse entities
 	while (1) {
@@ -1584,13 +1713,13 @@ void SpawnEntities(const char *mapname, const char *entities, const char *spawnp
 		if (!entities)
 			break;
 		if (com_token[0] != '{')
-			gi.Com_ErrorFmt("SpawnEntities: Found \"{}\" when expecting {{ in entity string.", com_token);
+			gi.Com_ErrorFmt("{}: Found \"{}\" when expecting {{ in entity string.\n", __FUNCTION__, com_token);
 
 		if (!ent)
-			ent = g_edicts;
+			ent = g_entities;
 		else
 			ent = G_Spawn();
-		entities = ED_ParseEdict(entities, ent);
+		entities = ED_ParseEntity(entities, ent);
 
 		// nasty hacks time!
 		if (!strcmp(level.mapname, "bunk1")) {
@@ -1600,9 +1729,9 @@ void SpawnEntities(const char *mapname, const char *entities, const char *spawnp
 		}
 
 		// remove things (except the world) from different skill levels or deathmatch
-		if (ent != g_edicts) {
+		if (ent != g_entities) {
 			if (G_InhibitEntity(ent)) {
-				G_FreeEdict(ent);
+				G_FreeEntity(ent);
 				inhibit++;
 				continue;
 			}
@@ -1611,17 +1740,18 @@ void SpawnEntities(const char *mapname, const char *entities, const char *spawnp
 		}
 
 		if (!ent)
-			gi.Com_Error("SpawnEntities: Invalid or empty entity string.");
+			gi.Com_ErrorFmt("{}: Invalid or empty entity string.", __FUNCTION__);
 
 		// do this before calling the spawn function so it can be overridden.
-		ent->gravityVector = {0.0, 0.0, -1.0};
-		
+		ent->gravityVector = { 0.0, 0.0, -1.0 };
+
 		ED_CallSpawn(ent);
 
 		ent->s.renderfx |= RF_IR_VISIBLE;
 	}
 
-	gi.Com_PrintFmt("{} entities inhibited\n", inhibit);
+	if (inhibit)
+		gi.Com_PrintFmt("{}: {} entities inhibited.\n", __FUNCTION__, inhibit);
 
 	// precache start_items
 	PrecacheStartItems();
@@ -1644,6 +1774,8 @@ void SpawnEntities(const char *mapname, const char *entities, const char *spawnp
 	G_LocateSpawnSpots();
 
 	setup_shadow_lights();
+
+	level.init = true;
 }
 
 //===================================================================
@@ -1692,6 +1824,31 @@ static void G_InitStatusbar() {
 	}
 
 	// ---- gamemode-specific stuff ----
+
+	if (InCoopStyle()) {
+		int32_t			y;
+		const int32_t	text_adj = 26;
+
+		// top of screen coop respawn display
+		sb.ifstat(STAT_COOP_RESPAWN).xv(0).yt(0).loc_stat_cstring2(STAT_COOP_RESPAWN).endifstat();
+		
+		// coop lives
+		if (g_coop_enable_lives->integer && g_coop_num_lives->integer > 0)
+			sb.ifstat(STAT_LIVES).xr(-16).yt(y = 2).lives_num(STAT_LIVES).xr(0).yt(y += text_adj).loc_rstring("$g_lives").endifstat();
+
+		// total monsters
+		if (GT(GT_HORDE)) {
+			int num, chars;
+			
+			num = level.round_number;
+			chars = num > 99 ? 3 : num > 9 ? 2 : 1;
+			sb.ifstat(STAT_ROUND_NUMBER).xr(-32 - (16 * chars)).yt(y += 10).num(3, STAT_ROUND_NUMBER).xr(0).yt(y += text_adj).loc_rstring("Wave").endifstat();
+
+			num = level.total_monsters - level.killed_monsters;
+			chars = num > 99 ? 3 : num > 9 ? 2 : 1;
+			sb.ifstat(STAT_MONSTER_COUNT).xr(-32 - (16 * chars)).yt(y += 10).num(3, STAT_MONSTER_COUNT).xr(0).yt(y += text_adj).loc_rstring("Monsters").endifstat();
+		}
+	}
 	if (!deathmatch->integer) {
 		// SP/coop
 		// key display
@@ -1708,21 +1865,13 @@ static void G_InitStatusbar() {
 		sb.ifstat(STAT_KEY_B).xv(272).pic(STAT_KEY_B).endifstat();
 		sb.ifstat(STAT_KEY_C).xv(248).pic(STAT_KEY_C).endifstat();
 
-		if (coop->integer) {
-			// top of screen coop respawn display
-			sb.ifstat(STAT_COOP_RESPAWN).xv(0).yt(0).loc_stat_cstring2(STAT_COOP_RESPAWN).endifstat();
-
-			// coop lives
-			sb.ifstat(STAT_LIVES).xr(-16).yt(2).lives_num(STAT_LIVES).xr(0).yt(28).loc_rstring("$g_lives").endifstat();
-		}
-
 		sb.ifstat(STAT_HEALTH_BARS).yt(24).health_bars().endifstat();
 
 		sb.story();
 	} else {
 		if (Teams()) {
 			// flag carrier indicator
-			if (ctf->integer)
+			if (GTF(GTF_CTF))
 				sb.ifstat(STAT_CTF_FLAG_PIC).xr(-24).yt(26).pic(STAT_CTF_FLAG_PIC).endifstat();
 
 			// teams unbalanced warning
@@ -1752,17 +1901,17 @@ static void G_InitStatusbar() {
 		sb.ifstat(STAT_MINISCORE_FIRST_PIC).xr(-28).yb(-57).stat_string(STAT_SCORELIMIT).endifstat();
 
 		// crosshair id
-		sb.ifstat(STAT_CROSSHAIR_ID_VIEW).xv(122).yb(-152).stat_pname(STAT_CROSSHAIR_ID_VIEW).endifstat();	//112 -58
+		sb.ifstat(STAT_CROSSHAIR_ID_VIEW).xv(122).yb(-168).stat_pname(STAT_CROSSHAIR_ID_VIEW).endifstat();	//112 -58
 		sb.ifstat(STAT_CROSSHAIR_ID_VIEW_COLOR).xv(156).yb(-162).pic(STAT_CROSSHAIR_ID_VIEW_COLOR).endifstat();	//106 -160 //96 -58
 	}
 
 	gi.configstring(CS_STATUSBAR, sb.sb.str().c_str());
 }
 
-static void G_SetGametypeName(void) {
+void GT_SetLongName(void) {
 	const char *s;
 	if (deathmatch->integer) {
-		if (ctf->integer) {
+		if (GT(GT_CTF)) {
 			if (g_instagib->integer) {
 				s = "Insta-CTF";
 			} else if (g_vampiric_damage->integer) {
@@ -1776,7 +1925,7 @@ static void G_SetGametypeName(void) {
 			} else {
 				s = gt_long_name[GT_CTF];
 			}
-		} else if (freeze->integer) {
+		} else if (GT(GT_FREEZE)) {
 			if (g_instagib->integer) {
 				s = "Insta-Freeze";
 			} else if (g_vampiric_damage->integer) {
@@ -1790,7 +1939,7 @@ static void G_SetGametypeName(void) {
 			} else {
 				s = gt_long_name[GT_FREEZE];
 			}
-		} else if (clanarena->integer) {
+		} else if (GT(GT_CA)) {
 			if (g_instagib->integer) {
 				s = "Insta-CA";
 			} else if (g_vampiric_damage->integer) {
@@ -1804,7 +1953,35 @@ static void G_SetGametypeName(void) {
 			} else {
 				s = gt_long_name[GT_CA];
 			}
-		} else if (teamplay->integer) {
+		} else if (GT(GT_RR)) {
+			if (g_instagib->integer) {
+				s = "Insta-RR";
+			} else if (g_vampiric_damage->integer) {
+				s = "Vampiric RR";
+			} else if (g_frenzy->integer) {
+				s = "Frenzy RR";
+			} else if (g_nadefest->integer) {
+				s = "NadeFest RR";
+			} else if (g_quadhog->integer) {
+				s = "Quad Hog RR";
+			} else {
+				s = gt_long_name[GT_RR];
+			}
+		} else if (GT(GT_STRIKE)) {
+			if (g_instagib->integer) {
+				s = "Insta-Strike";
+			} else if (g_vampiric_damage->integer) {
+				s = "Vampiric Strike";
+			} else if (g_frenzy->integer) {
+				s = "Frenzy Strike";
+			} else if (g_nadefest->integer) {
+				s = "NadeFest Strike";
+			} else if (g_quadhog->integer) {
+				s = "Quad Hog Strike";
+			} else {
+				s = gt_long_name[GT_STRIKE];
+			}
+		} else if (GT(GT_TDM)) {
 			if (g_instagib->integer) {
 				s = "Insta-TDM";
 			} else if (g_vampiric_damage->integer) {
@@ -1818,7 +1995,7 @@ static void G_SetGametypeName(void) {
 			} else {
 				s = gt_long_name[GT_TDM];
 			}
-		} else if (duel->integer) {
+		} else if (GT(GT_DUEL)) {
 			if (g_instagib->integer) {
 				s = "Insta-Duel";
 			} else if (g_vampiric_damage->integer) {
@@ -1832,7 +2009,7 @@ static void G_SetGametypeName(void) {
 			} else {
 				s = gt_long_name[GT_DUEL];
 			}
-		} else if (horde->integer) {
+		} else if (GT(GT_HORDE)) {
 			if (g_instagib->integer) {
 				s = "Insta-Horde";
 			} else if (g_vampiric_damage->integer) {
@@ -1872,8 +2049,6 @@ static void G_SetGametypeName(void) {
 	}
 	if (s)
 		Q_strlcpy(level.gametype_name, s, sizeof(level.gametype_name));
-
-	Q_strlcpy(level.gamemod_name, G_Fmt("{} v{}", GAMEMOD_TITLE, GAMEMOD_VERSION).data(), sizeof(level.gamemod_name));
 }
 
 /*QUAKED worldspawn (0 0 0) ?
@@ -1886,7 +2061,9 @@ Only used for the world.
 "gravity"	800 is default gravity
 "message"	text to print at user logon
 */
-void SP_worldspawn(edict_t *ent) {
+void SP_worldspawn(gentity_t *ent) {
+	Q_strlcpy(level.gamemod_name, G_Fmt("{} v{}", GAMEMOD_TITLE, GAMEMOD_VERSION).data(), sizeof(level.gamemod_name));
+
 	ent->movetype = MOVETYPE_PUSH;
 	ent->solid = SOLID_BSP;
 	ent->inuse = true; // since the world doesn't use G_Spawn()
@@ -1925,6 +2102,11 @@ void SP_worldspawn(edict_t *ent) {
 	} else
 		Q_strlcpy(level.level_name, level.mapname, sizeof(level.level_name));
 
+	if (ent->author && ent->author[0])
+		Q_strlcpy(level.author, ent->author, sizeof(level.author));
+	if (ent->author2 && ent->author2[0])
+		Q_strlcpy(level.author2, ent->author2, sizeof(level.author2));
+
 	if (st.sky && st.sky[0])
 		gi.configstring(CS_SKY, st.sky);
 	else
@@ -1954,7 +2136,7 @@ void SP_worldspawn(edict_t *ent) {
 	// [Paril-KEX]
 	if (!deathmatch->integer)
 		gi.configstring(CS_GAME_STYLE, G_Fmt("{}", (int32_t)game_style_t::GAME_STYLE_PVE).data());
-	else if (Teams())
+	else if (Teams() && notGT(GT_RR))
 		gi.configstring(CS_GAME_STYLE, G_Fmt("{}", (int32_t)game_style_t::GAME_STYLE_TDM).data());
 	else
 		gi.configstring(CS_GAME_STYLE, G_Fmt("{}", (int32_t)game_style_t::GAME_STYLE_FFA).data());
@@ -2007,7 +2189,7 @@ void SP_worldspawn(edict_t *ent) {
 		PrecacheItem(GetItemByIndex(IT_WEAPON_BLASTER));
 
 	if ((!strcmp(g_allow_grapple->string, "auto")) ?
-		(ctf->integer ? !level.no_grapple : 0) :
+		(GTF(GTF_CTF) ? !level.no_grapple : 0) :
 		g_allow_grapple->integer) {
 		PrecacheItem(GetItemByIndex(IT_WEAPON_GRAPPLE));
 	}
@@ -2045,7 +2227,7 @@ void SP_worldspawn(edict_t *ent) {
 
 	PrecacheAssets();
 
-	G_SetGametypeName();
+	GT_SetLongName();
 
 	//
 	// Setup light animation tables. 'a' is total darkness, 'z' is doublebright.
@@ -2102,7 +2284,7 @@ void SP_worldspawn(edict_t *ent) {
 	gi.configstring(CS_LIGHTS + 63, "a");
 
 	// coop respawn strings
-	if (coop->integer) {
+	if (InCoopStyle()) {
 		gi.configstring(CONFIG_COOP_RESPAWN_STRING + 0, "$g_coop_respawn_in_combat");
 		gi.configstring(CONFIG_COOP_RESPAWN_STRING + 1, "$g_coop_respawn_bad_area");
 		gi.configstring(CONFIG_COOP_RESPAWN_STRING + 2, "$g_coop_respawn_blocked");

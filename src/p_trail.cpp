@@ -27,13 +27,13 @@ constexpr size_t TRAIL_LENGTH = 8;
 // places a new entity at the head of the player trail.
 // the tail entity may be moved to the front if the length
 // is at the end.
-static edict_t *PlayerTrail_Spawn(edict_t *owner) {
+static gentity_t *PlayerTrail_Spawn(gentity_t *owner) {
 	size_t len = 0;
 
-	for (edict_t *tail = owner->client->trail_tail; tail; tail = tail->chain)
+	for (gentity_t *tail = owner->client->trail_tail; tail; tail = tail->chain)
 		len++;
 
-	edict_t *trail;
+	gentity_t *trail;
 
 	// move the tail to the head
 	if (len == TRAIL_LENGTH) {
@@ -63,11 +63,11 @@ static edict_t *PlayerTrail_Spawn(edict_t *owner) {
 
 // destroys all player trail entities in the map.
 // we don't want these to stay around across level loads.
-void PlayerTrail_Destroy(edict_t *player) {
-	for (size_t i = 0; i < globals.num_edicts; i++)
-		if (g_edicts[i].classname && strcmp(g_edicts[i].classname, "player_trail") == 0)
-			if (!player || g_edicts[i].owner == player)
-				G_FreeEdict(&g_edicts[i]);
+void PlayerTrail_Destroy(gentity_t *player) {
+	for (size_t i = 0; i < globals.num_entities; i++)
+		if (g_entities[i].classname && strcmp(g_entities[i].classname, "player_trail") == 0)
+			if (!player || g_entities[i].owner == player)
+				G_FreeEntity(&g_entities[i]);
 
 	if (player)
 		player->client->trail_head = player->client->trail_tail = nullptr;
@@ -77,7 +77,7 @@ void PlayerTrail_Destroy(edict_t *player) {
 
 // check to see if we can add a new player trail spot
 // for this player.
-void PlayerTrail_Add(edict_t *player) {
+void PlayerTrail_Add(gentity_t *player) {
 	// if we can still see the head, we don't want a new one.
 	if (player->client->trail_head && visible(player, player->client->trail_head))
 		return;
@@ -86,7 +86,7 @@ void PlayerTrail_Add(edict_t *player) {
 		!player->groundentity)
 		return;
 
-	edict_t *trail = PlayerTrail_Spawn(player);
+	gentity_t *trail = PlayerTrail_Spawn(player);
 	trail->s.origin = player->s.old_origin;
 	trail->timestamp = level.time;
 	trail->owner = player;
@@ -94,14 +94,14 @@ void PlayerTrail_Add(edict_t *player) {
 
 // pick a trail node that matches the player
 // we're hunting that is visible to us.
-edict_t *PlayerTrail_Pick(edict_t *self, bool next) {
+gentity_t *PlayerTrail_Pick(gentity_t *self, bool next) {
 	// not player or doesn't have a trail yet
 	if (!self->enemy->client || !self->enemy->client->trail_head)
 		return nullptr;
 
 	// find which marker head that was dropped while we
 	// were searching for this enemy
-	edict_t *marker;
+	gentity_t *marker;
 
 	for (marker = self->enemy->client->trail_head; marker; marker = marker->enemy) {
 		if (marker->timestamp <= self->monsterinfo.trail_time)
@@ -113,9 +113,9 @@ edict_t *PlayerTrail_Pick(edict_t *self, bool next) {
 	if (next) {
 		// find the marker we're closest to
 		float closest_dist = std::numeric_limits<float>::infinity();
-		edict_t *closest = nullptr;
+		gentity_t *closest = nullptr;
 
-		for (edict_t *m2 = marker; m2; m2 = m2->enemy) {
+		for (gentity_t *m2 = marker; m2; m2 = m2->enemy) {
 			float len = (m2->s.origin - self->s.origin).lengthSquared();
 
 			if (len < closest_dist) {

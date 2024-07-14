@@ -25,19 +25,19 @@ static cached_soundindex sound_idle;
 static cached_soundindex sound_search;
 static cached_soundindex sound_sight;
 
-MONSTERINFO_IDLE(gladiator_idle) (edict_t *self) -> void {
+MONSTERINFO_IDLE(gladiator_idle) (gentity_t *self) -> void {
 	gi.sound(self, CHAN_VOICE, sound_idle, 1, ATTN_IDLE, 0);
 }
 
-MONSTERINFO_SIGHT(gladiator_sight) (edict_t *self, edict_t *other) -> void {
+MONSTERINFO_SIGHT(gladiator_sight) (gentity_t *self, gentity_t *other) -> void {
 	gi.sound(self, CHAN_VOICE, sound_sight, 1, ATTN_NORM, 0);
 }
 
-MONSTERINFO_SEARCH(gladiator_search) (edict_t *self) -> void {
+MONSTERINFO_SEARCH(gladiator_search) (gentity_t *self) -> void {
 	gi.sound(self, CHAN_VOICE, sound_search, 1, ATTN_NORM, 0);
 }
 
-static void gladiator_cleaver_swing(edict_t *self) {
+static void gladiator_cleaver_swing(gentity_t *self) {
 	gi.sound(self, CHAN_WEAPON, sound_cleaver_swing, 1, ATTN_NORM, 0);
 }
 
@@ -52,7 +52,7 @@ mframe_t gladiator_frames_stand[] = {
 };
 MMOVE_T(gladiator_move_stand) = { FRAME_stand1, FRAME_stand7, gladiator_frames_stand, nullptr };
 
-MONSTERINFO_STAND(gladiator_stand) (edict_t *self) -> void {
+MONSTERINFO_STAND(gladiator_stand) (gentity_t *self) -> void {
 	M_SetAnimation(self, &gladiator_move_stand);
 }
 
@@ -76,7 +76,7 @@ mframe_t gladiator_frames_walk[] = {
 };
 MMOVE_T(gladiator_move_walk) = { FRAME_walk1, FRAME_walk16, gladiator_frames_walk, nullptr };
 
-MONSTERINFO_WALK(gladiator_walk) (edict_t *self) -> void {
+MONSTERINFO_WALK(gladiator_walk) (gentity_t *self) -> void {
 	M_SetAnimation(self, &gladiator_move_walk);
 }
 
@@ -90,14 +90,14 @@ mframe_t gladiator_frames_run[] = {
 };
 MMOVE_T(gladiator_move_run) = { FRAME_run1, FRAME_run6, gladiator_frames_run, nullptr };
 
-MONSTERINFO_RUN(gladiator_run) (edict_t *self) -> void {
+MONSTERINFO_RUN(gladiator_run) (gentity_t *self) -> void {
 	if (self->monsterinfo.aiflags & AI_STAND_GROUND)
 		M_SetAnimation(self, &gladiator_move_stand);
 	else
 		M_SetAnimation(self, &gladiator_move_run);
 }
 
-static void GladiatorMelee(edict_t *self) {
+static void GladiatorMelee(gentity_t *self) {
 	vec3_t aim = { MELEE_DISTANCE, self->mins[0], -4 };
 	if (fire_hit(self, aim, irandom(20, 25), 300))
 		gi.sound(self, CHAN_AUTO, sound_cleaver_hit, 1, ATTN_NORM, 0);
@@ -125,11 +125,11 @@ mframe_t gladiator_frames_attack_melee[] = {
 };
 MMOVE_T(gladiator_move_attack_melee) = { FRAME_melee3, FRAME_melee16, gladiator_frames_attack_melee, gladiator_run };
 
-MONSTERINFO_MELEE(gladiator_melee) (edict_t *self) -> void {
+MONSTERINFO_MELEE(gladiator_melee) (gentity_t *self) -> void {
 	M_SetAnimation(self, &gladiator_move_attack_melee);
 }
 
-static void GladiatorGun(edict_t *self) {
+static void GladiatorGun(gentity_t *self) {
 	vec3_t start;
 	vec3_t dir;
 	vec3_t forward, right;
@@ -157,7 +157,7 @@ mframe_t gladiator_frames_attack_gun[] = {
 };
 MMOVE_T(gladiator_move_attack_gun) = { FRAME_attack1, FRAME_attack9, gladiator_frames_attack_gun, gladiator_run };
 
-static void gladbGun(edict_t *self) {
+static void gladbGun(gentity_t *self) {
 	vec3_t start;
 	vec3_t dir;
 	vec3_t forward, right;
@@ -177,15 +177,15 @@ static void gladbGun(edict_t *self) {
 		radius_damage /= 2;
 	}
 
-	fire_plasma(self, start, dir, damage, 725, radius_damage, radius_damage);
+	fire_phalanx(self, start, dir, damage, 725, radius_damage, radius_damage);
 
 	// save for aiming the shot
 	self->pos1 = self->enemy->s.origin;
 	self->pos1[2] += self->enemy->viewheight;
 }
 
-static void gladbGun_check(edict_t *self) {
-	if (skill->integer == 3)
+static void gladbGun_check(gentity_t *self) {
+	if (skill->integer >= 3)
 		gladbGun(self);
 }
 
@@ -202,7 +202,7 @@ mframe_t gladb_frames_attack_gun[] = {
 };
 MMOVE_T(gladb_move_attack_gun) = { FRAME_attack1, FRAME_attack9, gladb_frames_attack_gun, gladiator_run };
 
-MONSTERINFO_ATTACK(gladiator_attack) (edict_t *self) -> void {
+MONSTERINFO_ATTACK(gladiator_attack) (gentity_t *self) -> void {
 	float  range;
 	vec3_t v;
 
@@ -244,7 +244,7 @@ mframe_t gladiator_frames_pain_air[] = {
 };
 MMOVE_T(gladiator_move_pain_air) = { FRAME_painup2, FRAME_painup6, gladiator_frames_pain_air, gladiator_run };
 
-static PAIN(gladiator_pain) (edict_t *self, edict_t *other, float kick, int damage, const mod_t &mod) -> void {
+static PAIN(gladiator_pain) (gentity_t *self, gentity_t *other, float kick, int damage, const mod_t &mod) -> void {
 	if (level.time < self->pain_debounce_time) {
 		if ((self->velocity[2] > 100) && (self->monsterinfo.active_move == &gladiator_move_pain))
 			M_SetAnimation(self, &gladiator_move_pain_air);
@@ -267,20 +267,20 @@ static PAIN(gladiator_pain) (edict_t *self, edict_t *other, float kick, int dama
 		M_SetAnimation(self, &gladiator_move_pain);
 }
 
-MONSTERINFO_SETSKIN(gladiator_setskin) (edict_t *self) -> void {
+MONSTERINFO_SETSKIN(gladiator_setskin) (gentity_t *self) -> void {
 	if (self->health < (self->max_health / 2))
 		self->s.skinnum |= 1;
 	else
 		self->s.skinnum &= ~1;
 }
 
-static void gladiator_dead(edict_t *self) {
+static void gladiator_dead(gentity_t *self) {
 	self->mins = { -16, -16, -24 };
 	self->maxs = { 16, 16, -8 };
 	monster_dead(self);
 }
 
-static void gladiator_shrink(edict_t *self) {
+static void gladiator_shrink(gentity_t *self) {
 	self->maxs[2] = 0;
 	self->svflags |= SVF_DEADMONSTER;
 	gi.linkentity(self);
@@ -311,7 +311,7 @@ mframe_t gladiator_frames_death[] = {
 };
 MMOVE_T(gladiator_move_death) = { FRAME_death2, FRAME_death22, gladiator_frames_death, gladiator_dead };
 
-static DIE(gladiator_die) (edict_t *self, edict_t *inflictor, edict_t *attacker, int damage, const vec3_t &point, const mod_t &mod) -> void {
+static DIE(gladiator_die) (gentity_t *self, gentity_t *inflictor, gentity_t *attacker, int damage, const vec3_t &point, const mod_t &mod) -> void {
 	// check for gib
 	if (M_CheckGib(self, mod)) {
 		gi.sound(self, CHAN_VOICE, gi.soundindex("misc/udeath.wav"), 1, ATTN_NORM, 0);
@@ -346,7 +346,7 @@ static DIE(gladiator_die) (edict_t *self, edict_t *inflictor, edict_t *attacker,
 	M_SetAnimation(self, &gladiator_move_death);
 }
 
-MONSTERINFO_BLOCKED(gladiator_blocked) (edict_t *self, float dist) -> bool {
+MONSTERINFO_BLOCKED(gladiator_blocked) (gentity_t *self, float dist) -> bool {
 	if (blocked_checkplat(self, dist))
 		return true;
 
@@ -355,9 +355,9 @@ MONSTERINFO_BLOCKED(gladiator_blocked) (edict_t *self, float dist) -> bool {
 
 /*QUAKED monster_gladiator (1 .5 0) (-32 -32 -24) (32 32 64) AMBUSH TRIGGER_SPAWN SIGHT x x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
  */
-void SP_monster_gladiator(edict_t *self) {
+void SP_monster_gladiator(gentity_t *self) {
 	if (!M_AllowSpawn(self)) {
-		G_FreeEdict(self);
+		G_FreeEntity(self);
 		return;
 	}
 
@@ -439,6 +439,6 @@ void SP_monster_gladiator(edict_t *self) {
 //
 /*QUAKED monster_gladb (1 .5 0) (-32 -32 -24) (32 32 64) AMBUSH TRIGGER_SPAWN SIGHT x x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
  */
-void SP_monster_gladb(edict_t *self) {
+void SP_monster_gladb(gentity_t *self) {
 	SP_monster_gladiator(self);
 }

@@ -24,9 +24,9 @@
 //
 // CreateMonster
 //
-edict_t *CreateMonster(const vec3_t &origin, const vec3_t &angles, const char *classname)
+gentity_t *CreateMonster(const vec3_t &origin, const vec3_t &angles, const char *classname)
 {
-	edict_t *newEnt;
+	gentity_t *newEnt;
 
 	newEnt = G_Spawn();
 
@@ -42,7 +42,7 @@ edict_t *CreateMonster(const vec3_t &origin, const vec3_t &angles, const char *c
 	return newEnt;
 }
 
-edict_t *CreateFlyMonster(const vec3_t &origin, const vec3_t &angles, const vec3_t &mins, const vec3_t &maxs, const char *classname)
+gentity_t *CreateFlyMonster(const vec3_t &origin, const vec3_t &angles, const vec3_t &mins, const vec3_t &maxs, const char *classname)
 {
 	if (!CheckSpawnPoint(origin, mins, maxs))
 		return nullptr;
@@ -53,9 +53,9 @@ edict_t *CreateFlyMonster(const vec3_t &origin, const vec3_t &angles, const vec3
 // This is just a wrapper for CreateMonster that looks down height # of CMUs and sees if there
 // are bad things down there or not
 
-edict_t *CreateGroundMonster(const vec3_t &origin, const vec3_t &angles, const vec3_t &entMins, const vec3_t &entMaxs, const char *classname, float height)
+gentity_t *CreateGroundMonster(const vec3_t &origin, const vec3_t &angles, const vec3_t &entMins, const vec3_t &entMaxs, const char *classname, float height)
 {
-	edict_t *newEnt;
+	gentity_t *newEnt;
 
 	// check the ground to make sure it's there, it's relatively flat, and it's not toxic
 	if (!CheckGroundSpawnPoint(origin, entMins, entMaxs, height, -1.f))
@@ -152,12 +152,12 @@ bool CheckGroundSpawnPoint(const vec3_t &origin, const vec3_t &entMins, const ve
 
 constexpr gtime_t SPAWNGROW_LIFESPAN = 1000_ms;
 
-static THINK(spawngrow_think) (edict_t *self) -> void
+static THINK(spawngrow_think) (gentity_t *self) -> void
 {
 	if (level.time >= self->timestamp)
 	{
-		G_FreeEdict(self->target_ent);
-		G_FreeEdict(self);
+		G_FreeEntity(self->target_ent);
+		G_FreeEntity(self);
 		return;
 	}
 
@@ -171,7 +171,7 @@ static THINK(spawngrow_think) (edict_t *self) -> void
 	self->nextthink += FRAME_TIME_MS;
 }
 
-static vec3_t SpawnGro_laser_pos(edict_t *ent)
+static vec3_t SpawnGro_laser_pos(gentity_t *ent)
 {
 	// pick random direction
 	float theta = frandom(2 * PIf);
@@ -186,7 +186,7 @@ static vec3_t SpawnGro_laser_pos(edict_t *ent)
 	return ent->s.origin + (d * ent->owner->s.scale * 9.f);
 }
 
-static THINK(SpawnGro_laser_think) (edict_t *self) -> void
+static THINK(SpawnGro_laser_think) (gentity_t *self) -> void
 {
 	self->s.old_origin = SpawnGro_laser_pos(self);
 	gi.linkentity(self);
@@ -195,7 +195,7 @@ static THINK(SpawnGro_laser_think) (edict_t *self) -> void
 
 void SpawnGrow_Spawn(const vec3_t &startpos, float start_size, float end_size)
 {
-	edict_t *ent;
+	gentity_t *ent;
 
 	ent = G_Spawn();
 	ent->s.origin = startpos;
@@ -231,7 +231,7 @@ void SpawnGrow_Spawn(const vec3_t &startpos, float start_size, float end_size)
 	gi.linkentity(ent);
 
 	// [Paril-KEX]
-	edict_t *beam = ent->target_ent = G_Spawn();
+	gentity_t *beam = ent->target_ent = G_Spawn();
 	beam->s.modelindex = MODELINDEX_WORLD;
 	beam->s.renderfx = RF_BEAM_LIGHTNING | RF_NO_ORIGIN_LERP;
 	beam->s.frame = 1;
@@ -253,12 +253,12 @@ void SpawnGrow_Spawn(const vec3_t &startpos, float start_size, float end_size)
 constexpr int32_t MAX_LEGSFRAME = 23;
 constexpr gtime_t LEG_WAIT_TIME = 1_sec;
 
-void ThrowMoreStuff(edict_t *self, const vec3_t &point);
-void ThrowSmallStuff(edict_t *self, const vec3_t &point);
-void ThrowWidowGibLoc(edict_t *self, const char *gibname, int damage, gib_type_t type, const vec3_t *startpos, bool fade);
-void ThrowWidowGibSized(edict_t *self, const char *gibname, int damage, gib_type_t type, const vec3_t *startpos, int hitsound, bool fade);
+void ThrowMoreStuff(gentity_t *self, const vec3_t &point);
+void ThrowSmallStuff(gentity_t *self, const vec3_t &point);
+void ThrowWidowGibLoc(gentity_t *self, const char *gibname, int damage, gib_type_t type, const vec3_t *startpos, bool fade);
+void ThrowWidowGibSized(gentity_t *self, const char *gibname, int damage, gib_type_t type, const vec3_t *startpos, int hitsound, bool fade);
 
-static THINK(widowlegs_think) (edict_t *self) -> void
+static THINK(widowlegs_think) (gentity_t *self) -> void
 {
 	vec3_t offset;
 	vec3_t point;
@@ -313,7 +313,7 @@ static THINK(widowlegs_think) (edict_t *self) -> void
 		ThrowWidowGibSized(self, "models/monsters/blackwidow/gib2/tris.md2", 80 + (int) frandom(20.0f), GIB_METALLIC, &point, 0, true);
 		ThrowWidowGibSized(self, "models/monsters/blackwidow/gib3/tris.md2", 80 + (int) frandom(20.0f), GIB_METALLIC, &point, 0, true);
 
-		G_FreeEdict(self);
+		G_FreeEntity(self);
 		return;
 	}
 	if ((level.time > gtime_t::from_sec(self->wait - 0.5f)) && (self->count == 0))
@@ -345,7 +345,7 @@ static THINK(widowlegs_think) (edict_t *self) -> void
 
 void Widowlegs_Spawn(const vec3_t &startpos, const vec3_t &angles)
 {
-	edict_t *ent;
+	gentity_t *ent;
 
 	ent = G_Spawn();
 	ent->s.origin = startpos;

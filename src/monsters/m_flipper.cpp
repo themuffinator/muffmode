@@ -26,7 +26,7 @@ mframe_t flipper_frames_stand[] = {
 
 MMOVE_T(flipper_move_stand) = { FRAME_flphor01, FRAME_flphor01, flipper_frames_stand, nullptr };
 
-MONSTERINFO_STAND(flipper_stand) (edict_t *self) -> void {
+MONSTERINFO_STAND(flipper_stand) (gentity_t *self) -> void {
 	M_SetAnimation(self, &flipper_move_stand);
 }
 
@@ -62,7 +62,7 @@ mframe_t flipper_frames_run[] = {
 };
 MMOVE_T(flipper_move_run_loop) = { FRAME_flpver06, FRAME_flpver29, flipper_frames_run, nullptr };
 
-void flipper_run_loop(edict_t *self) {
+void flipper_run_loop(gentity_t *self) {
 	M_SetAnimation(self, &flipper_move_run_loop);
 }
 
@@ -76,7 +76,7 @@ mframe_t flipper_frames_run_start[] = {
 };
 MMOVE_T(flipper_move_run_start) = { FRAME_flpver01, FRAME_flpver06, flipper_frames_run_start, flipper_run_loop };
 
-static void flipper_run(edict_t *self) {
+static void flipper_run(gentity_t *self) {
 	M_SetAnimation(self, &flipper_move_run_start);
 }
 
@@ -109,7 +109,7 @@ mframe_t flipper_frames_walk[] = {
 };
 MMOVE_T(flipper_move_walk) = { FRAME_flphor01, FRAME_flphor24, flipper_frames_walk, nullptr };
 
-MONSTERINFO_WALK(flipper_walk) (edict_t *self) -> void {
+MONSTERINFO_WALK(flipper_walk) (gentity_t *self) -> void {
 	M_SetAnimation(self, &flipper_move_walk);
 }
 
@@ -122,7 +122,7 @@ mframe_t flipper_frames_start_run[] = {
 };
 MMOVE_T(flipper_move_start_run) = { FRAME_flphor01, FRAME_flphor05, flipper_frames_start_run, nullptr };
 
-MONSTERINFO_RUN(flipper_start_run) (edict_t *self) -> void {
+MONSTERINFO_RUN(flipper_start_run) (gentity_t *self) -> void {
 	M_SetAnimation(self, &flipper_move_start_run);
 }
 
@@ -144,12 +144,12 @@ mframe_t flipper_frames_pain1[] = {
 };
 MMOVE_T(flipper_move_pain1) = { FRAME_flppn201, FRAME_flppn205, flipper_frames_pain1, flipper_run };
 
-static void flipper_bite(edict_t *self) {
+static void flipper_bite(gentity_t *self) {
 	vec3_t aim = { MELEE_DISTANCE, 0, 0 };
 	fire_hit(self, aim, 5, 0);
 }
 
-void flipper_preattack(edict_t *self) {
+void flipper_preattack(gentity_t *self) {
 	gi.sound(self, CHAN_WEAPON, sound_chomp, 1, ATTN_NORM, 0);
 }
 
@@ -177,11 +177,11 @@ mframe_t flipper_frames_attack[] = {
 };
 MMOVE_T(flipper_move_attack) = { FRAME_flpbit01, FRAME_flpbit20, flipper_frames_attack, flipper_run };
 
-MONSTERINFO_MELEE(flipper_melee) (edict_t *self) -> void {
+MONSTERINFO_MELEE(flipper_melee) (gentity_t *self) -> void {
 	M_SetAnimation(self, &flipper_move_attack);
 }
 
-static PAIN(flipper_pain) (edict_t *self, edict_t *other, float kick, int damage, const mod_t &mod) -> void {
+static PAIN(flipper_pain) (gentity_t *self, gentity_t *other, float kick, int damage, const mod_t &mod) -> void {
 	int n;
 
 	if (level.time < self->pain_debounce_time)
@@ -204,14 +204,14 @@ static PAIN(flipper_pain) (edict_t *self, edict_t *other, float kick, int damage
 		M_SetAnimation(self, &flipper_move_pain2);
 }
 
-MONSTERINFO_SETSKIN(flipper_setskin) (edict_t *self) -> void {
+MONSTERINFO_SETSKIN(flipper_setskin) (gentity_t *self) -> void {
 	if (self->health < (self->max_health / 2))
 		self->s.skinnum = 1;
 	else
 		self->s.skinnum = 0;
 }
 
-static void flipper_dead(edict_t *self) {
+static void flipper_dead(gentity_t *self) {
 	self->mins = { -16, -16, -8 };
 	self->maxs = { 16, 16, 8 };
 	monster_dead(self);
@@ -282,11 +282,11 @@ mframe_t flipper_frames_death[] = {
 };
 MMOVE_T(flipper_move_death) = { FRAME_flpdth01, FRAME_flpdth56, flipper_frames_death, flipper_dead };
 
-MONSTERINFO_SIGHT(flipper_sight) (edict_t *self, edict_t *other) -> void {
+MONSTERINFO_SIGHT(flipper_sight) (gentity_t *self, gentity_t *other) -> void {
 	gi.sound(self, CHAN_VOICE, sound_sight, 1, ATTN_NORM, 0);
 }
 
-static DIE(flipper_die) (edict_t *self, edict_t *inflictor, edict_t *attacker, int damage, const vec3_t &point, const mod_t &mod) -> void {
+static DIE(flipper_die) (gentity_t *self, gentity_t *inflictor, gentity_t *attacker, int damage, const vec3_t &point, const mod_t &mod) -> void {
 	// check for gib
 	if (M_CheckGib(self, mod)) {
 		gi.sound(self, CHAN_VOICE, gi.soundindex("misc/udeath.wav"), 1, ATTN_NORM, 0);
@@ -310,7 +310,7 @@ static DIE(flipper_die) (edict_t *self, edict_t *inflictor, edict_t *attacker, i
 	M_SetAnimation(self, &flipper_move_death);
 }
 
-static void flipper_set_fly_parameters(edict_t *self) {
+static void flipper_set_fly_parameters(gentity_t *self) {
 	self->monsterinfo.fly_thrusters = false;
 	self->monsterinfo.fly_acceleration = 30.f;
 	self->monsterinfo.fly_speed = 110.f;
@@ -321,9 +321,9 @@ static void flipper_set_fly_parameters(edict_t *self) {
 
 /*QUAKED monster_flipper (1 .5 0) (-16 -16 -24) (16 16 32) AMBUSH TRIGGER_SPAWN SIGHT x x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
  */
-void SP_monster_flipper(edict_t *self) {
+void SP_monster_flipper(gentity_t *self) {
 	if (!M_AllowSpawn(self)) {
-		G_FreeEdict(self);
+		G_FreeEntity(self);
 		return;
 	}
 

@@ -6,7 +6,7 @@
 
 // this is used for communications out of g_movestep to say what entity
 // is blocking us
-edict_t *new_bad; // pmm
+gentity_t *new_bad; // pmm
 
 /*
 =============
@@ -36,7 +36,7 @@ bool M_CheckBottom_Fast_Generic(const vec3_t &absmins, const vec3_t &absmaxs, bo
 	return true; // we got out easy
 }
 
-bool M_CheckBottom_Slow_Generic(const vec3_t &origin, const vec3_t &mins, const vec3_t &maxs, edict_t *ignore, contents_t mask, bool ceiling, bool allow_any_step_height) {
+bool M_CheckBottom_Slow_Generic(const vec3_t &origin, const vec3_t &mins, const vec3_t &maxs, gentity_t *ignore, contents_t mask, bool ceiling, bool allow_any_step_height) {
 	vec3_t start;
 
 	//
@@ -112,7 +112,7 @@ bool M_CheckBottom_Slow_Generic(const vec3_t &origin, const vec3_t &mins, const 
 	return true;
 }
 
-bool M_CheckBottom(edict_t *ent) {
+bool M_CheckBottom(gentity_t *ent) {
 	// if all of the points under the corners are solid world, don't bother
 	// with the tougher checks
 
@@ -123,7 +123,7 @@ bool M_CheckBottom(edict_t *ent) {
 	return M_CheckBottom_Slow_Generic(ent->s.origin, ent->mins, ent->maxs, ent, mask, ent->gravityVector[2] > 0, ent->spawnflags.has(SPAWNFLAG_MONSTER_SUPER_STEP));
 }
 
-static bool IsBadAhead(edict_t *self, edict_t *bad, const vec3_t &move) {
+static bool IsBadAhead(gentity_t *self, gentity_t *bad, const vec3_t &move) {
 	vec3_t dir;
 	vec3_t forward;
 	float  dp_bad, dp_move;
@@ -148,7 +148,7 @@ static bool IsBadAhead(edict_t *self, edict_t *bad, const vec3_t &move) {
 	return false;
 }
 
-static vec3_t G_IdealHoverPosition(edict_t *ent) {
+static vec3_t G_IdealHoverPosition(gentity_t *ent) {
 	if ((!ent->enemy && !(ent->monsterinfo.aiflags & AI_MEDIC)) || (ent->monsterinfo.aiflags & (AI_COMBAT_POINT | AI_SOUND_TARGET | AI_HINT_PATH | AI_PATHING)))
 		return { 0, 0, 0 }; // go right for the center
 
@@ -174,7 +174,7 @@ static vec3_t G_IdealHoverPosition(edict_t *ent) {
 	return d * frandom(ent->monsterinfo.fly_min_distance, ent->monsterinfo.fly_max_distance);
 }
 
-static inline bool G_flystep_testvisposition(vec3_t start, vec3_t end, vec3_t starta, vec3_t startb, edict_t *ent) {
+static inline bool G_flystep_testvisposition(vec3_t start, vec3_t end, vec3_t starta, vec3_t startb, gentity_t *ent) {
 	trace_t tr = gi.traceline(start, end, ent, MASK_SOLID | CONTENTS_MONSTERCLIP);
 
 	if (tr.fraction == 1.0f) {
@@ -187,7 +187,7 @@ static inline bool G_flystep_testvisposition(vec3_t start, vec3_t end, vec3_t st
 	return false;
 }
 
-static bool G_alternate_flystep(edict_t *ent, vec3_t move, bool relink, edict_t *current_bad) {
+static bool G_alternate_flystep(gentity_t *ent, vec3_t move, bool relink, gentity_t *current_bad) {
 	// swimming monsters just follow their velocity in the air
 	if ((ent->flags & FL_SWIM) && ent->waterlevel < WATER_UNDER)
 		return true;
@@ -399,7 +399,7 @@ static bool G_alternate_flystep(edict_t *ent, vec3_t move, bool relink, edict_t 
 }
 
 // flying monsters don't step up
-static bool G_flystep(edict_t *ent, vec3_t move, bool relink, edict_t *current_bad) {
+static bool G_flystep(gentity_t *ent, vec3_t move, bool relink, gentity_t *current_bad) {
 	if (ent->monsterinfo.aiflags & AI_ALTERNATE_FLY) {
 		if (G_alternate_flystep(ent, move, relink, current_bad))
 			return true;
@@ -532,8 +532,8 @@ pr_global_struct->trace_normal is set to the normal of the blocking wall
 */
 // FIXME since we need to test end position contents here, can we avoid doing
 // it again later in catagorize position?
-static bool G_movestep(edict_t *ent, vec3_t move, bool relink) {
-	edict_t *current_bad = nullptr;
+static bool G_movestep(gentity_t *ent, vec3_t move, bool relink) {
+	gentity_t *current_bad = nullptr;
 
 	// PMM - who cares about bad areas if you're dead?
 	if (ent->health > 0) {
@@ -764,7 +764,7 @@ static bool G_movestep(edict_t *ent, vec3_t move, bool relink) {
 }
 
 // check if a movement would succeed
-bool ai_check_move(edict_t *self, float dist) {
+bool ai_check_move(gentity_t *self, float dist) {
 	if (ai_movement_disabled->integer) {
 		return false;
 	}
@@ -794,7 +794,7 @@ M_ChangeYaw
 
 ===============
 */
-void M_ChangeYaw(edict_t *ent) {
+void M_ChangeYaw(gentity_t *ent) {
 	float ideal;
 	float current;
 	float move;
@@ -837,7 +837,7 @@ facing it.
 
 ======================
 */
-static bool G_StepDirection(edict_t *ent, float yaw, float dist, bool allow_no_turns) {
+static bool G_StepDirection(gentity_t *ent, float yaw, float dist, bool allow_no_turns) {
 	vec3_t move, oldorigin;
 
 	if (!ent->inuse)
@@ -887,7 +887,7 @@ G_FixCheckBottom
 
 ======================
 */
-static void G_FixCheckBottom(edict_t *ent) {
+static void G_FixCheckBottom(gentity_t *ent) {
 	ent->flags |= FL_PARTIALGROUND;
 }
 
@@ -899,7 +899,7 @@ G_NewChaseDir
 */
 constexpr float DI_NODIR = -1;
 
-static bool G_NewChaseDir(edict_t *actor, vec3_t pos, float dist) {
+static bool G_NewChaseDir(gentity_t *actor, vec3_t pos, float dist) {
 	float deltax, deltay;
 	float d[3];
 	float tdir, olddir, turnaround;
@@ -1003,7 +1003,7 @@ G_CloseEnough
 
 ======================
 */
-bool G_CloseEnough(edict_t *ent, edict_t *goal, float dist) {
+bool G_CloseEnough(gentity_t *ent, gentity_t *goal, float dist) {
 	int i;
 
 	for (i = 0; i < 3; i++) {
@@ -1015,7 +1015,7 @@ bool G_CloseEnough(edict_t *ent, edict_t *goal, float dist) {
 	return true;
 }
 
-static bool M_NavPathToGoal(edict_t *self, float dist, const vec3_t &goal) {
+static bool M_NavPathToGoal(gentity_t *self, float dist, const vec3_t &goal) {
 	// mark us as *trying* now (nav_pos is valid)
 	self->monsterinfo.aiflags |= AI_PATHING;
 
@@ -1125,7 +1125,7 @@ Advanced movement code that use the bots pathfinder if allowed and conditions ar
 Feel free to add any other conditions needed.
 =============
 */
-static bool M_MoveToPath(edict_t *self, float dist) {
+static bool M_MoveToPath(gentity_t *self, float dist) {
 	if (self->flags & FL_STATIONARY)
 		return false;
 	else if (self->monsterinfo.aiflags & AI_NO_PATH_FINDING)
@@ -1203,7 +1203,7 @@ static bool M_MoveToPath(edict_t *self, float dist) {
 M_MoveToGoal
 ======================
 */
-void M_MoveToGoal(edict_t *ent, float dist) {
+void M_MoveToGoal(gentity_t *ent, float dist) {
 	if (ai_movement_disabled->integer) {
 		if (!FacingIdeal(ent)) {
 			M_ChangeYaw(ent);
@@ -1211,7 +1211,7 @@ void M_MoveToGoal(edict_t *ent, float dist) {
 		return;
 	}
 
-	edict_t *goal;
+	gentity_t *goal;
 
 	goal = ent->goalentity;
 
@@ -1301,7 +1301,7 @@ void M_MoveToGoal(edict_t *ent, float dist) {
 M_walkmove
 ===============
 */
-bool M_walkmove(edict_t *ent, float yaw, float dist) {
+bool M_walkmove(gentity_t *ent, float yaw, float dist) {
 	if (ai_movement_disabled->integer) {
 		return false;
 	}

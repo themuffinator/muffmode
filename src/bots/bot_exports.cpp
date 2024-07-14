@@ -9,7 +9,7 @@
 Bot_SetWeapon
 ================
 */
-void Bot_SetWeapon(edict_t *bot, const int weaponIndex, const bool instantSwitch) {
+void Bot_SetWeapon(gentity_t *bot, const int weaponIndex, const bool instantSwitch) {
 	if (weaponIndex <= IT_NULL || weaponIndex > IT_TOTAL) {
 		return;
 	}
@@ -62,11 +62,11 @@ void Bot_SetWeapon(edict_t *bot, const int weaponIndex, const bool instantSwitch
 
 /*
 ================
-Bot_TriggerEdict
+Bot_TriggerEntity
 ================
 */
-void Bot_TriggerEdict(edict_t *bot, edict_t *edict) {
-	if (!bot->inuse || !edict->inuse) {
+void Bot_TriggerEntity(gentity_t *bot, gentity_t *entity) {
+	if (!bot->inuse || !entity->inuse) {
 		return;
 	}
 
@@ -74,13 +74,13 @@ void Bot_TriggerEdict(edict_t *bot, edict_t *edict) {
 		return;
 	}
 
-	if (edict->use) {
-		edict->use(edict, bot, bot);
+	if (entity->use) {
+		entity->use(entity, bot, bot);
 	}
 
 	trace_t unUsed;
-	if (edict->touch) {
-		edict->touch(edict, bot, unUsed, true);
+	if (entity->touch) {
+		entity->touch(entity, bot, unUsed, true);
 	}
 }
 
@@ -89,7 +89,7 @@ void Bot_TriggerEdict(edict_t *bot, edict_t *edict) {
 Bot_UseItem
 ================
 */
-void Bot_UseItem(edict_t *bot, const int32_t itemID) {
+void Bot_UseItem(gentity_t *bot, const int32_t itemID) {
 	if (!bot->inuse) {
 		return;
 	}
@@ -152,13 +152,13 @@ int32_t Bot_GetItemID(const char *classname) {
 
 /*
 ================
-Edict_ForceLookAtPoint
+Entity_ForceLookAtPoint
 ================
 */
-void Edict_ForceLookAtPoint(edict_t *edict, gvec3_cref_t point) {
-	vec3_t viewOrigin = edict->s.origin;
-	if (edict->client != nullptr) {
-		viewOrigin += edict->client->ps.viewoffset;
+void Entity_ForceLookAtPoint(gentity_t *entity, gvec3_cref_t point) {
+	vec3_t viewOrigin = entity->s.origin;
+	if (entity->client != nullptr) {
+		viewOrigin += entity->client->ps.viewoffset;
 	}
 
 	const vec3_t ideal = (point - viewOrigin).normalized();
@@ -168,11 +168,11 @@ void Edict_ForceLookAtPoint(edict_t *edict, gvec3_cref_t point) {
 		viewAngles.x = anglemod(viewAngles.x + 360.0f);
 	}
 
-	if (edict->client != nullptr) {
-		edict->client->ps.pmove.delta_angles = (viewAngles - edict->client->resp.cmd_angles);
-		edict->client->ps.viewangles = {};
-		edict->client->v_angle = {};
-		edict->s.angles = {};
+	if (entity->client != nullptr) {
+		entity->client->ps.pmove.delta_angles = (viewAngles - entity->client->resp.cmd_angles);
+		entity->client->ps.viewangles = {};
+		entity->client->v_angle = {};
+		entity->s.angles = {};
 	}
 }
 
@@ -183,6 +183,6 @@ Bot_PickedUpItem
 Check if the given bot has picked up the given item or not.
 ================
 */
-bool Bot_PickedUpItem(edict_t *bot, edict_t *item) {
+bool Bot_PickedUpItem(gentity_t *bot, gentity_t *item) {
 	return item->item_picked_up_by[(bot->s.number - 1)];
 }

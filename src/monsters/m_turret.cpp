@@ -19,18 +19,18 @@ constexpr spawnflags_t SPAWNFLAG_TURRET_WEAPONCHOICE = SPAWNFLAG_TURRET_HEATBEAM
 constexpr spawnflags_t SPAWNFLAG_TURRET_WALL_UNIT = 0x0080_spawnflag;
 constexpr spawnflags_t SPAWNFLAG_TURRET_NO_LASERSIGHT = 18_spawnflag_bit;
 
-bool FindTarget(edict_t *self);
+bool FindTarget(gentity_t *self);
 
-void TurretAim(edict_t *self);
-void turret_ready_gun(edict_t *self);
-void turret_run(edict_t *self);
+void TurretAim(gentity_t *self);
+void turret_ready_gun(gentity_t *self);
+void turret_run(gentity_t *self);
 
 extern const mmove_t turret_move_fire;
 extern const mmove_t turret_move_fire_blind;
 
 static cached_soundindex sound_moved, sound_moving;
 
-void TurretAim(edict_t *self) {
+void TurretAim(gentity_t *self) {
 	vec3_t end, dir;
 	vec3_t ang;
 	float  move, idealPitch, idealYaw, current, speed;
@@ -254,9 +254,9 @@ void TurretAim(edict_t *self) {
 	gi.linkentity(self->target_ent);
 }
 
-MONSTERINFO_SIGHT(turret_sight) (edict_t *self, edict_t *other) -> void {}
+MONSTERINFO_SIGHT(turret_sight) (gentity_t *self, gentity_t *other) -> void {}
 
-MONSTERINFO_SEARCH(turret_search) (edict_t *self) -> void {}
+MONSTERINFO_SEARCH(turret_search) (gentity_t *self) -> void {}
 
 mframe_t turret_frames_stand[] = {
 	{ ai_stand },
@@ -264,10 +264,10 @@ mframe_t turret_frames_stand[] = {
 };
 MMOVE_T(turret_move_stand) = { FRAME_stand01, FRAME_stand02, turret_frames_stand, nullptr };
 
-MONSTERINFO_STAND(turret_stand) (edict_t *self) -> void {
+MONSTERINFO_STAND(turret_stand) (gentity_t *self) -> void {
 	M_SetAnimation(self, &turret_move_stand);
 	if (self->target_ent) {
-		G_FreeEdict(self->target_ent);
+		G_FreeEntity(self->target_ent);
 		self->target_ent = nullptr;
 	}
 }
@@ -285,7 +285,7 @@ mframe_t turret_frames_ready_gun[] = {
 };
 MMOVE_T(turret_move_ready_gun) = { FRAME_active01, FRAME_run01, turret_frames_ready_gun, turret_run };
 
-void turret_ready_gun(edict_t *self) {
+void turret_ready_gun(gentity_t *self) {
 	if (self->monsterinfo.active_move != &turret_move_ready_gun) {
 		M_SetAnimation(self, &turret_move_ready_gun);
 		self->monsterinfo.weapon_sound = sound_moving;
@@ -298,7 +298,7 @@ mframe_t turret_frames_seek[] = {
 };
 MMOVE_T(turret_move_seek) = { FRAME_run01, FRAME_run02, turret_frames_seek, nullptr };
 
-MONSTERINFO_WALK(turret_walk) (edict_t *self) -> void {
+MONSTERINFO_WALK(turret_walk) (gentity_t *self) -> void {
 	if (self->s.frame < FRAME_run01)
 		turret_ready_gun(self);
 	else
@@ -311,7 +311,7 @@ mframe_t turret_frames_run[] = {
 };
 MMOVE_T(turret_move_run) = { FRAME_run01, FRAME_run02, turret_frames_run, turret_run };
 
-MONSTERINFO_RUN(turret_run) (edict_t *self) -> void {
+MONSTERINFO_RUN(turret_run) (gentity_t *self) -> void {
 	if (self->s.frame < FRAME_run01)
 		turret_ready_gun(self);
 	else {
@@ -334,7 +334,7 @@ constexpr int32_t TURRET_BULLET_DAMAGE = 2;
 // unused
 // constexpr int32_t TURRET_HEAT_DAMAGE	= 4;
 
-static void TurretFire(edict_t *self) {
+static void TurretFire(gentity_t *self) {
 	vec3_t	forward;
 	vec3_t	start, end, dir;
 	float	dist, chance;
@@ -420,7 +420,7 @@ static void TurretFire(edict_t *self) {
 	}
 }
 
-static void TurretFireBlind(edict_t *self) {
+static void TurretFireBlind(gentity_t *self) {
 	vec3_t forward;
 	vec3_t start, end, dir;
 	float  chance;
@@ -483,7 +483,7 @@ mframe_t turret_frames_fire_blind[] = {
 MMOVE_T(turret_move_fire_blind) = { FRAME_pow01, FRAME_pow04, turret_frames_fire_blind, turret_run };
 // pmm
 
-MONSTERINFO_ATTACK(turret_attack) (edict_t *self) -> void {
+MONSTERINFO_ATTACK(turret_attack) (gentity_t *self) -> void {
 	float r, chance;
 
 	if (self->s.frame < FRAME_run01)
@@ -521,15 +521,15 @@ MONSTERINFO_ATTACK(turret_attack) (edict_t *self) -> void {
 //  PAIN
 // **********************
 
-static PAIN(turret_pain) (edict_t *self, edict_t *other, float kick, int damage, const mod_t &mod) -> void {}
+static PAIN(turret_pain) (gentity_t *self, gentity_t *other, float kick, int damage, const mod_t &mod) -> void {}
 
 // **********************
 //  DEATH
 // **********************
 
-static DIE(turret_die) (edict_t *self, edict_t *inflictor, edict_t *attacker, int damage, const vec3_t &point, const mod_t &mod) -> void {
+static DIE(turret_die) (gentity_t *self, gentity_t *inflictor, gentity_t *attacker, int damage, const vec3_t &point, const mod_t &mod) -> void {
 	vec3_t	 forward;
-	edict_t *base;
+	gentity_t *base;
 
 	AngleVectors(self->s.angles, forward, nullptr, nullptr);
 	self->s.origin += (forward * 1);
@@ -569,11 +569,11 @@ static DIE(turret_die) (edict_t *self, edict_t *inflictor, edict_t *attacker, in
 	}
 
 	if (self->target_ent) {
-		G_FreeEdict(self->target_ent);
+		G_FreeEntity(self->target_ent);
 		self->target_ent = nullptr;
 	}
 
-	edict_t *gib = ThrowGib(self, "models/monsters/turret/tris.md2", damage, GIB_SKINNED | GIB_METALLIC | GIB_HEAD | GIB_DEBRIS, self->s.scale);
+	gentity_t *gib = ThrowGib(self, "models/monsters/turret/tris.md2", damage, GIB_SKINNED | GIB_METALLIC | GIB_HEAD | GIB_DEBRIS, self->s.scale);
 	gib->s.frame = 14;
 }
 
@@ -581,8 +581,8 @@ static DIE(turret_die) (edict_t *self, edict_t *inflictor, edict_t *attacker, in
 //  WALL SPAWN
 // **********************
 
-static void turret_wall_spawn(edict_t *turret) {
-	edict_t *ent;
+static void turret_wall_spawn(gentity_t *turret) {
+	gentity_t *ent;
 	int		 angle;
 
 	ent = G_Spawn();
@@ -637,7 +637,7 @@ static void turret_wall_spawn(edict_t *turret) {
 	gi.linkentity(ent);
 }
 
-MOVEINFO_ENDFUNC(turret_wake) (edict_t *ent) -> void {
+MOVEINFO_ENDFUNC(turret_wake) (gentity_t *ent) -> void {
 	// the wall section will call this when it stops moving.
 	// just return without doing anything. easiest way to have a null function.
 	if (ent->flags & FL_TEAMSLAVE) {
@@ -673,10 +673,10 @@ MOVEINFO_ENDFUNC(turret_wake) (edict_t *ent) -> void {
 	ent->monsterinfo.aiflags &= ~AI_DO_NOT_COUNT;
 }
 
-static USE(turret_activate) (edict_t *self, edict_t *other, edict_t *activator) -> void {
+static USE(turret_activate) (gentity_t *self, gentity_t *other, gentity_t *activator) -> void {
 	vec3_t	 endpos;
-	vec3_t	 forward;
-	edict_t *base;
+	vec3_t	 forward = { 0, 0, 0 };
+	gentity_t *base;
 
 	self->movetype = MOVETYPE_PUSH;
 	if (!self->speed)
@@ -721,7 +721,7 @@ static USE(turret_activate) (edict_t *self, edict_t *other, edict_t *activator) 
 }
 
 // checkattack .. ignore range, just attack if available
-MONSTERINFO_CHECKATTACK(turret_checkattack) (edict_t *self) -> bool {
+MONSTERINFO_CHECKATTACK(turret_checkattack) (gentity_t *self) -> bool {
 	vec3_t	spot1, spot2;
 	float	chance;
 	trace_t tr;
@@ -812,11 +812,11 @@ Check the weapon you want it to use: blaster, machinegun, rocket, heatbeam.
 Default weapon is blaster.
 When activated, wall units move 32 units in the direction they're facing.
 */
-void SP_monster_turret(edict_t *self) {
+void SP_monster_turret(gentity_t *self) {
 	int angle;
 
 	if (!M_AllowSpawn(self)) {
-		G_FreeEdict(self);
+		G_FreeEntity(self);
 		return;
 	}
 
@@ -905,7 +905,7 @@ void SP_monster_turret(edict_t *self) {
 
 	if (self->spawnflags.has(SPAWNFLAG_TURRET_WALL_UNIT)) {
 		if (!self->targetname) {
-			G_FreeEdict(self);
+			G_FreeEntity(self);
 			return;
 		}
 

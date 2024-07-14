@@ -3,8 +3,8 @@
 
 #pragma once
 
-void Entity_UpdateState( edict_t * edict );
-const edict_t * FindLocalPlayer();
-const edict_t * FindFirstBot();
-const edict_t * FindFirstMonster();
-const edict_t * FindActorUnderCrosshair( const edict_t * player );
+void Entity_UpdateState( gentity_t * entity );
+const gentity_t * FindLocalPlayer();
+const gentity_t * FindFirstBot();
+const gentity_t * FindFirstMonster();
+const gentity_t * FindActorUnderCrosshair( const gentity_t * player );

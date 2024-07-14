@@ -24,12 +24,12 @@ constexpr gtime_t CARRIER_ROCKET_TIME = 2_sec; // number of seconds between rock
 constexpr int32_t CARRIER_ROCKET_SPEED = 750;
 constexpr gtime_t RAIL_FIRE_TIME = 3_sec;
 
-bool infront(edict_t *self, edict_t *other);
-bool inback(edict_t *self, edict_t *other);
-bool below(edict_t *self, edict_t *other);
-void drawbbox(edict_t *self);
+bool infront(gentity_t *self, gentity_t *other);
+bool inback(gentity_t *self, gentity_t *other);
+bool below(gentity_t *self, gentity_t *other);
+void drawbbox(gentity_t *self);
 
-void ED_CallSpawn(edict_t *ent);
+void ED_CallSpawn(gentity_t *ent);
 
 static cached_soundindex sound_pain1;
 static cached_soundindex sound_pain2;
@@ -44,26 +44,26 @@ static cached_soundindex sound_cg_down, sound_cg_loop, sound_cg_up;
 float orig_yaw_speed;
 
 void M_SetupReinforcements(const char *reinforcements, reinforcement_list_t &list);
-std::array<uint8_t, MAX_REINFORCEMENTS> M_PickReinforcements(edict_t *self, int32_t &num_chosen, int32_t max_slots);
+std::array<uint8_t, MAX_REINFORCEMENTS> M_PickReinforcements(gentity_t *self, int32_t &num_chosen, int32_t max_slots);
 
 extern const mmove_t flyer_move_attack2, flyer_move_attack3, flyer_move_kamikaze;
 
-void carrier_run(edict_t *self);
-void carrier_dead(edict_t *self);
-void carrier_attack_mg(edict_t *self);
-void carrier_reattack_mg(edict_t *self);
+void carrier_run(gentity_t *self);
+void carrier_dead(gentity_t *self);
+void carrier_attack_mg(gentity_t *self);
+void carrier_reattack_mg(gentity_t *self);
 
-void carrier_attack_gren(edict_t *self);
-void carrier_reattack_gren(edict_t *self);
+void carrier_attack_gren(gentity_t *self);
+void carrier_reattack_gren(gentity_t *self);
 
-void carrier_start_spawn(edict_t *self);
-void carrier_spawn_check(edict_t *self);
-void carrier_prep_spawn(edict_t *self);
+void carrier_start_spawn(gentity_t *self);
+void carrier_spawn_check(gentity_t *self);
+void carrier_prep_spawn(gentity_t *self);
 
-void CarrierMachineGunHold(edict_t *self);
-void CarrierRocket(edict_t *self);
+void CarrierMachineGunHold(gentity_t *self);
+void CarrierRocket(gentity_t *self);
 
-MONSTERINFO_SIGHT(carrier_sight) (edict_t *self, edict_t *other) -> void {
+MONSTERINFO_SIGHT(carrier_sight) (gentity_t *self, gentity_t *other) -> void {
 	gi.sound(self, CHAN_VOICE, sound_sight, 1, ATTN_NORM, 0);
 }
 
@@ -72,19 +72,14 @@ MONSTERINFO_SIGHT(carrier_sight) (edict_t *self, edict_t *other) -> void {
 //
 // if there is a player behind/below the carrier, and we can shoot, and we can trace a LOS to them ..
 // pick one of the group, and let it rip
-static void CarrierCoopCheck(edict_t *self) {
+static void CarrierCoopCheck(gentity_t *self) {
 	// no more than 8 players in coop, so..
-	std::array<edict_t *, MAX_SPLIT_PLAYERS> targets;
+	std::array<gentity_t *, MAX_SPLIT_PLAYERS> targets;
 	uint32_t num_targets = 0;
 	int32_t  target;
-	edict_t *ent;
+	gentity_t *ent;
 	trace_t	 tr;
 
-	// if we're not in coop, this is a noop
-	// [Paril-KEX] might as well let this work in SP too, so he fires it
-	// if you get below him
-	//if (!coop->integer)
-	//	return;
 	// if we are, and we have recently fired, bail
 	if (self->monsterinfo.fire_wait > level.time)
 		return;
@@ -121,7 +116,7 @@ static void CarrierCoopCheck(edict_t *self) {
 	return;
 }
 
-static void CarrierGrenade(edict_t *self) {
+static void CarrierGrenade(gentity_t *self) {
 	vec3_t					 start;
 	vec3_t					 forward, right, up;
 	vec3_t					 aim;
@@ -178,7 +173,7 @@ static void CarrierGrenade(edict_t *self) {
 	monster_fire_grenade(self, start, aim, 50, 600, flash_number, (crandom_open() * 10.0f), 200.f + (crandom_open() * 10.0f));
 }
 
-static void CarrierPredictiveRocket(edict_t *self) {
+static void CarrierPredictiveRocket(gentity_t *self) {
 	vec3_t forward, right;
 	vec3_t start;
 	vec3_t dir;
@@ -206,7 +201,7 @@ static void CarrierPredictiveRocket(edict_t *self) {
 	monster_fire_rocket(self, start, dir, 50, CARRIER_ROCKET_SPEED, MZ2_CARRIER_ROCKET_4);
 }
 
-void CarrierRocket(edict_t *self) {
+void CarrierRocket(gentity_t *self) {
 	vec3_t forward, right;
 	vec3_t start;
 	vec3_t dir;
@@ -261,7 +256,7 @@ void CarrierRocket(edict_t *self) {
 	monster_fire_rocket(self, start, dir, 50, 500, MZ2_CARRIER_ROCKET_4);
 }
 
-static void carrier_firebullet_right(edict_t *self) {
+static void carrier_firebullet_right(gentity_t *self) {
 	vec3_t					 forward, right, start;
 	monster_muzzleflash_id_t flashnum;
 
@@ -277,7 +272,7 @@ static void carrier_firebullet_right(edict_t *self) {
 	monster_fire_bullet(self, start, forward, 6, 4, DEFAULT_BULLET_HSPREAD, DEFAULT_BULLET_VSPREAD, flashnum);
 }
 
-static void carrier_firebullet_left(edict_t *self) {
+static void carrier_firebullet_left(gentity_t *self) {
 	vec3_t					 forward, right, start;
 	monster_muzzleflash_id_t flashnum;
 
@@ -293,7 +288,7 @@ static void carrier_firebullet_left(edict_t *self) {
 	monster_fire_bullet(self, start, forward, 6, 4, DEFAULT_BULLET_HSPREAD, DEFAULT_BULLET_VSPREAD, flashnum);
 }
 
-static void CarrierMachineGun(edict_t *self) {
+static void CarrierMachineGun(gentity_t *self) {
 	CarrierCoopCheck(self);
 	if (self->enemy)
 		carrier_firebullet_left(self);
@@ -301,9 +296,9 @@ static void CarrierMachineGun(edict_t *self) {
 		carrier_firebullet_right(self);
 }
 
-static void CarrierSpawn(edict_t *self) {
+static void CarrierSpawn(gentity_t *self) {
 	vec3_t	 f, r, offset, startpoint, spawnpoint;
-	edict_t *ent;
+	gentity_t *ent;
 
 	//	offset = { 105, 0, -30 }; // real distance needed is (sqrt (56*56*2) + sqrt(16*16*2)) or 101.8
 	offset = { 105, 0, -58 }; // real distance needed is (sqrt (56*56*2) + sqrt(16*16*2)) or 101.8
@@ -357,14 +352,14 @@ static void CarrierSpawn(edict_t *self) {
 	}
 }
 
-void carrier_prep_spawn(edict_t *self) {
+void carrier_prep_spawn(gentity_t *self) {
 	CarrierCoopCheck(self);
 	self->monsterinfo.aiflags |= AI_MANUAL_STEERING;
 	self->timestamp = level.time;
 	self->yaw_speed = 10;
 }
 
-void carrier_spawn_check(edict_t *self) {
+void carrier_spawn_check(gentity_t *self) {
 	CarrierCoopCheck(self);
 	CarrierSpawn(self);
 
@@ -376,7 +371,7 @@ void carrier_spawn_check(edict_t *self) {
 		self->monsterinfo.nextframe = FRAME_spawn08;
 }
 
-static void carrier_ready_spawn(edict_t *self) {
+static void carrier_ready_spawn(gentity_t *self) {
 	float  current_yaw;
 	vec3_t offset, f, r, startpoint, spawnpoint;
 
@@ -410,7 +405,7 @@ static void carrier_ready_spawn(edict_t *self) {
 	}
 }
 
-void carrier_start_spawn(edict_t *self) {
+void carrier_start_spawn(gentity_t *self) {
 	int	   mytime;
 	float  enemy_yaw;
 	vec3_t temp;
@@ -487,7 +482,7 @@ mframe_t carrier_frames_run[] = {
 };
 MMOVE_T(carrier_move_run) = { FRAME_search01, FRAME_search13, carrier_frames_run, nullptr };
 
-static void CarrierSpool(edict_t *self) {
+static void CarrierSpool(gentity_t *self) {
 	CarrierCoopCheck(self);
 	gi.sound(self, CHAN_BODY, sound_cg_up, 1, 0.5f, 0);
 
@@ -555,7 +550,7 @@ mframe_t carrier_frames_attack_rocket[] = {
 };
 MMOVE_T(carrier_move_attack_rocket) = { FRAME_fireb01, FRAME_fireb01, carrier_frames_attack_rocket, carrier_run };
 
-static void CarrierRail(edict_t *self) {
+static void CarrierRail(gentity_t *self) {
 	vec3_t start;
 	vec3_t dir;
 	vec3_t forward, right;
@@ -572,7 +567,7 @@ static void CarrierRail(edict_t *self) {
 	self->monsterinfo.attack_finished = level.time + RAIL_FIRE_TIME;
 }
 
-static void CarrierSaveLoc(edict_t *self) {
+static void CarrierSaveLoc(gentity_t *self) {
 	CarrierCoopCheck(self);
 	self->pos1 = self->enemy->s.origin; // save for aiming the shot
 	self->pos1[2] += self->enemy->viewheight;
@@ -655,11 +650,11 @@ mframe_t carrier_frames_death[] = {
 };
 MMOVE_T(carrier_move_death) = { FRAME_death01, FRAME_death16, carrier_frames_death, carrier_dead };
 
-MONSTERINFO_STAND(carrier_stand) (edict_t *self) -> void {
+MONSTERINFO_STAND(carrier_stand) (gentity_t *self) -> void {
 	M_SetAnimation(self, &carrier_move_stand);
 }
 
-MONSTERINFO_RUN(carrier_run) (edict_t *self) -> void {
+MONSTERINFO_RUN(carrier_run) (gentity_t *self) -> void {
 	self->monsterinfo.aiflags &= ~AI_HOLD_FRAME;
 
 	if (self->monsterinfo.aiflags & AI_STAND_GROUND)
@@ -668,15 +663,15 @@ MONSTERINFO_RUN(carrier_run) (edict_t *self) -> void {
 		M_SetAnimation(self, &carrier_move_run);
 }
 
-MONSTERINFO_WALK(carrier_walk) (edict_t *self) -> void {
+MONSTERINFO_WALK(carrier_walk) (gentity_t *self) -> void {
 	M_SetAnimation(self, &carrier_move_walk);
 }
 
-void CarrierMachineGunHold(edict_t *self) {
+void CarrierMachineGunHold(gentity_t *self) {
 	CarrierMachineGun(self);
 }
 
-MONSTERINFO_ATTACK(carrier_attack) (edict_t *self) -> void {
+MONSTERINFO_ATTACK(carrier_attack) (gentity_t *self) -> void {
 	vec3_t vec;
 	float  range, luck;
 	bool   enemy_inback, enemy_infront, enemy_below;
@@ -778,13 +773,13 @@ MONSTERINFO_ATTACK(carrier_attack) (edict_t *self) -> void {
 	}
 }
 
-void carrier_attack_mg(edict_t *self) {
+void carrier_attack_mg(gentity_t *self) {
 	CarrierCoopCheck(self);
 	M_SetAnimation(self, &carrier_move_attack_mg);
 	self->monsterinfo.melee_debounce_time = level.time + random_time(1.2_sec, 2_sec);
 }
 
-void carrier_reattack_mg(edict_t *self) {
+void carrier_reattack_mg(gentity_t *self) {
 	CarrierMachineGun(self);
 
 	CarrierCoopCheck(self);
@@ -804,13 +799,13 @@ void carrier_reattack_mg(edict_t *self) {
 	gi.sound(self, CHAN_BODY, sound_cg_down, 1, 0.5f, 0);
 }
 
-void carrier_attack_gren(edict_t *self) {
+void carrier_attack_gren(gentity_t *self) {
 	CarrierCoopCheck(self);
 	self->timestamp = level.time;
 	M_SetAnimation(self, &carrier_move_attack_gren);
 }
 
-void carrier_reattack_gren(edict_t *self) {
+void carrier_reattack_gren(gentity_t *self) {
 	CarrierCoopCheck(self);
 	if (infront(self, self->enemy))
 		if (self->timestamp + 1.3_sec > level.time) // four grenades
@@ -821,7 +816,7 @@ void carrier_reattack_gren(edict_t *self) {
 	M_SetAnimation(self, &carrier_move_attack_post_gren);
 }
 
-static PAIN(carrier_pain) (edict_t *self, edict_t *other, float kick, int damage, const mod_t &mod) -> void {
+static PAIN(carrier_pain) (gentity_t *self, gentity_t *other, float kick, int damage, const mod_t &mod) -> void {
 	bool changed = false;
 
 	if (level.time < self->pain_debounce_time)
@@ -861,14 +856,14 @@ static PAIN(carrier_pain) (edict_t *self, edict_t *other, float kick, int damage
 	}
 }
 
-MONSTERINFO_SETSKIN(carrier_setskin) (edict_t *self) -> void {
+MONSTERINFO_SETSKIN(carrier_setskin) (gentity_t *self) -> void {
 	if (self->health < (self->max_health / 2))
 		self->s.skinnum = 1;
 	else
 		self->s.skinnum = 0;
 }
 
-void carrier_dead(edict_t *self) {
+void carrier_dead(gentity_t *self) {
 	gi.WriteByte(svc_temp_entity);
 	gi.WriteByte(TE_EXPLOSION1_BIG);
 	gi.WritePosition(self->s.origin);
@@ -895,7 +890,7 @@ void carrier_dead(edict_t *self) {
 		});
 }
 
-static DIE(carrier_die) (edict_t *self, edict_t *inflictor, edict_t *attacker, int damage, const vec3_t &point, const mod_t &mod) -> void {
+static DIE(carrier_die) (gentity_t *self, gentity_t *inflictor, gentity_t *attacker, int damage, const vec3_t &point, const mod_t &mod) -> void {
 	gi.sound(self, CHAN_VOICE, sound_death, 1, ATTN_NONE, 0);
 	self->deadflag = true;
 	self->takedamage = false;
@@ -906,7 +901,7 @@ static DIE(carrier_die) (edict_t *self, edict_t *inflictor, edict_t *attacker, i
 	self->monsterinfo.weapon_sound = 0;
 }
 
-MONSTERINFO_CHECKATTACK(Carrier_CheckAttack) (edict_t *self) -> bool {
+MONSTERINFO_CHECKATTACK(Carrier_CheckAttack) (gentity_t *self) -> bool {
 	bool enemy_infront = infront(self, self->enemy);
 	bool enemy_inback = inback(self, self->enemy);
 	bool enemy_below = below(self, self->enemy);
@@ -955,9 +950,9 @@ static void CarrierPrecache() {
 
 /*QUAKED monster_carrier (1 .5 0) (-56 -56 -44) (56 56 44) AMBUSH TRIGGER_SPAWN SIGHT x x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
  */
-void SP_monster_carrier(edict_t *self) {
+void SP_monster_carrier(gentity_t *self) {
 	if (!M_AllowSpawn(self)) {
-		G_FreeEdict(self);
+		G_FreeEntity(self);
 		return;
 	}
 
@@ -996,7 +991,7 @@ void SP_monster_carrier(edict_t *self) {
 	// 2000 - 4000 health
 	self->health = max(2000, 2000 + 1000 * (skill->integer - 1)) * st.health_multiplier;
 	// add health in coop (500 * skill)
-	if (coop->integer)
+	if (InCoopStyle())
 		self->health += 500 * skill->integer;
 
 	self->gib_health = -200;

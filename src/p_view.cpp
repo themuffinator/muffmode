@@ -5,7 +5,7 @@
 #include "monsters/m_player.h"
 #include "bots/bot_includes.h"
 
-static edict_t *current_player;
+static gentity_t *current_player;
 static gclient_t *current_client;
 
 static vec3_t forward, right, up;
@@ -21,18 +21,19 @@ SkipViewModifiers
 ===============
 */
 static inline bool SkipViewModifiers() {
-	if (g_skip_view_modifiers->integer && g_cheats->integer) {
+	if (g_skip_view_modifiers->integer && g_cheats->integer)
 		return true;
-	}
+
 	// don't do bobbing, etc on grapple
 	if (current_client->grapple_ent &&
-		current_client->grapple_state > GRAPPLE_STATE_FLY) {
+			current_client->grapple_state > GRAPPLE_STATE_FLY) {
 		return true;
 	}
+
 	// spectator mode
-	if (!ClientIsPlaying(current_client)) {
+	if (!ClientIsPlaying(current_client))
 		return true;
-	}
+
 	return false;
 }
 
@@ -72,7 +73,7 @@ P_DamageFeedback
 Handles color blends and view kicks
 ===============
 */
-void P_DamageFeedback(edict_t *player) {
+void P_DamageFeedback(gentity_t *player) {
 	gclient_t *client;
 	float			 side;
 	float			 realcount, count, kick;
@@ -278,7 +279,7 @@ Auto pitching on slopes?
 
 ===============
 */
-static void G_CalcViewOffset(edict_t *ent) {
+static void G_CalcViewOffset(gentity_t *ent) {
 	float  bob;
 	float  ratio;
 	float  delta;
@@ -290,7 +291,7 @@ static void G_CalcViewOffset(edict_t *ent) {
 	vec3_t &angles = ent->client->ps.kick_angles;
 
 	// if dead, fix the angle and don't add any kick
-	if (ent->deadflag && ClientIsPlaying(ent->client) && !ent->client->eliminated) {
+	if (ent->deadflag && ClientIsPlaying(ent->client)) {
 		angles = {};
 
 		if (ent->flags & FL_SAM_RAIMI) {
@@ -440,7 +441,7 @@ static void G_CalcViewOffset(edict_t *ent) {
 G_CalcGunOffset
 ==============
 */
-static void G_CalcGunOffset(edict_t *ent) {
+static void G_CalcGunOffset(gentity_t *ent) {
 	int	  i;
 
 	if (ent->client->pers.weapon &&
@@ -514,7 +515,7 @@ static void G_CalcGunOffset(edict_t *ent) {
 G_CalcBlend
 =============
 */
-static void G_CalcBlend(edict_t *ent) {
+static void G_CalcBlend(gentity_t *ent) {
 	gtime_t remaining;
 
 	ent->client->ps.damage_blend = ent->client->ps.screen_blend = {};
@@ -564,12 +565,8 @@ static void G_CalcBlend(edict_t *ent) {
 			G_AddBlend(0.4f, 1, 0.4f, 0.04f, ent->client->ps.screen_blend);
 	}
 /*freeze*/
-	else if (freeze->integer && ent->client->eliminated && !ent->client->follow_target && (!ent->client->resp.thawer))	// || level.framenum &8))
-	{
-		if (ent->client->resp.team == TEAM_RED)
-			G_AddBlend(0.6f, 0, 0, 0.4f, ent->client->ps.screen_blend);
-		else
-			G_AddBlend(0.6f, 0.6f, 0.6f, 0.4f, ent->client->ps.screen_blend);
+	else if (GT(GT_FREEZE) && ent->client->eliminated && !ent->client->follow_target && (!ent->client->resp.thawer)) {	// || level.framenum &8))
+		G_AddBlend(0.6f, 0.6f, 0.6f, 0.4f, ent->client->ps.screen_blend);
 	}
 /*freeze*/
 
@@ -769,35 +766,20 @@ static void P_WorldEffects() {
 	}
 }
 
-
-static void G_SetPowerupEffects(edict_t *ent, effects_t def) {
-	// muff: do not change color based on team, that makes it confusing
-	ent->s.effects |= def;
-}
-
-
 /*
 ===============
 G_SetClientEffects
 ===============
 */
-static void G_SetClientEffects(edict_t *ent) {
+static void G_SetClientEffects(gentity_t *ent) {
 	int pa_type;
 
-/*freeze*/
-	if (freeze->integer && !level.intermission_time && ent->client->eliminated && !ent->client->resp.thawer) {	// || level.framenum & 8) {
-		ent->s.effects |= EF_COLOR_SHELL;
-		ent->s.renderfx |= (RF_SHELL_RED | RF_SHELL_GREEN | RF_SHELL_BLUE);
-	} else {
-		ent->s.effects = EF_NONE;
-	}
-/*freeze*/
-
+	ent->s.effects = EF_NONE;
 	ent->s.renderfx &= RF_STAIR_STEP;
 	ent->s.renderfx |= RF_IR_VISIBLE;
 	ent->s.alpha = 1.0;
 
-	if (ent->health <= 0 || level.intermission_time)
+	if (ent->health <= 0 || ent->client->eliminated || level.intermission_time)
 		return;
 
 	if (ent->flags & FL_FLASHLIGHT)
@@ -818,44 +800,29 @@ static void G_SetClientEffects(edict_t *ent) {
 
 	CTF_ClientEffects(ent);
 
-	if (ent->client->pu_time_quad > level.time) {
+	if (ent->client->pu_time_quad > level.time)
 		if (G_PowerUpExpiring(ent->client->pu_time_quad))
-			G_SetPowerupEffects(ent, EF_QUAD);
-	}
-
-	if (ent->client->pu_time_duelfire > level.time) {
-		;
+			ent->s.effects |= EF_QUAD;
+	if (ent->client->pu_time_protection > level.time)
+		if (G_PowerUpExpiring(ent->client->pu_time_protection))
+			ent->s.effects |= EF_PENT;
+	if (ent->client->pu_time_duelfire > level.time)
 		if (G_PowerUpExpiring(ent->client->pu_time_duelfire))
-			G_SetPowerupEffects(ent, EF_DUALFIRE);
-	}
-
-	if (ent->client->pu_time_double > level.time) {
+			ent->s.effects |= EF_DUALFIRE;
+	if (ent->client->pu_time_double > level.time)
 		if (G_PowerUpExpiring(ent->client->pu_time_double))
-			G_SetPowerupEffects(ent, EF_DOUBLE);
-	}
-	if ((ent->client->owned_sphere) && (ent->client->owned_sphere->spawnflags == SF_SPHERE_DEFENDER)) {
-		G_SetPowerupEffects(ent, EF_HALF_DAMAGE);
-	}
-	if (ent->client->tracker_pain_time > level.time) {
+			ent->s.effects |= EF_DOUBLE;
+	if ((ent->client->owned_sphere) && (ent->client->owned_sphere->spawnflags == SF_SPHERE_DEFENDER))
+		ent->s.effects |= EF_HALF_DAMAGE;
+	if (ent->client->tracker_pain_time > level.time)
 		ent->s.effects |= EF_TRACKERTRAIL;
-	}
 	if (ent->client->pu_time_invisibility > level.time) {
 		if (ent->client->invisibility_fade_time <= level.time)
-			ent->s.alpha = 0.1f;
+			ent->s.alpha = 0.05f;
 		else {
 			float x = (ent->client->invisibility_fade_time - level.time).seconds() / INVISIBILITY_TIME.seconds();
-			ent->s.alpha = std::clamp(x, 0.1f, 1.0f);
+			ent->s.alpha = std::clamp(x, 0.05f, 0.2f);
 		}
-	}
-	if (ent->client->pu_time_protection > level.time) {
-		if (G_PowerUpExpiring(ent->client->pu_time_protection))
-			G_SetPowerupEffects(ent, EF_PENT);
-	}
-
-	// show cheaters!!!
-	if (ent->flags & FL_GODMODE) {
-		ent->s.effects |= EF_COLOR_SHELL;
-		ent->s.renderfx |= (RF_SHELL_RED | RF_SHELL_GREEN | RF_SHELL_BLUE);
 	}
 }
 
@@ -864,7 +831,7 @@ static void G_SetClientEffects(edict_t *ent) {
 G_SetClientEvent
 ===============
 */
-static void G_SetClientEvent(edict_t *ent) {
+static void G_SetClientEvent(gentity_t *ent) {
 	if (ent->s.event)
 		return;
 
@@ -888,7 +855,7 @@ static void G_SetClientEvent(edict_t *ent) {
 G_SetClientSound
 ===============
 */
-static void G_SetClientSound(edict_t *ent) {
+static void G_SetClientSound(gentity_t *ent) {
 	// help beep (no more than three times)
 	if (ent->client->pers.helpchanged && ent->client->pers.helpchanged <= 3 && ent->client->pers.help_time < level.time) {
 		if (ent->client->pers.helpchanged == 1) // [KEX] haleyjd: once only
@@ -907,7 +874,7 @@ static void G_SetClientSound(edict_t *ent) {
 		return;
 	}
 
-	if (ent->deadflag || !ClientIsPlaying(ent->client))
+	if (ent->deadflag || !ClientIsPlaying(ent->client) || ent->client->eliminated)
 		return;
 
 	if (ent->client->weapon_sound)
@@ -940,7 +907,7 @@ static void G_SetClientSound(edict_t *ent) {
 G_SetClientFrame
 ===============
 */
-void G_SetClientFrame(edict_t *ent) {
+void G_SetClientFrame(gentity_t *ent) {
 	gclient_t *client;
 	bool	   duck, run;
 
@@ -1047,7 +1014,7 @@ newanim:
 }
 
 // [Paril-KEX]
-static void P_RunMegaHealth(edict_t *ent) {
+static void P_RunMegaHealth(gentity_t *ent) {
 	if (!ent->client->pers.megahealth_time)
 		return;
 	else if (ent->health <= ent->max_health) {
@@ -1068,7 +1035,7 @@ static void P_RunMegaHealth(edict_t *ent) {
 }
 
 // [Paril-KEX] push all players' origins back to match their lag compensation
-void G_LagCompensate(edict_t *from_player, const vec3_t &start, const vec3_t &dir) {
+void G_LagCompensate(gentity_t *from_player, const vec3_t &start, const vec3_t &dir) {
 	uint32_t current_frame = gi.ServerFrame();
 
 	// if you need this to fight monsters, you need help
@@ -1102,7 +1069,7 @@ void G_LagCompensate(edict_t *from_player, const vec3_t &start, const vec3_t &di
 			lag_id = game.max_lag_origins + lag_id;
 
 		if (lag_id < 0 || lag_id >= player->client->num_lag_origins) {
-			gi.Com_Print("lag compensation error\n");
+			gi.Com_PrintFmt("{}: lag compensation error.\n", __FUNCTION__);
 			G_UnLagCompensate();
 			return;
 		}
@@ -1137,7 +1104,7 @@ void G_UnLagCompensate() {
 }
 
 // [Paril-KEX] save the current lag compensation value
-static void G_SaveLagCompensation(edict_t *ent) {
+static void G_SaveLagCompensation(gentity_t *ent) {
 	(game.lag_origins + ((ent->s.number - 1) * game.max_lag_origins))[ent->client->next_lag_origin] = ent->s.origin;
 	ent->client->next_lag_origin = (ent->client->next_lag_origin + 1) % game.max_lag_origins;
 
@@ -1145,7 +1112,7 @@ static void G_SaveLagCompensation(edict_t *ent) {
 		ent->client->num_lag_origins++;
 }
 
-void Frenzy_ApplyAmmoRegen(edict_t *ent) {
+void Frenzy_ApplyAmmoRegen(gentity_t *ent) {
 	gclient_t *client;
 
 	if (!g_frenzy->integer)
@@ -1247,20 +1214,20 @@ and right after spawning
 =================
 */
 static int scorelimit = -1;
-void ClientEndServerFrame(edict_t *ent) {
+void ClientEndServerFrame(gentity_t *ent) {
 	// no player exists yet (load game)
 	if (!ent->client->pers.spawned)
 		return;
 
 	float bobtime, bobtime_run;
-	edict_t *e = g_eyecam->integer && ent->client->follow_target ? ent->client->follow_target : ent;
+	gentity_t *e = g_eyecam->integer && ent->client->follow_target ? ent->client->follow_target : ent;
 
 	current_player = e;
 	current_client = e->client;
 
 	if (deathmatch->integer) {
 		int limit = GT_ScoreLimit();
-		if (!ent->client->ps.stats[STAT_SCORELIMIT] || limit != atoi(gi.get_configstring(CONFIG_STORY_SCORELIMIT))) {
+		if (!ent->client->ps.stats[STAT_SCORELIMIT] || limit != strtoul(gi.get_configstring(CONFIG_STORY_SCORELIMIT), nullptr, 10)) {
 			ent->client->ps.stats[STAT_SCORELIMIT] = CONFIG_STORY_SCORELIMIT;
 			gi.configstring(CONFIG_STORY_SCORELIMIT, limit ? G_Fmt("{}", limit).data() : "");
 		}
@@ -1277,23 +1244,18 @@ void ClientEndServerFrame(edict_t *ent) {
 
 	// vampiric damage expiration
 	// don't expire if only 1 player in the match
-	if (g_vampiric_damage->integer && ClientIsPlaying(ent->client) && !ent->client->ps.stats[STAT_CHASE] && !level.intermission_time && ent->health > 0) {
+	if (g_vampiric_damage->integer && ClientIsPlaying(ent->client) && !ent->client->ps.stats[STAT_CHASE] && !level.intermission_time && ent->health > g_vampiric_exp_min->integer) {
 		if (level.num_playing_clients > 1 && level.time > ent->client->vampire_expiretime) {
 			int quantity = floor((ent->health - 1) / ent->max_health) + 1;
-			/*
-			if (ent->health > ent->max_health * 5)
-				quantity += ceil(ent->health - (ent->max_health * 5) / ent->max_health);
-				*/
 			ent->health -= quantity;
 			ent->client->vampire_expiretime = level.time + 1_sec;
-			//ent->client->vampire_expiretime += ent->health < ceil(ent->max_health / 2) ? 2_sec : 1_sec;
 			if (ent->health <= 0) {
-				G_AdjustPlayerScore(ent->client, -1, !!teamplay->integer, -1);
+				G_AdjustPlayerScore(ent->client, -1, GT(GT_TDM), -1);
 
 				player_die(ent, ent, ent, 1, vec3_origin, { MOD_EXPIRE, true });
-				return;
+				if (!ent->client->eliminated)
+					return;
 			}
-			//ent->client->vampire_expiretime = level.time;
 		}
 	}
 
@@ -1327,6 +1289,13 @@ void ClientEndServerFrame(edict_t *ent) {
 			gi.unicast(ent, false);
 			ent->client->menutime = 0_ms;
 		}
+
+/*freeze*/
+		if (GT(GT_FREEZE) && !level.intermission_time && ent->client->eliminated && !ent->client->resp.thawer) {	// || level.framenum & 8) {
+			ent->s.effects |= EF_COLOR_SHELL;
+			ent->s.renderfx |= (RF_SHELL_RED | RF_SHELL_GREEN | RF_SHELL_BLUE);
+		}
+/*freeze*/
 
 		return;
 	}
@@ -1399,7 +1368,7 @@ void ClientEndServerFrame(edict_t *ent) {
 	G_CalcBlend(e);
 
 	// chase cam stuff
-	if (!ClientIsPlaying(ent->client))
+	if (!ClientIsPlaying(ent->client) || ent->client->eliminated)
 		G_SetSpectatorStats(ent);
 	else
 		G_SetStats(ent);
@@ -1455,7 +1424,7 @@ void ClientEndServerFrame(edict_t *ent) {
 	// [Paril-KEX] in coop, if player collision is enabled and
 	// we are currently in no-player-collision mode, check if
 	// it's safe.
-	if (coop->integer && G_ShouldPlayersCollide(false) && !(ent->clipmask & CONTENTS_PLAYER) && ent->takedamage) {
+	if (InCoopStyle() && G_ShouldPlayersCollide(false) && !(ent->clipmask & CONTENTS_PLAYER) && ent->takedamage) {
 		bool clipped_player = false;
 
 		for (auto player : active_clients()) {

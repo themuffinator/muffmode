@@ -4,8 +4,8 @@
 
 #include "g_local.h"
 
-bool FindTarget(edict_t *self);
-bool ai_checkattack(edict_t *self, float dist);
+bool FindTarget(gentity_t *self);
+bool ai_checkattack(gentity_t *self, float dist);
 
 bool    enemy_vis;
 bool    enemy_infront;
@@ -24,11 +24,11 @@ who we can see. We don't care who we see, as long
 as it's something we can shoot.
 =================
 */
-edict_t *AI_GetSightClient(edict_t *self) {
+gentity_t *AI_GetSightClient(gentity_t *self) {
 	if (level.intermission_time)
 		return nullptr;
 
-	edict_t **visible_players = (edict_t **)alloca(sizeof(edict_t *) * game.maxclients);
+	gentity_t **visible_players = (gentity_t **)alloca(sizeof(gentity_t *) * game.maxclients);
 	size_t num_visible = 0;
 
 	for (auto player : active_clients()) {
@@ -62,7 +62,7 @@ Move the specified distance at current facing.
 This replaces the QC functions: ai_forward, ai_back, ai_pain, and ai_painforward
 ==============
 */
-void ai_move(edict_t *self, float dist) {
+void ai_move(gentity_t *self, float dist) {
 	M_walkmove(self, self->s.angles[YAW], dist);
 }
 
@@ -74,7 +74,7 @@ Used for standing around and looking for players
 Distance is for slight position adjustments needed by the animations
 ==============
 */
-void ai_stand(edict_t *self, float dist) {
+void ai_stand(gentity_t *self, float dist) {
 	vec3_t v;
 	bool retval;
 
@@ -170,8 +170,8 @@ ai_walk
 The monster is walking it's beat
 =============
 */
-void ai_walk(edict_t *self, float dist) {
-	edict_t *temp_goal = nullptr;
+void ai_walk(gentity_t *self, float dist) {
+	gentity_t *temp_goal = nullptr;
 
 	if (!self->goalentity && (self->monsterinfo.aiflags & AI_GOOD_GUY)) {
 		vec3_t fwd;
@@ -185,7 +185,7 @@ void ai_walk(edict_t *self, float dist) {
 	M_MoveToGoal(self, dist);
 
 	if (temp_goal) {
-		G_FreeEdict(temp_goal);
+		G_FreeEntity(temp_goal);
 		self->goalentity = nullptr;
 	}
 
@@ -211,7 +211,7 @@ Turns towards target and advances
 Use this call with a distance of 0 to replace ai_face
 ==============
 */
-void ai_charge(edict_t *self, float dist) {
+void ai_charge(gentity_t *self, float dist) {
 	vec3_t v;
 	float ofs;
 
@@ -273,7 +273,7 @@ don't move, but turn towards ideal_yaw
 Distance is for slight position adjustments needed by the animations
 =============
 */
-void ai_turn(edict_t *self, float dist) {
+void ai_turn(gentity_t *self, float dist) {
 	if (dist || (self->monsterinfo.aiflags & AI_ALTERNATE_FLY))
 		M_walkmove(self, self->s.angles[YAW], dist);
 
@@ -322,7 +322,7 @@ mid	    infront and show hostile
 > mid	only triggered by damage
 =============
 */
-float range_to(edict_t *self, edict_t *other) {
+float range_to(gentity_t *self, gentity_t *other) {
 	return distance_between_boxes(self->absmin, self->absmax, other->absmin, other->absmax);
 }
 
@@ -333,7 +333,7 @@ visible
 returns 1 if the entity is visible to self, even if not infront ()
 =============
 */
-bool visible(edict_t *self, edict_t *other, bool through_glass) {
+bool visible(gentity_t *self, gentity_t *other, bool through_glass) {
 	// never visible
 	if (other->flags & FL_NOVISIBLE)
 		return false;
@@ -385,7 +385,7 @@ infront
 returns 1 if the entity is in front (in sight) of self
 =============
 */
-bool infront(edict_t *self, edict_t *other) {
+bool infront(gentity_t *self, gentity_t *other) {
 	vec3_t vec;
 	float  dot;
 	vec3_t forward;
@@ -405,7 +405,7 @@ bool infront(edict_t *self, edict_t *other) {
 
 //============================================================================
 
-void HuntTarget(edict_t *self, bool animate_state) {
+void HuntTarget(gentity_t *self, bool animate_state) {
 	vec3_t vec;
 
 	self->goalentity = self->enemy;
@@ -419,7 +419,7 @@ void HuntTarget(edict_t *self, bool animate_state) {
 	self->ideal_yaw = vectoyaw(vec);
 }
 
-void FoundTarget(edict_t *self) {
+void FoundTarget(gentity_t *self) {
 	// let other monsters see this monster for a while
 	if (self->enemy->client) {
 		if (self->enemy->flags & FL_DISGUISED)
@@ -483,7 +483,7 @@ void FoundTarget(edict_t *self) {
 // [Paril-KEX] monsters that were alerted by players will
 // be temporarily stored on player entities, so we can
 // check them & get mad at them even around corners
-static edict_t *AI_GetMonsterAlertedByPlayers(edict_t *self) {
+static gentity_t *AI_GetMonsterAlertedByPlayers(gentity_t *self) {
 	for (auto player : active_clients()) {
 		// dead
 		if (player->health <= 0 || player->deadflag || !player->solid)
@@ -505,8 +505,8 @@ static edict_t *AI_GetMonsterAlertedByPlayers(edict_t *self) {
 }
 
 // [Paril-KEX] per-player sounds
-static edict_t *AI_GetSoundClient(edict_t *self, bool direct) {
-	edict_t *best_sound = nullptr;
+static gentity_t *AI_GetSoundClient(gentity_t *self, bool direct) {
+	gentity_t *best_sound = nullptr;
 	float best_distance = std::numeric_limits<float>::max();
 
 	for (auto player : active_clients()) {
@@ -514,7 +514,7 @@ static edict_t *AI_GetSoundClient(edict_t *self, bool direct) {
 		if (player->health <= 0 || player->deadflag || !player->solid)
 			continue;
 
-		edict_t *sound = direct ? player->client->sound_entity : player->client->sound2_entity;
+		gentity_t *sound = direct ? player->client->sound_entity : player->client->sound2_entity;
 
 		if (!sound)
 			continue;
@@ -537,7 +537,7 @@ static edict_t *AI_GetSoundClient(edict_t *self, bool direct) {
 	return best_sound;
 }
 
-bool G_MonsterSourceVisible(edict_t *self, edict_t *client) {
+bool G_MonsterSourceVisible(gentity_t *self, gentity_t *client) {
 	// this is where we would check invisibility
 	float r = range_to(self, client);
 
@@ -571,8 +571,8 @@ checked each frame.  This means multi player games will have slightly
 slower noticing monsters.
 ============
 */
-bool FindTarget(edict_t *self) {
-	edict_t *client = nullptr;
+bool FindTarget(gentity_t *self) {
+	gentity_t *client = nullptr;
 	bool     heardit;
 	bool     ignore_sight_sound = false;
 
@@ -671,7 +671,7 @@ bool FindTarget(edict_t *self) {
 	}
 
 	// hintpath coop fix
-	if ((self->monsterinfo.aiflags & AI_HINT_PATH) && coop->integer)
+	if ((self->monsterinfo.aiflags & AI_HINT_PATH) && InCoopStyle())
 		heardit = false;
 
 	if (client->svflags & SVF_MONSTER) {
@@ -783,7 +783,7 @@ FacingIdeal
 
 ============
 */
-bool FacingIdeal(edict_t *self) {
+bool FacingIdeal(gentity_t *self) {
 	float delta = anglemod(self->s.angles[YAW] - self->ideal_yaw);
 
 	if (self->monsterinfo.aiflags & AI_PATHING)
@@ -795,7 +795,7 @@ bool FacingIdeal(edict_t *self) {
 //=============================================================================
 
 // [Paril-KEX] split this out so we can use it for the other bosses
-bool M_CheckAttack_Base(edict_t *self, float stand_ground_chance, float melee_chance, float near_chance, float mid_chance, float far_chance, float strafe_scalar) {
+bool M_CheckAttack_Base(gentity_t *self, float stand_ground_chance, float melee_chance, float near_chance, float mid_chance, float far_chance, float strafe_scalar) {
 	vec3_t  spot1, spot2;
 	float   chance;
 	trace_t tr;
@@ -943,7 +943,7 @@ bool M_CheckAttack_Base(edict_t *self, float stand_ground_chance, float melee_ch
 	return false;
 }
 
-MONSTERINFO_CHECKATTACK(M_CheckAttack) (edict_t *self) -> bool {
+MONSTERINFO_CHECKATTACK(M_CheckAttack) (gentity_t *self) -> bool {
 	return M_CheckAttack_Base(self, 0.7f, 0.4f, 0.25f, 0.06f, 0.f, 1.0f);
 }
 
@@ -954,7 +954,7 @@ ai_run_melee
 Turn and close until within an angle to launch a melee attack
 =============
 */
-static void ai_run_melee(edict_t *self) {
+static void ai_run_melee(gentity_t *self) {
 	self->ideal_yaw = enemy_yaw;
 	if (!(self->monsterinfo.aiflags & AI_MANUAL_STEERING))
 		M_ChangeYaw(self);
@@ -972,7 +972,7 @@ ai_run_missile
 Turn in place until within an angle to launch a missile attack
 =============
 */
-static void ai_run_missile(edict_t *self) {
+static void ai_run_missile(gentity_t *self) {
 	self->ideal_yaw = enemy_yaw;
 	if (!(self->monsterinfo.aiflags & AI_MANUAL_STEERING))
 		M_ChangeYaw(self);
@@ -995,7 +995,7 @@ ai_run_slide
 Strafe sideways, but stay at aproximately the same range
 =============
 */
-static void ai_run_slide(edict_t *self, float distance) {
+static void ai_run_slide(gentity_t *self, float distance) {
 	float ofs;
 	float angle;
 
@@ -1044,7 +1044,7 @@ Decides if we're going to attack or do something else
 used by ai_run and ai_stand
 =============
 */
-bool ai_checkattack(edict_t *self, float dist) {
+bool ai_checkattack(gentity_t *self, float dist) {
 	vec3_t temp;
 	bool   hesDeadJim;
 	bool    retval;
@@ -1201,12 +1201,12 @@ ai_run
 The monster has an enemy it is trying to kill
 =============
 */
-void ai_run(edict_t *self, float dist) {
+void ai_run(gentity_t *self, float dist) {
 	vec3_t   v;
-	edict_t *tempgoal;
-	edict_t *save;
+	gentity_t *tempgoal;
+	gentity_t *save;
 	bool     newEnemy;
-	edict_t *marker;
+	gentity_t *marker;
 	float    d1, d2;
 	trace_t  tr;
 	vec3_t   v_forward, v_right;
@@ -1215,7 +1215,7 @@ void ai_run(edict_t *self, float dist) {
 	bool     retval;
 	bool     alreadyMoved = false;
 	bool     gotcha = false;
-	edict_t *realEnemy;
+	gentity_t *realEnemy;
 
 	// if we're going to a combat point, just proceed
 	if (self->monsterinfo.aiflags & AI_COMBAT_POINT) {
@@ -1275,7 +1275,7 @@ void ai_run(edict_t *self, float dist) {
 			return;
 		}
 
-		if (coop->integer) {
+		if (InCoopStyle()) {
 			// if we're in coop, check my real enemy first .. if I SEE him, set gotcha to true
 			if (self->enemy && visible(self, realEnemy))
 				gotcha = true;
@@ -1412,7 +1412,7 @@ void ai_run(edict_t *self, float dist) {
 
 	// moved down here to allow monsters to get on hint paths
 	// coop will change to another enemy if visible
-	if (coop->integer)
+	if (InCoopStyle())
 		FindTarget(self);
 
 	if ((self->monsterinfo.search_time) && (level.time > (self->monsterinfo.search_time + 20_sec))) {
@@ -1530,7 +1530,7 @@ void ai_run(edict_t *self, float dist) {
 
 	M_MoveToGoal(self, dist);
 
-	G_FreeEdict(tempgoal);
+	G_FreeEntity(tempgoal);
 
 	if (!self->inuse)
 		return; // PGM - g_touchtrigger free problem

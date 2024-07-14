@@ -12,9 +12,9 @@ TANK
 #include "m_tank.h"
 #include "m_flash.h"
 
-void tank_refire_rocket(edict_t *self);
-void tank_doattack_rocket(edict_t *self);
-void tank_reattack_blaster(edict_t *self);
+void tank_refire_rocket(gentity_t *self);
+void tank_doattack_rocket(gentity_t *self);
+void tank_reattack_blaster(gentity_t *self);
 
 static cached_soundindex sound_thud;
 static cached_soundindex sound_pain, sound_pain2;
@@ -32,23 +32,23 @@ constexpr spawnflags_t SPAWNFLAG_TANK_COMMANDER_HEAT_SEEKING = 16_spawnflag;
 // misc
 //
 
-MONSTERINFO_SIGHT(tank_sight) (edict_t *self, edict_t *other) -> void {
+MONSTERINFO_SIGHT(tank_sight) (gentity_t *self, gentity_t *other) -> void {
 	gi.sound(self, CHAN_VOICE, sound_sight, 1, ATTN_NORM, 0);
 }
 
-static void tank_footstep(edict_t *self) {
+static void tank_footstep(gentity_t *self) {
 	gi.sound(self, CHAN_BODY, sound_step, 1, ATTN_NORM, 0);
 }
 
-static void tank_thud(edict_t *self) {
+static void tank_thud(gentity_t *self) {
 	gi.sound(self, CHAN_BODY, sound_thud, 1, ATTN_NORM, 0);
 }
 
-static void tank_windup(edict_t *self) {
+static void tank_windup(gentity_t *self) {
 	gi.sound(self, CHAN_WEAPON, sound_windup, 1, ATTN_NORM, 0);
 }
 
-MONSTERINFO_IDLE(tank_idle) (edict_t *self) -> void {
+MONSTERINFO_IDLE(tank_idle) (gentity_t *self) -> void {
 	gi.sound(self, CHAN_VOICE, sound_idle, 1, ATTN_IDLE, 0);
 }
 
@@ -90,7 +90,7 @@ mframe_t tank_frames_stand[] = {
 };
 MMOVE_T(tank_move_stand) = { FRAME_stand01, FRAME_stand30, tank_frames_stand, nullptr };
 
-MONSTERINFO_STAND(tank_stand) (edict_t *self) -> void {
+MONSTERINFO_STAND(tank_stand) (gentity_t *self) -> void {
 	M_SetAnimation(self, &tank_move_stand);
 }
 
@@ -98,7 +98,7 @@ MONSTERINFO_STAND(tank_stand) (edict_t *self) -> void {
 // walk
 //
 
-void tank_walk(edict_t *self);
+void tank_walk(gentity_t *self);
 
 mframe_t tank_frames_walk[] = {
 	{ ai_walk, 4 },
@@ -120,7 +120,7 @@ mframe_t tank_frames_walk[] = {
 };
 MMOVE_T(tank_move_walk) = { FRAME_walk05, FRAME_walk20, tank_frames_walk, nullptr };
 
-MONSTERINFO_WALK(tank_walk) (edict_t *self) -> void {
+MONSTERINFO_WALK(tank_walk) (gentity_t *self) -> void {
 	M_SetAnimation(self, &tank_move_walk);
 }
 
@@ -128,7 +128,7 @@ MONSTERINFO_WALK(tank_walk) (edict_t *self) -> void {
 // run
 //
 
-void tank_run(edict_t *self);
+void tank_run(gentity_t *self);
 
 mframe_t tank_frames_start_run[] = {
 	{ ai_run },
@@ -158,7 +158,7 @@ mframe_t tank_frames_run[] = {
 };
 MMOVE_T(tank_move_run) = { FRAME_walk05, FRAME_walk20, tank_frames_run, nullptr };
 
-MONSTERINFO_RUN(tank_run) (edict_t *self) -> void {
+MONSTERINFO_RUN(tank_run) (gentity_t *self) -> void {
 	if (self->enemy && self->enemy->client)
 		self->monsterinfo.aiflags |= AI_BRUTAL;
 	else
@@ -218,7 +218,7 @@ mframe_t tank_frames_pain3[] = {
 };
 MMOVE_T(tank_move_pain3) = { FRAME_pain301, FRAME_pain316, tank_frames_pain3, tank_run };
 
-static PAIN(tank_pain) (edict_t *self, edict_t *other, float kick, int damage, const mod_t &mod) -> void {
+static PAIN(tank_pain) (gentity_t *self, gentity_t *other, float kick, int damage, const mod_t &mod) -> void {
 	if (mod.id != MOD_CHAINFIST && damage <= 10)
 		return;
 
@@ -259,7 +259,7 @@ static PAIN(tank_pain) (edict_t *self, edict_t *other, float kick, int damage, c
 		M_SetAnimation(self, &tank_move_pain3);
 }
 
-MONSTERINFO_SETSKIN(tank_setskin) (edict_t *self) -> void {
+MONSTERINFO_SETSKIN(tank_setskin) (gentity_t *self) -> void {
 	if (self->health < (self->max_health / 2))
 		self->s.skinnum |= 1;
 	else
@@ -267,7 +267,7 @@ MONSTERINFO_SETSKIN(tank_setskin) (edict_t *self) -> void {
 }
 
 // [Paril-KEX]
-static bool M_AdjustBlindfireTarget(edict_t *self, const vec3_t &start, const vec3_t &target, const vec3_t &right, vec3_t &out_dir) {
+static bool M_AdjustBlindfireTarget(gentity_t *self, const vec3_t &start, const vec3_t &target, const vec3_t &right, vec3_t &out_dir) {
 	trace_t trace = gi.traceline(start, target, self, MASK_PROJECTILE);
 
 	// blindfire has different fail criteria for the trace
@@ -303,7 +303,7 @@ static bool M_AdjustBlindfireTarget(edict_t *self, const vec3_t &start, const ve
 // attacks
 //
 
-static void TankBlaster(edict_t *self) {
+static void TankBlaster(gentity_t *self) {
 	vec3_t					 forward, right;
 	vec3_t					 start;
 	vec3_t					 dir;
@@ -340,11 +340,11 @@ static void TankBlaster(edict_t *self) {
 	monster_fire_blaster(self, start, dir, 30, 800, flash_number, EF_BLASTER);
 }
 
-static void TankStrike(edict_t *self) {
+static void TankStrike(gentity_t *self) {
 	gi.sound(self, CHAN_WEAPON, sound_strike, 1, ATTN_NORM, 0);
 }
 
-static void TankRocket(edict_t *self) {
+static void TankRocket(gentity_t *self) {
 	vec3_t					forward, right;
 	vec3_t					start;
 	vec3_t					dir;
@@ -427,7 +427,7 @@ static void TankRocket(edict_t *self) {
 	}
 }
 
-static void TankMachineGun(edict_t *self) {
+static void TankMachineGun(gentity_t *self) {
 	vec3_t					 dir;
 	vec3_t					 vec;
 	vec3_t					 start;
@@ -463,7 +463,7 @@ static void TankMachineGun(edict_t *self) {
 	monster_fire_bullet(self, start, forward, 20, 4, DEFAULT_BULLET_HSPREAD, DEFAULT_BULLET_VSPREAD, flash_number);
 }
 
-static void tank_blind_check(edict_t *self) {
+static void tank_blind_check(gentity_t *self) {
 	if (self->monsterinfo.aiflags & AI_MANUAL_STEERING) {
 		vec3_t aim = self->monsterinfo.blind_fire_target - self->s.origin;
 		self->ideal_yaw = vectoyaw(aim);
@@ -510,7 +510,7 @@ mframe_t tank_frames_attack_post_blast[] = {
 };
 MMOVE_T(tank_move_attack_post_blast) = { FRAME_attak117, FRAME_attak122, tank_frames_attack_post_blast, tank_run };
 
-void tank_reattack_blaster(edict_t *self) {
+void tank_reattack_blaster(gentity_t *self) {
 	if (self->monsterinfo.aiflags & AI_MANUAL_STEERING) {
 		self->monsterinfo.aiflags &= ~AI_MANUAL_STEERING;
 		M_SetAnimation(self, &tank_move_attack_post_blast);
@@ -526,7 +526,7 @@ void tank_reattack_blaster(edict_t *self) {
 	M_SetAnimation(self, &tank_move_attack_post_blast);
 }
 
-static void tank_poststrike(edict_t *self) {
+static void tank_poststrike(gentity_t *self) {
 	self->enemy = nullptr;
 	// [Paril-KEX]
 	self->monsterinfo.pausetime = HOLD_FOREVER;
@@ -677,7 +677,7 @@ mframe_t tank_frames_attack_chain[] = {
 };
 MMOVE_T(tank_move_attack_chain) = { FRAME_attak401, FRAME_attak429, tank_frames_attack_chain, tank_run };
 
-void tank_refire_rocket(edict_t *self) {
+void tank_refire_rocket(gentity_t *self) {
 	// PMM - blindfire cleanup
 	if (self->monsterinfo.aiflags & AI_MANUAL_STEERING) {
 		self->monsterinfo.aiflags &= ~AI_MANUAL_STEERING;
@@ -695,11 +695,11 @@ void tank_refire_rocket(edict_t *self) {
 	M_SetAnimation(self, &tank_move_attack_post_rocket);
 }
 
-void tank_doattack_rocket(edict_t *self) {
+void tank_doattack_rocket(gentity_t *self) {
 	M_SetAnimation(self, &tank_move_attack_fire_rocket);
 }
 
-MONSTERINFO_ATTACK(tank_attack) (edict_t *self) -> void {
+MONSTERINFO_ATTACK(tank_attack) (gentity_t *self) -> void {
 	vec3_t vec;
 	float  range;
 	float  r;
@@ -795,13 +795,13 @@ MONSTERINFO_ATTACK(tank_attack) (edict_t *self) -> void {
 // death
 //
 
-static void tank_dead(edict_t *self) {
+static void tank_dead(gentity_t *self) {
 	self->mins = { -16, -16, -16 };
 	self->maxs = { 16, 16, -0 };
 	monster_dead(self);
 }
 
-static void tank_shrink(edict_t *self) {
+static void tank_shrink(gentity_t *self) {
 	self->maxs[2] = 0;
 	self->svflags |= SVF_DEADMONSTER;
 	gi.linkentity(self);
@@ -843,7 +843,7 @@ mframe_t tank_frames_death1[] = {
 };
 MMOVE_T(tank_move_death) = { FRAME_death101, FRAME_death132, tank_frames_death1, tank_dead };
 
-static DIE(tank_die) (edict_t *self, edict_t *inflictor, edict_t *attacker, int damage, const vec3_t &point, const mod_t &mod) -> void {
+static DIE(tank_die) (gentity_t *self, gentity_t *inflictor, gentity_t *attacker, int damage, const vec3_t &point, const mod_t &mod) -> void {
 	// check for gib
 	if (M_CheckGib(self, mod)) {
 		gi.sound(self, CHAN_VOICE, gi.soundindex("misc/udeath.wav"), 1, ATTN_NORM, 0);
@@ -876,7 +876,7 @@ static DIE(tank_die) (edict_t *self, edict_t *inflictor, edict_t *attacker, int 
 
 		auto [fwd, rgt, up] = AngleVectors(self->s.angles);
 
-		edict_t *arm_gib = ThrowGib(self, "models/monsters/tank/gibs/barm.md2", damage, GIB_SKINNED | GIB_UPRIGHT, self->s.scale);
+		gentity_t *arm_gib = ThrowGib(self, "models/monsters/tank/gibs/barm.md2", damage, GIB_SKINNED | GIB_UPRIGHT, self->s.scale);
 		arm_gib->s.origin = self->s.origin + (rgt * -16.f) + (up * 23.f);
 		arm_gib->s.old_origin = arm_gib->s.origin;
 		arm_gib->avelocity = { crandom() * 15.f, crandom() * 15.f, 180.f };
@@ -895,7 +895,7 @@ static DIE(tank_die) (edict_t *self, edict_t *inflictor, edict_t *attacker, int 
 	M_SetAnimation(self, &tank_move_death);
 }
 
-MONSTERINFO_BLOCKED(tank_blocked) (edict_t *self, float dist) -> bool {
+MONSTERINFO_BLOCKED(tank_blocked) (gentity_t *self, float dist) -> bool {
 	if (blocked_checkplat(self, dist))
 		return true;
 
@@ -911,9 +911,9 @@ model="models/monsters/tank/tris.md2"
 */
 /*QUAKED monster_tank_commander (1 .5 0) (-32 -32 -16) (32 32 72) AMBUSH TRIGGER_SPAWN SIGHT GUARDIAN HEATSEEKING x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
 */
-void SP_monster_tank(edict_t *self) {
+void SP_monster_tank(gentity_t *self) {
 	if (!M_AllowSpawn(self)) {
-		G_FreeEdict(self);
+		G_FreeEntity(self);
 		return;
 	}
 
@@ -997,9 +997,9 @@ void SP_monster_tank(edict_t *self) {
 		self->s.skinnum = 2;
 }
 
-void Use_Boss3(edict_t *ent, edict_t *other, edict_t *activator);
+void Use_Boss3(gentity_t *ent, gentity_t *other, gentity_t *activator);
 
-static THINK(Think_TankStand) (edict_t *ent) -> void {
+static THINK(Think_TankStand) (gentity_t *ent) -> void {
 	if (ent->s.frame == FRAME_stand30)
 		ent->s.frame = FRAME_stand01;
 	else
@@ -1012,9 +1012,9 @@ static THINK(Think_TankStand) (edict_t *ent) -> void {
 Just stands and cycles in one place until targeted, then teleports away.
 N64 edition!
 */
-void SP_monster_tank_stand(edict_t *self) {
+void SP_monster_tank_stand(gentity_t *self) {
 	if (!M_AllowSpawn(self)) {
-		G_FreeEdict(self);
+		G_FreeEntity(self);
 		return;
 	}
 

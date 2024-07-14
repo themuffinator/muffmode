@@ -11,7 +11,7 @@ boss3
 #include "../g_local.h"
 #include "m_boss32.h"
 
-USE(Use_Boss3) (edict_t *self, edict_t *other, edict_t *activator) -> void {
+USE(Use_Boss3) (gentity_t *self, gentity_t *other, gentity_t *activator) -> void {
 	gi.WriteByte(svc_temp_entity);
 	gi.WriteByte(TE_BOSSTPORT);
 	gi.WritePosition(self->s.origin);
@@ -22,7 +22,7 @@ USE(Use_Boss3) (edict_t *self, edict_t *other, edict_t *activator) -> void {
 	self->solid = SOLID_NOT;
 }
 
-static THINK(Think_Boss3Stand) (edict_t *self) -> void {
+static THINK(Think_Boss3Stand) (gentity_t *self) -> void {
 	if (self->s.frame == FRAME_stand260)
 		self->s.frame = FRAME_stand201;
 	else
@@ -34,9 +34,9 @@ static THINK(Think_Boss3Stand) (edict_t *self) -> void {
 
 Just stands and cycles in one place until targeted, then teleports away.
 */
-void SP_monster_boss3_stand(edict_t *self) {
+void SP_monster_boss3_stand(gentity_t *self) {
 	if (!M_AllowSpawn(self)) {
-		G_FreeEdict(self);
+		G_FreeEntity(self);
 		return;
 	}
 

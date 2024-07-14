@@ -2,7 +2,7 @@
 // Licensed under the GNU General Public License 2.0.
 #include "g_local.h"
 
-void FreeFollower(edict_t *ent) {
+void FreeFollower(gentity_t *ent) {
 	if (!ent)
 		return;
 
@@ -24,7 +24,7 @@ void FreeFollower(edict_t *ent) {
 	ent->client->ps.rdflags = RDF_NONE;
 }
 
-void FreeClientFollowers(edict_t *ent) {
+void FreeClientFollowers(gentity_t *ent) {
 	if (!ent)
 		return;
 
@@ -36,9 +36,9 @@ void FreeClientFollowers(edict_t *ent) {
 	}
 }
 
-void UpdateChaseCam(edict_t *ent) {
+void UpdateChaseCam(gentity_t *ent) {
 	vec3_t	o, ownerv, goal;
-	edict_t	*targ = ent->client->follow_target;
+	gentity_t	*targ = ent->client->follow_target;
 	vec3_t	forward, right;
 	trace_t	trace;
 	vec3_t	oldgoal;
@@ -153,9 +153,9 @@ void UpdateChaseCam(edict_t *ent) {
 		ent->client->v_angle = targ->client->v_angle;
 		AngleVectors(ent->client->v_angle, ent->client->v_forward, nullptr, nullptr);
 	}
-
-	edict_t *e = targ ? targ : ent;
-	ent->client->ps.stats[STAT_SHOW_STATUSBAR] = e->client->resp.team == TEAM_SPECTATOR || e->client->eliminated ? 0 : 1;
+	
+	gentity_t *e = targ ? targ : ent;
+	ent->client->ps.stats[STAT_SHOW_STATUSBAR] = !ClientIsPlaying(e->client) || e->client->eliminated ? 0 : 1;
 
 	ent->viewheight = 0;
 	if (!g_eyecam->integer)
@@ -192,7 +192,7 @@ Returns a player number for either a number or name string
 Returns -1 if invalid
 ==================
 */
-static int ClientNumberFromString(edict_t *to, char *s) {
+static int ClientNumberFromString(gentity_t *to, char *s) {
 	gclient_t	*cl;
 	uint32_t	idnum;
 	char		s2[MAX_STRING_CHARS];
@@ -229,22 +229,22 @@ static int ClientNumberFromString(edict_t *to, char *s) {
 	return -1;
 }
 
-void FollowNext(edict_t *ent) {
+void FollowNext(gentity_t *ent) {
 	ptrdiff_t i;
-	edict_t *e;
+	gentity_t *e;
 
 	if (!ent->client->follow_target)
 		return;
 
-	i = ent->client->follow_target - g_edicts;
+	i = ent->client->follow_target - g_entities;
 	do {
 		i++;
 		if (i > game.maxclients)
 			i = 1;
-		e = g_edicts + i;
+		e = g_entities + i;
 		if (!e->inuse)
 			continue;
-		if (ent->client->eliminated && ent->client->resp.team != e->client->resp.team)
+		if (ent->client->eliminated && ent->client->sess.team != e->client->sess.team)
 			continue;
 		if (ClientIsPlaying(e->client) && !e->client->eliminated)
 			break;
@@ -254,22 +254,22 @@ void FollowNext(edict_t *ent) {
 	ent->client->follow_update = true;
 }
 
-void FollowPrev(edict_t *ent) {
+void FollowPrev(gentity_t *ent) {
 	int		 i;
-	edict_t *e;
+	gentity_t *e;
 
 	if (!ent->client->follow_target)
 		return;
 
-	i = ent->client->follow_target - g_edicts;
+	i = ent->client->follow_target - g_entities;
 	do {
 		i--;
 		if (i < 1)
 			i = game.maxclients;
-		e = g_edicts + i;
+		e = g_entities + i;
 		if (!e->inuse)
 			continue;
-		if (ent->client->eliminated && ent->client->resp.team != e->client->resp.team)
+		if (ent->client->eliminated && ent->client->sess.team != e->client->sess.team)
 			continue;
 		if (ClientIsPlaying(e->client) && !e->client->eliminated)
 			break;
@@ -279,25 +279,25 @@ void FollowPrev(edict_t *ent) {
 	ent->client->follow_update = true;
 }
 
-void FollowCycle(edict_t *ent, int dir) {
+void FollowCycle(gentity_t *ent, int dir) {
 	int			clientnum;
 	int			original;
 	gclient_t	*cl = ent->client;
-	edict_t		*follow_ent = nullptr;
+	gentity_t		*follow_ent = nullptr;
 
 	// if they are playing a duel game, count as a loss
-	if (duel->integer && ent->client->resp.team == TEAM_FREE)
-		ent->client->resp.losses++;
+	if (GT(GT_DUEL) && ent->client->sess.team == TEAM_FREE)
+		ent->client->sess.losses++;
 
 	// first set them to spectator
-	if (cl->resp.spectator_state == SPECTATOR_NOT && !cl->eliminated)
+	if (cl->sess.spectator_state == SPECTATOR_NOT && !cl->eliminated)
 		SetTeam(ent, TEAM_SPECTATOR, false, false, false);
 
-	clientnum = cl->resp.spectator_client;
+	clientnum = cl->sess.spectator_client;
 	original = clientnum;
 	do {
 		clientnum = (clientnum + dir) % game.maxclients;
-		follow_ent = &g_edicts[clientnum + 1];
+		follow_ent = &g_entities[clientnum + 1];
 
 		// can only follow connected clients
 		if (!follow_ent->client->pers.connected)
@@ -310,13 +310,13 @@ void FollowCycle(edict_t *ent, int dir) {
 		if (follow_ent->client->eliminated)
 			continue;
 
-		if (ent->client->eliminated && ent->client->resp.team != follow_ent->client->resp.team)
+		if (ent->client->eliminated && ent->client->sess.team != follow_ent->client->sess.team)
 			continue;
 
 		// this is good, we can use it
 		//q3
-		cl->resp.spectator_client = clientnum;
-		cl->resp.spectator_state = SPECTATOR_FOLLOW;
+		cl->sess.spectator_client = clientnum;
+		cl->sess.spectator_state = SPECTATOR_FOLLOW;
 
 		//q2
 		ent->client->follow_target = follow_ent;
@@ -328,10 +328,10 @@ void FollowCycle(edict_t *ent, int dir) {
 	// leave it where it was
 }
 
-void GetFollowTarget(edict_t *ent) {
+void GetFollowTarget(gentity_t *ent) {
 	for (auto ec : active_clients()) {
 		if (ec->inuse && ClientIsPlaying(ec->client) && !ec->client->eliminated) {
-			if (ent->client->eliminated && ent->client->resp.team != ec->client->resp.team)
+			if (ent->client->eliminated && ent->client->sess.team != ec->client->sess.team)
 				continue;
 			ent->client->follow_target = ec;
 			ent->client->follow_update = true;
@@ -341,7 +341,7 @@ void GetFollowTarget(edict_t *ent) {
 	}
 	/*
 	if (ent->client->chase_msg_time <= level.time) {
-		if (ent->client->resp.initialised) {
+		if (ent->client->sess.initialised) {
 			gi.LocCenter_Print(ent, "$g_no_players_chase");
 			ent->client->chase_msg_time = level.time + 5_sec;
 		} else {

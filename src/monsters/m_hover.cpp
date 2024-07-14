@@ -29,7 +29,7 @@ static cached_soundindex daed_sound_sight;
 static cached_soundindex daed_sound_search1;
 static cached_soundindex daed_sound_search2;
 
-MONSTERINFO_SIGHT(hover_sight) (edict_t *self, edict_t *other) -> void {
+MONSTERINFO_SIGHT(hover_sight) (gentity_t *self, gentity_t *other) -> void {
 	// PMM - daedalus sounds
 	if (self->mass < 225)
 		gi.sound(self, CHAN_VOICE, sound_sight, 1, ATTN_NORM, 0);
@@ -37,7 +37,7 @@ MONSTERINFO_SIGHT(hover_sight) (edict_t *self, edict_t *other) -> void {
 		gi.sound(self, CHAN_VOICE, daed_sound_sight, 1, ATTN_NORM, 0);
 }
 
-MONSTERINFO_SEARCH(hover_search) (edict_t *self) -> void {
+MONSTERINFO_SEARCH(hover_search) (gentity_t *self) -> void {
 	// PMM - daedalus sounds
 	if (self->mass < 225) {
 		if (frandom() < 0.5f)
@@ -52,11 +52,11 @@ MONSTERINFO_SEARCH(hover_search) (edict_t *self) -> void {
 	}
 }
 
-void hover_run(edict_t *self);
-void hover_dead(edict_t *self);
-void hover_attack(edict_t *self);
-void hover_reattack(edict_t *self);
-void hover_fire_blaster(edict_t *self);
+void hover_run(gentity_t *self);
+void hover_dead(gentity_t *self);
+void hover_attack(gentity_t *self);
+void hover_reattack(gentity_t *self);
+void hover_fire_blaster(gentity_t *self);
 
 mframe_t hover_frames_stand[] = {
 	{ ai_stand },
@@ -231,7 +231,7 @@ mframe_t hover_frames_run[] = {
 };
 MMOVE_T(hover_move_run) = { FRAME_forwrd01, FRAME_forwrd35, hover_frames_run, nullptr };
 
-static void hover_gib(edict_t *self) {
+static void hover_gib(gentity_t *self) {
 	gi.WriteByte(svc_temp_entity);
 	gi.WriteByte(TE_EXPLOSION1);
 	gi.WritePosition(self->s.origin);
@@ -249,7 +249,7 @@ static void hover_gib(edict_t *self) {
 		});
 }
 
-static THINK(hover_deadthink) (edict_t *self) -> void {
+static THINK(hover_deadthink) (gentity_t *self) -> void {
 	if (!self->groundentity && level.time < self->timestamp) {
 		self->nextthink = level.time + FRAME_TIME_S;
 		return;
@@ -258,7 +258,7 @@ static THINK(hover_deadthink) (edict_t *self) -> void {
 	hover_gib(self);
 }
 
-static void hover_dying(edict_t *self) {
+static void hover_dying(gentity_t *self) {
 	if (self->groundentity) {
 		hover_deadthink(self);
 		return;
@@ -325,7 +325,7 @@ mframe_t hover_frames_attack2[] = {
 };
 MMOVE_T(hover_move_attack2) = { FRAME_attak104, FRAME_attak106, hover_frames_attack2, nullptr };
 
-void hover_reattack(edict_t *self) {
+void hover_reattack(gentity_t *self) {
 	if (self->enemy->health > 0)
 		if (visible(self, self->enemy))
 			if (frandom() <= 0.6f) {
@@ -341,7 +341,7 @@ void hover_reattack(edict_t *self) {
 	M_SetAnimation(self, &hover_move_end_attack);
 }
 
-void hover_fire_blaster(edict_t *self) {
+void hover_fire_blaster(gentity_t *self) {
 	vec3_t	  start;
 	vec3_t	  forward, right;
 	vec3_t	  end;
@@ -366,26 +366,26 @@ void hover_fire_blaster(edict_t *self) {
 		monster_fire_blaster2(self, start, dir, 1, 1000, (self->s.frame & 1) ? MZ2_DAEDALUS_BLASTER_2 : MZ2_DAEDALUS_BLASTER, (self->s.frame % 4) ? EF_NONE : EF_BLASTER);
 }
 
-MONSTERINFO_STAND(hover_stand) (edict_t *self) -> void {
+MONSTERINFO_STAND(hover_stand) (gentity_t *self) -> void {
 	M_SetAnimation(self, &hover_move_stand);
 }
 
-MONSTERINFO_RUN(hover_run) (edict_t *self) -> void {
+MONSTERINFO_RUN(hover_run) (gentity_t *self) -> void {
 	if (self->monsterinfo.aiflags & AI_STAND_GROUND)
 		M_SetAnimation(self, &hover_move_stand);
 	else
 		M_SetAnimation(self, &hover_move_run);
 }
 
-MONSTERINFO_WALK(hover_walk) (edict_t *self) -> void {
+MONSTERINFO_WALK(hover_walk) (gentity_t *self) -> void {
 	M_SetAnimation(self, &hover_move_walk);
 }
 
-MONSTERINFO_ATTACK(hover_start_attack) (edict_t *self) -> void {
+MONSTERINFO_ATTACK(hover_start_attack) (gentity_t *self) -> void {
 	M_SetAnimation(self, &hover_move_start_attack);
 }
 
-void hover_attack(edict_t *self) {
+void hover_attack(gentity_t *self) {
 	float chance = 0.5f;
 
 	if (self->mass > 150) // the daedalus strafes more
@@ -403,7 +403,7 @@ void hover_attack(edict_t *self) {
 	}
 }
 
-static PAIN(hover_pain) (edict_t *self, edict_t *other, float kick, int damage, const mod_t &mod) -> void {
+static PAIN(hover_pain) (gentity_t *self, gentity_t *other, float kick, int damage, const mod_t &mod) -> void {
 	if (level.time < self->pain_debounce_time)
 		return;
 
@@ -444,14 +444,14 @@ static PAIN(hover_pain) (edict_t *self, edict_t *other, float kick, int damage, 
 	}
 }
 
-MONSTERINFO_SETSKIN(hover_setskin) (edict_t *self) -> void {
+MONSTERINFO_SETSKIN(hover_setskin) (gentity_t *self) -> void {
 	if (self->health < (self->max_health / 2))
 		self->s.skinnum |= 1; // PGM support for skins 2 & 3.
 	else
 		self->s.skinnum &= ~1; // PGM support for skins 2 & 3.
 }
 
-void hover_dead(edict_t *self) {
+void hover_dead(gentity_t *self) {
 	self->mins = { -16, -16, -24 };
 	self->maxs = { 16, 16, -8 };
 	self->movetype = MOVETYPE_TOSS;
@@ -461,7 +461,7 @@ void hover_dead(edict_t *self) {
 	gi.linkentity(self);
 }
 
-static DIE(hover_die) (edict_t *self, edict_t *inflictor, edict_t *attacker, int damage, const vec3_t &point, const mod_t &mod) -> void {
+static DIE(hover_die) (gentity_t *self, gentity_t *inflictor, gentity_t *attacker, int damage, const vec3_t &point, const mod_t &mod) -> void {
 	self->s.effects = EF_NONE;
 	self->monsterinfo.power_armor_type = IT_NULL;
 
@@ -491,7 +491,7 @@ static DIE(hover_die) (edict_t *self, edict_t *inflictor, edict_t *attacker, int
 	M_SetAnimation(self, &hover_move_death1);
 }
 
-static void hover_set_fly_parameters(edict_t *self) {
+static void hover_set_fly_parameters(gentity_t *self) {
 	self->monsterinfo.fly_thrusters = false;
 	self->monsterinfo.fly_acceleration = 20.f;
 	self->monsterinfo.fly_speed = 120.f;
@@ -507,9 +507,9 @@ static void hover_set_fly_parameters(edict_t *self) {
 /*QUAKED monster_daedalus (1 .5 0) (-16 -16 -24) (16 16 32) AMBUSH TRIGGER_SPAWN SIGHT x x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
 This is the improved icarus monster.
 */
-void SP_monster_hover(edict_t *self) {
+void SP_monster_hover(gentity_t *self) {
 	if (!M_AllowSpawn(self)) {
-		G_FreeEdict(self);
+		G_FreeEntity(self);
 		return;
 	}
 

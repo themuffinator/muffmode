@@ -9,7 +9,7 @@ constexpr spawnflags_t SPAWNFLAG_TRIGGER_TOGGLE = 0x08_spawnflag;
 constexpr spawnflags_t SPAWNFLAG_TRIGGER_LATCHED = 0x10_spawnflag;
 constexpr spawnflags_t SPAWNFLAG_TRIGGER_CLIP = 0x20_spawnflag;
 
-static void InitTrigger(edict_t *self) {
+static void InitTrigger(gentity_t *self) {
 	if (st.was_key_specified("angle") || st.was_key_specified("angles") || self->s.angles)
 		G_SetMovedir(self->s.angles, self->movedir);
 
@@ -23,14 +23,14 @@ static void InitTrigger(edict_t *self) {
 }
 
 // the wait time has passed, so set back up for another activation
-static THINK(multi_wait) (edict_t *ent) -> void {
+static THINK(multi_wait) (gentity_t *ent) -> void {
 	ent->nextthink = 0_ms;
 }
 
 // the trigger was just activated
 // ent->activator should be set to the activator so it can be held through a delay
 // so wait for the delay time before firing
-static void multi_trigger(edict_t *ent) {
+static void multi_trigger(gentity_t *ent) {
 	if (ent->nextthink)
 		return; // already been triggered
 
@@ -43,11 +43,11 @@ static void multi_trigger(edict_t *ent) {
 		// called while looping through area links...
 		ent->touch = nullptr;
 		ent->nextthink = level.time + FRAME_TIME_S;
-		ent->think = G_FreeEdict;
+		ent->think = G_FreeEntity;
 	}
 }
 
-static USE(Use_Multi) (edict_t *ent, edict_t *other, edict_t *activator) -> void {
+static USE(Use_Multi) (gentity_t *ent, gentity_t *other, gentity_t *activator) -> void {
 	// PGM
 	if (ent->spawnflags.has(SPAWNFLAG_TRIGGER_TOGGLE)) {
 		if (ent->solid == SOLID_TRIGGER)
@@ -62,7 +62,7 @@ static USE(Use_Multi) (edict_t *ent, edict_t *other, edict_t *activator) -> void
 	// PGM
 }
 
-static TOUCH(Touch_Multi) (edict_t *self, edict_t *other, const trace_t &tr, bool other_touching_self) -> void {
+static TOUCH(Touch_Multi) (gentity_t *self, gentity_t *other, const trace_t &tr, bool other_touching_self) -> void {
 	if (other->client) {
 		if (self->spawnflags.has(SPAWNFLAG_TRIGGER_NOT_PLAYER))
 			return;
@@ -70,6 +70,9 @@ static TOUCH(Touch_Multi) (edict_t *self, edict_t *other, const trace_t &tr, boo
 		if (!self->spawnflags.has(SPAWNFLAG_TRIGGER_MONSTER))
 			return;
 	} else
+		return;
+
+	if (IsCombatDisabled())
 		return;
 
 	if (self->spawnflags.has(SPAWNFLAG_TRIGGER_CLIP)) {
@@ -105,40 +108,40 @@ sounds
 4)
 set "message" to text string
 */
-static USE(trigger_enable) (edict_t *self, edict_t *other, edict_t *activator) -> void {
+static USE(trigger_enable) (gentity_t *self, gentity_t *other, gentity_t *activator) -> void {
 	self->solid = SOLID_TRIGGER;
 	self->use = Use_Multi;
 	gi.linkentity(self);
 }
 
-static BoxEdictsResult_t latched_trigger_filter(edict_t *other, void *data) {
-	edict_t *self = (edict_t *)data;
+static BoxEntitiesResult_t latched_trigger_filter(gentity_t *other, void *data) {
+	gentity_t *self = (gentity_t *)data;
 
 	if (other->client) {
 		if (self->spawnflags.has(SPAWNFLAG_TRIGGER_NOT_PLAYER))
-			return BoxEdictsResult_t::Skip;
+			return BoxEntitiesResult_t::Skip;
 	} else if (other->svflags & SVF_MONSTER) {
 		if (!self->spawnflags.has(SPAWNFLAG_TRIGGER_MONSTER))
-			return BoxEdictsResult_t::Skip;
+			return BoxEntitiesResult_t::Skip;
 	} else
-		return BoxEdictsResult_t::Skip;
+		return BoxEntitiesResult_t::Skip;
 
 	if (self->movedir) {
 		vec3_t forward;
 
 		AngleVectors(other->s.angles, forward, nullptr, nullptr);
 		if (forward.dot(self->movedir) < 0)
-			return BoxEdictsResult_t::Skip;
+			return BoxEntitiesResult_t::Skip;
 	}
 
 	self->activator = other;
-	return BoxEdictsResult_t::Keep | BoxEdictsResult_t::End;
+	return BoxEntitiesResult_t::Keep | BoxEntitiesResult_t::End;
 }
 
-static THINK(latched_trigger_think) (edict_t *self) -> void {
+static THINK(latched_trigger_think) (gentity_t *self) -> void {
 	self->nextthink = level.time + 1_ms;
 
-	bool any_inside = !!gi.BoxEdicts(self->absmin, self->absmax, nullptr, 0, AREA_SOLID, latched_trigger_filter, self);
+	bool any_inside = !!gi.BoxEntities(self->absmin, self->absmax, nullptr, 0, AREA_SOLID, latched_trigger_filter, self);
 
 	if (!!self->count != any_inside) {
 		G_UseTargets(self, self->activator);
@@ -146,7 +149,7 @@ static THINK(latched_trigger_think) (edict_t *self) -> void {
 	}
 }
 
-void SP_trigger_multiple(edict_t *ent) {
+void SP_trigger_multiple(gentity_t *ent) {
 	if (ent->sounds == 1)
 		ent->noise_index = gi.soundindex("misc/secret.wav");
 	else if (ent->sounds == 2)
@@ -199,7 +202,7 @@ sounds
 "message"	string to be displayed when triggered
 */
 
-void SP_trigger_once(edict_t *ent) {
+void SP_trigger_once(gentity_t *ent) {
 	// make old maps work because I messed up on flag assignments here
 	// triggered was on bit 1 when it should have been on bit 4
 	if (ent->spawnflags.has(SPAWNFLAG_TRIGGER_MONSTER)) {
@@ -217,14 +220,14 @@ This fixed size trigger cannot be touched, it can only be fired by other events.
 */
 constexpr spawnflags_t SPAWNFLAGS_TRIGGER_RELAY_NO_SOUND = 1_spawnflag;
 
-static USE(trigger_relay_use) (edict_t *self, edict_t *other, edict_t *activator) -> void {
+static USE(trigger_relay_use) (gentity_t *self, gentity_t *other, gentity_t *activator) -> void {
 	if (self->crosslevel_flags && !(self->crosslevel_flags == (game.cross_level_flags & SFL_CROSS_TRIGGER_MASK & self->crosslevel_flags)))
 		return;
 
 	G_UseTargets(self, activator);
 }
 
-void SP_trigger_relay(edict_t *self) {
+void SP_trigger_relay(gentity_t *self) {
 	self->use = trigger_relay_use;
 
 	if (self->spawnflags.has(SPAWNFLAGS_TRIGGER_RELAY_NO_SOUND))
@@ -245,7 +248,7 @@ Use "item" to specify the required key, for example "key_data_cd"
 
 MULTI : allow multiple uses
 */
-static USE(trigger_key_use) (edict_t *self, edict_t *other, edict_t *activator) -> void {
+static USE(trigger_key_use) (gentity_t *self, gentity_t *other, gentity_t *activator) -> void {
 	item_id_t index;
 
 	if (!self->item)
@@ -308,7 +311,7 @@ static USE(trigger_key_use) (edict_t *self, edict_t *other, edict_t *activator) 
 		self->use = nullptr;
 }
 
-void SP_trigger_key(edict_t *self) {
+void SP_trigger_key(gentity_t *self) {
 	if (!st.item) {
 		gi.Com_PrintFmt("{}: no key item\n", *self);
 		return;
@@ -349,7 +352,7 @@ After the counter has been triggered "count" times (default 2), it will fire all
 
 constexpr spawnflags_t SPAWNFLAG_COUNTER_NOMESSAGE = 1_spawnflag;
 
-static USE(trigger_counter_use) (edict_t *self, edict_t *other, edict_t *activator) -> void {
+static USE(trigger_counter_use) (gentity_t *self, gentity_t *other, gentity_t *activator) -> void {
 	if (self->count == 0)
 		return;
 
@@ -371,7 +374,7 @@ static USE(trigger_counter_use) (edict_t *self, edict_t *other, edict_t *activat
 	multi_trigger(self);
 }
 
-void SP_trigger_counter(edict_t *self) {
+void SP_trigger_counter(gentity_t *self) {
 	self->wait = -1;
 	if (!self->count)
 		self->count = 2;
@@ -390,7 +393,7 @@ trigger_always
 /*QUAKED trigger_always (.5 .5 .5) (-8 -8 -8) (8 8 8) x x x x x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
 This trigger will always fire.  It is activated by the world.
 */
-void SP_trigger_always(edict_t *ent) {
+void SP_trigger_always(gentity_t *ent) {
 	// we must have some delay to make sure our use targets are present
 	if (!ent->delay)
 		ent->delay = 0.2f;
@@ -407,7 +410,7 @@ Deaths considered are monsters during campaigns and players during deathmatch.
 
 REPEAT : repeats per every 'count' deaths
 */
-void SP_trigger_deathcount(edict_t *ent) {
+void SP_trigger_deathcount(gentity_t *ent) {
 	if (!ent->count) {
 		gi.Com_PrintFmt("{}: No count key set, setting to 10.\n", *ent);
 		ent->count = 10;
@@ -421,7 +424,7 @@ void SP_trigger_deathcount(edict_t *ent) {
 	if (ent->spawnflags.has(1_spawnflag)) {	// only once
 		if (kills == ent->count) {
 			G_UseTargets(ent, ent);
-			G_FreeEdict(ent);
+			G_FreeEntity(ent);
 			return;
 		}
 	} else {	// every 'count' deaths
@@ -439,9 +442,9 @@ Auto-removed in deathmatch (except horde mode).
 
 ONCE : will be removed after firing once
 */
-void SP_trigger_no_monsters(edict_t *ent) {
-	if (deathmatch->integer && !horde->integer) {
-		G_FreeEdict(ent);
+void SP_trigger_no_monsters(gentity_t *ent) {
+	if (deathmatch->integer && notGT(GT_HORDE)) {
+		G_FreeEntity(ent);
 		return;
 	}
 	
@@ -451,7 +454,7 @@ void SP_trigger_no_monsters(edict_t *ent) {
 	G_UseTargets(ent, ent);
 
 	if (ent->spawnflags.has(1_spawnflag))
-		G_FreeEdict(ent);
+		G_FreeEntity(ent);
 }
 
 //==========================================================
@@ -462,9 +465,9 @@ Auto-removed in deathmatch (except horde mode).
 
 ONCE : will be removed after firing once
 */
-void SP_trigger_monsters(edict_t *ent) {
-	if (deathmatch->integer && !horde->integer) {
-		G_FreeEdict(ent);
+void SP_trigger_monsters(gentity_t *ent) {
+	if (deathmatch->integer && notGT(GT_HORDE)) {
+		G_FreeEntity(ent);
 		return;
 	}
 	
@@ -474,7 +477,7 @@ void SP_trigger_monsters(edict_t *ent) {
 	G_UseTargets(ent, ent);
 
 	if (ent->spawnflags.has(1_spawnflag))
-		G_FreeEdict(ent);
+		G_FreeEntity(ent);
 }
 
 /*
@@ -492,7 +495,7 @@ AimAtTarget
 Calculate origin2 so the target apogee will be hit
 =================
 */
-static void AimAtTarget(edict_t *self) {
+static void AimAtTarget(gentity_t *self) {
 	vec3_t	origin;
 	float	height, gravity, time, forward;
 	float	dist;
@@ -504,7 +507,7 @@ static void AimAtTarget(edict_t *self) {
 	gravity = g_gravity->value;
 	time = sqrt(height / (0.5 * gravity));
 	if (!time) {
-		G_FreeEdict(self);
+		G_FreeEntity(self);
 		return;
 	}
 
@@ -526,7 +529,7 @@ constexpr spawnflags_t SPAWNFLAG_PUSH_CLIP = 0x10_spawnflag;
 
 static cached_soundindex windsound;
 
-static TOUCH(trigger_push_touch) (edict_t *self, edict_t *other, const trace_t &tr, bool other_touching_self) -> void {
+static TOUCH(trigger_push_touch) (gentity_t *self, gentity_t *other, const trace_t &tr, bool other_touching_self) -> void {
 	if (self->target_ent) {
 		AimAtTarget(other);
 
@@ -544,7 +547,7 @@ static TOUCH(trigger_push_touch) (edict_t *self, edict_t *other, const trace_t &
 
 	if (strcmp(other->classname, "grenade") == 0) {
 		other->velocity = self->movedir * (self->speed * 10);
-	} else if (other->health > 0 || (freeze->integer && other->client && other->client->eliminated)) {
+	} else if (other->health > 0 || (other->client && other->client->eliminated)) {
 		other->velocity = self->movedir * (self->speed * 10);
 
 		if (other->client) {
@@ -561,10 +564,10 @@ static TOUCH(trigger_push_touch) (edict_t *self, edict_t *other, const trace_t &
 	}
 
 	if (self->spawnflags.has(SPAWNFLAG_PUSH_ONCE))
-		G_FreeEdict(self);
+		G_FreeEntity(self);
 }
 
-static USE(trigger_push_use) (edict_t *self, edict_t *other, edict_t *activator) -> void {
+static USE(trigger_push_use) (gentity_t *self, gentity_t *other, gentity_t *activator) -> void {
 	if (self->solid == SOLID_NOT)
 		self->solid = SOLID_TRIGGER;
 	else
@@ -572,9 +575,9 @@ static USE(trigger_push_use) (edict_t *self, edict_t *other, edict_t *activator)
 	gi.linkentity(self);
 }
 
-void trigger_push_active(edict_t *self);
+void trigger_push_active(gentity_t *self);
 
-static void trigger_effect(edict_t *self) {
+static void trigger_effect(gentity_t *self) {
 	vec3_t origin;
 	int	   i;
 
@@ -592,7 +595,7 @@ static void trigger_effect(edict_t *self) {
 	}
 }
 
-static THINK(trigger_push_inactive) (edict_t *self) -> void {
+static THINK(trigger_push_inactive) (gentity_t *self) -> void {
 	if (self->delay > level.time.seconds()) {
 		self->nextthink = level.time + 100_ms;
 	} else {
@@ -603,7 +606,7 @@ static THINK(trigger_push_inactive) (edict_t *self) -> void {
 	}
 }
 
-THINK(trigger_push_active) (edict_t *self) -> void {
+THINK(trigger_push_active) (gentity_t *self) -> void {
 	if (self->delay > level.time.seconds()) {
 		self->nextthink = level.time + 100_ms;
 		trigger_effect(self);
@@ -626,7 +629,7 @@ If it has a target, will set an apogee to the target and modify speed and angle 
 START_OFF - toggled trigger_push begins in off setting
 SILENT - doesn't make wind noise
 */
-void SP_trigger_push(edict_t *self) {
+void SP_trigger_push(gentity_t *self) {
 	InitTrigger(self);
 	if (!(self->spawnflags & SPAWNFLAG_PUSH_SILENT))
 		windsound.assign("misc/windfly.wav");
@@ -663,7 +666,7 @@ void SP_trigger_push(edict_t *self) {
 		self->svflags |= SVF_HULL;
 
 	if (self->target) {
-		edict_t *e = G_PickTarget(self->target);
+		gentity_t *e = G_PickTarget(self->target);
 		if (e)
 			self->target_ent = e;
 	}
@@ -699,7 +702,7 @@ constexpr spawnflags_t SPAWNFLAG_HURT_NO_PLAYERS = 32_spawnflag;
 constexpr spawnflags_t SPAWNFLAG_HURT_NO_MONSTERS = 64_spawnflag;
 constexpr spawnflags_t SPAWNFLAG_HURT_CLIPPED = 128_spawnflag;
 
-static USE(hurt_use) (edict_t *self, edict_t *other, edict_t *activator) -> void {
+static USE(hurt_use) (gentity_t *self, gentity_t *other, gentity_t *activator) -> void {
 	if (self->solid == SOLID_NOT)
 		self->solid = SOLID_TRIGGER;
 	else
@@ -710,7 +713,7 @@ static USE(hurt_use) (edict_t *self, edict_t *other, edict_t *activator) -> void
 		self->use = nullptr;
 }
 
-static TOUCH(hurt_touch) (edict_t *self, edict_t *other, const trace_t &tr, bool other_touching_self) -> void {
+static TOUCH(hurt_touch) (gentity_t *self, gentity_t *other, const trace_t &tr, bool other_touching_self) -> void {
 	damageflags_t dflags;
 
 	if (!other->takedamage)
@@ -752,7 +755,7 @@ static TOUCH(hurt_touch) (edict_t *self, edict_t *other, const trace_t &tr, bool
 	T_Damage(other, self, self, vec3_origin, other->s.origin, vec3_origin, self->dmg, self->dmg, dflags, MOD_TRIGGER_HURT);
 }
 
-void SP_trigger_hurt(edict_t *self) {
+void SP_trigger_hurt(gentity_t *self) {
 	InitTrigger(self);
 
 	self->noise_index = gi.soundindex("world/electro.wav");
@@ -795,7 +798,7 @@ constexpr spawnflags_t SPAWNFLAG_GRAVITY_TOGGLE = 1_spawnflag;
 constexpr spawnflags_t SPAWNFLAG_GRAVITY_START_OFF = 2_spawnflag;
 constexpr spawnflags_t SPAWNFLAG_GRAVITY_CLIPPED = 4_spawnflag;
 
-static USE(trigger_gravity_use) (edict_t *self, edict_t *other, edict_t *activator) -> void {
+static USE(trigger_gravity_use) (gentity_t *self, gentity_t *other, gentity_t *activator) -> void {
 	if (self->solid == SOLID_NOT)
 		self->solid = SOLID_TRIGGER;
 	else
@@ -803,7 +806,7 @@ static USE(trigger_gravity_use) (edict_t *self, edict_t *other, edict_t *activat
 	gi.linkentity(self);
 }
 
-static TOUCH(trigger_gravity_touch) (edict_t *self, edict_t *other, const trace_t &tr, bool other_touching_self) -> void {
+static TOUCH(trigger_gravity_touch) (gentity_t *self, gentity_t *other, const trace_t &tr, bool other_touching_self) -> void {
 
 	if (self->spawnflags.has(SPAWNFLAG_GRAVITY_CLIPPED)) {
 		trace_t clip = gi.clip(self, other->s.origin, other->mins, other->maxs, other->s.origin, G_GetClipMask(other));
@@ -815,10 +818,10 @@ static TOUCH(trigger_gravity_touch) (edict_t *self, edict_t *other, const trace_
 	other->gravity = self->gravity;
 }
 
-void SP_trigger_gravity(edict_t *self) {
+void SP_trigger_gravity(gentity_t *self) {
 	if (!st.gravity || !*st.gravity) {
 		gi.Com_PrintFmt("{}: no gravity set\n", *self);
-		G_FreeEdict(self);
+		G_FreeEntity(self);
 		return;
 	}
 
@@ -863,7 +866,7 @@ constexpr spawnflags_t SPAWNFLAG_MONSTERJUMP_TOGGLE = 1_spawnflag;
 constexpr spawnflags_t SPAWNFLAG_MONSTERJUMP_START_OFF = 2_spawnflag;
 constexpr spawnflags_t SPAWNFLAG_MONSTERJUMP_CLIPPED = 4_spawnflag;
 
-static USE(trigger_monsterjump_use) (edict_t *self, edict_t *other, edict_t *activator) -> void {
+static USE(trigger_monsterjump_use) (gentity_t *self, gentity_t *other, gentity_t *activator) -> void {
 	if (self->solid == SOLID_NOT)
 		self->solid = SOLID_TRIGGER;
 	else
@@ -871,7 +874,7 @@ static USE(trigger_monsterjump_use) (edict_t *self, edict_t *other, edict_t *act
 	gi.linkentity(self);
 }
 
-static TOUCH(trigger_monsterjump_touch) (edict_t *self, edict_t *other, const trace_t &tr, bool other_touching_self) -> void {
+static TOUCH(trigger_monsterjump_touch) (gentity_t *self, gentity_t *other, const trace_t &tr, bool other_touching_self) -> void {
 	if (other->flags & (FL_FLY | FL_SWIM))
 		return;
 	if (other->svflags & SVF_DEADMONSTER)
@@ -897,7 +900,7 @@ static TOUCH(trigger_monsterjump_touch) (edict_t *self, edict_t *other, const tr
 	other->velocity[2] = self->movedir[2];
 }
 
-void SP_trigger_monsterjump(edict_t *self) {
+void SP_trigger_monsterjump(gentity_t *self) {
 	if (!self->speed)
 		self->speed = 200;
 	if (!st.height)
@@ -938,7 +941,7 @@ Players moving against this trigger will have their flashlight turned on or off.
 
 constexpr spawnflags_t SPAWNFLAG_FLASHLIGHT_CLIPPED = 1_spawnflag;
 
-static TOUCH(trigger_flashlight_touch) (edict_t *self, edict_t *other, const trace_t &tr, bool other_touching_self) -> void {
+static TOUCH(trigger_flashlight_touch) (gentity_t *self, gentity_t *other, const trace_t &tr, bool other_touching_self) -> void {
 	if (!other->client)
 		return;
 
@@ -959,7 +962,7 @@ static TOUCH(trigger_flashlight_touch) (edict_t *self, edict_t *other, const tra
 	}
 }
 
-void SP_trigger_flashlight(edict_t *self) {
+void SP_trigger_flashlight(gentity_t *self) {
 	if (self->s.angles[YAW] == 0)
 		self->s.angles[YAW] = 360;
 	InitTrigger(self);
@@ -1018,7 +1021,7 @@ constexpr spawnflags_t SPAWNFLAG_FOG_INSTANTANEOUS = 4_spawnflag;
 constexpr spawnflags_t SPAWNFLAG_FOG_FORCE = 8_spawnflag;
 constexpr spawnflags_t SPAWNFLAG_FOG_BLEND = 16_spawnflag;
 
-static TOUCH(trigger_fog_touch) (edict_t *self, edict_t *other, const trace_t &tr, bool other_touching_self) -> void {
+static TOUCH(trigger_fog_touch) (gentity_t *self, gentity_t *other, const trace_t &tr, bool other_touching_self) -> void {
 	if (!other->client)
 		return;
 
@@ -1027,7 +1030,7 @@ static TOUCH(trigger_fog_touch) (edict_t *self, edict_t *other, const trace_t &t
 
 	self->timestamp = level.time + gtime_t::from_sec(self->wait);
 
-	edict_t *fog_value_storage = self;
+	gentity_t *fog_value_storage = self;
 
 	if (self->movetarget)
 		fog_value_storage = self->movetarget;
@@ -1153,7 +1156,7 @@ static TOUCH(trigger_fog_touch) (edict_t *self, edict_t *other, const trace_t &t
 	}
 }
 
-void SP_trigger_fog(edict_t *self) {
+void SP_trigger_fog(gentity_t *self) {
 	if (self->s.angles[YAW] == 0)
 		self->s.angles[YAW] = 360;
 
@@ -1183,17 +1186,17 @@ The same as a trigger_relay.
 
 constexpr spawnflags_t SPAWNFLAG_COOP_RELAY_AUTO_FIRE = 1_spawnflag;
 
-static inline bool trigger_coop_relay_filter(edict_t *player) {
+static inline bool trigger_coop_relay_filter(gentity_t *player) {
 	return (player->health <= 0 || player->deadflag || player->movetype == MOVETYPE_NOCLIP || player->movetype == MOVETYPE_FREECAM ||
 		!ClientIsPlaying(player->client) || player->s.modelindex != MODELINDEX_PLAYER);
 }
 
-static bool trigger_coop_relay_can_use(edict_t *self, edict_t *activator) {
+static bool trigger_coop_relay_can_use(gentity_t *self, gentity_t *activator) {
 	//muff mode: this is a hinderance, remove this
 	return true;
 }
 
-static USE(trigger_coop_relay_use) (edict_t *self, edict_t *other, edict_t *activator) -> void {
+static USE(trigger_coop_relay_use) (gentity_t *self, gentity_t *other, gentity_t *activator) -> void {
 	if (!trigger_coop_relay_can_use(self, activator)) {
 		if (self->timestamp < level.time)
 			gi.LocCenter_Print(activator, self->message);
@@ -1208,32 +1211,32 @@ static USE(trigger_coop_relay_use) (edict_t *self, edict_t *other, edict_t *acti
 	self->message = msg;
 }
 
-static BoxEdictsResult_t trigger_coop_relay_player_filter(edict_t *ent, void *data) {
+static BoxEntitiesResult_t trigger_coop_relay_player_filter(gentity_t *ent, void *data) {
 	if (!ent->client)
-		return BoxEdictsResult_t::Skip;
+		return BoxEntitiesResult_t::Skip;
 	else if (trigger_coop_relay_filter(ent))
-		return BoxEdictsResult_t::Skip;
+		return BoxEntitiesResult_t::Skip;
 
-	return BoxEdictsResult_t::Keep;
+	return BoxEntitiesResult_t::Keep;
 }
 
-static THINK(trigger_coop_relay_think) (edict_t *self) -> void {
-	std::array<edict_t *, MAX_SPLIT_PLAYERS> players;
+static THINK(trigger_coop_relay_think) (gentity_t *self) -> void {
+	std::array<gentity_t *, MAX_SPLIT_PLAYERS> players;
 	size_t num_active = 0;
 
 	for (auto player : active_clients())
 		if (!trigger_coop_relay_filter(player))
 			num_active++;
 
-	size_t n = gi.BoxEdicts(self->absmin, self->absmax, players.data(), num_active, AREA_SOLID, trigger_coop_relay_player_filter, nullptr);
+	size_t n = gi.BoxEntities(self->absmin, self->absmax, players.data(), num_active, AREA_SOLID, trigger_coop_relay_player_filter, nullptr);
 
 	if (n == num_active) {
 		const char *msg = self->message;
 		self->message = nullptr;
-		G_UseTargets(self, &globals.edicts[1]);
+		G_UseTargets(self, &globals.gentities[1]);
 		self->message = msg;
 
-		G_FreeEdict(self);
+		G_FreeEntity(self);
 		return;
 	} else if (n && self->timestamp < level.time) {
 		for (size_t i = 0; i < n; i++)
@@ -1249,7 +1252,7 @@ static THINK(trigger_coop_relay_think) (edict_t *self) -> void {
 	self->nextthink = level.time + gtime_t::from_sec(self->wait);
 }
 
-void SP_trigger_coop_relay(edict_t *self) {
+void SP_trigger_coop_relay(gentity_t *self) {
 	if (self->targetname && self->spawnflags.has(SPAWNFLAG_COOP_RELAY_AUTO_FIRE))
 		gi.Com_PrintFmt("{}: targetname and auto-fire are mutually exclusive\n", *self);
 
@@ -1277,7 +1280,7 @@ void SP_trigger_coop_relay(edict_t *self) {
 /*QUAKED info_teleport_destination (.5 .5 .5) (-16 -16 -24) (16 16 32) x x x x x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
 Destination marker for a teleporter.
 */
-void SP_info_teleport_destination(edict_t *self) {}
+void SP_info_teleport_destination(gentity_t *self) {}
 
 // unused; broken?
 // constexpr uint32_t SPAWNFLAG_TELEPORT_PLAYER_ONLY	= 1;
@@ -1300,8 +1303,8 @@ silent: <not used right now>
 ctf_only: <not used right now>
 start_on: when trigger has targetname, start active, deactivate when used.
 */
-static TOUCH(trigger_teleport_touch) (edict_t *self, edict_t *other, const trace_t &tr, bool other_touching_self) -> void {
-	edict_t *dest;
+static TOUCH(trigger_teleport_touch) (gentity_t *self, gentity_t *other, const trace_t &tr, bool other_touching_self) -> void {
+	gentity_t *dest;
 
 	if (!other->client)
 		return;
@@ -1326,7 +1329,12 @@ static TOUCH(trigger_teleport_touch) (edict_t *self, edict_t *other, const trace
 	other->s.old_origin = dest->s.origin;
 	other->s.origin[2] += 10;
 
-	if (g_teleporter_nofreeze->value == 0) {
+	if (g_teleporter_freeze->integer) {
+		// preserve velocity and 'spit' them out of destination
+		other->velocity[2] = 0;
+		AngleVectors(dest->s.angles, other->velocity, NULL, NULL);
+		other->velocity *= other->velocity.length();
+	} else {
 		// clear the velocity and hold them in place briefly
 		other->velocity = {};
 		other->client->ps.pmove.pm_time = 160; // hold time
@@ -1356,7 +1364,7 @@ static TOUCH(trigger_teleport_touch) (edict_t *self, edict_t *other, const trace
 
 	// [Paril-KEX] move sphere, if we own it
 	if (other->client && other->client->owned_sphere) {
-		edict_t *sphere = other->client->owned_sphere;
+		gentity_t *sphere = other->client->owned_sphere;
 		sphere->s.origin = other->s.origin;
 		sphere->s.origin[2] = other->absmax[2];
 		sphere->s.angles[YAW] = other->s.angles[YAW];
@@ -1364,14 +1372,14 @@ static TOUCH(trigger_teleport_touch) (edict_t *self, edict_t *other, const trace
 	}
 }
 
-static USE(trigger_teleport_use) (edict_t *self, edict_t *other, edict_t *activator) -> void {
+static USE(trigger_teleport_use) (gentity_t *self, gentity_t *other, gentity_t *activator) -> void {
 	if (self->delay)
 		self->delay = 0;
 	else
 		self->delay = 1;
 }
 
-void SP_trigger_teleport(edict_t *self) {
+void SP_trigger_teleport(gentity_t *self) {
 	if (!self->wait)
 		self->wait = 0.2f;
 
@@ -1400,8 +1408,8 @@ Players touching this will be teleported
 */
 
 //just here to help old map conversions
-static TOUCH(old_teleporter_touch) (edict_t *self, edict_t *other, const trace_t &tr, bool other_touching_self) -> void {
-	edict_t *dest;
+static TOUCH(old_teleporter_touch) (gentity_t *self, gentity_t *other, const trace_t &tr, bool other_touching_self) -> void {
+	gentity_t *dest;
 	vec3_t	 forward;
 
 	if (!other->client)
@@ -1421,7 +1429,12 @@ static TOUCH(old_teleporter_touch) (edict_t *self, edict_t *other, const trace_t
 	other->s.old_origin = dest->s.origin;
 	//	other->s.origin[2] += 10;
 
-	if (g_teleporter_nofreeze->value == 0) {
+	if (g_teleporter_freeze->integer) {
+		// preserve velocity and 'spit' them out of destination
+		other->velocity[2] = 0;
+		AngleVectors(dest->s.angles, other->velocity, NULL, NULL);
+		other->velocity *= other->velocity.length();
+	} else {
 		// clear the velocity and hold them in place briefly
 		other->velocity = {};
 		other->client->ps.pmove.pm_time = 160; // hold time
@@ -1453,7 +1466,7 @@ static TOUCH(old_teleporter_touch) (edict_t *self, edict_t *other, const trace_t
 
 	// [Paril-KEX] move sphere, if we own it
 	if (other->client->owned_sphere) {
-		edict_t *sphere = other->client->owned_sphere;
+		gentity_t *sphere = other->client->owned_sphere;
 		sphere->s.origin = other->s.origin;
 		sphere->s.origin[2] = other->absmax[2];
 		sphere->s.angles[YAW] = other->s.angles[YAW];
@@ -1461,13 +1474,13 @@ static TOUCH(old_teleporter_touch) (edict_t *self, edict_t *other, const trace_t
 	}
 }
 
-void SP_trigger_ctf_teleport(edict_t *ent) {
-	edict_t *s;
+void SP_trigger_ctf_teleport(gentity_t *ent) {
+	gentity_t *s;
 	int		 i;
 
 	if (!ent->target) {
 		gi.Com_PrintFmt("{} without a target.\n", *ent);
-		G_FreeEdict(ent);
+		G_FreeEntity(ent);
 		return;
 	}
 
@@ -1501,7 +1514,7 @@ REMOVE - field removes the disguise
 constexpr spawnflags_t SPAWNFLAG_DISGUISE_START_ON = 2_spawnflag;
 constexpr spawnflags_t SPAWNFLAG_DISGUISE_REMOVE = 4_spawnflag;
 
-static TOUCH(trigger_disguise_touch) (edict_t *self, edict_t *other, const trace_t &tr, bool other_touching_self) -> void {
+static TOUCH(trigger_disguise_touch) (gentity_t *self, gentity_t *other, const trace_t &tr, bool other_touching_self) -> void {
 	if (other->client) {
 		if (self->spawnflags.has(SPAWNFLAG_DISGUISE_REMOVE))
 			other->flags &= ~FL_DISGUISED;
@@ -1510,7 +1523,7 @@ static TOUCH(trigger_disguise_touch) (edict_t *self, edict_t *other, const trace
 	}
 }
 
-static USE(trigger_disguise_use) (edict_t *self, edict_t *other, edict_t *activator) -> void {
+static USE(trigger_disguise_use) (gentity_t *self, gentity_t *other, gentity_t *activator) -> void {
 	if (self->solid == SOLID_NOT)
 		self->solid = SOLID_TRIGGER;
 	else
@@ -1519,7 +1532,7 @@ static USE(trigger_disguise_use) (edict_t *self, edict_t *other, edict_t *activa
 	gi.linkentity(self);
 }
 
-void SP_trigger_disguise(edict_t *self) {
+void SP_trigger_disguise(gentity_t *self) {
 	if (!level.disguise_icon)
 		level.disguise_icon = gi.imageindex("i_disguise");
 
@@ -1544,7 +1557,7 @@ Must have a target, which will be the teleport destination.
 
 If spectator is set, only spectators can use this teleport.
 */
-static TOUCH(trigger_teleport_touch) (edict_t *self, edict_t *other, const trace_t &tr, bool other_touching_self) -> void {
+static TOUCH(trigger_teleport_touch) (gentity_t *self, gentity_t *other, const trace_t &tr, bool other_touching_self) -> void {
 	if (!other->client)
 		return;
 	if (other->health <= 0)
@@ -1552,7 +1565,7 @@ static TOUCH(trigger_teleport_touch) (edict_t *self, edict_t *other, const trace
 
 	// Spectators only?
 	if ((self->spawnflags.has(1_spawnflag)) &&
-			other->client->resp.team != TEAM_SPECTATOR) {
+			other->client->sess.team != TEAM_SPECTATOR) {
 		return;
 	}
 
@@ -1568,7 +1581,7 @@ static TOUCH(trigger_teleport_touch) (edict_t *self, edict_t *other, const trace
 	}
 }
 
-void SP_trigger_teleport(edict_t *self) {
+void SP_trigger_teleport(gentity_t *self) {
 	InitTrigger(self);
 
 	self->touch = trigger_teleport_touch;

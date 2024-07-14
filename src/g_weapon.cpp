@@ -15,7 +15,7 @@ fire_hit
 Used for all impact (hit/punch/slash) attacks
 =================
 */
-bool fire_hit(edict_t *self, vec3_t aim, int damage, int kick) {
+bool fire_hit(gentity_t *self, vec3_t aim, int damage, int kick) {
 	trace_t tr;
 	vec3_t	forward, right, up;
 	vec3_t	v;
@@ -89,8 +89,8 @@ bool fire_hit(edict_t *self, vec3_t aim, int damage, int kick) {
 // you can adjust the mask for the re-trace (for water, etc).
 // note that you must take care in your pierce callback to mark
 // the entities that are being pierced.
-void pierce_trace(const vec3_t &start, const vec3_t &end, edict_t *ignore, pierce_args_t &pierce, contents_t mask) {
-	int	   loop_count = MAX_EDICTS;
+void pierce_trace(const vec3_t &start, const vec3_t &end, gentity_t *ignore, pierce_args_t &pierce, contents_t mask) {
+	int	   loop_count = MAX_ENTITIES;
 	vec3_t own_start, own_end;
 	own_start = start;
 	own_end = end;
@@ -113,7 +113,7 @@ void pierce_trace(const vec3_t &start, const vec3_t &end, edict_t *ignore, pierc
 }
 
 struct fire_lead_pierce_t : pierce_args_t {
-	edict_t *self;
+	gentity_t *self;
 	vec3_t		 start;
 	vec3_t		 aimdir;
 	int			 damage;
@@ -125,9 +125,9 @@ struct fire_lead_pierce_t : pierce_args_t {
 	contents_t   mask;
 	bool	     water = false;
 	vec3_t	     water_start = {};
-	edict_t *chain = nullptr;
+	gentity_t *chain = nullptr;
 
-	inline fire_lead_pierce_t(edict_t *self, vec3_t start, vec3_t aimdir, int damage, int kick, int hspread, int vspread, mod_t mod, int te_impact, contents_t mask) :
+	inline fire_lead_pierce_t(gentity_t *self, vec3_t start, vec3_t aimdir, int damage, int kick, int hspread, int vspread, mod_t mod, int te_impact, contents_t mask) :
 		pierce_args_t(),
 		self(self),
 		start(start),
@@ -235,7 +235,7 @@ fire_lead
 This is an internal support routine used for bullet/pellet based weapons.
 =================
 */
-static void fire_lead(edict_t *self, const vec3_t &start, const vec3_t &aimdir, int damage, int kick, int te_impact, int hspread, int vspread, mod_t mod) {
+static void fire_lead(gentity_t *self, const vec3_t &start, const vec3_t &aimdir, int damage, int kick, int te_impact, int hspread, int vspread, mod_t mod) {
 	fire_lead_pierce_t args = {
 		self,
 		start,
@@ -315,7 +315,7 @@ Fires a single round.  Used for machinegun and chaingun.  Would be fine for
 pistols, rifles, etc....
 =================
 */
-void fire_bullet(edict_t *self, const vec3_t &start, const vec3_t &aimdir, int damage, int kick, int hspread, int vspread, mod_t mod) {
+void fire_bullet(gentity_t *self, const vec3_t &start, const vec3_t &aimdir, int damage, int kick, int hspread, int vspread, mod_t mod) {
 	fire_lead(self, start, aimdir, damage, kick, mod.id == MOD_TESLA ? -1 : TE_GUNSHOT, hspread, vspread, mod);
 }
 
@@ -326,7 +326,7 @@ fire_shotgun
 Shoots shotgun pellets.  Used by shotgun and super shotgun.
 =================
 */
-void fire_shotgun(edict_t *self, const vec3_t &start, const vec3_t &aimdir, int damage, int kick, int hspread, int vspread, int count, mod_t mod) {
+void fire_shotgun(gentity_t *self, const vec3_t &start, const vec3_t &aimdir, int damage, int kick, int hspread, int vspread, int count, mod_t mod) {
 	for (int i = 0; i < count; i++)
 		fire_lead(self, start, aimdir, damage, kick, TE_SHOTGUN, hspread, vspread, mod);
 }
@@ -338,36 +338,44 @@ fire_blaster
 Fires a single blaster bolt.  Used by the blaster and hyper blaster.
 =================
 */
-TOUCH(blaster_touch) (edict_t *self, edict_t *other, const trace_t &tr, bool other_touching_self) -> void {
-	if (other == self->owner)
+TOUCH(blaster_touch) (gentity_t *ent, gentity_t *other, const trace_t &tr, bool other_touching_self) -> void {
+	vec3_t origin;
+	if (other == ent->owner)
 		return;
 
 	if (tr.surface && (tr.surface->flags & SURF_SKY)) {
-		G_FreeEdict(self);
+		G_FreeEntity(ent);
 		return;
 	}
 
 	// PMM - crash prevention
-	if (self->owner && self->owner->client)
-		PlayerNoise(self->owner, self->s.origin, PNOISE_IMPACT);
+	if (ent->owner && ent->owner->client)
+		PlayerNoise(ent->owner, ent->s.origin, PNOISE_IMPACT);
+
+	// calculate position for the explosion entity
+	origin = ent->s.origin + tr.plane.normal;
 
 	if (other->takedamage) {
-		T_Damage(other, self, self->owner, self->velocity, self->s.origin, tr.plane.normal, self->dmg, 1, DAMAGE_ENERGY | DAMAGE_STAT_ONCE, static_cast<mod_id_t>(self->style));
+		T_Damage(other, ent, ent->owner, ent->velocity, ent->s.origin, tr.plane.normal, ent->dmg, 1, DAMAGE_ENERGY | DAMAGE_STAT_ONCE, static_cast<mod_id_t>(ent->style));
 
-		Weapon_Stats_Hit(self->owner->client, MOD_BLASTER);
+		Weapon_Stats_Hit(ent->owner->client, (mod_id_t)ent->style);
 	} else {
-		gi.WriteByte(svc_temp_entity);
-		gi.WriteByte((self->style != MOD_BLUEBLASTER) ? TE_BLASTER : TE_BLUEHYPERBLASTER);
-		gi.WritePosition(self->s.origin);
-		gi.WriteDir(tr.plane.normal);
-		gi.multicast(self->s.origin, MULTICAST_PHS, false);
 	}
 
-	G_FreeEdict(self);
+	if (ent->splash_damage)
+		T_RadiusDamage(ent, ent->owner, (float)ent->splash_damage, other, ent->splash_radius, DAMAGE_ENERGY, MOD_HYPERBLASTER);
+
+	gi.WriteByte(svc_temp_entity);
+	gi.WriteByte((ent->style != MOD_BLUEBLASTER) ? TE_BLASTER : TE_BLUEHYPERBLASTER);
+	gi.WritePosition(ent->s.origin);
+	gi.WriteDir(tr.plane.normal);
+	gi.multicast(ent->s.origin, MULTICAST_PHS, false);
+
+	G_FreeEntity(ent);
 }
 
-void fire_blaster(edict_t *self, const vec3_t &start, const vec3_t &dir, int damage, int speed, effects_t effect, mod_t mod) {
-	edict_t *bolt;
+void fire_blaster(gentity_t *self, const vec3_t &start, const vec3_t &dir, int damage, int speed, effects_t effect, mod_t mod) {
+	gentity_t *bolt;
 	trace_t	 tr;
 
 	bolt = G_Spawn();
@@ -389,10 +397,15 @@ void fire_blaster(edict_t *self, const vec3_t &start, const vec3_t &dir, int dam
 	bolt->owner = self;
 	bolt->touch = blaster_touch;
 	bolt->style = mod.id;
-
+	
 	bolt->nextthink = level.time + 2_sec;
-	bolt->think = G_FreeEdict;
+	bolt->think = G_FreeEntity;
 	bolt->dmg = damage;
+	if (RS(RS_Q3A) && mod.id == MOD_HYPERBLASTER) {
+		bolt->s.scale = 100;
+		bolt->splash_radius = 20;
+		bolt->splash_damage = 15;
+	}
 	bolt->classname = "bolt";
 	gi.linkentity(bolt);
 
@@ -410,7 +423,7 @@ fire_greenblaster
 Fires a single green blaster bolt. Used by monsters, generally.
 =================
 */
-static TOUCH(blaster2_touch) (edict_t *self, edict_t *other, const trace_t &tr, bool other_touching_self) -> void {
+static TOUCH(blaster2_touch) (gentity_t *self, gentity_t *other, const trace_t &tr, bool other_touching_self) -> void {
 	mod_t mod;
 	int	  damagestat;
 
@@ -418,7 +431,7 @@ static TOUCH(blaster2_touch) (edict_t *self, edict_t *other, const trace_t &tr, 
 		return;
 
 	if (tr.surface && (tr.surface->flags & SURF_SKY)) {
-		G_FreeEdict(self);
+		G_FreeEntity(self);
 		return;
 	}
 
@@ -437,20 +450,20 @@ static TOUCH(blaster2_touch) (edict_t *self, edict_t *other, const trace_t &tr, 
 			damagestat = self->owner->takedamage;
 			self->owner->takedamage = false;
 			if (self->dmg >= 5)
-				T_RadiusDamage(self, self->owner, (float)(self->dmg * 2), other, self->dmg_radius, DAMAGE_ENERGY, MOD_UNKNOWN);
+				T_RadiusDamage(self, self->owner, (float)(self->dmg * 2), other, self->splash_radius, DAMAGE_ENERGY, MOD_UNKNOWN);
 			T_Damage(other, self, self->owner, self->velocity, self->s.origin, tr.plane.normal, self->dmg, 1, DAMAGE_ENERGY | DAMAGE_STAT_ONCE, mod);
 			self->owner->takedamage = damagestat;
 
 			Weapon_Stats_Hit(self->owner->client, mod);
 		} else {
 			if (self->dmg >= 5)
-				T_RadiusDamage(self, self->owner, (float)(self->dmg * 2), other, self->dmg_radius, DAMAGE_ENERGY, MOD_UNKNOWN);
+				T_RadiusDamage(self, self->owner, (float)(self->dmg * 2), other, self->splash_radius, DAMAGE_ENERGY, MOD_UNKNOWN);
 			T_Damage(other, self, self->owner, self->velocity, self->s.origin, tr.plane.normal, self->dmg, 1, DAMAGE_ENERGY | DAMAGE_STAT_ONCE, mod);
 		}
 	} else {
 		// PMM - yeowch this will get expensive
 		if (self->dmg >= 5)
-			T_RadiusDamage(self, self->owner, (float)(self->dmg * 2), self->owner, self->dmg_radius, DAMAGE_ENERGY, MOD_UNKNOWN);
+			T_RadiusDamage(self, self->owner, (float)(self->dmg * 2), self->owner, self->splash_radius, DAMAGE_ENERGY, MOD_UNKNOWN);
 
 		gi.WriteByte(svc_temp_entity);
 		gi.WriteByte(TE_BLASTER2);
@@ -459,11 +472,11 @@ static TOUCH(blaster2_touch) (edict_t *self, edict_t *other, const trace_t &tr, 
 		gi.multicast(self->s.origin, MULTICAST_PHS, false);
 	}
 
-	G_FreeEdict(self);
+	G_FreeEntity(self);
 }
 
-void fire_greenblaster(edict_t *self, const vec3_t &start, const vec3_t &dir, int damage, int speed, effects_t effect, bool hyper) {
-	edict_t *bolt;
+void fire_greenblaster(gentity_t *self, const vec3_t &start, const vec3_t &dir, int damage, int speed, effects_t effect, bool hyper) {
+	gentity_t *bolt;
 	trace_t	 tr;
 
 	bolt = G_Spawn();
@@ -485,12 +498,12 @@ void fire_greenblaster(edict_t *self, const vec3_t &start, const vec3_t &dir, in
 	bolt->touch = blaster2_touch;
 	if (effect)
 		bolt->s.effects |= EF_TRACKER;
-	bolt->dmg_radius = 128;
+	bolt->splash_radius = 128;
 	bolt->s.skinnum = 2;
 	bolt->s.scale = 2.5f;
 
 	bolt->nextthink = level.time + 2_sec;
-	bolt->think = G_FreeEdict;
+	bolt->think = G_FreeEntity;
 	bolt->dmg = damage;
 	bolt->classname = "bolt";
 	gi.linkentity(bolt);
@@ -507,8 +520,8 @@ void fire_greenblaster(edict_t *self, const vec3_t &start, const vec3_t &dir, in
 fire_blueblaster
 =================
 */
-void fire_blueblaster(edict_t *self, const vec3_t &start, const vec3_t &dir, int damage, int speed, effects_t effect) {
-	edict_t *bolt;
+void fire_blueblaster(gentity_t *self, const vec3_t &start, const vec3_t &dir, int damage, int speed, effects_t effect) {
+	gentity_t *bolt;
 	trace_t	 tr;
 
 	bolt = G_Spawn();
@@ -533,7 +546,7 @@ void fire_blueblaster(edict_t *self, const vec3_t &start, const vec3_t &dir, int
 	bolt->style = MOD_BLUEBLASTER;
 
 	bolt->nextthink = level.time + 2_sec;
-	bolt->think = G_FreeEdict;
+	bolt->think = G_FreeEntity;
 	bolt->dmg = damage;
 	bolt->classname = "bolt";
 	gi.linkentity(bolt);
@@ -553,7 +566,7 @@ constexpr spawnflags_t SPAWNFLAG_GRENADE_HELD = 2_spawnflag;
 fire_grenade
 =================
 */
-static THINK(Grenade_Explode) (edict_t *ent) -> void {
+static THINK(Grenade_Explode) (gentity_t *ent) -> void {
 	vec3_t origin;
 	mod_t  mod;
 
@@ -586,7 +599,7 @@ static THINK(Grenade_Explode) (edict_t *ent) -> void {
 		mod = MOD_HG_SPLASH;
 	else
 		mod = MOD_G_SPLASH;
-	T_RadiusDamage(ent, ent->owner, (float)ent->dmg, ent->enemy, ent->dmg_radius, DAMAGE_NONE | DAMAGE_STAT_ONCE, mod);
+	T_RadiusDamage(ent, ent->owner, (float)ent->dmg, ent->enemy, ent->splash_radius, DAMAGE_NONE | DAMAGE_STAT_ONCE, mod);
 
 	origin = ent->s.origin + (ent->velocity * -0.02f);
 	gi.WriteByte(svc_temp_entity);
@@ -604,15 +617,15 @@ static THINK(Grenade_Explode) (edict_t *ent) -> void {
 	gi.WritePosition(origin);
 	gi.multicast(ent->s.origin, MULTICAST_PHS, false);
 
-	G_FreeEdict(ent);
+	G_FreeEntity(ent);
 }
 
-static TOUCH(Grenade_Touch) (edict_t *ent, edict_t *other, const trace_t &tr, bool other_touching_self) -> void {
+static TOUCH(Grenade_Touch) (gentity_t *ent, gentity_t *other, const trace_t &tr, bool other_touching_self) -> void {
 	if (other == ent->owner)
 		return;
 
 	if (tr.surface && (tr.surface->flags & SURF_SKY)) {
-		G_FreeEdict(ent);
+		G_FreeEntity(ent);
 		return;
 	}
 
@@ -632,7 +645,7 @@ static TOUCH(Grenade_Touch) (edict_t *ent, edict_t *other, const trace_t &tr, bo
 	Grenade_Explode(ent);
 }
 
-static THINK(Grenade4_Think) (edict_t *self) -> void {
+static THINK(Grenade4_Think) (gentity_t *self) -> void {
 	if (level.time >= self->timestamp) {
 		Grenade_Explode(self);
 		return;
@@ -650,8 +663,8 @@ static THINK(Grenade4_Think) (edict_t *self) -> void {
 	self->nextthink = level.time + FRAME_TIME_S;
 }
 
-void fire_grenade(edict_t *self, const vec3_t &start, const vec3_t &aimdir, int damage, int speed, gtime_t timer, float damage_radius, float right_adjust, float up_adjust, bool monster) {
-	edict_t *grenade;
+void fire_grenade(gentity_t *self, const vec3_t &start, const vec3_t &aimdir, int damage, int speed, gtime_t timer, float damage_radius, float right_adjust, float up_adjust, bool monster) {
+	gentity_t *grenade;
 	vec3_t	 dir;
 	vec3_t	 forward, right, up;
 
@@ -699,14 +712,14 @@ void fire_grenade(edict_t *self, const vec3_t &start, const vec3_t &aimdir, int 
 	grenade->owner = self;
 	grenade->touch = Grenade_Touch;
 	grenade->dmg = damage;
-	grenade->dmg_radius = damage_radius;
+	grenade->splash_radius = damage_radius;
 	grenade->classname = "grenade";
 
 	gi.linkentity(grenade);
 }
 
-void fire_handgrenade(edict_t *self, const vec3_t &start, const vec3_t &aimdir, int damage, int speed, gtime_t timer, float damage_radius, bool held) {
-	edict_t *grenade;
+void fire_handgrenade(gentity_t *self, const vec3_t &start, const vec3_t &aimdir, int damage, int speed, gtime_t timer, float damage_radius, bool held) {
+	gentity_t *grenade;
 	vec3_t	 dir;
 	vec3_t	 forward, right, up;
 
@@ -740,7 +753,7 @@ void fire_handgrenade(edict_t *self, const vec3_t &start, const vec3_t &aimdir, 
 	grenade->nextthink = level.time + timer;
 	grenade->think = Grenade_Explode;
 	grenade->dmg = damage;
-	grenade->dmg_radius = damage_radius;
+	grenade->splash_radius = damage_radius;
 	grenade->classname = "hand_grenade";
 	grenade->spawnflags = SPAWNFLAG_GRENADE_HAND;
 	if (held)
@@ -760,13 +773,13 @@ void fire_handgrenade(edict_t *self, const vec3_t &start, const vec3_t &aimdir, 
 fire_rocket
 =================
 */
-TOUCH(rocket_touch) (edict_t *ent, edict_t *other, const trace_t &tr, bool other_touching_self) -> void {
+TOUCH(rocket_touch) (gentity_t *ent, gentity_t *other, const trace_t &tr, bool other_touching_self) -> void {
 	vec3_t origin;
 	if (other == ent->owner)
 		return;
 
 	if (tr.surface && (tr.surface->flags & SURF_SKY)) {
-		G_FreeEdict(ent);
+		G_FreeEntity(ent);
 		return;
 	}
 
@@ -777,7 +790,7 @@ TOUCH(rocket_touch) (edict_t *ent, edict_t *other, const trace_t &tr, bool other
 	origin = ent->s.origin + tr.plane.normal;
 
 	if (other->takedamage) {
-		T_Damage(other, ent, ent->owner, ent->velocity, ent->s.origin, tr.plane.normal, ent->dmg, 0, DAMAGE_NONE | DAMAGE_STAT_ONCE, MOD_ROCKET);
+		T_Damage(other, ent, ent->owner, ent->velocity, ent->s.origin, tr.plane.normal, ent->dmg, RS(RS_MM) ? 50 : 0, DAMAGE_NONE | DAMAGE_STAT_ONCE, MOD_ROCKET);
 
 		Weapon_Stats_Hit(ent->owner->client, MOD_ROCKET);
 	} else {
@@ -791,7 +804,7 @@ TOUCH(rocket_touch) (edict_t *ent, edict_t *other, const trace_t &tr, bool other
 		}
 	}
 
-	T_RadiusDamage(ent, ent->owner, (float)ent->radius_dmg, other, ent->dmg_radius, DAMAGE_NONE, MOD_R_SPLASH);
+	T_RadiusDamage(ent, ent->owner, (float)ent->splash_damage, other, ent->splash_radius, DAMAGE_NONE, MOD_R_SPLASH);
 
 	gi.WriteByte(svc_temp_entity);
 	if (ent->waterlevel)
@@ -801,11 +814,11 @@ TOUCH(rocket_touch) (edict_t *ent, edict_t *other, const trace_t &tr, bool other
 	gi.WritePosition(origin);
 	gi.multicast(ent->s.origin, MULTICAST_PHS, false);
 
-	G_FreeEdict(ent);
+	G_FreeEntity(ent);
 }
 
-edict_t *fire_rocket(edict_t *self, const vec3_t &start, const vec3_t &dir, int damage, int speed, float damage_radius, int radius_damage) {
-	edict_t *rocket;
+gentity_t *fire_rocket(gentity_t *self, const vec3_t &start, const vec3_t &dir, int damage, int speed, float damage_radius, int radius_damage) {
+	gentity_t *rocket;
 
 	rocket = G_Spawn();
 	rocket->s.origin = start;
@@ -824,10 +837,10 @@ edict_t *fire_rocket(edict_t *self, const vec3_t &start, const vec3_t &dir, int 
 	rocket->owner = self;
 	rocket->touch = rocket_touch;
 	rocket->nextthink = level.time + gtime_t::from_sec(8000.f / speed);
-	rocket->think = G_FreeEdict;
+	rocket->think = G_FreeEntity;
 	rocket->dmg = damage;
-	rocket->radius_dmg = radius_damage;
-	rocket->dmg_radius = damage_radius;
+	rocket->splash_damage = radius_damage;
+	rocket->splash_radius = damage_radius;
 	rocket->s.sound = gi.soundindex("weapons/rockfly.wav");
 	rocket->classname = "rocket";
 
@@ -865,13 +878,13 @@ static bool binary_positional_search(const vec3_t &viewer, const vec3_t &start, 
 }
 
 struct fire_rail_pierce_t : pierce_args_t {
-	edict_t *self;
+	gentity_t *self;
 	vec3_t	 aimdir;
 	int		 damage;
 	int		 kick;
 	bool	 water = false;
 
-	inline fire_rail_pierce_t(edict_t *self, vec3_t aimdir, int damage, int kick) :
+	inline fire_rail_pierce_t(gentity_t *self, vec3_t aimdir, int damage, int kick) :
 		pierce_args_t(),
 		self(self),
 		aimdir(aimdir),
@@ -922,7 +935,7 @@ uint32_t GetUnicastKey() {
 fire_rail
 =================
 */
-void fire_rail(edict_t *self, const vec3_t &start, const vec3_t &aimdir, int damage, int kick) {
+void fire_rail(gentity_t *self, const vec3_t &start, const vec3_t &aimdir, int damage, int kick) {
 	fire_rail_pierce_t args = {
 		self,
 		aimdir,
@@ -958,7 +971,7 @@ void fire_rail(edict_t *self, const vec3_t &start, const vec3_t &aimdir, int dam
 	}
 
 	if (g_instagib->integer && g_instagib_splash->integer) {
-		edict_t *exp;
+		gentity_t *exp;
 
 		exp = G_Spawn();
 		exp->classname = "railsplash";
@@ -967,12 +980,12 @@ void fire_rail(edict_t *self, const vec3_t &start, const vec3_t &aimdir, int dam
 		exp->clipmask = MASK_PROJECTILE;
 		exp->owner = self;
 		exp->dmg = 180;
-		exp->radius_dmg = 120;
-		exp->dmg_radius = 120;
+		exp->splash_damage = 120;
+		exp->splash_radius = 120;
 
 		gi.linkentity(exp);
 
-		T_RadiusDamage(exp, exp->owner, exp->dmg, nullptr, exp->dmg_radius, DAMAGE_NONE, MOD_RAILGUN_SPLASH);
+		T_RadiusDamage(exp, exp->owner, exp->dmg, nullptr, exp->splash_radius, DAMAGE_NONE, MOD_RAILGUN_SPLASH);
 
 		gi.WriteByte(svc_temp_entity);
 		if (exp->waterlevel)
@@ -982,7 +995,7 @@ void fire_rail(edict_t *self, const vec3_t &start, const vec3_t &aimdir, int dam
 		gi.WritePosition(exp->s.origin);
 		gi.multicast(exp->s.origin, MULTICAST_PHS, false);
 
-		G_FreeEdict(exp);
+		G_FreeEntity(exp);
 
 	}
 
@@ -1003,9 +1016,9 @@ static vec3_t bfg_laser_pos(vec3_t p, float dist) {
 	return p + (d * dist);
 }
 
-static THINK(bfg_laser_update) (edict_t *self) -> void {
+static THINK(bfg_laser_update) (gentity_t *self) -> void {
 	if (level.time > self->timestamp || !self->owner->inuse) {
-		G_FreeEdict(self);
+		G_FreeEntity(self);
 		return;
 	}
 
@@ -1014,14 +1027,14 @@ static THINK(bfg_laser_update) (edict_t *self) -> void {
 	gi.linkentity(self);
 }
 
-static void bfg_spawn_laser(edict_t *self) {
+static void bfg_spawn_laser(gentity_t *self) {
 	vec3_t end = bfg_laser_pos(self->s.origin, 256);
 	trace_t tr = gi.traceline(self->s.origin, end, self, MASK_OPAQUE);
 
 	if (tr.fraction == 1.0f)
 		return;
 
-	edict_t *laser = G_Spawn();
+	gentity_t *laser = G_Spawn();
 	laser->s.frame = 3;
 	laser->s.renderfx = RF_BEAM_LIGHTNING;
 	laser->movetype = MOVETYPE_NONE;
@@ -1042,8 +1055,8 @@ static void bfg_spawn_laser(edict_t *self) {
 fire_bfg
 =================
 */
-static THINK(bfg_explode) (edict_t *self) -> void {
-	edict_t *ent;
+static THINK(bfg_explode) (gentity_t *self) -> void {
+	gentity_t *ent;
 	float	 points;
 	vec3_t	 v;
 	float	 dist;
@@ -1053,15 +1066,13 @@ static THINK(bfg_explode) (edict_t *self) -> void {
 	if (self->s.frame == 0) {
 		// the BFG effect
 		ent = nullptr;
-		while ((ent = findradius(ent, self->s.origin, self->dmg_radius)) != nullptr) {
+		while ((ent = findradius(ent, self->s.origin, self->splash_radius)) != nullptr) {
 			if (!ent->takedamage)
 				continue;
 			if (ent == self->owner)
 				continue;
-			/*freeze*/
 			if (ent->client && ent->client->eliminated)
 				continue;
-			/*freeze*/
 			if (!CanDamage(ent, self))
 				continue;
 			if (!CanDamage(ent, self->owner))
@@ -1078,7 +1089,7 @@ static THINK(bfg_explode) (edict_t *self) -> void {
 			vec3_t centroid = v;
 			v = self->s.origin - centroid;
 			dist = v.length();
-			points = self->radius_dmg * (1.0f - sqrtf(dist / self->dmg_radius));
+			points = self->splash_damage * (1.0f - sqrtf(dist / self->splash_radius));
 
 			T_Damage(ent, self, self->owner, self->velocity, centroid, vec3_origin, (int)points, 0, DAMAGE_ENERGY | DAMAGE_STAT_ONCE, MOD_BFG_EFFECT);
 
@@ -1094,15 +1105,15 @@ static THINK(bfg_explode) (edict_t *self) -> void {
 	self->nextthink = level.time + 10_hz;
 	self->s.frame++;
 	if (self->s.frame == 5)
-		self->think = G_FreeEdict;
+		self->think = G_FreeEntity;
 }
 
-static TOUCH(bfg_touch) (edict_t *self, edict_t *other, const trace_t &tr, bool other_touching_self) -> void {
+static TOUCH(bfg_touch) (gentity_t *self, gentity_t *other, const trace_t &tr, bool other_touching_self) -> void {
 	if (other == self->owner)
 		return;
 
 	if (tr.surface && (tr.surface->flags & SURF_SKY)) {
-		G_FreeEdict(self);
+		G_FreeEntity(self);
 		return;
 	}
 
@@ -1135,11 +1146,11 @@ static TOUCH(bfg_touch) (edict_t *self, edict_t *other, const trace_t &tr, bool 
 
 
 struct bfg_laser_pierce_t : pierce_args_t {
-	edict_t *self;
+	gentity_t *self;
 	vec3_t	 dir;
 	int		 damage;
 
-	inline bfg_laser_pierce_t(edict_t *self, vec3_t dir, int damage) :
+	inline bfg_laser_pierce_t(gentity_t *self, vec3_t dir, int damage) :
 		pierce_args_t(),
 		self(self),
 		dir(dir),
@@ -1171,8 +1182,8 @@ struct bfg_laser_pierce_t : pierce_args_t {
 	}
 };
 
-static THINK(bfg_think) (edict_t *self) -> void {
-	edict_t *ent;
+static THINK(bfg_think) (gentity_t *self) -> void {
+	gentity_t *ent;
 	vec3_t	 point;
 	vec3_t	 dir;
 	vec3_t	 start;
@@ -1188,13 +1199,10 @@ static THINK(bfg_think) (edict_t *self) -> void {
 	while ((ent = findradius(ent, self->s.origin, 256)) != nullptr) {
 		if (ent == self)
 			continue;
-
 		if (ent == self->owner)
 			continue;
-		/*freeze*/
 		if (ent->client && ent->client->eliminated)
 			continue;
-		/*freeze*/
 		if (!ent->takedamage)
 			continue;
 
@@ -1237,8 +1245,8 @@ static THINK(bfg_think) (edict_t *self) -> void {
 	self->nextthink = level.time + 10_hz;
 }
 
-void fire_bfg(edict_t *self, const vec3_t &start, const vec3_t &dir, int damage, int speed, float damage_radius) {
-	edict_t *bfg;
+void fire_bfg(gentity_t *self, const vec3_t &start, const vec3_t &dir, int damage, int speed, float damage_radius) {
+	gentity_t *bfg;
 
 	bfg = G_Spawn();
 	bfg->s.origin = start;
@@ -1256,9 +1264,9 @@ void fire_bfg(edict_t *self, const vec3_t &start, const vec3_t &dir, int damage,
 	bfg->owner = self;
 	bfg->touch = bfg_touch;
 	bfg->nextthink = level.time + gtime_t::from_sec(8000.f / speed);
-	bfg->think = G_FreeEdict;
-	bfg->radius_dmg = damage;
-	bfg->dmg_radius = damage_radius;
+	bfg->think = G_FreeEntity;
+	bfg->splash_damage = damage;
+	bfg->splash_radius = damage_radius;
 	bfg->classname = "bfg blast";
 	bfg->s.sound = gi.soundindex("weapons/bfg__l1a.wav");
 
@@ -1270,13 +1278,13 @@ void fire_bfg(edict_t *self, const vec3_t &start, const vec3_t &dir, int damage,
 	gi.linkentity(bfg);
 }
 
-static TOUCH(disintegrator_touch) (edict_t *self, edict_t *other, const trace_t &tr, bool other_touching_self) -> void {
+static TOUCH(disintegrator_touch) (gentity_t *self, gentity_t *other, const trace_t &tr, bool other_touching_self) -> void {
 	gi.WriteByte(svc_temp_entity);
 	gi.WriteByte(TE_WIDOWSPLASH);
 	gi.WritePosition(self->s.origin - (self->velocity * 0.01f));
 	gi.multicast(self->s.origin, MULTICAST_PHS, false);
 
-	G_FreeEdict(self);
+	G_FreeEntity(self);
 
 	if (other->svflags & (SVF_MONSTER | SVF_PLAYER)) {
 		other->disintegrator_time += 50_sec;
@@ -1284,8 +1292,8 @@ static TOUCH(disintegrator_touch) (edict_t *self, edict_t *other, const trace_t 
 	}
 }
 
-void fire_disintegrator(edict_t *self, const vec3_t &start, const vec3_t &forward, int speed) {
-	edict_t *bfg;
+void fire_disintegrator(gentity_t *self, const vec3_t &start, const vec3_t &forward, int speed) {
+	gentity_t *bfg;
 
 	bfg = G_Spawn();
 	bfg->s.origin = start;
@@ -1305,7 +1313,7 @@ void fire_disintegrator(edict_t *self, const vec3_t &start, const vec3_t &forwar
 	bfg->owner = self;
 	bfg->touch = disintegrator_touch;
 	bfg->nextthink = level.time + gtime_t::from_sec(8000.f / speed);
-	bfg->think = G_FreeEdict;
+	bfg->think = G_FreeEntity;
 	bfg->classname = "disint ball";
 	bfg->s.sound = gi.soundindex("weapons/bfg__l1a.wav");
 
@@ -1316,7 +1324,7 @@ void fire_disintegrator(edict_t *self, const vec3_t &start, const vec3_t &forwar
 //  PLASMA BEAM
 // *************************
 
-static void fire_beams(edict_t *self, const vec3_t &start, const vec3_t &aimdir, const vec3_t &offset, int damage, int kick, int te_beam, int te_impact, mod_t mod) {
+static void fire_beams(gentity_t *self, const vec3_t &start, const vec3_t &aimdir, const vec3_t &offset, int damage, int kick, int te_beam, int te_impact, mod_t mod) {
 	trace_t	   tr;
 	vec3_t	   dir;
 	vec3_t	   forward, right, up;
@@ -1329,15 +1337,11 @@ static void fire_beams(edict_t *self, const vec3_t &start, const vec3_t &aimdir,
 	if (self->client && !G_ShouldPlayersCollide(true))
 		content_mask &= ~CONTENTS_PLAYER;
 
-	vec3_t	   beam_endpt;
-
-	//	tr = gi.traceline (self->s.origin, start, self, MASK_PROJECTILE);
-	//	if (!(tr.fraction < 1.0))
-	//	{
 	dir = vectoangles(aimdir);
 	AngleVectors(dir, forward, right, up);
 
-	end = start + (forward * 8192);
+	float dist = RS(RS_MM) ? 768 : 8192;
+	end = start + (forward * dist);
 
 	if (gi.pointcontents(start) & MASK_WATER) {
 		underwater = true;
@@ -1355,23 +1359,18 @@ static void fire_beams(edict_t *self, const vec3_t &start, const vec3_t &aimdir,
 		if (start != tr.endpos) {
 			gi.WriteByte(svc_temp_entity);
 			gi.WriteByte(TE_HEATBEAM_SPARKS);
-			//			gi.WriteByte (50);
 			gi.WritePosition(water_start);
 			gi.WriteDir(tr.plane.normal);
-			//			gi.WriteByte (8);
-			//			gi.WriteShort (60);
 			gi.multicast(tr.endpos, MULTICAST_PVS, false);
 		}
 		// re-trace ignoring water this time
 		tr = gi.traceline(water_start, end, self, content_mask & ~MASK_WATER);
 	}
 	endpoint = tr.endpos;
-	//	}
 
 	// halve the damage if target underwater
-	if (water) {
+	if (water)
 		damage = damage / 2;
-	}
 
 	// send gun puff / flash
 	if (!((tr.surface) && (tr.surface->flags & SURF_SKY))) {
@@ -1383,11 +1382,8 @@ static void fire_beams(edict_t *self, const vec3_t &start, const vec3_t &aimdir,
 					// This is the truncated steam entry - uses 1+1+2 extra bytes of data
 					gi.WriteByte(svc_temp_entity);
 					gi.WriteByte(TE_HEATBEAM_STEAM);
-					//					gi.WriteByte (20);
 					gi.WritePosition(tr.endpos);
 					gi.WriteDir(tr.plane.normal);
-					//					gi.WriteByte (0xe0);
-					//					gi.WriteShort (60);
 					gi.multicast(tr.endpos, MULTICAST_PVS, false);
 
 					if (self->client)
@@ -1414,23 +1410,16 @@ static void fire_beams(edict_t *self, const vec3_t &start, const vec3_t &aimdir,
 
 		gi.WriteByte(svc_temp_entity);
 		gi.WriteByte(TE_BUBBLETRAIL2);
-		//		gi.WriteByte (8);
 		gi.WritePosition(water_start);
 		gi.WritePosition(tr.endpos);
 		gi.multicast(pos, MULTICAST_PVS, false);
-	}
-
-	if ((!underwater) && (!water)) {
-		beam_endpt = tr.endpos;
-	} else {
-		beam_endpt = endpoint;
 	}
 
 	gi.WriteByte(svc_temp_entity);
 	gi.WriteByte(te_beam);
 	gi.WriteEntity(self);
 	gi.WritePosition(start);
-	gi.WritePosition(beam_endpt);
+	gi.WritePosition(!underwater && !water ? tr.endpos : endpoint);
 	gi.multicast(self->s.origin, MULTICAST_ALL, false);
 }
 
@@ -1441,7 +1430,7 @@ fire_plasmabeam
 Fires a single heat beam.
 =================
 */
-void fire_plasmabeam(edict_t *self, const vec3_t &start, const vec3_t &aimdir, const vec3_t &offset, int damage, int kick, bool monster) {
+void fire_plasmabeam(gentity_t *self, const vec3_t &start, const vec3_t &aimdir, const vec3_t &offset, int damage, int kick, bool monster) {
 	if (monster)
 		fire_beams(self, start, aimdir, offset, damage, kick, TE_MONSTER_HEATBEAM, TE_HEATBEAM_SPARKS, MOD_PLASMABEAM);
 	else
@@ -1457,7 +1446,7 @@ constexpr damageflags_t DISRUPTOR_IMPACT_FLAGS = (DAMAGE_NO_POWER_ARMOR | DAMAGE
 
 constexpr gtime_t DISRUPTOR_DAMAGE_TIME = 500_ms;
 
-static THINK(disruptor_pain_daemon_think) (edict_t *self) -> void {
+static THINK(disruptor_pain_daemon_think) (gentity_t *self) -> void {
 	constexpr vec3_t pain_normal = { 0, 0, 1 };
 	int				 hurt;
 
@@ -1467,7 +1456,7 @@ static THINK(disruptor_pain_daemon_think) (edict_t *self) -> void {
 	if ((level.time - self->timestamp) > DISRUPTOR_DAMAGE_TIME) {
 		if (!self->enemy->client)
 			self->enemy->s.effects &= ~EF_TRACKERTRAIL;
-		G_FreeEdict(self);
+		G_FreeEntity(self);
 	} else {
 		if (self->enemy->health > 0) {
 			vec3_t center = (self->enemy->absmax + self->enemy->absmin) * 0.5f;
@@ -1498,13 +1487,13 @@ static THINK(disruptor_pain_daemon_think) (edict_t *self) -> void {
 		} else {
 			if (!self->enemy->client)
 				self->enemy->s.effects &= ~EF_TRACKERTRAIL;
-			G_FreeEdict(self);
+			G_FreeEntity(self);
 		}
 	}
 }
 
-static void disruptor_pain_daemon_spawn(edict_t *owner, edict_t *enemy, int damage) {
-	edict_t *daemon;
+static void disruptor_pain_daemon_spawn(gentity_t *owner, gentity_t *enemy, int damage) {
+	gentity_t *daemon;
 
 	if (enemy == nullptr)
 		return;
@@ -1519,23 +1508,23 @@ static void disruptor_pain_daemon_spawn(edict_t *owner, edict_t *enemy, int dama
 	daemon->dmg = damage;
 }
 
-static void tracker_explode(edict_t *self) {
+static void tracker_explode(gentity_t *self) {
 	gi.WriteByte(svc_temp_entity);
 	gi.WriteByte(TE_TRACKER_EXPLOSION);
 	gi.WritePosition(self->s.origin);
 	gi.multicast(self->s.origin, MULTICAST_PHS, false);
 
-	G_FreeEdict(self);
+	G_FreeEntity(self);
 }
 
-static TOUCH(disruptor_touch) (edict_t *self, edict_t *other, const trace_t &tr, bool other_touching_self) -> void {
+static TOUCH(disruptor_touch) (gentity_t *self, gentity_t *other, const trace_t &tr, bool other_touching_self) -> void {
 	float damagetime;
 
 	if (other == self->owner)
 		return;
 
 	if (tr.surface && (tr.surface->flags & SURF_SKY)) {
-		G_FreeEdict(self);
+		G_FreeEntity(self);
 		return;
 	}
 
@@ -1574,7 +1563,7 @@ static TOUCH(disruptor_touch) (edict_t *self, edict_t *other, const trace_t &tr,
 	return;
 }
 
-static THINK(disruptor_fly) (edict_t *self) -> void {
+static THINK(disruptor_fly) (gentity_t *self) -> void {
 	vec3_t dest;
 	vec3_t dir;
 	vec3_t center;
@@ -1606,8 +1595,8 @@ static THINK(disruptor_fly) (edict_t *self) -> void {
 	self->nextthink = level.time + 10_hz;
 }
 
-void fire_disruptor(edict_t *self, const vec3_t &start, const vec3_t &dir, int damage, int speed, edict_t *enemy) {
-	edict_t *bolt;
+void fire_disruptor(gentity_t *self, const vec3_t &start, const vec3_t &dir, int damage, int speed, gentity_t *enemy) {
+	gentity_t *bolt;
 	trace_t	 tr;
 
 	bolt = G_Spawn();
@@ -1640,7 +1629,7 @@ void fire_disruptor(edict_t *self, const vec3_t &start, const vec3_t &dir, int d
 		bolt->think = disruptor_fly;
 	} else {
 		bolt->nextthink = level.time + 10_sec;
-		bolt->think = G_FreeEdict;
+		bolt->think = G_FreeEntity;
 	}
 
 	tr = gi.traceline(self->s.origin, bolt->s.origin, bolt, bolt->clipmask);
@@ -1655,12 +1644,12 @@ void fire_disruptor(edict_t *self, const vec3_t &start, const vec3_t &dir, int d
 fire_flechette
 ========================
 */
-static TOUCH(flechette_touch) (edict_t *self, edict_t *other, const trace_t &tr, bool other_touching_self) -> void {
+static TOUCH(flechette_touch) (gentity_t *self, gentity_t *other, const trace_t &tr, bool other_touching_self) -> void {
 	if (other == self->owner)
 		return;
 
 	if (tr.surface && (tr.surface->flags & SURF_SKY)) {
-		G_FreeEdict(self);
+		G_FreeEntity(self);
 		return;
 	}
 
@@ -1669,7 +1658,7 @@ static TOUCH(flechette_touch) (edict_t *self, edict_t *other, const trace_t &tr,
 
 	if (other->takedamage) {
 		T_Damage(other, self, self->owner, self->velocity, self->s.origin, tr.plane.normal,
-			self->dmg, (int)self->dmg_radius, DAMAGE_NO_REG_ARMOR | DAMAGE_STAT_ONCE, MOD_ETF_RIFLE);
+			self->dmg, (int)self->splash_radius, DAMAGE_NO_REG_ARMOR | DAMAGE_STAT_ONCE, MOD_ETF_RIFLE);
 	} else {
 		gi.WriteByte(svc_temp_entity);
 		gi.WriteByte(TE_FLECHETTE);
@@ -1678,11 +1667,11 @@ static TOUCH(flechette_touch) (edict_t *self, edict_t *other, const trace_t &tr,
 		gi.multicast(self->s.origin, MULTICAST_PHS, false);
 	}
 
-	G_FreeEdict(self);
+	G_FreeEntity(self);
 }
 
-void fire_flechette(edict_t *self, const vec3_t &start, const vec3_t &dir, int damage, int speed, int kick) {
-	edict_t *flechette;
+void fire_flechette(gentity_t *self, const vec3_t &start, const vec3_t &dir, int damage, int speed, int kick) {
+	gentity_t *flechette;
 
 	flechette = G_Spawn();
 	flechette->s.origin = start;
@@ -1705,9 +1694,9 @@ void fire_flechette(edict_t *self, const vec3_t &start, const vec3_t &dir, int d
 	flechette->owner = self;
 	flechette->touch = flechette_touch;
 	flechette->nextthink = level.time + gtime_t::from_sec(8000.f / speed);
-	flechette->think = G_FreeEdict;
+	flechette->think = G_FreeEntity;
 	flechette->dmg = damage;
-	flechette->dmg_radius = (float)kick;
+	flechette->splash_radius = (float)kick;
 
 	gi.linkentity(flechette);
 
@@ -1729,15 +1718,15 @@ constexpr float	  PROX_DAMAGE_RADIUS = 192;
 constexpr int32_t PROX_HEALTH = 20;
 constexpr int32_t PROX_DAMAGE = 90;
 
-static THINK(Prox_Explode) (edict_t *ent) -> void {
+static THINK(Prox_Explode) (gentity_t *ent) -> void {
 	vec3_t	 origin;
-	edict_t *owner;
+	gentity_t *owner;
 
 	// free the trigger field
 
 	// PMM - changed teammaster to "mover" .. owner of the field is the prox
 	if (ent->teamchain && ent->teamchain->owner == ent)
-		G_FreeEdict(ent->teamchain);
+		G_FreeEntity(ent->teamchain);
 
 	owner = ent;
 	if (ent->teammaster) {
@@ -1761,10 +1750,10 @@ static THINK(Prox_Explode) (edict_t *ent) -> void {
 	gi.WritePosition(origin);
 	gi.multicast(ent->s.origin, MULTICAST_PHS, false);
 
-	G_FreeEdict(ent);
+	G_FreeEntity(ent);
 }
 
-static DIE(prox_die) (edict_t *self, edict_t *inflictor, edict_t *attacker, int damage, const vec3_t &point, const mod_t &mod) -> void {
+static DIE(prox_die) (gentity_t *self, gentity_t *inflictor, gentity_t *attacker, int damage, const vec3_t &point, const mod_t &mod) -> void {
 	// if set off by another prox, delay a little (chained explosions)
 	if (strcmp(inflictor->classname, "prox_mine")) {
 		self->takedamage = false;
@@ -1776,8 +1765,8 @@ static DIE(prox_die) (edict_t *self, edict_t *inflictor, edict_t *attacker, int 
 	}
 }
 
-static TOUCH(Prox_Field_Touch) (edict_t *ent, edict_t *other, const trace_t &tr, bool other_touching_self) -> void {
-	edict_t *prox;
+static TOUCH(Prox_Field_Touch) (gentity_t *ent, gentity_t *other, const trace_t &tr, bool other_touching_self) -> void {
+	gentity_t *prox;
 
 	if (deathmatch->integer && IsCombatDisabled())
 		return;
@@ -1809,10 +1798,10 @@ static TOUCH(Prox_Field_Touch) (edict_t *ent, edict_t *other, const trace_t &tr,
 	}
 
 	ent->solid = SOLID_NOT;
-	G_FreeEdict(ent);
+	G_FreeEntity(ent);
 }
 
-static THINK(prox_seek) (edict_t *ent) -> void {
+static THINK(prox_seek) (gentity_t *ent) -> void {
 	if (level.time > gtime_t::from_sec(ent->wait)) {
 		Prox_Explode(ent);
 	} else {
@@ -1824,8 +1813,8 @@ static THINK(prox_seek) (edict_t *ent) -> void {
 	}
 }
 
-static THINK(prox_open) (edict_t *ent) -> void {
-	edict_t *search;
+static THINK(prox_open) (gentity_t *ent) -> void {
+	gentity_t *search;
 
 	search = nullptr;
 
@@ -1900,8 +1889,8 @@ static THINK(prox_open) (edict_t *ent) -> void {
 	}
 }
 
-static TOUCH(prox_land) (edict_t *ent, edict_t *other, const trace_t &tr, bool other_touching_self) -> void {
-	edict_t *field;
+static TOUCH(prox_land) (gentity_t *ent, gentity_t *other, const trace_t &tr, bool other_touching_self) -> void {
+	gentity_t *field;
 	vec3_t	   dir;
 	vec3_t	   forward, right, up;
 	movetype_t movetype = MOVETYPE_NONE;
@@ -1912,7 +1901,7 @@ static TOUCH(prox_land) (edict_t *ent, edict_t *other, const trace_t &tr, bool o
 	// moved to prox_open so owner can get away from it if fired at pointblank range into
 	// wall
 	if (tr.surface && (tr.surface->flags & SURF_SKY)) {
-		G_FreeEdict(ent);
+		G_FreeEntity(ent);
 		return;
 	}
 
@@ -2013,7 +2002,7 @@ static TOUCH(prox_land) (edict_t *ent, edict_t *other, const trace_t &tr, bool o
 	gi.linkentity(ent);
 }
 
-static THINK(Prox_Think) (edict_t *self) -> void {
+static THINK(Prox_Think) (gentity_t *self) -> void {
 	if (self->timestamp <= level.time) {
 		Prox_Explode(self);
 		return;
@@ -2024,8 +2013,8 @@ static THINK(Prox_Think) (edict_t *self) -> void {
 	self->nextthink = level.time;
 }
 
-void fire_prox(edict_t *self, const vec3_t &start, const vec3_t &aimdir, int prox_damage_multiplier, int speed) {
-	edict_t *prox;
+void fire_prox(gentity_t *self, const vec3_t &start, const vec3_t &aimdir, int prox_damage_multiplier, int speed) {
+	gentity_t *prox;
 	vec3_t	 dir;
 	vec3_t	 forward, right, up;
 
@@ -2096,17 +2085,17 @@ void fire_prox(edict_t *self, const vec3_t &start, const vec3_t &aimdir, int pro
 // *************************
 
 struct player_melee_data_t {
-	edict_t *self;
+	gentity_t *self;
 	const vec3_t &start;
 	const vec3_t &aim;
 	int reach;
 };
 
-static BoxEdictsResult_t fire_player_melee_BoxFilter(edict_t *check, void *data_v) {
+static BoxEntitiesResult_t fire_player_melee_BoxFilter(gentity_t *check, void *data_v) {
 	const player_melee_data_t *data = (const player_melee_data_t *)data_v;
 
 	if (!check->inuse || !check->takedamage || check == data->self)
-		return BoxEdictsResult_t::Skip;
+		return BoxEntitiesResult_t::Skip;
 
 	// check distance
 	vec3_t closest_point_to_check = closest_point_to_box(data->start, check->s.origin + check->mins, check->s.origin + check->maxs);
@@ -2116,7 +2105,7 @@ static BoxEdictsResult_t fire_player_melee_BoxFilter(edict_t *check, void *data_
 	float len = dir.normalize();
 
 	if (len > data->reach)
-		return BoxEdictsResult_t::Skip;
+		return BoxEntitiesResult_t::Skip;
 
 	// check angle if we aren't intersecting
 	vec3_t shrink{ 2, 2, 2 };
@@ -2124,17 +2113,17 @@ static BoxEdictsResult_t fire_player_melee_BoxFilter(edict_t *check, void *data_
 		dir = (((check->absmin + check->absmax) / 2) - data->start).normalized();
 
 		if (dir.dot(data->aim) < 0.70f)
-			return BoxEdictsResult_t::Skip;
+			return BoxEntitiesResult_t::Skip;
 	}
 
-	return BoxEdictsResult_t::Keep;
+	return BoxEntitiesResult_t::Keep;
 }
 
-bool fire_player_melee(edict_t *self, const vec3_t &start, const vec3_t &aim, int reach, int damage, int kick, mod_t mod) {
+bool fire_player_melee(gentity_t *self, const vec3_t &start, const vec3_t &aim, int reach, int damage, int kick, mod_t mod) {
 	constexpr size_t MAX_HIT = 4;
 
 	vec3_t reach_vec{ float(reach - 1), float(reach - 1), float(reach - 1) };
-	edict_t *targets[MAX_HIT];
+	gentity_t *targets[MAX_HIT];
 
 	player_melee_data_t data{
 		self,
@@ -2144,7 +2133,7 @@ bool fire_player_melee(edict_t *self, const vec3_t &start, const vec3_t &aim, in
 	};
 
 	// find all the things we could maybe hit
-	size_t num = gi.BoxEdicts(self->absmin - reach_vec, self->absmax + reach_vec, targets, q_countof(targets), AREA_SOLID, fire_player_melee_BoxFilter, &data);
+	size_t num = gi.BoxEntities(self->absmin - reach_vec, self->absmax + reach_vec, targets, q_countof(targets), AREA_SOLID, fire_player_melee_BoxFilter, &data);
 
 	if (!num)
 		return false;
@@ -2152,7 +2141,7 @@ bool fire_player_melee(edict_t *self, const vec3_t &start, const vec3_t &aim, in
 	bool was_hit = false;
 
 	for (size_t i = 0; i < num; i++) {
-		edict_t *hit = targets[i];
+		gentity_t *hit = targets[i];
 
 		if (!hit->inuse || !hit->takedamage)
 			continue;
@@ -2188,16 +2177,16 @@ constexpr int32_t NUKE_DAMAGE = 400;
 constexpr gtime_t NUKE_QUAKE_TIME = 3_sec;
 constexpr float	  NUKE_QUAKE_STRENGTH = 100;
 
-static THINK(Nuke_Quake) (edict_t *self) -> void {
+static THINK(Nuke_Quake) (gentity_t *self) -> void {
 	uint32_t i;
-	edict_t *e;
+	gentity_t *e;
 
 	if (self->last_move_time < level.time) {
 		gi.positioned_sound(self->s.origin, self, CHAN_AUTO, self->noise_index, 0.75, ATTN_NONE, 0);
 		self->last_move_time = level.time + 500_ms;
 	}
 
-	for (i = 1, e = g_edicts + i; i < globals.num_edicts; i++, e++) {
+	for (i = 1, e = g_entities + i; i < globals.num_entities; i++, e++) {
 		if (!e->inuse)
 			continue;
 		if (!e->client)
@@ -2214,23 +2203,23 @@ static THINK(Nuke_Quake) (edict_t *self) -> void {
 	if (level.time < self->timestamp)
 		self->nextthink = level.time + FRAME_TIME_S;
 	else
-		G_FreeEdict(self);
+		G_FreeEntity(self);
 }
 
-void Nuke_Explode(edict_t *ent) {
+void Nuke_Explode(gentity_t *ent) {
 	float dmg = ent->dmg;
-	float dmg_radius = ent->dmg_radius;
+	float splash_radius = ent->splash_radius;
 
 	if (!dmg)
 		dmg = 400;
 
-	if (!dmg_radius)
+	if (!splash_radius)
 		dmg = 512;
 
 	if (ent->teammaster->client)
 		PlayerNoise(ent->teammaster, ent->s.origin, PNOISE_IMPACT);
 
-	T_RadiusNukeDamage(ent, ent->teammaster, dmg, ent, dmg_radius, MOD_NUKE);
+	T_RadiusNukeDamage(ent, ent->teammaster, dmg, ent, splash_radius, MOD_NUKE);
 
 	if (ent->dmg > NUKE_DAMAGE)
 		gi.sound(ent, CHAN_ITEM, gi.soundindex("items/damage3.wav"), 1, ATTN_NORM, 0);
@@ -2257,16 +2246,16 @@ void Nuke_Explode(edict_t *ent) {
 	ent->last_move_time = 0_ms;
 }
 
-static DIE(nuke_die) (edict_t *self, edict_t *inflictor, edict_t *attacker, int damage, const vec3_t &point, const mod_t &mod) -> void {
+static DIE(nuke_die) (gentity_t *self, gentity_t *inflictor, gentity_t *attacker, int damage, const vec3_t &point, const mod_t &mod) -> void {
 	self->takedamage = false;
 	if ((attacker) && !(strcmp(attacker->classname, "nuke"))) {
-		G_FreeEdict(self);
+		G_FreeEntity(self);
 		return;
 	}
 	Nuke_Explode(self);
 }
 
-static THINK(Nuke_Think) (edict_t *ent) -> void {
+static THINK(Nuke_Think) (gentity_t *ent) -> void {
 	float			attenuation, default_atten = 1.8f;
 	int				nuke_damage_multiplier;
 	player_muzzle_t muzzleflash;
@@ -2336,7 +2325,7 @@ static THINK(Nuke_Think) (edict_t *ent) -> void {
 	}
 }
 
-static TOUCH(nuke_bounce) (edict_t *ent, edict_t *other, const trace_t &tr, bool other_touching_self) -> void {
+static TOUCH(nuke_bounce) (gentity_t *ent, gentity_t *other, const trace_t &tr, bool other_touching_self) -> void {
 	if (tr.surface && tr.surface->id) {
 		if (frandom() > 0.5f)
 			gi.sound(ent, CHAN_BODY, gi.soundindex("weapons/hgrenb1a.wav"), 1, ATTN_NORM, 0);
@@ -2345,8 +2334,8 @@ static TOUCH(nuke_bounce) (edict_t *ent, edict_t *other, const trace_t &tr, bool
 	}
 }
 
-void fire_nuke(edict_t *self, const vec3_t &start, const vec3_t &aimdir, int speed) {
-	edict_t *nuke;
+void fire_nuke(gentity_t *self, const vec3_t &start, const vec3_t &aimdir, int speed) {
+	gentity_t *nuke;
 	vec3_t	 dir;
 	vec3_t	 forward, right, up;
 	int		 damage_modifier = P_DamageModifier(self);
@@ -2379,9 +2368,9 @@ void fire_nuke(edict_t *self, const vec3_t &start, const vec3_t &aimdir, int spe
 	nuke->flags |= FL_DAMAGEABLE;
 	nuke->dmg = NUKE_DAMAGE * damage_modifier;
 	if (damage_modifier == 1)
-		nuke->dmg_radius = NUKE_RADIUS;
+		nuke->splash_radius = NUKE_RADIUS;
 	else
-		nuke->dmg_radius = NUKE_RADIUS + NUKE_RADIUS * (0.25f * (float)damage_modifier);
+		nuke->splash_radius = NUKE_RADIUS + NUKE_RADIUS * (0.25f * (float)damage_modifier);
 	// this yields 1.0, 1.5, 2.0, 3.0 times radius
 
 	nuke->classname = "nuke";
@@ -2404,15 +2393,15 @@ constexpr gtime_t TESLA_ACTIVATE_TIME = 3_sec;
 constexpr int32_t TESLA_EXPLOSION_DAMAGE_MULT = 50; // this is the amount the damage is multiplied by for underwater explosions
 constexpr float	  TESLA_EXPLOSION_RADIUS = 200;
 
-static void tesla_remove(edict_t *self) {
-	edict_t *cur, *next;
+static void tesla_remove(gentity_t *self) {
+	gentity_t *cur, *next;
 
 	self->takedamage = false;
 	if (self->teamchain) {
 		cur = self->teamchain;
 		while (cur) {
 			next = cur->teamchain;
-			G_FreeEdict(cur);
+			G_FreeEntity(cur);
 			cur = next;
 		}
 	} else if (self->air_finished)
@@ -2423,54 +2412,54 @@ static void tesla_remove(edict_t *self) {
 	self->enemy = nullptr;
 
 	// play quad sound if quadded and an underwater explosion
-	if ((self->dmg_radius) && (self->dmg > (TESLA_DAMAGE * TESLA_EXPLOSION_DAMAGE_MULT)))
+	if ((self->splash_radius) && (self->dmg > (TESLA_DAMAGE * TESLA_EXPLOSION_DAMAGE_MULT)))
 		gi.sound(self, CHAN_ITEM, gi.soundindex("items/damage3.wav"), 1, ATTN_NORM, 0);
 
 	Grenade_Explode(self);
 }
 
-static DIE(tesla_die) (edict_t *self, edict_t *inflictor, edict_t *attacker, int damage, const vec3_t &point, const mod_t &mod) -> void {
+static DIE(tesla_die) (gentity_t *self, gentity_t *inflictor, gentity_t *attacker, int damage, const vec3_t &point, const mod_t &mod) -> void {
 	tesla_remove(self);
 }
 
-static void tesla_blow(edict_t *self) {
+static void tesla_blow(gentity_t *self) {
 	self->dmg *= TESLA_EXPLOSION_DAMAGE_MULT;
-	self->dmg_radius = TESLA_EXPLOSION_RADIUS;
+	self->splash_radius = TESLA_EXPLOSION_RADIUS;
 	tesla_remove(self);
 }
 
-static TOUCH(tesla_zap) (edict_t *self, edict_t *other, const trace_t &tr, bool other_touching_self) -> void {}
+static TOUCH(tesla_zap) (gentity_t *self, gentity_t *other, const trace_t &tr, bool other_touching_self) -> void {}
 
-static BoxEdictsResult_t tesla_think_active_BoxFilter(edict_t *check, void *data) {
-	edict_t *self = (edict_t *)data;
+static BoxEntitiesResult_t tesla_think_active_BoxFilter(gentity_t *check, void *data) {
+	gentity_t *self = (gentity_t *)data;
 
 	if (!check->inuse)
-		return BoxEdictsResult_t::Skip;
+		return BoxEntitiesResult_t::Skip;
 	if (check == self)
-		return BoxEdictsResult_t::Skip;
+		return BoxEntitiesResult_t::Skip;
 	if (check->health < 1)
-		return BoxEdictsResult_t::Skip;
+		return BoxEntitiesResult_t::Skip;
 	// don't hit teammates
 	if (check->client) {
 		if (!deathmatch->integer)
-			return BoxEdictsResult_t::Skip;
+			return BoxEntitiesResult_t::Skip;
 		else if (CheckTeamDamage(check, self->teammaster))
-			return BoxEdictsResult_t::Skip;
+			return BoxEntitiesResult_t::Skip;
 	}
 	if (!(check->svflags & SVF_MONSTER) && !(check->flags & FL_DAMAGEABLE) && !check->client)
-		return BoxEdictsResult_t::Skip;
+		return BoxEntitiesResult_t::Skip;
 
 	// don't hit other teslas in SP/coop
 	if (!deathmatch->integer && check->classname && (check->flags & FL_TRAP))
-		return BoxEdictsResult_t::Skip;
+		return BoxEntitiesResult_t::Skip;
 
-	return BoxEdictsResult_t::Keep;
+	return BoxEntitiesResult_t::Keep;
 }
 
-static THINK(tesla_think_active) (edict_t *self) -> void {
+static THINK(tesla_think_active) (gentity_t *self) -> void {
 	size_t	 num;
-	static edict_t *touch[MAX_EDICTS];
-	edict_t *hit;
+	static gentity_t *touch[MAX_ENTITIES];
+	gentity_t *hit;
 	vec3_t	 dir, start;
 	trace_t	 tr;
 
@@ -2485,7 +2474,7 @@ static THINK(tesla_think_active) (edict_t *self) -> void {
 	start = self->s.origin;
 	start[2] += 16;
 
-	num = gi.BoxEdicts(self->teamchain->absmin, self->teamchain->absmax, touch, MAX_EDICTS, AREA_SOLID, tesla_think_active_BoxFilter, self);
+	num = gi.BoxEntities(self->teamchain->absmin, self->teamchain->absmax, touch, MAX_ENTITIES, AREA_SOLID, tesla_think_active_BoxFilter, self);
 	for (size_t i = 0; i < num; i++) {
 		// if the tesla died while zapping things, stop zapping.
 		if (!(self->inuse))
@@ -2540,8 +2529,8 @@ static THINK(tesla_think_active) (edict_t *self) -> void {
 	}
 }
 
-static THINK(tesla_activate) (edict_t *self) -> void {
-	edict_t *trigger, *search;
+static THINK(tesla_activate) (gentity_t *self) -> void {
+	gentity_t *trigger, *search;
 
 	if (gi.pointcontents(self->s.origin) & (CONTENTS_SLIME | CONTENTS_LAVA | CONTENTS_WATER)) {
 		tesla_blow(self);
@@ -2590,7 +2579,7 @@ static THINK(tesla_activate) (edict_t *self) -> void {
 	self->air_finished = level.time + TESLA_TIME_TO_LIVE;
 }
 
-static THINK(tesla_think) (edict_t *ent) -> void {
+static THINK(tesla_think) (gentity_t *ent) -> void {
 	if (gi.pointcontents(ent->s.origin) & (CONTENTS_SLIME | CONTENTS_LAVA)) {
 		tesla_remove(ent);
 		return;
@@ -2623,7 +2612,7 @@ static THINK(tesla_think) (edict_t *ent) -> void {
 	}
 }
 
-static TOUCH(tesla_lava) (edict_t *ent, edict_t *other, const trace_t &tr, bool other_touching_self) -> void {
+static TOUCH(tesla_lava) (gentity_t *ent, gentity_t *other, const trace_t &tr, bool other_touching_self) -> void {
 	if (tr.contents & (CONTENTS_SLIME | CONTENTS_LAVA)) {
 		tesla_blow(ent);
 		return;
@@ -2637,8 +2626,8 @@ static TOUCH(tesla_lava) (edict_t *ent, edict_t *other, const trace_t &tr, bool 
 	}
 }
 
-void fire_tesla(edict_t *self, const vec3_t &start, const vec3_t &aimdir, int tesla_damage_multiplier, int speed) {
-	edict_t *tesla;
+void fire_tesla(gentity_t *self, const vec3_t &start, const vec3_t &aimdir, int tesla_damage_multiplier, int speed) {
+	gentity_t *tesla;
 	vec3_t	 dir;
 	vec3_t	 forward, right, up;
 
@@ -2697,7 +2686,7 @@ void fire_tesla(edict_t *self, const vec3_t &start, const vec3_t &aimdir, int te
 fire_ionripper
 =================
 */
-static THINK(ionripper_sparks) (edict_t *self) -> void {
+static THINK(ionripper_sparks) (gentity_t *self) -> void {
 	gi.WriteByte(svc_temp_entity);
 	gi.WriteByte(TE_WELDING_SPARKS);
 	gi.WriteByte(0);
@@ -2706,15 +2695,15 @@ static THINK(ionripper_sparks) (edict_t *self) -> void {
 	gi.WriteByte(irandom(0xe4, 0xe8));
 	gi.multicast(self->s.origin, MULTICAST_PVS, false);
 
-	G_FreeEdict(self);
+	G_FreeEntity(self);
 }
 
-static TOUCH(ionripper_touch) (edict_t *self, edict_t *other, const trace_t &tr, bool other_touching_self) -> void {
+static TOUCH(ionripper_touch) (gentity_t *self, gentity_t *other, const trace_t &tr, bool other_touching_self) -> void {
 	if (other == self->owner)
 		return;
 
 	if (tr.surface && (tr.surface->flags & SURF_SKY)) {
-		G_FreeEdict(self);
+		G_FreeEntity(self);
 		return;
 	}
 
@@ -2727,11 +2716,11 @@ static TOUCH(ionripper_touch) (edict_t *self, edict_t *other, const trace_t &tr,
 		return;
 	}
 
-	G_FreeEdict(self);
+	G_FreeEntity(self);
 }
 
-void fire_ionripper(edict_t *self, const vec3_t &start, const vec3_t &dir, int damage, int speed, effects_t effect) {
-	edict_t *ion;
+void fire_ionripper(gentity_t *self, const vec3_t &start, const vec3_t &dir, int damage, int speed, effects_t effect) {
+	gentity_t *ion;
 	trace_t	 tr;
 
 	ion = G_Spawn();
@@ -2758,7 +2747,7 @@ void fire_ionripper(edict_t *self, const vec3_t &start, const vec3_t &dir, int d
 	ion->nextthink = level.time + 3_sec;
 	ion->think = ionripper_sparks;
 	ion->dmg = damage;
-	ion->dmg_radius = 100;
+	ion->splash_radius = 100;
 	gi.linkentity(ion);
 
 	tr = gi.traceline(self->s.origin, ion->s.origin, ion, ion->clipmask);
@@ -2774,9 +2763,9 @@ void fire_ionripper(edict_t *self, const vec3_t &start, const vec3_t &dir, int d
 fire_heat
 =================
 */
-static THINK(heat_think) (edict_t *self) -> void {
-	edict_t *target = nullptr;
-	edict_t *acquire = nullptr;
+static THINK(heat_think) (gentity_t *self) -> void {
+	gentity_t *target = nullptr;
+	gentity_t *acquire = nullptr;
 	vec3_t	 vec;
 	vec3_t	 oldang;
 	float	 len;
@@ -2793,10 +2782,10 @@ static THINK(heat_think) (edict_t *self) -> void {
 			continue;
 		if (target->health <= 0)
 			continue;
+		if (target->client && target->client->eliminated)
+			continue;
 		if (!visible(self, target))
 			continue;
-		//if (!infront(self, target))
-		//	continue;
 
 		vec = self->s.origin - target->s.origin;
 		len = vec.length();
@@ -2838,8 +2827,8 @@ static THINK(heat_think) (edict_t *self) -> void {
 	self->nextthink = level.time + FRAME_TIME_MS;
 }
 
-void fire_heat(edict_t *self, const vec3_t &start, const vec3_t &dir, int damage, int speed, float damage_radius, int radius_damage, float turn_fraction) {
-	edict_t *heat;
+void fire_heat(gentity_t *self, const vec3_t &start, const vec3_t &dir, int damage, int speed, float damage_radius, int radius_damage, float turn_fraction) {
+	gentity_t *heat;
 
 	heat = G_Spawn();
 	heat->s.origin = start;
@@ -2862,8 +2851,8 @@ void fire_heat(edict_t *self, const vec3_t &start, const vec3_t &dir, int damage
 	heat->think = heat_think;
 
 	heat->dmg = damage;
-	heat->radius_dmg = radius_damage;
-	heat->dmg_radius = damage_radius;
+	heat->splash_damage = radius_damage;
+	heat->splash_radius = damage_radius;
 	heat->s.sound = gi.soundindex("weapons/rockfly.wav");
 
 	gi.linkentity(heat);
@@ -2872,17 +2861,17 @@ void fire_heat(edict_t *self, const vec3_t &start, const vec3_t &dir, int damage
 
 /*
 =================
-fire_plasma
+fire_phalanx
 =================
 */
-static TOUCH(plasma_touch) (edict_t *ent, edict_t *other, const trace_t &tr, bool other_touching_self) -> void {
+static TOUCH(phalanx_touch) (gentity_t *ent, gentity_t *other, const trace_t &tr, bool other_touching_self) -> void {
 	vec3_t origin;
 
 	if (other == ent->owner)
 		return;
 
 	if (tr.surface && (tr.surface->flags & SURF_SKY)) {
-		G_FreeEdict(ent);
+		G_FreeEntity(ent);
 		return;
 	}
 
@@ -2892,51 +2881,50 @@ static TOUCH(plasma_touch) (edict_t *ent, edict_t *other, const trace_t &tr, boo
 	// calculate position for the explosion entity
 	origin = ent->s.origin + (ent->velocity * -0.02f);
 
-	if (other->takedamage) {
+	if (other->takedamage)
 		T_Damage(other, ent, ent->owner, ent->velocity, ent->s.origin, tr.plane.normal, ent->dmg, 0, DAMAGE_ENERGY, MOD_PHALANX);
-	}
 
-	T_RadiusDamage(ent, ent->owner, (float)ent->radius_dmg, other, ent->dmg_radius, DAMAGE_ENERGY, MOD_PHALANX);
+	T_RadiusDamage(ent, ent->owner, (float)ent->splash_damage, other, ent->splash_radius, DAMAGE_ENERGY, MOD_PHALANX);
 
 	gi.WriteByte(svc_temp_entity);
 	gi.WriteByte(TE_PLASMA_EXPLOSION);
 	gi.WritePosition(origin);
 	gi.multicast(ent->s.origin, MULTICAST_PHS, false);
 
-	G_FreeEdict(ent);
+	G_FreeEntity(ent);
 }
 
-void fire_plasma(edict_t *self, const vec3_t &start, const vec3_t &dir, int damage, int speed, float damage_radius, int radius_damage) {
-	edict_t *plasma;
+void fire_phalanx(gentity_t *self, const vec3_t &start, const vec3_t &dir, int damage, int speed, float damage_radius, int radius_damage) {
+	gentity_t *phalanx;
 
-	plasma = G_Spawn();
-	plasma->s.origin = start;
-	plasma->movedir = dir;
-	plasma->s.angles = vectoangles(dir);
-	plasma->velocity = dir * speed;
-	plasma->movetype = MOVETYPE_FLYMISSILE;
-	plasma->clipmask = MASK_PROJECTILE;
+	phalanx = G_Spawn();
+	phalanx->s.origin = start;
+	phalanx->movedir = dir;
+	phalanx->s.angles = vectoangles(dir);
+	phalanx->velocity = dir * speed;
+	phalanx->movetype = MOVETYPE_FLYMISSILE;
+	phalanx->clipmask = MASK_PROJECTILE;
 
 	// [Paril-KEX]
 	if (self->client && !G_ShouldPlayersCollide(true))
-		plasma->clipmask &= ~CONTENTS_PLAYER;
+		phalanx->clipmask &= ~CONTENTS_PLAYER;
 
-	plasma->solid = SOLID_BBOX;
-	plasma->svflags |= SVF_PROJECTILE;
-	plasma->flags |= FL_DODGE;
-	plasma->owner = self;
-	plasma->touch = plasma_touch;
-	plasma->nextthink = level.time + gtime_t::from_sec(8000.f / speed);
-	plasma->think = G_FreeEdict;
-	plasma->dmg = damage;
-	plasma->radius_dmg = radius_damage;
-	plasma->dmg_radius = damage_radius;
-	plasma->s.sound = gi.soundindex("weapons/rockfly.wav");
+	phalanx->solid = SOLID_BBOX;
+	phalanx->svflags |= SVF_PROJECTILE;
+	phalanx->flags |= FL_DODGE;
+	phalanx->owner = self;
+	phalanx->touch = phalanx_touch;
+	phalanx->nextthink = level.time + gtime_t::from_sec(8000.f / speed);
+	phalanx->think = G_FreeEntity;
+	phalanx->dmg = damage;
+	phalanx->splash_damage = radius_damage;
+	phalanx->splash_radius = damage_radius;
+	phalanx->s.sound = gi.soundindex("weapons/rockfly.wav");
 
-	plasma->s.modelindex = gi.modelindex("sprites/s_photon.sp2");
-	plasma->s.effects |= EF_PLASMA | EF_ANIM_ALLFAST;
+	phalanx->s.modelindex = gi.modelindex("sprites/s_photon.sp2");
+	phalanx->s.effects |= EF_PLASMA | EF_ANIM_ALLFAST;
 
-	gi.linkentity(plasma);
+	gi.linkentity(phalanx);
 }
 
 
@@ -2946,9 +2934,9 @@ void fire_plasma(edict_t *self, const vec3_t &start, const vec3_t &dir, int dama
 fire_trap
 =================
 */
-static THINK(Trap_Gib_Think) (edict_t *ent) -> void {
+static THINK(Trap_Gib_Think) (gentity_t *ent) -> void {
 	if (ent->owner->s.frame != 5) {
-		G_FreeEdict(ent);
+		G_FreeEntity(ent);
 		return;
 	}
 
@@ -2979,13 +2967,13 @@ static THINK(Trap_Gib_Think) (edict_t *ent) -> void {
 	gi.linkentity(ent);
 }
 
-static DIE(trap_die) (edict_t *self, edict_t *inflictor, edict_t *attacker, int damage, const vec3_t &point, const mod_t &mod) -> void {
+static DIE(trap_die) (gentity_t *self, gentity_t *inflictor, gentity_t *attacker, int damage, const vec3_t &point, const mod_t &mod) -> void {
 	BecomeExplosion1(self);
 }
 
-static void SP_item_foodcube(edict_t *self) {
+static void SP_item_foodcube(gentity_t *self) {
 	if (deathmatch->integer && g_no_health->integer) {
-		G_FreeEdict(self);
+		G_FreeEntity(self);
 		return;
 	}
 
@@ -2995,9 +2983,9 @@ static void SP_item_foodcube(edict_t *self) {
 
 void SpawnDamage(int type, const vec3_t &origin, const vec3_t &normal, int damage);
 
-static THINK(Trap_Think) (edict_t *ent) -> void {
-	edict_t *target = nullptr;
-	edict_t *best = nullptr;
+static THINK(Trap_Think) (gentity_t *ent) -> void {
+	gentity_t *target = nullptr;
+	gentity_t *best = nullptr;
 	vec3_t	 vec;
 	float	 len;
 	float	 oldlen = 8000;
@@ -3034,7 +3022,7 @@ static THINK(Trap_Think) (edict_t *ent) -> void {
 		ent->s.frame++;
 		if (ent->s.frame == 8) {
 			ent->nextthink = level.time + 1_sec;
-			ent->think = G_FreeEdict;
+			ent->think = G_FreeEntity;
 			ent->s.effects &= ~EF_TRAP;
 
 			best = G_Spawn();
@@ -3100,6 +3088,8 @@ static THINK(Trap_Think) (edict_t *ent) -> void {
 			continue;
 		if (target->health <= 0)
 			continue;
+		if (target->client && target->client->eliminated)
+			continue;
 		if (!visible(ent, target))
 			continue;
 		vec = ent->s.origin - target->s.origin;
@@ -3152,8 +3142,8 @@ static THINK(Trap_Think) (edict_t *ent) -> void {
 				ent->s.frame = 5;
 
 				// link up any gibs that this monster may have spawned
-				for (size_t i = 0; i < globals.num_edicts; i++) {
-					edict_t *e = &g_edicts[i];
+				for (size_t i = 0; i < globals.num_entities; i++) {
+					gentity_t *e = &g_entities[i];
 
 					if (!e->inuse)
 						continue;
@@ -3178,8 +3168,8 @@ static THINK(Trap_Think) (edict_t *ent) -> void {
 	}
 }
 
-void fire_trap(edict_t *self, const vec3_t &start, const vec3_t &aimdir, int speed) {
-	edict_t *trap;
+void fire_trap(gentity_t *self, const vec3_t &start, const vec3_t &aimdir, int speed) {
+	gentity_t *trap;
 	vec3_t	 dir;
 	vec3_t	 forward, right, up;
 

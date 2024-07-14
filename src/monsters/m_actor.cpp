@@ -64,7 +64,7 @@ mframe_t actor_frames_stand[] = {
 };
 MMOVE_T(actor_move_stand) = { FRAME_stand101, FRAME_stand140, actor_frames_stand, nullptr };
 
-MONSTERINFO_STAND(actor_stand) (edict_t *self) -> void {
+MONSTERINFO_STAND(actor_stand) (gentity_t *self) -> void {
 	M_SetAnimation(self, &actor_move_stand);
 
 	// randomize on startup
@@ -84,7 +84,7 @@ mframe_t actor_frames_walk[] = {
 };
 MMOVE_T(actor_move_walk) = { FRAME_walk01, FRAME_walk08, actor_frames_walk, nullptr };
 
-MONSTERINFO_WALK(actor_walk) (edict_t *self) -> void {
+MONSTERINFO_WALK(actor_walk) (gentity_t *self) -> void {
 	M_SetAnimation(self, &actor_move_walk);
 }
 
@@ -98,7 +98,7 @@ mframe_t actor_frames_run[] = {
 };
 MMOVE_T(actor_move_run) = { FRAME_run02, FRAME_run07, actor_frames_run, nullptr };
 
-MONSTERINFO_RUN(actor_run) (edict_t *self) -> void {
+MONSTERINFO_RUN(actor_run) (gentity_t *self) -> void {
 	if ((level.time < self->pain_debounce_time) && (!self->enemy)) {
 		if (self->movetarget)
 			actor_walk(self);
@@ -182,7 +182,7 @@ const char *messages[] = {
 	"Check your targets"
 };
 
-static PAIN(actor_pain) (edict_t *self, edict_t *other, float kick, int damage, const mod_t &mod) -> void {
+static PAIN(actor_pain) (gentity_t *self, gentity_t *other, float kick, int damage, const mod_t &mod) -> void {
 	int n;
 
 	if (level.time < self->pain_debounce_time)
@@ -201,7 +201,7 @@ static PAIN(actor_pain) (edict_t *self, edict_t *other, float kick, int damage, 
 			M_SetAnimation(self, &actor_move_flipoff);
 		else
 			M_SetAnimation(self, &actor_move_taunt);
-		name = actor_names[(self - g_edicts) % q_countof(actor_names)];
+		name = actor_names[(self - g_entities) % q_countof(actor_names)];
 		gi.LocClient_Print(other, PRINT_CHAT, "{}: {}!\n", name, random_element(messages));
 		return;
 	}
@@ -215,14 +215,14 @@ static PAIN(actor_pain) (edict_t *self, edict_t *other, float kick, int damage, 
 		M_SetAnimation(self, &actor_move_pain3);
 }
 
-MONSTERINFO_SETSKIN(actor_setskin) (edict_t *self) -> void {
+MONSTERINFO_SETSKIN(actor_setskin) (gentity_t *self) -> void {
 	if (self->health < (self->max_health / 2))
 		self->s.skinnum = 1;
 	else
 		self->s.skinnum = 0;
 }
 
-static void actorMachineGun(edict_t *self) {
+static void actorMachineGun(gentity_t *self) {
 	vec3_t start, target;
 	vec3_t forward, right;
 
@@ -244,7 +244,7 @@ static void actorMachineGun(edict_t *self) {
 	monster_fire_bullet(self, start, forward, 3, 4, DEFAULT_BULLET_HSPREAD, DEFAULT_BULLET_VSPREAD, MZ2_ACTOR_MACHINEGUN_1);
 }
 
-static void actor_dead(edict_t *self) {
+static void actor_dead(gentity_t *self) {
 	self->mins = { -16, -16, -24 };
 	self->maxs = { 16, 16, -8 };
 	self->movetype = MOVETYPE_TOSS;
@@ -281,7 +281,7 @@ mframe_t actor_frames_death2[] = {
 };
 MMOVE_T(actor_move_death2) = { FRAME_death201, FRAME_death213, actor_frames_death2, actor_dead };
 
-static DIE(actor_die) (edict_t *self, edict_t *inflictor, edict_t *attacker, int damage, const vec3_t &point, const mod_t &mod) -> void {
+static DIE(actor_die) (gentity_t *self, gentity_t *inflictor, gentity_t *attacker, int damage, const vec3_t &point, const mod_t &mod) -> void {
 	// check for gib
 	if (self->health <= -80) {
 		//		gi.sound (self, CHAN_VOICE, actor.sound_gib, 1, ATTN_NORM, 0);
@@ -308,7 +308,7 @@ static DIE(actor_die) (edict_t *self, edict_t *inflictor, edict_t *attacker, int
 		M_SetAnimation(self, &actor_move_death2);
 }
 
-static void actor_fire(edict_t *self) {
+static void actor_fire(gentity_t *self) {
 	actorMachineGun(self);
 
 	if (level.time >= self->monsterinfo.fire_wait)
@@ -325,12 +325,12 @@ mframe_t actor_frames_attack[] = {
 };
 MMOVE_T(actor_move_attack) = { FRAME_attak01, FRAME_attak04, actor_frames_attack, actor_run };
 
-MONSTERINFO_ATTACK(actor_attack) (edict_t *self) -> void {
+MONSTERINFO_ATTACK(actor_attack) (gentity_t *self) -> void {
 	M_SetAnimation(self, &actor_move_attack);
 	self->monsterinfo.fire_wait = level.time + random_time(1_sec, 2.6_sec);
 }
 
-static USE(actor_use) (edict_t *self, edict_t *other, edict_t *activator) -> void {
+static USE(actor_use) (gentity_t *self, gentity_t *other, gentity_t *activator) -> void {
 	vec3_t v;
 
 	self->goalentity = self->movetarget = G_PickTarget(self->target);
@@ -351,21 +351,21 @@ static USE(actor_use) (edict_t *self, edict_t *other, edict_t *activator) -> voi
 /*QUAKED misc_actor (1 .5 0) (-16 -16 -24) (16 16 32) x x x x x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
  */
 
-void SP_misc_actor(edict_t *self) {
+void SP_misc_actor(gentity_t *self) {
 	if (!M_AllowSpawn(self)) {
-		G_FreeEdict(self);
+		G_FreeEntity(self);
 		return;
 	}
 
 	if (!self->targetname) {
 		gi.Com_PrintFmt("{}: no targetname\n", *self);
-		G_FreeEdict(self);
+		G_FreeEntity(self);
 		return;
 	}
 
 	if (!self->target) {
 		gi.Com_PrintFmt("{}: no target\n", *self);
-		G_FreeEdict(self);
+		G_FreeEntity(self);
 		return;
 	}
 
@@ -424,7 +424,7 @@ constexpr spawnflags_t SPAWNFLAG_TARGET_ACTOR_ATTACK = 4_spawnflag;
 constexpr spawnflags_t SPAWNFLAG_TARGET_ACTOR_HOLD = 16_spawnflag;
 constexpr spawnflags_t SPAWNFLAG_TARGET_ACTOR_BRUTAL = 32_spawnflag;
 
-static TOUCH(target_actor_touch) (edict_t *self, edict_t *other, const trace_t &tr, bool other_touching_self) -> void {
+static TOUCH(target_actor_touch) (gentity_t *self, gentity_t *other, const trace_t &tr, bool other_touching_self) -> void {
 	vec3_t v;
 
 	if (other->movetarget != self)
@@ -437,7 +437,7 @@ static TOUCH(target_actor_touch) (edict_t *self, edict_t *other, const trace_t &
 
 	if (self->message)
 		for (auto ce : active_clients())
-			gi.LocClient_Print(ce, PRINT_CHAT, "{}: {}\n", actor_names[(other - g_edicts) % q_countof(actor_names)], self->message);
+			gi.LocClient_Print(ce, PRINT_CHAT, "{}: {}\n", actor_names[(other - g_entities) % q_countof(actor_names)], self->message);
 
 	if (self->spawnflags.has(SPAWNFLAG_TARGET_ACTOR_JUMP)) { // jump
 		other->velocity[0] = self->movedir[0] * self->speed;
@@ -491,7 +491,7 @@ static TOUCH(target_actor_touch) (edict_t *self, edict_t *other, const trace_t &
 	}
 }
 
-void SP_target_actor(edict_t *self) {
+void SP_target_actor(gentity_t *self) {
 	if (!self->targetname)
 		gi.Com_PrintFmt("{}: no targetname\n", *self);
 

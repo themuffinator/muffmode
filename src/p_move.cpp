@@ -192,7 +192,7 @@ Slide off of the impacting object
 returns the blocked flags (1 = floor, 2 = step / wall)
 ==================
 */
-void PM_ClipVelocity(const vec3_t &in, const vec3_t &normal, vec3_t &out, float overbounce) {
+static void PM_ClipVelocity(const vec3_t &in, const vec3_t &normal, vec3_t &out, float overbounce) {
 	float backoff;
 	float change;
 	int	  i;
@@ -207,11 +207,11 @@ void PM_ClipVelocity(const vec3_t &in, const vec3_t &normal, vec3_t &out, float 
 	}
 }
 
-trace_t PM_Clip(const vec3_t &start, const vec3_t &mins, const vec3_t &maxs, const vec3_t &end, contents_t mask) {
+static trace_t PM_Clip(const vec3_t &start, const vec3_t &mins, const vec3_t &maxs, const vec3_t &end, contents_t mask) {
 	return pm->clip(start, &mins, &maxs, end, mask);
 }
 
-trace_t PM_Trace(const vec3_t &start, const vec3_t &mins, const vec3_t &maxs, const vec3_t &end, contents_t mask = CONTENTS_NONE) {
+static trace_t PM_Trace(const vec3_t &start, const vec3_t &mins, const vec3_t &maxs, const vec3_t &end, contents_t mask = CONTENTS_NONE) {
 	if (pm->s.pm_type == PM_SPECTATOR)
 		return PM_Clip(start, mins, maxs, end, MASK_SOLID);
 
@@ -249,7 +249,7 @@ Does not modify any world state?
 constexpr float	 MIN_STEP_NORMAL = 0.7f; // can't step up onto very steep slopes
 constexpr size_t MAX_CLIP_PLANES = 5;
 
-inline void PM_RecordTrace(touch_list_t &touch, trace_t &tr) {
+static inline void PM_RecordTrace(touch_list_t &touch, trace_t &tr) {
 	if (touch.num == MAXTOUCH)
 		return;
 
@@ -397,7 +397,7 @@ void PM_StepSlideMove_Generic(vec3_t &origin, vec3_t &velocity, float frametime,
 	}
 }
 
-inline void PM_StepSlideMove_() {
+static inline void PM_StepSlideMove_() {
 	PM_StepSlideMove_Generic(pml.origin, pml.velocity, pml.frametime, pm->mins, pm->maxs, pm->touch, pm->s.pm_time, PM_Trace_Auto);
 }
 
@@ -407,7 +407,7 @@ PM_StepSlideMove
 
 ==================
 */
-void PM_StepSlideMove() {
+static void PM_StepSlideMove() {
 	vec3_t	start_o, start_v;
 	vec3_t	down_o, down_v;
 	trace_t trace;
@@ -498,7 +498,7 @@ PM_Friction
 Handles both ground friction and water friction
 ==================
 */
-void PM_Friction() {
+static void PM_Friction() {
 	float *vel;
 	float  speed, newspeed, control;
 	float  friction;
@@ -545,7 +545,7 @@ PM_Accelerate
 Handles user intended acceleration
 ==============
 */
-void PM_Accelerate(const vec3_t &wishdir, float wishspeed, float accel) {
+static void PM_Accelerate(const vec3_t &wishdir, float wishspeed, float accel) {
 	int	  i;
 	float addspeed, accelspeed, currentspeed;
 
@@ -561,7 +561,7 @@ void PM_Accelerate(const vec3_t &wishdir, float wishspeed, float accel) {
 		pml.velocity[i] += accelspeed * wishdir[i];
 }
 
-void PM_AirAccelerate(const vec3_t &wishdir, float wishspeed, float accel) {
+static void PM_AirAccelerate(const vec3_t &wishdir, float wishspeed, float accel) {
 	int	  i;
 	float addspeed, accelspeed, currentspeed, wishspd = wishspeed;
 
@@ -584,7 +584,7 @@ void PM_AirAccelerate(const vec3_t &wishdir, float wishspeed, float accel) {
 PM_AddCurrents
 =============
 */
-void PM_AddCurrents(vec3_t &wishvel) {
+static void PM_AddCurrents(vec3_t &wishvel) {
 	vec3_t v;
 	float  s;
 
@@ -722,7 +722,7 @@ PM_WaterMove
 
 ===================
 */
-void PM_WaterMove() {
+static void PM_WaterMove() {
 	int	   i;
 	vec3_t wishvel;
 	float  wishspeed;
@@ -772,7 +772,7 @@ PM_AirMove
 
 ===================
 */
-void PM_AirMove() {
+static void PM_AirMove() {
 	int	   i;
 	vec3_t wishvel;
 	float  fmove, smove;
@@ -842,7 +842,7 @@ void PM_AirMove() {
 	}
 }
 
-inline void PM_GetWaterLevel(const vec3_t &position, water_level_t &level, contents_t &type) {
+static inline void PM_GetWaterLevel(const vec3_t &position, water_level_t &level, contents_t &type) {
 	//
 	// get waterlevel, accounting for ducking
 	//
@@ -878,7 +878,7 @@ inline void PM_GetWaterLevel(const vec3_t &position, water_level_t &level, conte
 PM_CatagorizePosition
 =============
 */
-void PM_CatagorizePosition() {
+static void PM_CatagorizePosition() {
 	vec3_t	   point;
 	trace_t	   trace;
 
@@ -963,7 +963,7 @@ void PM_CatagorizePosition() {
 PM_CheckJump
 =============
 */
-void PM_CheckJump() {
+static void PM_CheckJump() {
 	if (pm->s.pm_flags & PMF_TIME_LAND) { // hasn't been long enough since landing to jump again
 		return;
 	}
@@ -995,7 +995,10 @@ void PM_CheckJump() {
 
 	float jump_height = 270.f;
 
-	pml.velocity[2] += jump_height;
+	if (pml.origin[2] < 0)
+		jump_height += 4.0f;
+
+	pml.velocity[2] = ceil(pml.velocity[2] + jump_height);
 	if (pml.velocity[2] < jump_height)
 		pml.velocity[2] = jump_height;
 }
@@ -1005,7 +1008,7 @@ void PM_CheckJump() {
 PM_CheckSpecialMovement
 =============
 */
-void PM_CheckSpecialMovement() {
+static void PM_CheckSpecialMovement() {
 	vec3_t	spot;
 	vec3_t	flatforward;
 	trace_t trace;
@@ -1106,7 +1109,7 @@ void PM_CheckSpecialMovement() {
 PM_FlyMove
 ===============
 */
-void PM_FlyMove(bool doclip) {
+static void PM_FlyMove(bool doclip) {
 	float	speed, drop, friction, control, newspeed;
 	float	currentspeed, addspeed, accelspeed;
 	int		i;
@@ -1194,7 +1197,7 @@ void PM_FlyMove(bool doclip) {
 	}
 }
 
-void PM_SetDimensions() {
+static void PM_SetDimensions() {
 	pm->mins[0] = -16;
 	pm->mins[1] = -16;
 
@@ -1219,7 +1222,7 @@ void PM_SetDimensions() {
 	}
 }
 
-inline bool PM_AboveWater() {
+static inline bool PM_AboveWater() {
 	const vec3_t below = pml.origin - vec3_t{ 0, 0, 8 };
 
 	bool solid_below = pm->trace(pml.origin, &pm->mins, &pm->maxs, below, pm->player, MASK_SOLID).fraction < 1.0f;
@@ -1242,7 +1245,7 @@ PM_CheckDuck
 Sets mins, maxs, and pm->viewheight
 ==============
 */
-bool PM_CheckDuck() {
+static bool PM_CheckDuck() {
 	if (pm->s.pm_type == PM_GIB)
 		return false;
 
@@ -1292,7 +1295,7 @@ bool PM_CheckDuck() {
 PM_DeadMove
 ==============
 */
-void PM_DeadMove() {
+static void PM_DeadMove() {
 	float forward;
 
 	if (!pm->groundentity)
@@ -1327,7 +1330,7 @@ On exit, the origin will have a value that is pre-quantized to the PMove
 precision of the network channel and in a valid position.
 ================
 */
-void PM_SnapPosition() {
+static void PM_SnapPosition() {
 	pm->s.velocity = pml.velocity;
 	pm->s.origin = pml.origin;
 
@@ -1346,7 +1349,7 @@ PM_InitialSnapPosition
 
 ================
 */
-void PM_InitialSnapPosition() {
+static void PM_InitialSnapPosition() {
 	int					   x, y, z;
 	vec3_t				base;
 	constexpr int		   offset[3] = { 0, -1, 1 };
@@ -1375,7 +1378,7 @@ PM_ClampAngles
 
 ================
 */
-void PM_ClampAngles() {
+static void PM_ClampAngles() {
 	if (pm->s.pm_flags & PMF_TIME_TELEPORT) {
 		pm->viewangles[YAW] = pm->cmd.angles[YAW] + pm->s.delta_angles[YAW];
 		pm->viewangles[PITCH] = 0;

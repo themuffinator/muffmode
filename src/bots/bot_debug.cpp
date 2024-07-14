@@ -5,10 +5,10 @@
 #include "bot_utils.h"
 #include "bot_debug.h"
 
-static const edict_t *escortBot = nullptr;
-static const edict_t *escortActor = nullptr;
+static const gentity_t *escortBot = nullptr;
+static const gentity_t *escortActor = nullptr;
 
-static const edict_t *moveToPointBot = nullptr;
+static const gentity_t *moveToPointBot = nullptr;
 static vec3_t moveToPointPos = vec3_origin;
 
 // how close the bot will try to get to the move to point goal
@@ -19,8 +19,8 @@ constexpr float moveToPointTolerance = 16.0f;
 ShowMonsterPathToPlayer
 ================
 */
-static void ShowMonsterPathToPlayer(const edict_t *player) {
-	const edict_t *monster = FindFirstMonster();
+static void ShowMonsterPathToPlayer(const gentity_t *player) {
+	const gentity_t *monster = FindFirstMonster();
 	if (monster == nullptr) {
 		return;
 	}
@@ -67,7 +67,7 @@ else by you.
 Check the console for debugging feedback...
 ================
 */
-static void UpdateFollowActorDebug(const edict_t *localPlayer) {
+static void UpdateFollowActorDebug(const gentity_t *localPlayer) {
 	if (bot_debug_follow_actor->integer) {
 		if (bot_debug_follow_actor->integer == 1) {
 			escortBot = FindFirstBot();
@@ -112,7 +112,7 @@ business until you give it something else to do.
 Check the console for debugging feedback...
 ================
 */
-static void UpdateMoveToPointDebug(const edict_t *localPlayer) {
+static void UpdateMoveToPointDebug(const gentity_t *localPlayer) {
 	if (bot_debug_move_to_point->integer) {
 		if (bot_debug_move_to_point->integer == 1) {
 			if (localPlayer->client->buttons & BUTTON_ATTACK) {
@@ -162,7 +162,7 @@ void Bot_UpdateDebug() {
 	if (!g_cheats->integer)
 		return;
 
-	const edict_t *localPlayer = FindLocalPlayer();
+	const gentity_t *localPlayer = FindLocalPlayer();
 	if (localPlayer == nullptr) {
 		return;
 	}

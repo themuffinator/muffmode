@@ -334,7 +334,7 @@ struct save_type_deducer<double> {
 
 // special types
 template<>
-struct save_type_deducer<edict_t *> {
+struct save_type_deducer<gentity_t *> {
 	static constexpr save_field_t get_save_type(const char *name, size_t offset) {
 		return { name, offset, { ST_ENTITY } };
 	}
@@ -718,7 +718,7 @@ FIELD_AUTO(hand),
 
 FIELD_AUTO(health),
 FIELD_AUTO(max_health),
-FIELD_AUTO(savedFlags),
+FIELD_AUTO(saved_flags),
 
 FIELD_AUTO(selected_item),
 FIELD_SIMPLE(inventory, ST_INVENTORY),
@@ -736,7 +736,7 @@ FIELD_AUTO(game_help2changed),
 FIELD_AUTO(helpchanged),
 FIELD_AUTO(help_time),
 
-FIELD_AUTO(spectator),
+//FIELD_AUTO(spectator),
 
 // save the wanted fog, but not the current fog
 // or transition time so it sends immediately
@@ -760,7 +760,7 @@ FIELD_STRUCT(resp.coop_respawn, client_persistant_t),
 FIELD_AUTO(resp.entertime),
 FIELD_AUTO(resp.score),
 FIELD_AUTO(resp.cmd_angles),
-FIELD_AUTO(resp.spectator),
+//FIELD_AUTO(resp.spectator),
 // old_pmove is not necessary to persist
 
 // showscores, showinventory, showhelp not necessary
@@ -867,7 +867,7 @@ static bool edict_t_gravityVector_is_empty(const void *data) {
 }
 
 // clang-format off
-#define DECLARE_SAVE_STRUCT edict_t
+#define DECLARE_SAVE_STRUCT gentity_t
 SAVE_STRUCT_START
 // entity_state_t stuff; only one instance
 // so no need to do a whole save struct
@@ -977,8 +977,8 @@ FIELD_LEVEL_STRING(map),
 FIELD_AUTO(viewheight),
 FIELD_AUTO(takedamage),
 FIELD_AUTO(dmg),
-FIELD_AUTO(radius_dmg),
-FIELD_AUTO(dmg_radius),
+FIELD_AUTO(splash_damage),
+FIELD_AUTO(splash_radius),
 FIELD_AUTO(sounds),
 FIELD_AUTO(count),
 
@@ -1162,7 +1162,7 @@ FIELD_AUTO(monsterinfo.jump_time),
 FIELD_SIMPLE(monsterinfo.reinforcements, ST_REINFORCEMENTS),
 FIELD_AUTO(monsterinfo.chosen_reinforcements),
 
-// back to edict_t
+// back to gentity_t
 FIELD_AUTO(plat2flags),
 FIELD_AUTO(offset),
 FIELD_AUTO(gravityVector).set_is_empty(edict_t_gravityVector_is_empty),
@@ -1570,13 +1570,13 @@ void read_save_type_json(const Json::Value &json, void *data, const save_type_t 
 		return;
 	case ST_ENTITY:
 		if (json.isNull())
-			*((edict_t **)data) = nullptr;
+			*((gentity_t **)data) = nullptr;
 		else if (!json.isUInt())
 			json_print_error(field, "expected null or integer", false);
-		else if (json.asUInt() >= globals.max_edicts)
+		else if (json.asUInt() >= globals.max_entities)
 			json_print_error(field, "entity index out of range", false);
 		else
-			*((edict_t **)data) = globals.edicts + json.asUInt();
+			*((gentity_t **)data) = globals.gentities + json.asUInt();
 
 		return;
 	case ST_ITEM_POINTER:
@@ -1967,7 +1967,7 @@ bool write_save_type_json(const void *data, const save_type_t *type, bool null_f
 		return true;
 	}
 	case ST_ENTITY: {
-		const edict_t *entity = *reinterpret_cast<const edict_t *const *>(data);
+		const gentity_t *entity = *reinterpret_cast<const gentity_t *const *>(data);
 
 		if (null_for_empty && TYPED_DATA_IS_EMPTY(type, entity == nullptr))
 			return false;
@@ -2236,9 +2236,9 @@ void ReadGameJson(const char *jsonString) {
 	uint32_t max_clients = game.maxclients;
 
 	game = {};
-	g_edicts = (edict_t *)gi.TagMalloc(max_entities * sizeof(g_edicts[0]), TAG_GAME);
+	g_entities = (gentity_t *)gi.TagMalloc(max_entities * sizeof(g_entities[0]), TAG_GAME);
 	game.clients = (gclient_t *)gi.TagMalloc(max_clients * sizeof(game.clients[0]), TAG_GAME);
-	globals.edicts = g_edicts;
+	globals.gentities = g_entities;
 
 	// read game
 	json_push_stack("game");
@@ -2282,8 +2282,8 @@ char *WriteLevelJson(bool transition, size_t *out_size) {
 	Json::Value entities(Json::objectValue);
 	char		number[16];
 
-	for (size_t i = 0; i < globals.num_edicts; i++) {
-		if (!globals.edicts[i].inuse)
+	for (size_t i = 0; i < globals.num_entities; i++) {
+		if (!globals.gentities[i].inuse)
 			continue;
 		// clear all the client inuse flags before saving so that
 		// when the level is re-entered, the clients will spawn
@@ -2298,7 +2298,7 @@ char *WriteLevelJson(bool transition, size_t *out_size) {
 		else
 			gi.Com_ErrorFmt("error formatting number: {}", std::make_error_code(result.ec).message());
 
-		write_save_struct_json(&globals.edicts[i], &edict_t_savestruct, false, entities[number]);
+		write_save_struct_json(&globals.gentities[i], &gentity_t_savestruct, false, entities[number]);
 	}
 
 	json["entities"] = std::move(entities);
@@ -2317,8 +2317,8 @@ void ReadLevelJson(const char *jsonString) {
 	Json::Value json = parseJson(jsonString);
 
 	// wipe all the entities
-	memset(g_edicts, 0, game.maxentities * sizeof(g_edicts[0]));
-	globals.num_edicts = game.maxclients + 1;
+	memset(g_entities, 0, game.maxentities * sizeof(g_entities[0]));
+	globals.num_entities = game.maxclients + 1;
 
 	// read level
 	json_push_stack("level");
@@ -2333,34 +2333,33 @@ void ReadLevelJson(const char *jsonString) {
 
 	//for (auto key : json.getMemberNames())
 	for (auto it = entities.begin(); it != entities.end(); it++) {
-		//const char		   *classname = key.c_str();
 		const char *dummy;
 		const char *id = it.memberName(&dummy);
 		const Json::Value &value = *it;//json[key];
 		uint32_t		   number = strtoul(id, nullptr, 10);
 
-		if (number >= globals.num_edicts)
-			globals.num_edicts = number + 1;
+		if (number >= globals.num_entities)
+			globals.num_entities = number + 1;
 
-		edict_t *ent = &g_edicts[number];
-		G_InitEdict(ent);
+		gentity_t *ent = &g_entities[number];
+		G_InitGentity(ent);
 		json_push_stack(fmt::format("entities[{}]", number));
-		read_save_struct_json(value, ent, &edict_t_savestruct);
+		read_save_struct_json(value, ent, &gentity_t_savestruct);
 		json_pop_stack();
 		gi.linkentity(ent);
 	}
 
 	// mark all clients as unconnected
 	for (size_t i = 0; i < game.maxclients; i++) {
-		edict_t *ent = &g_edicts[i + 1];
+		gentity_t *ent = &g_entities[i + 1];
 		ent->client = game.clients + i;
 		ent->client->pers.connected = false;
 		ent->client->pers.spawned = false;
 	}
 
 	// do any load time things at this point
-	for (size_t i = 0; i < globals.num_edicts; i++) {
-		edict_t *ent = &g_edicts[i];
+	for (size_t i = 0; i < globals.num_entities; i++) {
+		gentity_t *ent = &g_entities[i];
 
 		if (!ent->inuse)
 			continue;
@@ -2384,8 +2383,8 @@ void ReadLevelJson(const char *jsonString) {
 
 // [Paril-KEX]
 bool CanSave() {
-	if (game.maxclients == 1 && g_edicts[1].health <= 0) {
-		gi.LocClient_Print(&g_edicts[1], PRINT_CENTER, "$g_no_save_dead");
+	if (game.maxclients == 1 && g_entities[1].health <= 0) {
+		gi.LocClient_Print(&g_entities[1], PRINT_CENTER, "$g_no_save_dead");
 		return false;
 	}
 	// don't allow saving during cameras/intermissions as this

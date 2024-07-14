@@ -3,5 +3,5 @@
 
 #pragma once
 
-void Bot_BeginFrame( edict_t * bot );
-void Bot_EndFrame( edict_t * bot );
+void Bot_BeginFrame( gentity_t * bot );
+void Bot_EndFrame( gentity_t * bot );

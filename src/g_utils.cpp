@@ -10,17 +10,17 @@ G_Find
 
 Searches all active entities for the next one that validates the given callback.
 
-Searches beginning at the edict after from, or the beginning if nullptr
+Searches beginning at the entity after from, or the beginning if nullptr
 nullptr will be returned if the end of the list is reached.
 =============
 */
-edict_t *G_Find(edict_t *from, std::function<bool(edict_t *e)> matcher) {
+gentity_t *G_Find(gentity_t *from, std::function<bool(gentity_t *e)> matcher) {
 	if (!from)
-		from = g_edicts;
+		from = g_entities;
 	else
 		from++;
 
-	for (; from < &g_edicts[globals.num_edicts]; from++) {
+	for (; from < &g_entities[globals.num_entities]; from++) {
 		if (!from->inuse)
 			continue;
 		if (matcher(from))
@@ -39,15 +39,15 @@ Returns entities that have origins within a spherical area
 findradius (origin, radius)
 =================
 */
-edict_t *findradius(edict_t *from, const vec3_t &org, float rad) {
+gentity_t *findradius(gentity_t *from, const vec3_t &org, float rad) {
 	vec3_t eorg;
 	int	   j;
 
 	if (!from)
-		from = g_edicts;
+		from = g_entities;
 	else
 		from++;
-	for (; from < &g_edicts[globals.num_edicts]; from++) {
+	for (; from < &g_entities[globals.num_entities]; from++) {
 		if (!from->inuse)
 			continue;
 		if (from->solid == SOLID_NOT)
@@ -70,25 +70,25 @@ G_PickTarget
 Searches all active entities for the next one that holds
 the matching string at fieldofs in the structure.
 
-Searches beginning at the edict after from, or the beginning if nullptr
+Searches beginning at the entity after from, or the beginning if nullptr
 nullptr will be returned if the end of the list is reached.
 
 =============
 */
 constexpr size_t MAXCHOICES = 8;
 
-edict_t *G_PickTarget(const char *targetname) {
-	edict_t *ent = nullptr;
-	int		 num_choices = 0;
-	edict_t *choice[MAXCHOICES];
+gentity_t *G_PickTarget(const char *targetname) {
+	gentity_t	*choice[MAXCHOICES];
+	gentity_t	*ent = nullptr;
+	int		num_choices = 0;
 
 	if (!targetname) {
-		gi.Com_Print("G_PickTarget called with nullptr targetname\n");
+		gi.Com_PrintFmt("{}: called with nullptr targetname.\n", __FUNCTION__);
 		return nullptr;
 	}
 
 	while (1) {
-		ent = G_FindByString<&edict_t::targetname>(ent, targetname);
+		ent = G_FindByString<&gentity_t::targetname>(ent, targetname);
 		if (!ent)
 			break;
 		choice[num_choices++] = ent;
@@ -104,12 +104,12 @@ edict_t *G_PickTarget(const char *targetname) {
 	return choice[irandom(num_choices)];
 }
 
-static THINK(Think_Delay) (edict_t *ent) -> void {
+static THINK(Think_Delay) (gentity_t *ent) -> void {
 	G_UseTargets(ent, ent->activator);
-	G_FreeEdict(ent);
+	G_FreeEntity(ent);
 }
 
-void G_PrintActivationMessage(edict_t *ent, edict_t *activator, bool coop_global) {
+void G_PrintActivationMessage(gentity_t *ent, gentity_t *activator, bool coop_global) {
 	//
 	// print the message
 	//
@@ -131,23 +131,23 @@ void G_PrintActivationMessage(edict_t *ent, edict_t *activator, bool coop_global
 
 void BroadcastSpectatorMessage(const char *msg) {
 	for (auto ce : active_clients()) {
-		if (ce->client->resp.team != TEAM_SPECTATOR)
+		if (ClientIsPlaying(ce->client))
 			continue;
 
 		gi.LocClient_Print(ce, PRINT_HIGH, msg);
 	}
 }
 
-void BroadcastTeamMessage(team_t team, const char *msg) {
+void BroadcastTeamMessage(team_t team, print_type_t level, const char *msg) {
 	for (auto ce : active_clients()) {
-		if (ce->client->resp.team != team)
+		if (ce->client->sess.team != team)
 			continue;
 
-		gi.LocClient_Print(ce, PRINT_HIGH, msg);
+		gi.LocClient_Print(ce, level, msg);
 	}
 }
 
-void G_MonsterKilled(edict_t *self);
+void G_MonsterKilled(gentity_t *self);
 
 /*
 ==============================
@@ -165,8 +165,14 @@ match (string)self.target and call their .use function
 
 ==============================
 */
-void G_UseTargets(edict_t *ent, edict_t *activator) {
-	edict_t *t;
+void G_UseTargets(gentity_t *ent, gentity_t *activator) {
+	gentity_t *t;
+
+	if (!ent)
+		return;
+
+	if (IsCombatDisabled())
+		return;
 
 	//
 	// check for a delay
@@ -179,7 +185,7 @@ void G_UseTargets(edict_t *ent, edict_t *activator) {
 		t->think = Think_Delay;
 		t->activator = activator;
 		if (!activator)
-			gi.Com_Print("Think_Delay with no activator\n");
+			gi.Com_PrintFmt("{}: {} with no activator.\n", __FUNCTION__, *t);
 		t->message = ent->message;
 		t->target = ent->target;
 		t->killtarget = ent->killtarget;
@@ -196,11 +202,11 @@ void G_UseTargets(edict_t *ent, edict_t *activator) {
 	//
 	if (ent->killtarget) {
 		t = nullptr;
-		while ((t = G_FindByString<&edict_t::targetname>(t, ent->killtarget))) {
+		while ((t = G_FindByString<&gentity_t::targetname>(t, ent->killtarget))) {
 			if (t->teammaster) {
 				// if this entity is part of a chain, cleanly remove it
 				if (t->flags & FL_TEAMSLAVE) {
-					for (edict_t *master = t->teammaster; master; master = master->teamchain) {
+					for (gentity_t *master = t->teammaster; master; master = master->teamchain) {
 						if (master->teamchain == t) {
 							master->teamchain = t->teamchain;
 							break;
@@ -211,13 +217,13 @@ void G_UseTargets(edict_t *ent, edict_t *activator) {
 				else if (t->flags & FL_TEAMMASTER) {
 					t->teammaster->flags &= ~FL_TEAMMASTER;
 
-					edict_t *new_master = t->teammaster->teamchain;
+					gentity_t *new_master = t->teammaster->teamchain;
 
 					if (new_master) {
 						new_master->flags |= FL_TEAMMASTER;
 						new_master->flags &= ~FL_TEAMSLAVE;
 
-						for (edict_t *m = new_master; m; m = m->teamchain)
+						for (gentity_t *m = new_master; m; m = m->teamchain)
 							m->teammaster = new_master;
 					}
 				}
@@ -229,10 +235,10 @@ void G_UseTargets(edict_t *ent, edict_t *activator) {
 					G_MonsterKilled(t);
 			}
 
-			G_FreeEdict(t);
+			G_FreeEntity(t);
 
 			if (!ent->inuse) {
-				gi.Com_Print("entity was removed while using killtargets\n");
+				gi.Com_PrintFmt("{}: Entity was removed while using killtargets.\n", __FUNCTION__);
 				return;
 			}
 		}
@@ -243,7 +249,7 @@ void G_UseTargets(edict_t *ent, edict_t *activator) {
 	//
 	if (ent->target) {
 		t = nullptr;
-		while ((t = G_FindByString<&edict_t::targetname>(t, ent->target))) {
+		while ((t = G_FindByString<&gentity_t::targetname>(t, ent->target))) {
 			// doors fire area portals in a specific way
 			if (!Q_strcasecmp(t->classname, "func_areaportal") &&
 				(!Q_strcasecmp(ent->classname, "func_door") || !Q_strcasecmp(ent->classname, "func_door_rotating")
@@ -251,25 +257,30 @@ void G_UseTargets(edict_t *ent, edict_t *activator) {
 				continue;
 
 			if (t == ent) {
-				gi.Com_Print("WARNING: Entity used itself.\n");
+				gi.Com_PrintFmt("{}: WARNING: Entity used itself.\n", __FUNCTION__);
 			} else {
 				if (t->use)
 					t->use(t, ent, activator);
 			}
 			if (!ent->inuse) {
-				gi.Com_Print("entity was removed while using targets\n");
+				gi.Com_PrintFmt("{}: Entity was removed while using targets.\n", __FUNCTION__);
 				return;
 			}
 		}
 	}
 }
 
-constexpr vec3_t VEC_UP = { 0, -1, 0 };
-constexpr vec3_t MOVEDIR_UP = { 0, 0, 1 };
-constexpr vec3_t VEC_DOWN = { 0, -2, 0 };
-constexpr vec3_t MOVEDIR_DOWN = { 0, 0, -1 };
-
+/*
+===============
+G_SetMovedir
+===============
+*/
 void G_SetMovedir(vec3_t &angles, vec3_t &movedir) {
+	static vec3_t VEC_UP		= { 0, -1, 0 };
+	static vec3_t MOVEDIR_UP	= { 0, 0, 1 };
+	static vec3_t VEC_DOWN		= { 0, -2, 0 };
+	static vec3_t MOVEDIR_DOWN	= { 0, 0, -1 };
+
 	if (angles == VEC_UP) {
 		movedir = MOVEDIR_UP;
 	} else if (angles == VEC_DOWN) {
@@ -290,10 +301,10 @@ char *G_CopyString(const char *in, int32_t tag) {
 	return out;
 }
 
-void G_InitEdict(edict_t *e) {
+void G_InitGentity(gentity_t *e) {
 	// FIXME -
 	//   this fixes a bug somewhere that is setting "nextthink" for an entity that has
-	//   already been released.  nextthink is being set to FRAME_TIME_S after level.time,
+	//   already been released. nextthink is being set to FRAME_TIME_S after level.time,
 	//   since freetime = nextthink - FRAME_TIME_S
 	if (e->nextthink)
 		e->nextthink = 0_ms;
@@ -302,73 +313,71 @@ void G_InitEdict(edict_t *e) {
 	e->sv.init = false;
 	e->classname = "noclass";
 	e->gravity = 1.0;
-	e->s.number = e - g_edicts;
+	e->s.number = e - g_entities;
 
 	// do this before calling the spawn function so it can be overridden.
-	e->gravityVector[0] = 0.0;
-	e->gravityVector[1] = 0.0;
-	e->gravityVector[2] = -1.0;
+	e->gravityVector = { 0.0, 0.0, -1.0 };
 }
 
 /*
 =================
 G_Spawn
 
-Either finds a free edict, or allocates a new one.
+Either finds a free entity, or allocates a new one.
 Try to avoid reusing an entity that was recently freed, because it
 can cause the client to think the entity morphed into something else
 instead of being removed and recreated, which can cause interpolated
 angles and bad trails.
 =================
 */
-edict_t *G_Spawn() {
-	uint32_t i;
-	edict_t *e;
+gentity_t *G_Spawn() {
+	gentity_t *e = &g_entities[game.maxclients + 1];
+	size_t i;
 
-	e = &g_edicts[game.maxclients + 1];
-	for (i = game.maxclients + 1; i < globals.num_edicts; i++, e++) {
+	for (i = game.maxclients + 1; i < globals.num_entities; i++, e++) {
 		// the first couple seconds of server time can involve a lot of
 		// freeing and allocating, so relax the replacement policy
 		if (!e->inuse && (e->freetime < 2_sec || level.time - e->freetime > 500_ms)) {
-			G_InitEdict(e);
+			G_InitGentity(e);
 			return e;
 		}
 	}
 
 	if (i == game.maxentities)
-		gi.Com_Error("ED_Alloc: no free edicts");
+		gi.Com_ErrorFmt("{}: no free entities.", __FUNCTION__);
 
-	globals.num_edicts++;
-	G_InitEdict(e);
+	globals.num_entities++;
+	G_InitGentity(e);
+	//gi.Com_PrintFmt("{}: total:{}\n", __FUNCTION__, i);
 	return e;
 }
 
 /*
 =================
-G_FreeEdict
+G_FreeEntity
 
-Marks the edict as free
+Marks the entity as free
 =================
 */
-THINK(G_FreeEdict) (edict_t *ed) -> void {
+THINK(G_FreeEntity) (gentity_t *ed) -> void {
 	// already freed
 	if (!ed->inuse)
 		return;
 
 	gi.unlinkentity(ed); // unlink from world
 
-	if ((ed - g_edicts) <= (ptrdiff_t)(game.maxclients + BODY_QUEUE_SIZE)) {
+	if ((ed - g_entities) <= (ptrdiff_t)(game.maxclients + BODY_QUEUE_SIZE)) {
 #ifdef _DEBUG
-		gi.Com_Print("tried to free special edict\n");
+		gi.Com_Print("Tried to free special entity.\n");
 #endif
 		return;
 	}
 
-	gi.Bot_UnRegisterEdict(ed);
+	gi.Bot_UnRegisterEntity(ed);
 
 	int32_t id = ed->spawn_count + 1;
 	memset(ed, 0, sizeof(*ed));
-	ed->s.number = ed - g_edicts;
+	ed->s.number = ed - g_entities;
 	ed->classname = "freed";
 	ed->freetime = level.time;
 	ed->inuse = false;
@@ -376,11 +385,11 @@ THINK(G_FreeEdict) (edict_t *ed) -> void {
 	ed->sv.init = false;
 }
 
-BoxEdictsResult_t G_TouchTriggers_BoxFilter(edict_t *hit, void *) {
+BoxEntitiesResult_t G_TouchTriggers_BoxFilter(gentity_t *hit, void *) {
 	if (!hit->touch)
-		return BoxEdictsResult_t::Skip;
+		return BoxEntitiesResult_t::Skip;
 
-	return BoxEdictsResult_t::Keep;
+	return BoxEntitiesResult_t::Keep;
 }
 
 /*
@@ -389,24 +398,22 @@ G_TouchTriggers
 
 ============
 */
-void G_TouchTriggers(edict_t *ent) {
-	int		 i, num;
-	static edict_t *touch[MAX_EDICTS];
-	edict_t *hit;
+void G_TouchTriggers(gentity_t *ent) {
+	int				num;
+	static gentity_t	*touch[MAX_ENTITIES];
+	gentity_t			*hit;
 
-/*freeze*/
-	if (freeze->integer && ent->client && ent->client->eliminated);
+	if (ent->client && ent->client->eliminated);
 	else
-/*freeze*/
-			// dead things don't activate triggers!
+		// dead things don't activate triggers!
 		if ((ent->client || (ent->svflags & SVF_MONSTER)) && (ent->health <= 0))
 			return;
 
-	num = gi.BoxEdicts(ent->absmin, ent->absmax, touch, MAX_EDICTS, AREA_TRIGGERS, G_TouchTriggers_BoxFilter, nullptr);
+	num = gi.BoxEntities(ent->absmin, ent->absmax, touch, MAX_ENTITIES, AREA_TRIGGERS, G_TouchTriggers_BoxFilter, nullptr);
 
 	// be careful, it is possible to have an entity in this
 	// list removed before we get to it (killtriggered)
-	for (i = 0; i < num; i++) {
+	for (size_t i = 0; i < num; i++) {
 		hit = touch[i];
 		if (!hit->inuse)
 			continue;
@@ -422,9 +429,9 @@ void G_TouchTriggers(edict_t *ent) {
 
 // [Paril-KEX] scan for projectiles between our movement positions
 // to see if we need to collide against them
-void G_TouchProjectiles(edict_t *ent, vec3_t previous_origin) {
+void G_TouchProjectiles(gentity_t *ent, vec3_t previous_origin) {
 	struct skipped_projectile {
-		edict_t *projectile;
+		gentity_t *projectile;
 		int32_t		spawn_count;
 	};
 	// a bit ugly, but we'll store projectiles we are ignoring here.
@@ -474,14 +481,14 @@ of ent.
 =================
 */
 
-BoxEdictsResult_t KillBox_BoxFilter(edict_t *hit, void *) {
+BoxEntitiesResult_t KillBox_BoxFilter(gentity_t *hit, void *) {
 	if (!hit->solid || !hit->takedamage || hit->solid == SOLID_TRIGGER)
-		return BoxEdictsResult_t::Skip;
+		return BoxEntitiesResult_t::Skip;
 
-	return BoxEdictsResult_t::Keep;
+	return BoxEntitiesResult_t::Keep;
 }
 
-bool KillBox(edict_t *ent, bool from_spawning, mod_id_t mod, bool bsp_clipping) {
+bool KillBox(gentity_t *ent, bool from_spawning, mod_id_t mod, bool bsp_clipping) {
 	// don't telefrag as spectator or noclip player...
 	if (ent->movetype == MOVETYPE_NOCLIP || ent->movetype == MOVETYPE_FREECAM)
 		return true;
@@ -489,14 +496,14 @@ bool KillBox(edict_t *ent, bool from_spawning, mod_id_t mod, bool bsp_clipping) 
 	contents_t mask = CONTENTS_MONSTER | CONTENTS_PLAYER;
 
 	// [Paril-KEX] don't gib other players in coop if we're not colliding
-	if (from_spawning && ent->client && coop->integer && !G_ShouldPlayersCollide(false))
+	if (from_spawning && ent->client && InCoopStyle() && !G_ShouldPlayersCollide(false))
 		mask &= ~CONTENTS_PLAYER;
 
 	int		 i, num;
-	static edict_t *touch[MAX_EDICTS];
-	edict_t *hit;
+	static gentity_t *touch[MAX_ENTITIES];
+	gentity_t *hit;
 
-	num = gi.BoxEdicts(ent->absmin, ent->absmax, touch, MAX_EDICTS, AREA_SOLID, KillBox_BoxFilter, nullptr);
+	num = gi.BoxEntities(ent->absmin, ent->absmax, touch, MAX_ENTITIES, AREA_SOLID, KillBox_BoxFilter, nullptr);
 
 	for (i = 0; i < num; i++) {
 		hit = touch[i];
@@ -518,7 +525,7 @@ bool KillBox(edict_t *ent, bool from_spawning, mod_id_t mod, bool bsp_clipping) 
 		// [Paril-KEX] don't allow telefragging of friends in coop.
 		// the player that is about to be telefragged will have collision
 		// disabled until another time.
-		if (ent->client && hit->client && coop->integer) {
+		if (ent->client && hit->client && InCoopStyle()) {
 			hit->clipmask &= ~CONTENTS_PLAYER;
 			ent->clipmask &= ~CONTENTS_PLAYER;
 			continue;
@@ -574,8 +581,8 @@ constexpr const char *TEAM_BLUE_SKIN = "ctf_b";
 G_AssignPlayerSkin
 =================
 */
-void G_AssignPlayerSkin(edict_t *ent, const char *s) {
-	int	  playernum = ent - g_edicts - 1;
+void G_AssignPlayerSkin(gentity_t *ent, const char *s) {
+	int	  playernum = ent - g_entities - 1;
 	std::string_view t(s);
 
 	if (size_t i = t.find_first_of('/'); i != std::string_view::npos)
@@ -583,7 +590,7 @@ void G_AssignPlayerSkin(edict_t *ent, const char *s) {
 	else
 		t = "male/";
 
-	switch (ent->client->resp.team) {
+	switch (ent->client->sess.team) {
 	case TEAM_RED:
 		t = G_Fmt("{}\\{}{}\\default", ent->client->resp.netname, t, TEAM_RED_SKIN);
 		break;
@@ -619,9 +626,8 @@ void G_AdjustPlayerScore(gclient_t *cl, int32_t offset, bool adjust_team, int32_
 		CalculateRanks();
 	}
 
-	if (adjust_team && team_offset && Teams()) {
-		G_AdjustTeamScore(cl->resp.team, team_offset);
-	}
+	if (adjust_team && team_offset)
+		G_AdjustTeamScore(cl->sess.team, team_offset);
 }
 
 /*
@@ -630,13 +636,12 @@ Horde_AdjustPlayerScore
 ===================
 */
 void Horde_AdjustPlayerScore(gclient_t *cl, int32_t offset) {
-	if (!horde->integer) return;
-	if (!cl) return;
+	if (notGT(GT_HORDE)) return;
+	if (!cl || !cl->pers.connected) return;
 
 	if (IsScoringDisabled())
 		return;
 
-	gi.Com_PrintFmt("monster kill score = {}\n", offset);
 	G_AdjustPlayerScore(cl, offset, false, 0);
 }
 
@@ -665,11 +670,13 @@ G_AdjustTeamScore
 ===================
 */
 void G_AdjustTeamScore(team_t team, int32_t offset) {
-
 	if (IsScoringDisabled())
 		return;
 
 	if (level.intermission_queued)
+		return;
+
+	if (!Teams() || GT(GT_RR))
 		return;
 
 	if (team == TEAM_RED)
@@ -680,18 +687,19 @@ void G_AdjustTeamScore(team_t team, int32_t offset) {
 	CalculateRanks();
 }
 
-
 /*
 ===================
 G_SetTeamScore
 ===================
 */
 void G_SetTeamScore(team_t team, int32_t value) {
-
 	if (IsScoringDisabled())
 		return;
 
 	if (level.intermission_queued)
+		return;
+
+	if (!Teams() || GT(GT_RR))
 		return;
 
 	if (team == TEAM_RED)
@@ -701,7 +709,6 @@ void G_SetTeamScore(team_t team, int32_t value) {
 	else return;
 	CalculateRanks();
 }
-
 
 /*
 ===================
@@ -751,7 +758,7 @@ bool ItemSpawnsEnabled() {
 		return false;
 	if (g_instagib->integer || g_nadefest->integer)
 		return false;
-	if (clanarena->integer)
+	if (GTF(GTF_ARENA))
 		return false;
 	return true;
 }
@@ -776,7 +783,7 @@ static void loc_buildboxpoints(vec3_t(&p)[8], const vec3_t &org, const vec3_t &m
 	p[7][1] -= maxs[1];
 }
 
-bool loc_CanSee(edict_t *targ, edict_t *inflictor) {
+bool loc_CanSee(gentity_t *targ, gentity_t *inflictor) {
 	trace_t trace;
 	vec3_t	targpoints[8];
 	int		i;
@@ -801,7 +808,8 @@ bool loc_CanSee(edict_t *targ, edict_t *inflictor) {
 }
 
 bool Teams() {
-	return ctf->integer || teamplay->integer || freeze->integer || clanarena->integer;
+	return GTF(GTF_TEAMS);
+	//return GT(GT_CTF) || GT(GT_TDM) || GT(GT_FREEZE) || GT(GT_CA) || GT(GT_STRIKE) || GT(GT_RR);
 }
 
 /*
@@ -809,9 +817,12 @@ bool Teams() {
 G_TimeString
 =================
 */
-const char *G_TimeString(const int64_t msec) {
+const char *G_TimeString(const int msec) {
 	int ms = abs(msec);
 	int hours, mins, seconds;
+
+	if (level.match_state < matchst_t::MATCH_COUNTDOWN)
+		return "WARMUP";
 
 	if (level.intermission_queued || level.intermission_time)
 		return "MATCH END";
@@ -833,8 +844,11 @@ const char *G_TimeString(const int64_t msec) {
 G_TimeStringMs
 =================
 */
-const char *G_TimeStringMs(const int64_t msec) {
+const char *G_TimeStringMs(const int msec) {
 	int hours, mins, seconds, ms = msec;
+
+	if (level.match_state < matchst_t::MATCH_COUNTDOWN)
+		return "WARMUP";
 
 	if (level.intermission_queued || level.intermission_time)
 		return "MATCH END";
@@ -881,52 +895,44 @@ bool InAMatch() {
 	return false;
 }
 
-bool IsRoundBased() {
-	if (clanarena->integer)
-		return true;
-	return false;
-}
-
 bool IsCombatDisabled() {
+	if (!deathmatch->integer)
+		return false;
 	if (level.intermission_queued)
+		return true;
+	if (level.intermission_time)
 		return true;
 	if (level.match_state == matchst_t::MATCH_COUNTDOWN)
 		return true;
-	if (IsRoundBased() && level.match_state == matchst_t::MATCH_IN_PROGRESS) {
-		// added round none to allow gibbing etc. at end of rounds
+	if (GTF(GTF_ROUNDS) && level.match_state == matchst_t::MATCH_IN_PROGRESS) {
+		// added round ended to allow gibbing etc. at end of rounds
 		// scoring to be explicitly disabled during this time
-		if (level.round_state != roundst_t::ROUND_IN_PROGRESS && level.round_state != roundst_t::ROUND_NONE)
+		if (level.round_state == roundst_t::ROUND_COUNTDOWN && (notGT(GT_HORDE)))
 			return true;
 	}
 	return false;
 }
 
-bool IsScoringDisabled() {
-	if (IsCombatDisabled())
+bool IsPickupsDisabled() {
+	if (!deathmatch->integer)
+		return false;
+	if (level.intermission_queued)
 		return true;
-	if (IsRoundBased() && level.round_state != roundst_t::ROUND_IN_PROGRESS)
+	if (level.intermission_time)
+		return true;
+	if (level.match_state == matchst_t::MATCH_COUNTDOWN)
 		return true;
 	return false;
 }
 
-const char *G_GetGametypeShortName(void) {
-	if (!deathmatch->integer)
-		return "CPN";
-
-	if (ctf->integer)
-		return gt_short_name_upper[GT_CTF];
-	if (freeze->integer)
-		return gt_short_name_upper[GT_FREEZE];
-	if (clanarena->integer)
-		return gt_short_name_upper[GT_CA];
-	if (teamplay->integer)
-		return gt_short_name_upper[GT_TDM];
-	if (duel->integer)
-		return gt_short_name_upper[GT_DUEL];
-	if (horde->integer)
-		return gt_short_name_upper[GT_HORDE];
-
-	return gt_short_name_upper[GT_FFA];
+bool IsScoringDisabled() {
+	if (level.match_state != matchst_t::MATCH_IN_PROGRESS)
+		return true;
+	if (IsCombatDisabled())
+		return true;
+	if (GTF(GTF_ROUNDS) && level.round_state != roundst_t::ROUND_IN_PROGRESS)
+		return true;
+	return false;
 }
 
 gametype_t GT_IndexFromString(const char *in) {
@@ -936,5 +942,35 @@ gametype_t GT_IndexFromString(const char *in) {
 		if (!Q_strcasecmp(in, gt_long_name[i]))
 			return (gametype_t)i;
 	}
-	return GT_NONE;
+	return gametype_t::GT_NONE;
+}
+
+void BroadcastReadyReminderMessage() {
+	for (auto ec : active_players()) {
+		if (!ClientIsPlaying(ec->client))
+			continue;
+		if (ec->client->sess.is_a_bot)
+			continue;
+		gi.LocCenter_Print(ec, "%bind:+wheel2:Use Compass to toggle your ready status.%MATCH IS IN WARMUP\nYou are {}ready.", ec->client->resp.ready ? "" : "NOT ");
+	}
+}
+
+void TeleportPlayerToRandomSpawnPoint(gentity_t *ent, bool fx) {
+	bool	valid_spawn = false;
+	vec3_t	spawn_origin, spawn_angles;
+	bool	is_landmark = false;
+
+	valid_spawn = SelectSpawnPoint(ent, spawn_origin, spawn_angles, true, is_landmark);
+
+	if (!valid_spawn)
+		return;
+
+	TeleportPlayer(ent, spawn_origin, spawn_angles);
+
+	ent->s.event = fx ? EV_PLAYER_TELEPORT : EV_OTHER_TELEPORT;
+	//other->s.event = fx ? EV_PLAYER_TELEPORT : EV_OTHER_TELEPORT;
+}
+
+bool InCoopStyle() {
+	return coop->integer || GT(GT_HORDE);
 }

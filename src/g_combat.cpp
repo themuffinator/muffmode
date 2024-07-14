@@ -12,7 +12,7 @@ Returns true if the inflictor can directly damage the target.  Used for
 explosions and melee attacks.
 ============
 */
-bool CanDamage(edict_t *targ, edict_t *inflictor) {
+bool CanDamage(gentity_t *targ, gentity_t *inflictor) {
 	vec3_t	dest;
 	trace_t trace;
 
@@ -79,16 +79,14 @@ bool CanDamage(edict_t *targ, edict_t *inflictor) {
 Killed
 ============
 */
-void Killed(edict_t *targ, edict_t *inflictor, edict_t *attacker, int damage, const vec3_t &point, mod_t mod) {
+void Killed(gentity_t *targ, gentity_t *inflictor, gentity_t *attacker, int damage, const vec3_t &point, mod_t mod) {
 	if (targ->health < -999)
 		targ->health = -999;
 
 	// [Paril-KEX]
 	if ((targ->svflags & SVF_MONSTER) && targ->monsterinfo.aiflags & AI_MEDIC) {
 		if (targ->enemy && targ->enemy->inuse && (targ->enemy->svflags & SVF_MONSTER)) // god, I hope so
-		{
 			cleanupHealTarget(targ->enemy);
-		}
 
 		// clean up self
 		targ->monsterinfo.aiflags &= ~AI_MEDIC;
@@ -117,7 +115,6 @@ void SpawnDamage(int type, const vec3_t &origin, const vec3_t &normal, int damag
 		damage = 255;
 	gi.WriteByte(svc_temp_entity);
 	gi.WriteByte(type);
-	//	gi.WriteByte (damage);
 	gi.WritePosition(origin);
 	gi.WriteDir(normal);
 	gi.multicast(origin, MULTICAST_PVS, false);
@@ -147,7 +144,7 @@ dflags		these flags are used to control how T_Damage works
 	DAMAGE_NO_PROTECTION	kills godmode, armor, everything
 ============
 */
-static int CheckPowerArmor(edict_t *ent, const vec3_t &point, const vec3_t &normal, int damage, damageflags_t dflags) {
+static int CheckPowerArmor(gentity_t *ent, const vec3_t &point, const vec3_t &normal, int damage, damageflags_t dflags) {
 	gclient_t *client;
 	int		   save;
 	item_id_t  power_armor_type;
@@ -199,7 +196,7 @@ static int CheckPowerArmor(edict_t *ent, const vec3_t &point, const vec3_t &norm
 		damage = damage / 3;
 	} else {
 		if (deathmatch->integer)
-			damagePerCell = !!(ruleset->integer == 1) ? 1 : ctf->integer ? 1 : 2; // power armor is weaker in DM
+			damagePerCell = !!(RS(RS_MM)) ? 1 : GTF(GTF_CTF) ? 1 : 2; // power armor is weaker in DM
 		else
 			damagePerCell = 2;
 		pa_te_type = TE_SCREEN_SPARKS;
@@ -254,7 +251,7 @@ static int CheckPowerArmor(edict_t *ent, const vec3_t &point, const vec3_t &norm
 	return save;
 }
 
-static int CheckArmor(edict_t *ent, const vec3_t &point, const vec3_t &normal, int damage, int te_sparks,
+static int CheckArmor(gentity_t *ent, const vec3_t &point, const vec3_t &normal, int damage, int te_sparks,
 	damageflags_t dflags) {
 	gclient_t *client;
 	int		   save;
@@ -277,9 +274,9 @@ static int CheckArmor(edict_t *ent, const vec3_t &point, const vec3_t &normal, i
 	armor = GetItemByIndex(index);
 
 	if (dflags & DAMAGE_ENERGY)
-		save = (int)ceilf(armor->armor_info->energy_protection * damage);
+		save = (int)ceilf(RS(RS_Q3A) ? 0.66f * damage : armor->armor_info->energy_protection * damage);
 	else
-		save = (int)ceilf(armor->armor_info->normal_protection * damage);
+		save = (int)ceilf(RS(RS_Q3A) ? 0.66f * damage : armor->armor_info->normal_protection * damage);
 
 	if (client)
 		power = &client->pers.inventory[index];
@@ -302,7 +299,7 @@ static int CheckArmor(edict_t *ent, const vec3_t &point, const vec3_t &normal, i
 	return save;
 }
 
-static void M_ReactToDamage(edict_t *targ, edict_t *attacker, edict_t *inflictor) {
+static void M_ReactToDamage(gentity_t *targ, gentity_t *attacker, gentity_t *inflictor) {
 	if (!(attacker->client) && !(attacker->svflags & SVF_MONSTER))
 		return;
 
@@ -443,7 +440,7 @@ static void M_ReactToDamage(edict_t *targ, edict_t *attacker, edict_t *inflictor
 }
 
 // check if the two given entities are on the same team
-bool OnSameTeam(edict_t *ent1, edict_t *ent2) {
+bool OnSameTeam(gentity_t *ent1, gentity_t *ent2) {
 	// monsters are never on our team atm
 	if (!ent1->client || !ent2->client)
 		return false;
@@ -462,10 +459,10 @@ bool OnSameTeam(edict_t *ent1, edict_t *ent2) {
 	}
 
 	// [Paril-KEX] coop 'team' support
-	if (coop->integer)
+	if (InCoopStyle())
 		return ent1->client && ent2->client;
 	else if (Teams() && ent1->client && ent2->client) {
-		if (ent1->client->resp.team == ent2->client->resp.team)
+		if (ent1->client->sess.team == ent2->client->sess.team)
 			return true;
 	}
 
@@ -474,7 +471,7 @@ bool OnSameTeam(edict_t *ent1, edict_t *ent2) {
 
 // check if the two entities are on a team and that
 // they wouldn't damage each other
-bool CheckTeamDamage(edict_t *targ, edict_t *attacker) {
+bool CheckTeamDamage(gentity_t *targ, gentity_t *attacker) {
 	// always damage teammates if friendly fire is enabled
 	if (g_friendly_fire->integer)
 		return false;
@@ -482,15 +479,13 @@ bool CheckTeamDamage(edict_t *targ, edict_t *attacker) {
 	return OnSameTeam(targ, attacker);
 }
 
-void T_Damage(edict_t *targ, edict_t *inflictor, edict_t *attacker, const vec3_t &dir, const vec3_t &point,
+void T_Damage(gentity_t *targ, gentity_t *inflictor, gentity_t *attacker, const vec3_t &dir, const vec3_t &point,
 	const vec3_t &normal, int damage, int knockback, damageflags_t dflags, mod_t mod) {
 	gclient_t *client;
-	int		   take;
-	int		   save;
-	int		   asave;
-	int		   psave;
-	int		   te_sparks;
-	bool	   sphere_notified;
+	int			take, save;
+	int			asave, psave;
+	int			te_sparks;
+	bool		sphere_notified;
 
 	if (!targ->takedamage)
 		return;
@@ -499,7 +494,6 @@ void T_Damage(edict_t *targ, edict_t *inflictor, edict_t *attacker, const vec3_t
 		// [Kex] always kill no matter what on instagib
 		damage = 9999;
 	}
-
 	sphere_notified = false;
 
 	// friendly fire avoidance
@@ -554,11 +548,17 @@ void T_Damage(edict_t *targ, edict_t *inflictor, edict_t *attacker, const vec3_t
 	// power amplifier tech
 	damage = Tech_ApplyPowerAmp(attacker, damage);
 
-	/*freeze*/
-	if (freeze->integer && client && client->eliminated)
+	if (RS(RS_Q3A)) {
+		knockback = damage;
+		if (knockback > 200)
+			knockback = 200;
+	}
+
+/*freeze*/
+	if (GT(GT_FREEZE) && client && client->eliminated)
 		knockback *= 2;
 	else
-		/*freeze*/
+/*freeze*/
 		if ((targ->flags & FL_NO_KNOCKBACK) ||
 			((targ->flags & FL_ALIVE_KNOCKBACK_ONLY) && (!targ->deadflag || targ->dead_time != level.time)))
 			knockback = 0;
@@ -583,8 +583,8 @@ void T_Damage(edict_t *targ, edict_t *inflictor, edict_t *attacker, const vec3_t
 
 			kvel *= g_knockback_scale->value;
 
-			// clan arena gives a bit more knockback
-			if (clanarena->integer)
+			// arena gives a bit more knockback
+			if (GTF(GTF_ARENA))
 				kvel *= 1.25f;
 
 			targ->velocity += kvel;
@@ -609,16 +609,16 @@ void T_Damage(edict_t *targ, edict_t *inflictor, edict_t *attacker, const vec3_t
 			save = damage;
 		}
 
-		/*freeze*/
+/*freeze*/
 #if 0
-		if (freeze->integer && playerDamage(targ, attacker, damage)) {
+		if (GT(GT_FREEZE) && playerDamage(targ, attacker, damage)) {
 			take = 0;
 			save = damage;
 			SpawnDamage(te_sparks, point, normal, save);
 			return;
 		}
 #endif
-		/*freeze*/
+/*freeze*/
 
 		// instagib railgun splash never inflicts damage
 		if (mod.id == MOD_RAILGUN_SPLASH) {
@@ -628,16 +628,13 @@ void T_Damage(edict_t *targ, edict_t *inflictor, edict_t *attacker, const vec3_t
 
 		// protection does not take splash damage
 		if (client && client->pu_time_protection > level.time && (dflags & DAMAGE_RADIUS)) {
-			//if (targ->pain_debounce_time < level.time) {
 			gi.sound(targ, CHAN_AUX, gi.soundindex("items/protect3.wav"), 1, ATTN_NORM, 0);
-			//targ->pain_debounce_time = level.time + gtime_t::from_ms(500);
-		//}
 			take = 0;
 			save = damage;
 		}
 
 		// check for godmode
-		if ((targ->flags & FL_GODMODE) || !!(ruleset->integer != 1 && client->pu_time_protection > level.time)) {
+		if (targ->flags & FL_GODMODE) {
 			take = 0;
 			save = damage;
 			SpawnDamage(te_sparks, point, normal, save);
@@ -655,55 +652,58 @@ void T_Damage(edict_t *targ, edict_t *inflictor, edict_t *attacker, const vec3_t
 	}
 
 	// check for getting out of self damage
-	if (targ == attacker && deathmatch->integer && (g_dm_no_self_damage->integer || clanarena->integer)) {
+	if (targ == attacker && deathmatch->integer && g_dm_no_self_damage->integer) {
 		take = 0;
 		save = damage;
-		//SpawnDamage(te_sparks, point, normal, save);
 	}
 
 	if (g_vampiric_damage->integer && targ->health > 0 && attacker != targ && !OnSameTeam(targ, attacker) && take > 0) {
 		int vtake = take;
-		int hmax = g_vampiric_health_max->integer;
-
-		if (hmax < 100) hmax = 100;
-		else if (hmax > 999) hmax = 999;
+		int hmax = clamp(g_vampiric_health_max->integer, 100, 1000);
 
 		if (vtake > targ->health)
 			vtake = targ->health;
 
-		vtake = max(1, vtake / 2);
+		vtake = max(1, (int)ceil((float)vtake * g_vampiric_percentile->value));
 
-		if (attacker->health < hmax) {
+		if (attacker->health < hmax)
 			attacker->health += vtake;
-
-			if (attacker->health > hmax)
-				attacker->health = hmax;
-		}
+		if (attacker->health > hmax)
+			attacker->health = hmax;
 	}
 
 	// team armor protect
 	if (Teams() && targ->client && attacker->client &&
-		targ->client->resp.team == attacker->client->resp.team && targ != attacker &&
-		g_teamplay_armor_protect->integer) {
+			targ->client->sess.team == attacker->client->sess.team && targ != attacker &&
+			g_teamplay_armor_protect->integer) {
 		psave = asave = 0;
 	} else {
-		psave = CheckPowerArmor(targ, point, normal, take, dflags);
-		take -= psave;
+		if (targ == attacker && GTF(GTF_ARENA) && !g_arena_dmg_armor->integer) {
+			take = 0;
+			save = damage;
+		} else {
+			psave = CheckPowerArmor(targ, point, normal, take, dflags);
+			take -= psave;
 
-		asave = CheckArmor(targ, point, normal, take, te_sparks, dflags);
-		take -= asave;
+			asave = CheckArmor(targ, point, normal, take, te_sparks, dflags);
+			take -= asave;
+		}
 	}
 
 	// treat cheat/powerup savings the same as armor
 	asave += save;
 
-	// check for protection powerup
-	if (!(dflags & DAMAGE_NO_PROTECTION) && client && client->pu_time_protection > level.time) {
-		//if (targ->pain_debounce_time < level.time) {
-		gi.sound(targ, CHAN_AUX, gi.soundindex("items/protect3.wav"), 1, ATTN_NORM, 0);
-		//targ->pain_debounce_time = level.time + 2_sec;
-	//}
-		take *= 0.5;
+	if (!(dflags & DAMAGE_NO_PROTECTION)) {
+		if (targ == attacker && GTF(GTF_ARENA)) {
+			take = 0;
+			save = damage;
+		}
+
+		// check for protection powerup
+		if (take && client && client->pu_time_protection > level.time) {
+			gi.sound(targ, CHAN_AUX, gi.soundindex("items/protect3.wav"), 1, ATTN_NORM, 0);
+			take = RS(RS_Q2RE) ? 0 : 0.5;
+		}
 	}
 
 	// resistance tech
@@ -712,7 +712,7 @@ void T_Damage(edict_t *targ, edict_t *inflictor, edict_t *attacker, const vec3_t
 	CTF_CheckHurtCarrier(targ, attacker);
 
 	// this option will do damage both to the armor and person. originally for DPU rounds
-	if (dflags & DAMAGE_DESTROY_ARMOR) {
+	if ((dflags & DAMAGE_DESTROY_ARMOR)) {
 		if (!(targ->flags & FL_GODMODE) && !(dflags & DAMAGE_NO_PROTECTION) &&
 			!(client && client->pu_time_protection > level.time)) {
 			take = damage;
@@ -724,10 +724,9 @@ void T_Damage(edict_t *targ, edict_t *inflictor, edict_t *attacker, const vec3_t
 		if (stat_take > targ->health)
 			stat_take = targ->health;
 
-		// clan arena player scoring - 1 score per 100 damage dealt to opponents
-		if (clanarena->integer && !OnSameTeam(targ, attacker)) {
-			//TODO: cap this to target's theoretical max takeable damage (to 0 health)
-			attacker->client->pers.dmg_scorer += take + psave + asave;
+		// arena player scoring: 1 point per 100 damage dealt to opponents, capped to 0 health
+		if (GTF(GTF_ARENA) && !OnSameTeam(targ, attacker)) {
+			attacker->client->pers.dmg_scorer += stat_take + psave + asave;
 
 			if (attacker->client->pers.dmg_scorer >= 100) {
 				int32_t score_add = floor(attacker->client->pers.dmg_scorer / 100);
@@ -736,6 +735,7 @@ void T_Damage(edict_t *targ, edict_t *inflictor, edict_t *attacker, const vec3_t
 				G_AdjustPlayerScore(attacker->client, score_add, false, 0);
 			}
 		}
+
 		// team damage checks and warnings
 		if (OnSameTeam(targ, attacker)) {
 			attacker->client->pers.dmg_team += take + psave + asave;
@@ -744,7 +744,7 @@ void T_Damage(edict_t *targ, edict_t *inflictor, edict_t *attacker, const vec3_t
 				int32_t score_add = floor(attacker->client->pers.dmg_team / 100);
 				attacker->client->pers.dmg_team -= score_add * 100;
 
-				gi.LocClient_Print(attacker, PRINT_CENTER, "You are on {} Team,\nstop attacking your team mates!\n", Teams_TeamName(attacker->client->resp.team));
+				gi.LocClient_Print(attacker, PRINT_CENTER, "You are on {} Team,\nstop attacking your team mates!\n", Teams_TeamName(attacker->client->sess.team));
 			}
 		}
 
@@ -795,7 +795,7 @@ void T_Damage(edict_t *targ, edict_t *inflictor, edict_t *attacker, const vec3_t
 				targ->dead_time = level.time;
 
 				// don't gib in freeze tag unless thawing
-				if (freeze->integer && mod.id != MOD_THAW && targ->health <= targ->gib_health) {
+				if (GT(GT_FREEZE) && mod.id != MOD_THAW && targ->health <= targ->gib_health) {
 					targ->health = targ->gib_health + 1;
 				}
 			}
@@ -819,9 +819,8 @@ void T_Damage(edict_t *targ, edict_t *inflictor, edict_t *attacker, const vec3_t
 		}
 	}
 
-	if (targ->client) {
+	if (targ->client)
 		targ->client->last_attacker_time = level.time;
-	}
 
 	if (targ->svflags & SVF_MONSTER) {
 		if (damage > 0) {
@@ -885,9 +884,9 @@ void T_Damage(edict_t *targ, edict_t *inflictor, edict_t *attacker, const vec3_t
 T_RadiusDamage
 ============
 */
-void T_RadiusDamage(edict_t *inflictor, edict_t *attacker, float damage, edict_t *ignore, float radius, damageflags_t dflags, mod_t mod) {
+void T_RadiusDamage(gentity_t *inflictor, gentity_t *attacker, float damage, gentity_t *ignore, float radius, damageflags_t dflags, mod_t mod) {
 	float	 points;
-	edict_t *ent = nullptr;
+	gentity_t *ent = nullptr;
 	vec3_t	 v;
 	vec3_t	 dir;
 	vec3_t   inflictor_center;
@@ -931,8 +930,8 @@ void T_RadiusDamage(edict_t *inflictor, edict_t *attacker, float damage, edict_t
 ROGUE
 clean up heal targets for medic
 */
-void M_SetEffects(edict_t *self);
-void cleanupHealTarget(edict_t *ent) {
+void M_SetEffects(gentity_t *self);
+void cleanupHealTarget(gentity_t *ent) {
 	ent->monsterinfo.healer = nullptr;
 	ent->takedamage = true;
 	ent->monsterinfo.aiflags &= ~AI_RESURRECTING;
@@ -950,9 +949,9 @@ Like T_RadiusDamage, but ignores walls (skips CanDamage check, among others)
 ============
 */
 
-void T_RadiusNukeDamage(edict_t *inflictor, edict_t *attacker, float damage, edict_t *ignore, float radius, mod_t mod) {
+void T_RadiusNukeDamage(gentity_t *inflictor, gentity_t *attacker, float damage, gentity_t *ignore, float radius, mod_t mod) {
 	float	 points;
-	edict_t *ent = nullptr;
+	gentity_t *ent = nullptr;
 	vec3_t	 v;
 	vec3_t	 dir;
 	float	 len;
@@ -994,7 +993,7 @@ void T_RadiusNukeDamage(edict_t *inflictor, edict_t *attacker, float damage, edi
 			T_Damage(ent, inflictor, attacker, dir, inflictor->s.origin, vec3_origin, (int)points, (int)points, DAMAGE_RADIUS, mod);
 		}
 	}
-	ent = g_edicts + 1; // skip the worldspawn
+	ent = g_entities + 1; // skip the worldspawn
 	// cycle through players
 	while (ent) {
 		if ((ent->client) && (ent->client->nuke_time != level.time + 2_sec) && (ent->inuse)) {
@@ -1021,9 +1020,9 @@ T_RadiusClassDamage
 Like T_RadiusDamage, but ignores anything with classname=ignoreClass
 ============
 */
-void T_RadiusClassDamage(edict_t *inflictor, edict_t *attacker, float damage, char *ignoreClass, float radius, mod_t mod) {
+void T_RadiusClassDamage(gentity_t *inflictor, gentity_t *attacker, float damage, char *ignoreClass, float radius, mod_t mod) {
 	float	 points;
-	edict_t *ent = nullptr;
+	gentity_t *ent = nullptr;
 	vec3_t	 v;
 	vec3_t	 dir;
 

@@ -3,9 +3,9 @@
 
 #pragma once
 
-void	Bot_SetWeapon( edict_t * bot, const int weaponIndex, const bool instantSwitch );
-void	Bot_TriggerEdict( edict_t * bot, edict_t * edict );
+void	Bot_SetWeapon( gentity_t * bot, const int weaponIndex, const bool instantSwitch );
+void	Bot_TriggerEntity( gentity_t * bot, gentity_t * entity );
 int32_t Bot_GetItemID( const char * classname );
-void	Bot_UseItem( edict_t * bot, const int32_t itemID );
-void    Edict_ForceLookAtPoint( edict_t * edict, gvec3_cref_t point );
-bool    Bot_PickedUpItem( edict_t * bot, edict_t * item );
+void	Bot_UseItem( gentity_t * bot, const int32_t itemID );
+void    Entity_ForceLookAtPoint( gentity_t * entity, gvec3_cref_t point );
+bool    Bot_PickedUpItem( gentity_t * bot, gentity_t * item );

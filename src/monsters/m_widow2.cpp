@@ -34,35 +34,35 @@ constexpr float sweep_angles[] = {
 constexpr vec3_t stalker_mins = { -28, -28, -18 };
 constexpr vec3_t stalker_maxs = { 28, 28, 18 };
 
-bool infront(edict_t *self, edict_t *other);
-void WidowCalcSlots(edict_t *self);
-void WidowPowerups(edict_t *self);
+bool infront(gentity_t *self, gentity_t *other);
+void WidowCalcSlots(gentity_t *self);
+void WidowPowerups(gentity_t *self);
 
-void widow2_run(edict_t *self);
-void widow2_dead(edict_t *self);
-void widow2_attack_beam(edict_t *self);
-void widow2_reattack_beam(edict_t *self);
-void widow_start_spawn(edict_t *self);
-void widow_done_spawn(edict_t *self);
-void widow2_spawn_check(edict_t *self);
-void Widow2SaveBeamTarget(edict_t *self);
+void widow2_run(gentity_t *self);
+void widow2_dead(gentity_t *self);
+void widow2_attack_beam(gentity_t *self);
+void widow2_reattack_beam(gentity_t *self);
+void widow_start_spawn(gentity_t *self);
+void widow_done_spawn(gentity_t *self);
+void widow2_spawn_check(gentity_t *self);
+void Widow2SaveBeamTarget(gentity_t *self);
 
 // death stuff
-void WidowExplode(edict_t *self);
-void ThrowWidowGibReal(edict_t *self, const char *gibname, int damage, gib_type_t type, const vec3_t *startpos, bool large, int hitsound, bool fade);
-void ThrowWidowGibSized(edict_t *self, const char *gibname, int damage, gib_type_t type, const vec3_t *startpos, int hitsound, bool fade);
-void ThrowWidowGibLoc(edict_t *self, const char *gibname, int damage, gib_type_t type, const vec3_t *startpos, bool fade);
-void WidowExplosion1(edict_t *self);
-void WidowExplosion2(edict_t *self);
-void WidowExplosion3(edict_t *self);
-void WidowExplosion4(edict_t *self);
-void WidowExplosion5(edict_t *self);
-void WidowExplosion6(edict_t *self);
-void WidowExplosion7(edict_t *self);
-void WidowExplosionLeg(edict_t *self);
-void ThrowArm1(edict_t *self);
-void ThrowArm2(edict_t *self);
-void ClipGibVelocity(edict_t *ent);
+void WidowExplode(gentity_t *self);
+void ThrowWidowGibReal(gentity_t *self, const char *gibname, int damage, gib_type_t type, const vec3_t *startpos, bool large, int hitsound, bool fade);
+void ThrowWidowGibSized(gentity_t *self, const char *gibname, int damage, gib_type_t type, const vec3_t *startpos, int hitsound, bool fade);
+void ThrowWidowGibLoc(gentity_t *self, const char *gibname, int damage, gib_type_t type, const vec3_t *startpos, bool fade);
+void WidowExplosion1(gentity_t *self);
+void WidowExplosion2(gentity_t *self);
+void WidowExplosion3(gentity_t *self);
+void WidowExplosion4(gentity_t *self);
+void WidowExplosion5(gentity_t *self);
+void WidowExplosion6(gentity_t *self);
+void WidowExplosion7(gentity_t *self);
+void WidowExplosionLeg(gentity_t *self);
+void ThrowArm1(gentity_t *self);
+void ThrowArm2(gentity_t *self);
+void ClipGibVelocity(gentity_t *ent);
 // end of death stuff
 
 // these offsets used by the tongue
@@ -77,16 +77,16 @@ constexpr vec3_t offsets[] = {
 	{ 17.37f, 1.21f, 68.72f },
 };
 
-static void pauseme(edict_t *self) {
+static void pauseme(gentity_t *self) {
 	self->monsterinfo.aiflags |= AI_HOLD_FRAME;
 }
 
-MONSTERINFO_SEARCH(widow2_search) (edict_t *self) -> void {
+MONSTERINFO_SEARCH(widow2_search) (gentity_t *self) -> void {
 	if (frandom() < 0.5f)
 		gi.sound(self, CHAN_VOICE, sound_search1, 1, ATTN_NONE, 0);
 }
 
-static void Widow2Beam(edict_t *self) {
+static void Widow2Beam(gentity_t *self) {
 	vec3_t					 forward, right, target;
 	vec3_t					 start, targ_angles, vec;
 	monster_muzzleflash_id_t flashnum;
@@ -134,9 +134,9 @@ static void Widow2Beam(edict_t *self) {
 	}
 }
 
-static void Widow2Spawn(edict_t *self) {
+static void Widow2Spawn(gentity_t *self) {
 	vec3_t	 f, r, u, offset, startpoint, spawnpoint;
-	edict_t *ent, *designated_enemy;
+	gentity_t *ent, *designated_enemy;
 	int		 i;
 
 	AngleVectors(self->s.angles, f, r, u);
@@ -160,7 +160,7 @@ static void Widow2Spawn(edict_t *self) {
 
 			ent->monsterinfo.aiflags |= AI_SPAWNED_WIDOW | AI_DO_NOT_COUNT | AI_IGNORE_SHOTS;
 
-			if (!coop->integer) {
+			if (!InCoopStyle()) {
 				designated_enemy = self->enemy;
 			} else {
 				designated_enemy = PickCoopTarget(ent);
@@ -184,12 +184,12 @@ static void Widow2Spawn(edict_t *self) {
 	}
 }
 
-void widow2_spawn_check(edict_t *self) {
+void widow2_spawn_check(gentity_t *self) {
 	Widow2Beam(self);
 	Widow2Spawn(self);
 }
 
-static void widow2_ready_spawn(edict_t *self) {
+static void widow2_ready_spawn(gentity_t *self) {
 	vec3_t f, r, u, offset, startpoint, spawnpoint;
 	int	   i;
 
@@ -207,7 +207,7 @@ static void widow2_ready_spawn(edict_t *self) {
 	}
 }
 
-static void widow2_step(edict_t *self) {
+static void widow2_step(gentity_t *self) {
 	gi.sound(self, CHAN_BODY, gi.soundindex("widow/bwstep1.wav"), 1, ATTN_NORM, 0);
 }
 
@@ -266,7 +266,7 @@ mframe_t widow2_frames_attack_post_beam[] = {
 };
 MMOVE_T(widow2_move_attack_post_beam) = { FRAME_fireb06, FRAME_fireb07, widow2_frames_attack_post_beam, widow2_run };
 
-static void WidowDisrupt(edict_t *self) {
+static void WidowDisrupt(gentity_t *self) {
 	vec3_t start;
 	vec3_t dir;
 	vec3_t forward, right;
@@ -292,7 +292,7 @@ static void WidowDisrupt(edict_t *self) {
 	widow2_step(self);
 }
 
-static void Widow2SaveDisruptLoc(edict_t *self) {
+static void Widow2SaveDisruptLoc(gentity_t *self) {
 	if (self->enemy && self->enemy->inuse) {
 		self->pos1 = self->enemy->s.origin; // save for aiming the shot
 		self->pos1[2] += self->enemy->viewheight;
@@ -300,7 +300,7 @@ static void Widow2SaveDisruptLoc(edict_t *self) {
 		self->pos1 = {};
 }
 
-static void widow2_disrupt_reattack(edict_t *self) {
+static void widow2_disrupt_reattack(gentity_t *self) {
 	float luck = frandom();
 
 	if (luck < (0.25f + (skill->integer * 0.15f)))
@@ -318,7 +318,7 @@ mframe_t widow2_frames_attack_disrupt[] = {
 };
 MMOVE_T(widow2_move_attack_disrupt) = { FRAME_firea01, FRAME_firea07, widow2_frames_attack_disrupt, widow2_run };
 
-void Widow2SaveBeamTarget(edict_t *self) {
+void Widow2SaveBeamTarget(gentity_t *self) {
 	if (self->enemy && self->enemy->inuse) {
 		self->pos2 = self->pos1;
 		self->pos1 = self->enemy->s.origin; // save for aiming the shot
@@ -328,19 +328,19 @@ void Widow2SaveBeamTarget(edict_t *self) {
 	}
 }
 
-static void Widow2BeamTargetRemove(edict_t *self) {
+static void Widow2BeamTargetRemove(gentity_t *self) {
 	self->pos1 = {};
 	self->pos2 = {};
 }
 
-static void Widow2StartSweep(edict_t *self) {
+static void Widow2StartSweep(gentity_t *self) {
 	Widow2SaveBeamTarget(self);
 }
 
 mframe_t widow2_frames_spawn[] = {
 	{ ai_charge },
 	{ ai_charge },
-	{ ai_charge, 0, [](edict_t *self) { widow_start_spawn(self); widow2_step(self); } },
+	{ ai_charge, 0, [](gentity_t *self) { widow_start_spawn(self); widow2_step(self); } },
 	{ ai_charge, 0, Widow2Beam },
 	{ ai_charge, 0, Widow2Beam }, // 5
 	{ ai_charge, 0, Widow2Beam },
@@ -377,7 +377,7 @@ static bool widow2_tongue_attack_ok(const vec3_t &start, const vec3_t &end, floa
 	return true;
 }
 
-static void Widow2Tongue(edict_t *self) {
+static void Widow2Tongue(gentity_t *self) {
 	vec3_t	f, r, u;
 	vec3_t	start, end, dir;
 	trace_t tr;
@@ -412,7 +412,7 @@ static void Widow2Tongue(edict_t *self) {
 	T_Damage(self->enemy, self, self, dir, self->enemy->s.origin, vec3_origin, 2, 0, DAMAGE_NO_KNOCKBACK, MOD_UNKNOWN);
 }
 
-static void Widow2TonguePull(edict_t *self) {
+static void Widow2TonguePull(gentity_t *self) {
 	vec3_t vec;
 	vec3_t f, r, u;
 	vec3_t start, end;
@@ -447,7 +447,7 @@ static void Widow2TonguePull(edict_t *self) {
 	}
 }
 
-static void Widow2Crunch(edict_t *self) {
+static void Widow2Crunch(gentity_t *self) {
 	vec3_t aim;
 
 	if ((!self->enemy) || (!self->enemy->inuse)) {
@@ -467,7 +467,7 @@ static void Widow2Crunch(edict_t *self) {
 		fire_hit(self, aim, irandom(20, 26), 250);
 }
 
-static void Widow2Toss(edict_t *self) {
+static void Widow2Toss(gentity_t *self) {
 	self->timestamp = level.time + 3_sec;
 }
 
@@ -548,9 +548,9 @@ mframe_t widow2_frames_death[] = {
 };
 MMOVE_T(widow2_move_death) = { FRAME_death01, FRAME_death44, widow2_frames_death, nullptr };
 
-void widow2_start_searching(edict_t *self);
-void widow2_keep_searching(edict_t *self);
-void widow2_finaldeath(edict_t *self);
+void widow2_start_searching(gentity_t *self);
+void widow2_keep_searching(gentity_t *self);
+void widow2_finaldeath(gentity_t *self);
 
 mframe_t widow2_frames_dead[] = {
 	{ ai_move, 0, widow2_start_searching },
@@ -585,11 +585,11 @@ mframe_t widow2_frames_really_dead[] = {
 };
 MMOVE_T(widow2_move_really_dead) = { FRAME_dthsrh16, FRAME_dthsrh22, widow2_frames_really_dead, nullptr };
 
-void widow2_start_searching(edict_t *self) {
+void widow2_start_searching(gentity_t *self) {
 	self->count = 0;
 }
 
-void widow2_keep_searching(edict_t *self) {
+void widow2_keep_searching(gentity_t *self) {
 	if (self->count <= 2) {
 		M_SetAnimation(self, &widow2_move_dead);
 		self->s.frame = FRAME_dthsrh01;
@@ -600,7 +600,7 @@ void widow2_keep_searching(edict_t *self) {
 	M_SetAnimation(self, &widow2_move_really_dead);
 }
 
-void widow2_finaldeath(edict_t *self) {
+void widow2_finaldeath(gentity_t *self) {
 	self->mins = { -70, -70, 0 };
 	self->maxs = { 70, 70, 80 };
 	self->movetype = MOVETYPE_TOSS;
@@ -609,11 +609,11 @@ void widow2_finaldeath(edict_t *self) {
 	gi.linkentity(self);
 }
 
-MONSTERINFO_STAND(widow2_stand) (edict_t *self) -> void {
+MONSTERINFO_STAND(widow2_stand) (gentity_t *self) -> void {
 	M_SetAnimation(self, &widow2_move_stand);
 }
 
-MONSTERINFO_RUN(widow2_run) (edict_t *self) -> void {
+MONSTERINFO_RUN(widow2_run) (gentity_t *self) -> void {
 	self->monsterinfo.aiflags &= ~AI_HOLD_FRAME;
 
 	if (self->monsterinfo.aiflags & AI_STAND_GROUND)
@@ -622,20 +622,20 @@ MONSTERINFO_RUN(widow2_run) (edict_t *self) -> void {
 		M_SetAnimation(self, &widow2_move_run);
 }
 
-MONSTERINFO_WALK(widow2_walk) (edict_t *self) -> void {
+MONSTERINFO_WALK(widow2_walk) (gentity_t *self) -> void {
 	M_SetAnimation(self, &widow2_move_walk);
 }
 
-void widow2_attack(edict_t *self);
+void widow2_attack(gentity_t *self);
 
-MONSTERINFO_MELEE(widow2_melee) (edict_t *self) -> void {
+MONSTERINFO_MELEE(widow2_melee) (gentity_t *self) -> void {
 	if (self->timestamp >= level.time)
 		widow2_attack(self);
 	else
 		M_SetAnimation(self, &widow2_move_tongs);
 }
 
-MONSTERINFO_ATTACK(widow2_attack) (edict_t *self) -> void {
+MONSTERINFO_ATTACK(widow2_attack) (gentity_t *self) -> void {
 	float luck;
 	bool  blocked = false;
 
@@ -727,12 +727,12 @@ MONSTERINFO_ATTACK(widow2_attack) (edict_t *self) -> void {
 	}
 }
 
-void widow2_attack_beam(edict_t *self) {
+void widow2_attack_beam(gentity_t *self) {
 	M_SetAnimation(self, &widow2_move_attack_beam);
 	widow2_step(self);
 }
 
-void widow2_reattack_beam(edict_t *self) {
+void widow2_reattack_beam(gentity_t *self) {
 	self->monsterinfo.aiflags &= ~AI_MANUAL_STEERING;
 
 	if (infront(self, self->enemy))
@@ -747,7 +747,7 @@ void widow2_reattack_beam(edict_t *self) {
 		M_SetAnimation(self, &widow2_move_attack_post_beam);
 }
 
-static PAIN(widow2_pain) (edict_t *self, edict_t *other, float kick, int damage, const mod_t &mod) -> void {
+static PAIN(widow2_pain) (gentity_t *self, gentity_t *other, float kick, int damage, const mod_t &mod) -> void {
 	if (level.time < self->pain_debounce_time)
 		return;
 
@@ -778,20 +778,20 @@ static PAIN(widow2_pain) (edict_t *self, edict_t *other, float kick, int damage,
 	}
 }
 
-MONSTERINFO_SETSKIN(widow2_setskin) (edict_t *self) -> void {
+MONSTERINFO_SETSKIN(widow2_setskin) (gentity_t *self) -> void {
 	if (self->health < (self->max_health / 2))
 		self->s.skinnum = 1;
 	else
 		self->s.skinnum = 0;
 }
 
-void widow2_dead(edict_t *self) {}
+void widow2_dead(gentity_t *self) {}
 
-static void KillChildren(edict_t *self) {
-	edict_t *ent = nullptr;
+static void KillChildren(gentity_t *self) {
+	gentity_t *ent = nullptr;
 
 	while (1) {
-		ent = G_FindByString<&edict_t::classname>(ent, "monster_stalker");
+		ent = G_FindByString<&gentity_t::classname>(ent, "monster_stalker");
 		if (!ent)
 			return;
 
@@ -801,7 +801,7 @@ static void KillChildren(edict_t *self) {
 	}
 }
 
-static DIE(widow2_die) (edict_t *self, edict_t *inflictor, edict_t *attacker, int damage, const vec3_t &point, const mod_t &mod) -> void {
+static DIE(widow2_die) (gentity_t *self, gentity_t *inflictor, gentity_t *attacker, int damage, const vec3_t &point, const mod_t &mod) -> void {
 	int n;
 	int clipped;
 
@@ -848,7 +848,7 @@ static DIE(widow2_die) (edict_t *self, edict_t *inflictor, edict_t *attacker, in
 	M_SetAnimation(self, &widow2_move_death);
 }
 
-MONSTERINFO_CHECKATTACK(Widow2_CheckAttack) (edict_t *self) -> bool {
+MONSTERINFO_CHECKATTACK(Widow2_CheckAttack) (gentity_t *self) -> bool {
 	if (!self->enemy)
 		return false;
 
@@ -895,9 +895,9 @@ static void Widow2Precache() {
 
 /*QUAKED monster_widow2 (1 .5 0) (-70 -70 0) (70 70 144) AMBUSH TRIGGER_SPAWN SIGHT x x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
  */
-void SP_monster_widow2(edict_t *self) {
+void SP_monster_widow2(gentity_t *self) {
 	if (!M_AllowSpawn(self)) {
-		G_FreeEdict(self);
+		G_FreeEntity(self);
 		return;
 	}
 
@@ -915,13 +915,13 @@ void SP_monster_widow2(edict_t *self) {
 	self->maxs = { 70, 70, 144 };
 
 	self->health = (2000 + 800 + 1000 * skill->integer) * st.health_multiplier;
-	if (coop->integer)
+	if (InCoopStyle())
 		self->health += 500 * skill->integer;
 
 	self->gib_health = -900;
 	self->mass = 2500;
 
-	if (skill->integer == 3) {
+	if (skill->integer >= 3) {
 		if (!st.was_key_specified("power_armor_type"))
 			self->monsterinfo.power_armor_type = IT_POWER_SHIELD;
 		if (!st.was_key_specified("power_armor_power"))
@@ -964,7 +964,7 @@ static void WidowVelocityForDamage(int damage, vec3_t &v) {
 	v[2] = damage * crandom() + 200.0f;
 }
 
-static TOUCH(widow_gib_touch) (edict_t *self, edict_t *other, const trace_t &tr, bool other_touching_self) -> void {
+static TOUCH(widow_gib_touch) (gentity_t *self, gentity_t *other, const trace_t &tr, bool other_touching_self) -> void {
 	self->solid = SOLID_NOT;
 	self->touch = nullptr;
 	self->s.angles[PITCH] = 0;
@@ -975,20 +975,20 @@ static TOUCH(widow_gib_touch) (edict_t *self, edict_t *other, const trace_t &tr,
 		gi.sound(self, CHAN_VOICE, self->style, 1, ATTN_NORM, 0);
 }
 
-static void ThrowWidowGib(edict_t *self, const char *gibname, int damage, gib_type_t type) {
+static void ThrowWidowGib(gentity_t *self, const char *gibname, int damage, gib_type_t type) {
 	ThrowWidowGibReal(self, gibname, damage, type, nullptr, false, 0, true);
 }
 
-void ThrowWidowGibLoc(edict_t *self, const char *gibname, int damage, gib_type_t type, const vec3_t *startpos, bool fade) {
+void ThrowWidowGibLoc(gentity_t *self, const char *gibname, int damage, gib_type_t type, const vec3_t *startpos, bool fade) {
 	ThrowWidowGibReal(self, gibname, damage, type, startpos, false, 0, fade);
 }
 
-void ThrowWidowGibSized(edict_t *self, const char *gibname, int damage, gib_type_t type, const vec3_t *startpos, int hitsound, bool fade) {
+void ThrowWidowGibSized(gentity_t *self, const char *gibname, int damage, gib_type_t type, const vec3_t *startpos, int hitsound, bool fade) {
 	ThrowWidowGibReal(self, gibname, damage, type, startpos, true, hitsound, fade);
 }
 
-void ThrowWidowGibReal(edict_t *self, const char *gibname, int damage, gib_type_t type, const vec3_t *startpos, bool sized, int hitsound, bool fade) {
-	edict_t *gib;
+void ThrowWidowGibReal(gentity_t *self, const char *gibname, int damage, gib_type_t type, const vec3_t *startpos, bool sized, int hitsound, bool fade) {
+	gentity_t *gib;
 	vec3_t	 vd;
 	vec3_t	 origin;
 	vec3_t	 size;
@@ -1017,14 +1017,14 @@ void ThrowWidowGibReal(edict_t *self, const char *gibname, int damage, gib_type_
 	gib->s.renderfx &= ~RF_DOT_SHADOW;
 
 	if (fade) {
-		gib->think = G_FreeEdict;
+		gib->think = G_FreeEntity;
 		// sized gibs last longer
 		if (sized)
 			gib->nextthink = level.time + random_time(20_sec, 35_sec);
 		else
 			gib->nextthink = level.time + random_time(5_sec, 15_sec);
 	} else {
-		gib->think = G_FreeEdict;
+		gib->think = G_FreeEntity;
 		// sized gibs last longer
 		if (sized)
 			gib->nextthink = level.time + random_time(60_sec, 75_sec);
@@ -1079,7 +1079,7 @@ void ThrowWidowGibReal(edict_t *self, const char *gibname, int damage, gib_type_
 	gi.linkentity(gib);
 }
 
-void ThrowSmallStuff(edict_t *self, const vec3_t &point) {
+void ThrowSmallStuff(gentity_t *self, const vec3_t &point) {
 	int n;
 
 	for (n = 0; n < 2; n++)
@@ -1088,10 +1088,10 @@ void ThrowSmallStuff(edict_t *self, const vec3_t &point) {
 	ThrowWidowGibLoc(self, "models/objects/gibs/sm_metal/tris.md2", 100, GIB_METALLIC, &point, false);
 }
 
-void ThrowMoreStuff(edict_t *self, const vec3_t &point) {
+void ThrowMoreStuff(gentity_t *self, const vec3_t &point) {
 	int n;
 
-	if (coop->integer) {
+	if (InCoopStyle()) {
 		ThrowSmallStuff(self, point);
 		return;
 	}
@@ -1104,7 +1104,7 @@ void ThrowMoreStuff(edict_t *self, const vec3_t &point) {
 		ThrowWidowGibLoc(self, "models/objects/gibs/sm_metal/tris.md2", 100, GIB_METALLIC, &point, false);
 }
 
-THINK(WidowExplode) (edict_t *self) -> void {
+THINK(WidowExplode) (gentity_t *self) -> void {
 	vec3_t org;
 	int	   n;
 
@@ -1210,7 +1210,7 @@ THINK(WidowExplode) (edict_t *self) -> void {
 	self->nextthink = level.time + 10_hz;
 }
 
-void WidowExplosion1(edict_t *self) {
+void WidowExplosion1(gentity_t *self) {
 	int	   n;
 	vec3_t f, r, u, startpoint;
 	vec3_t offset = { 23.74f, -37.67f, 76.96f };
@@ -1231,7 +1231,7 @@ void WidowExplosion1(edict_t *self) {
 		ThrowWidowGibLoc(self, "models/objects/gibs/sm_metal/tris.md2", 300, GIB_METALLIC, &startpoint, false);
 }
 
-void WidowExplosion2(edict_t *self) {
+void WidowExplosion2(gentity_t *self) {
 	int	   n;
 	vec3_t f, r, u, startpoint;
 	vec3_t offset = { -20.49f, 36.92f, 73.52f };
@@ -1252,7 +1252,7 @@ void WidowExplosion2(edict_t *self) {
 		ThrowWidowGibLoc(self, "models/objects/gibs/sm_metal/tris.md2", 300, GIB_METALLIC, &startpoint, false);
 }
 
-void WidowExplosion3(edict_t *self) {
+void WidowExplosion3(gentity_t *self) {
 	int	   n;
 	vec3_t f, r, u, startpoint;
 	vec3_t offset = { 2.11f, 0.05f, 92.20f };
@@ -1273,7 +1273,7 @@ void WidowExplosion3(edict_t *self) {
 		ThrowWidowGibLoc(self, "models/objects/gibs/sm_metal/tris.md2", 300, GIB_METALLIC, &startpoint, false);
 }
 
-void WidowExplosion4(edict_t *self) {
+void WidowExplosion4(gentity_t *self) {
 	int	   n;
 	vec3_t f, r, u, startpoint;
 	vec3_t offset = { -28.04f, -35.57f, -77.56f };
@@ -1294,7 +1294,7 @@ void WidowExplosion4(edict_t *self) {
 		ThrowWidowGibLoc(self, "models/objects/gibs/sm_metal/tris.md2", 300, GIB_METALLIC, &startpoint, false);
 }
 
-void WidowExplosion5(edict_t *self) {
+void WidowExplosion5(gentity_t *self) {
 	int	   n;
 	vec3_t f, r, u, startpoint;
 	vec3_t offset = { -20.11f, -1.11f, 40.76f };
@@ -1315,7 +1315,7 @@ void WidowExplosion5(edict_t *self) {
 		ThrowWidowGibLoc(self, "models/objects/gibs/sm_metal/tris.md2", 300, GIB_METALLIC, &startpoint, false);
 }
 
-void WidowExplosion6(edict_t *self) {
+void WidowExplosion6(gentity_t *self) {
 	int	   n;
 	vec3_t f, r, u, startpoint;
 	vec3_t offset = { -20.11f, -1.11f, 40.76f };
@@ -1336,7 +1336,7 @@ void WidowExplosion6(edict_t *self) {
 		ThrowWidowGibLoc(self, "models/objects/gibs/sm_metal/tris.md2", 300, GIB_METALLIC, &startpoint, false);
 }
 
-void WidowExplosion7(edict_t *self) {
+void WidowExplosion7(gentity_t *self) {
 	int	   n;
 	vec3_t f, r, u, startpoint;
 	vec3_t offset = { -20.11f, -1.11f, 40.76f };
@@ -1357,7 +1357,7 @@ void WidowExplosion7(edict_t *self) {
 		ThrowWidowGibLoc(self, "models/objects/gibs/sm_metal/tris.md2", 300, GIB_METALLIC, &startpoint, false);
 }
 
-void WidowExplosionLeg(edict_t *self) {
+void WidowExplosionLeg(gentity_t *self) {
 	vec3_t f, r, u, startpoint;
 	vec3_t offset1 = { -31.89f, -47.86f, 67.02f };
 	vec3_t offset2 = { -44.9f, -82.14f, 54.72f };
@@ -1388,7 +1388,7 @@ void WidowExplosionLeg(edict_t *self) {
 	ThrowWidowGibLoc(self, "models/objects/gibs/sm_metal/tris.md2", 100, GIB_METALLIC, &startpoint, false);
 }
 
-void ThrowArm1(edict_t *self) {
+void ThrowArm1(gentity_t *self) {
 	int	   n;
 	vec3_t f, r, u, startpoint;
 	vec3_t offset1 = { 65.76f, 17.52f, 7.56f };
@@ -1405,7 +1405,7 @@ void ThrowArm1(edict_t *self) {
 		ThrowWidowGibLoc(self, "models/objects/gibs/sm_metal/tris.md2", 100, GIB_METALLIC, &startpoint, false);
 }
 
-void ThrowArm2(edict_t *self) {
+void ThrowArm2(gentity_t *self) {
 	vec3_t f, r, u, startpoint;
 	vec3_t offset1 = { 65.76f, 17.52f, 7.56f };
 

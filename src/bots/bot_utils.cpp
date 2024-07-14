@@ -12,7 +12,7 @@ constexpr int Team_Coop_Monster = 0;
 Player_UpdateState
 ================
 */
-static void Player_UpdateState(edict_t *player) {
+static void Player_UpdateState(gentity_t *player) {
 	const client_persistant_t &persistant = player->client->pers;
 
 	player->sv.ent_flags = SVFL_NONE;
@@ -106,7 +106,7 @@ static void Player_UpdateState(edict_t *player) {
 		player->sv.ent_flags |= SVFL_WAS_TELEFRAGGED;
 	}
 
-	if (!ClientIsPlaying(player->client)) {
+	if (!ClientIsPlaying(player->client) || player->client->eliminated) {
 		player->sv.ent_flags |= SVFL_IS_SPECTATOR;
 	}
 
@@ -160,7 +160,7 @@ static void Player_UpdateState(edict_t *player) {
 
 		gi.Info_ValueForKey(player->client->pers.userinfo, "name", player->sv.netname, sizeof(player->sv.netname));
 
-		gi.Bot_RegisterEdict(player);
+		gi.Bot_RegisterEntity(player);
 	}
 }
 
@@ -169,7 +169,7 @@ static void Player_UpdateState(edict_t *player) {
 Monster_UpdateState
 ================
 */
-static void Monster_UpdateState(edict_t *monster) {
+static void Monster_UpdateState(gentity_t *monster) {
 	monster->sv.ent_flags = SVFL_NONE;
 	if (monster->groundentity != nullptr) {
 		monster->sv.ent_flags |= SVFL_ONGROUND;
@@ -187,7 +187,7 @@ static void Monster_UpdateState(edict_t *monster) {
 		monster->sv.ent_flags |= SVFL_IN_WATER;
 	}
 
-	if (coop->integer) {
+	if (InCoopStyle()) {
 		monster->sv.team = Team_Coop_Monster;
 	} else {
 		monster->sv.team = Team_None; // TODO: CTF/TDM/etc...
@@ -217,7 +217,7 @@ static void Monster_UpdateState(edict_t *monster) {
 		monster->sv.starting_health = monster->health;
 		monster->sv.max_health = monster->max_health;
 
-		gi.Bot_RegisterEdict(monster);
+		gi.Bot_RegisterEntity(monster);
 	}
 }
 
@@ -226,7 +226,7 @@ static void Monster_UpdateState(edict_t *monster) {
 Item_UpdateState
 ================
 */
-static void Item_UpdateState(edict_t *item) {
+static void Item_UpdateState(gentity_t *item) {
 	item->sv.ent_flags = SVFL_IS_ITEM;
 	item->sv.respawntime = 0;
 
@@ -263,7 +263,7 @@ static void Item_UpdateState(edict_t *item) {
 		item->sv.init = true;
 		item->sv.targetname = item->targetname;
 
-		gi.Bot_RegisterEdict(item);
+		gi.Bot_RegisterEntity(item);
 	}
 }
 
@@ -272,7 +272,7 @@ static void Item_UpdateState(edict_t *item) {
 Trap_UpdateState
 ================
 */
-static void Trap_UpdateState(edict_t *danger) {
+static void Trap_UpdateState(gentity_t *danger) {
 	danger->sv.ent_flags = SVFL_TRAP_DANGER;
 	danger->sv.velocity = danger->velocity;
 
@@ -302,61 +302,61 @@ static void Trap_UpdateState(edict_t *danger) {
 		danger->sv.init = true;
 		danger->sv.classname = danger->classname;
 
-		gi.Bot_RegisterEdict(danger);
+		gi.Bot_RegisterEntity(danger);
 	}
 }
 
 /*
 ================
-Edict_UpdateState
+Mover_UpdateState
 ================
 */
-static void Edict_UpdateState(edict_t *edict) {
-	edict->sv.ent_flags = SVFL_NONE;
-	edict->sv.health = edict->health;
+static void Mover_UpdateState(gentity_t *entity) {
+	entity->sv.ent_flags = SVFL_NONE;
+	entity->sv.health = entity->health;
 
-	if (edict->takedamage) {
-		edict->sv.ent_flags |= SVFL_TAKES_DAMAGE;
+	if (entity->takedamage) {
+		entity->sv.ent_flags |= SVFL_TAKES_DAMAGE;
 	}
 
 	// plats, movers, and doors use this to determine move state.
-	const bool isDoor = ((edict->svflags & SVF_DOOR) != 0);
-	const bool isReversedDoor = (isDoor && edict->spawnflags.has(SPAWNFLAG_DOOR_REVERSE));
+	const bool isDoor = ((entity->svflags & SVF_DOOR) != 0);
+	const bool isReversedDoor = (isDoor && entity->spawnflags.has(SPAWNFLAG_DOOR_REVERSE));
 
 	// doors have their top/bottom states reversed from plats
 	// ( unless "reverse" spawnflag is set! )
 	if (isDoor && !isReversedDoor) {
-		if (edict->moveinfo.state == STATE_TOP) {
-			edict->sv.ent_flags |= SVFL_MOVESTATE_BOTTOM;
-		} else if (edict->moveinfo.state == STATE_BOTTOM) {
-			edict->sv.ent_flags |= SVFL_MOVESTATE_TOP;
+		if (entity->moveinfo.state == STATE_TOP) {
+			entity->sv.ent_flags |= SVFL_MOVESTATE_BOTTOM;
+		} else if (entity->moveinfo.state == STATE_BOTTOM) {
+			entity->sv.ent_flags |= SVFL_MOVESTATE_TOP;
 		}
 	} else {
-		if (edict->moveinfo.state == STATE_TOP) {
-			edict->sv.ent_flags |= SVFL_MOVESTATE_TOP;
-		} else if (edict->moveinfo.state == STATE_BOTTOM) {
-			edict->sv.ent_flags |= SVFL_MOVESTATE_BOTTOM;
+		if (entity->moveinfo.state == STATE_TOP) {
+			entity->sv.ent_flags |= SVFL_MOVESTATE_TOP;
+		} else if (entity->moveinfo.state == STATE_BOTTOM) {
+			entity->sv.ent_flags |= SVFL_MOVESTATE_BOTTOM;
 		}
 	}
 
-	if (edict->moveinfo.state == STATE_UP || edict->moveinfo.state == STATE_DOWN) {
-		edict->sv.ent_flags |= SVFL_MOVESTATE_MOVING;
+	if (entity->moveinfo.state == STATE_UP || entity->moveinfo.state == STATE_DOWN) {
+		entity->sv.ent_flags |= SVFL_MOVESTATE_MOVING;
 	}
 
-	edict->sv.start_origin = edict->moveinfo.start_origin;
-	edict->sv.end_origin = edict->moveinfo.end_origin;
+	entity->sv.start_origin = entity->moveinfo.start_origin;
+	entity->sv.end_origin = entity->moveinfo.end_origin;
 
-	if (edict->svflags & SVF_DOOR) {
-		if (edict->flags & FL_LOCKED) {
-			edict->sv.ent_flags |= SVFL_IS_LOCKED_DOOR;
+	if (entity->svflags & SVF_DOOR) {
+		if (entity->flags & FL_LOCKED) {
+			entity->sv.ent_flags |= SVFL_IS_LOCKED_DOOR;
 		}
 	}
 
-	if (!edict->sv.init) {
-		edict->sv.init = true;
-		edict->sv.classname = edict->classname;
-		edict->sv.targetname = edict->targetname;
-		edict->sv.spawnflags = edict->spawnflags.value;
+	if (!entity->sv.init) {
+		entity->sv.init = true;
+		entity->sv.classname = entity->classname;
+		entity->sv.targetname = entity->targetname;
+		entity->sv.spawnflags = entity->spawnflags.value;
 	}
 }
 
@@ -365,24 +365,24 @@ static void Edict_UpdateState(edict_t *edict) {
 Entity_UpdateState
 ================
 */
-void Entity_UpdateState(edict_t *edict) {
-	if (edict->svflags & SVF_MONSTER) {
-		Monster_UpdateState(edict);
-	} else if (edict->flags & FL_TRAP || edict->flags & FL_TRAP_LASER_FIELD) {
-		Trap_UpdateState(edict);
-	} else if (edict->item != nullptr) {
-		Item_UpdateState(edict);
-	} else if (edict->client != nullptr) {
-		Player_UpdateState(edict);
+void Entity_UpdateState(gentity_t *ent) {
+	if (ent->svflags & SVF_MONSTER) {
+		Monster_UpdateState(ent);
+	} else if (ent->flags & FL_TRAP || ent->flags & FL_TRAP_LASER_FIELD) {
+		Trap_UpdateState(ent);
+	} else if (ent->item != nullptr) {
+		Item_UpdateState(ent);
+	} else if (ent->client != nullptr) {
+		Player_UpdateState(ent);
 	} else {
-		Edict_UpdateState(edict);
+		Mover_UpdateState(ent);
 	}
 }
 
-static USE(info_nav_lock_use) (edict_t *self, edict_t *other, edict_t *activator) -> void {
-	edict_t *n = nullptr;
+static USE(info_nav_lock_use) (gentity_t *self, gentity_t *other, gentity_t *activator) -> void {
+	gentity_t *n = nullptr;
 
-	while ((n = G_FindByString<&edict_t::targetname>(n, self->target))) {
+	while ((n = G_FindByString<&gentity_t::targetname>(n, self->target))) {
 		if (!(n->svflags & SVF_DOOR)) {
 			gi.Com_PrintFmt("{} tried targeting {}, a non-SVF_DOOR\n", *self, *n);
 			continue;
@@ -395,16 +395,16 @@ static USE(info_nav_lock_use) (edict_t *self, edict_t *other, edict_t *activator
 /*QUAKED info_nav_lock (1.0 1.0 0.0) (-16 -16 0) (16 16 32) x x x x x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
 Toggles locked state on linked entity.
 */
-void SP_info_nav_lock(edict_t *self) {
+void SP_info_nav_lock(gentity_t *self) {
 	if (!self->targetname) {
 		gi.Com_PrintFmt("{} missing targetname\n", *self);
-		G_FreeEdict(self);
+		G_FreeEntity(self);
 		return;
 	}
 
 	if (!self->target) {
 		gi.Com_PrintFmt("{} missing target\n", *self);
-		G_FreeEdict(self);
+		G_FreeEntity(self);
 		return;
 	}
 
@@ -417,11 +417,11 @@ void SP_info_nav_lock(edict_t *self) {
 FindLocalPlayer
 ================
 */
-const edict_t *FindLocalPlayer() {
-	const edict_t *localPlayer = nullptr;
+const gentity_t *FindLocalPlayer() {
+	const gentity_t *localPlayer = nullptr;
 
-	const edict_t *ent = &g_edicts[0];
-	for (size_t i = 0; i < globals.num_edicts; i++, ent++) {
+	const gentity_t *ent = &g_entities[0];
+	for (size_t i = 0; i < globals.num_entities; i++, ent++) {
 		if (!ent->inuse || !(ent->svflags & SVF_PLAYER)) {
 			continue;
 		}
@@ -442,11 +442,11 @@ const edict_t *FindLocalPlayer() {
 FindFirstBot
 ================
 */
-const edict_t *FindFirstBot() {
-	const edict_t *firstBot = nullptr;
+const gentity_t *FindFirstBot() {
+	const gentity_t *firstBot = nullptr;
 
-	const edict_t *ent = &g_edicts[0];
-	for (size_t i = 0; i < globals.num_edicts; i++, ent++) {
+	const gentity_t *ent = &g_entities[0];
+	for (size_t i = 0; i < globals.num_entities; i++, ent++) {
 		if (!ent->inuse || !(ent->svflags & SVF_PLAYER)) {
 			continue;
 		}
@@ -471,11 +471,11 @@ const edict_t *FindFirstBot() {
 FindFirstMonster
 ================
 */
-const edict_t *FindFirstMonster() {
-	const edict_t *firstMonster = nullptr;
+const gentity_t *FindFirstMonster() {
+	const gentity_t *firstMonster = nullptr;
 
-	const edict_t *ent = &g_edicts[0];
-	for (size_t i = 0; i < globals.num_edicts; i++, ent++) {
+	const gentity_t *ent = &g_entities[0];
+	for (size_t i = 0; i < globals.num_entities; i++, ent++) {
 		if (!ent->inuse || !(ent->svflags & SVF_MONSTER)) {
 			continue;
 		}
@@ -498,7 +498,7 @@ FindFirstMonster
 "Actors" are either players or monsters - i.e. something alive and thinking.
 ================
 */
-const edict_t *FindActorUnderCrosshair(const edict_t *player) {
+const gentity_t *FindActorUnderCrosshair(const gentity_t *player) {
 	if (player == nullptr || !player->inuse) {
 		return nullptr;
 	}
@@ -512,7 +512,7 @@ const edict_t *FindActorUnderCrosshair(const edict_t *player) {
 
 	trace_t tr = gi.traceline(eye_position, end, player, mask);
 
-	const edict_t *traceEnt = tr.ent;
+	const gentity_t *traceEnt = tr.ent;
 	if (traceEnt == nullptr || !tr.ent->inuse) {
 		return nullptr;
 	}

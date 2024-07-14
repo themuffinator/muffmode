@@ -7,16 +7,16 @@
 // BLOCKED Logic
 //===============================
 
-bool face_wall(edict_t *self);
+bool face_wall(gentity_t *self);
 
 // blocked_checkplat
 //	dist: how far they are trying to walk.
-bool blocked_checkplat(edict_t *self, float dist) {
+bool blocked_checkplat(gentity_t *self, float dist) {
 	int		 playerPosition;
 	trace_t	 trace;
 	vec3_t	 pt1, pt2;
 	vec3_t	 forward;
-	edict_t *plat;
+	gentity_t *plat;
 
 	if (!self->enemy)
 		return false;
@@ -80,13 +80,13 @@ bool blocked_checkplat(edict_t *self, float dist) {
 // JUMPING AIDS
 //*******************
 
-static inline void monster_jump_start(edict_t *self) {
+static inline void monster_jump_start(gentity_t *self) {
 	monster_done_dodge(self);
 
 	self->monsterinfo.jump_time = level.time + 3_sec;
 }
 
-bool monster_jump_finished(edict_t *self) {
+bool monster_jump_finished(gentity_t *self) {
 	// if we lost our forward velocity, give us more
 	vec3_t forward;
 
@@ -106,7 +106,7 @@ bool monster_jump_finished(edict_t *self) {
 // blocked_checkjump
 //	dist: how far they are trying to walk.
 //  self->monsterinfo.drop_height/self->monsterinfo.jump_height: how far they'll ok a jump for. set to 0 to disable that direction.
-blocked_jump_result_t blocked_checkjump(edict_t *self, float dist) {
+blocked_jump_result_t blocked_checkjump(gentity_t *self, float dist) {
 	// can't jump even if we physically can
 	if (!self->monsterinfo.can_jump)
 		return blocked_jump_result_t::NO_JUMP;
@@ -233,7 +233,7 @@ constexpr spawnflags_t SPAWNFLAG_HINT_ENDPOINT = 0x0001_spawnflag;
 constexpr size_t   MAX_HINT_CHAINS = 100;
 
 int		 hint_paths_present;
-edict_t *hint_path_start[MAX_HINT_CHAINS];
+gentity_t *hint_path_start[MAX_HINT_CHAINS];
 int		 num_hint_paths;
 
 //
@@ -243,29 +243,29 @@ int		 num_hint_paths;
 // =============
 // hintpath_findstart - given any hintpath node, finds the start node
 // =============
-static edict_t *hintpath_findstart(edict_t *ent) {
-	edict_t *e;
-	edict_t *last;
+static gentity_t *hintpath_findstart(gentity_t *ent) {
+	gentity_t *e;
+	gentity_t *last;
 
 	if (ent->target) // starting point
 	{
 		last = world;
-		e = G_FindByString<&edict_t::targetname>(nullptr, ent->target);
+		e = G_FindByString<&gentity_t::targetname>(nullptr, ent->target);
 		while (e) {
 			last = e;
 			if (!e->target)
 				break;
-			e = G_FindByString<&edict_t::targetname>(nullptr, e->target);
+			e = G_FindByString<&gentity_t::targetname>(nullptr, e->target);
 		}
 	} else // end point
 	{
 		last = world;
-		e = G_FindByString<&edict_t::target>(nullptr, ent->targetname);
+		e = G_FindByString<&gentity_t::target>(nullptr, ent->targetname);
 		while (e) {
 			last = e;
 			if (!e->targetname)
 				break;
-			e = G_FindByString<&edict_t::target>(nullptr, e->targetname);
+			e = G_FindByString<&gentity_t::target>(nullptr, e->targetname);
 		}
 	}
 
@@ -280,29 +280,29 @@ static edict_t *hintpath_findstart(edict_t *ent) {
 // =============
 // hintpath_other_end - given one endpoint of a hintpath, returns the other end.
 // =============
-static edict_t *hintpath_other_end(edict_t *ent) {
-	edict_t *e;
-	edict_t *last;
+static gentity_t *hintpath_other_end(gentity_t *ent) {
+	gentity_t *e;
+	gentity_t *last;
 
 	if (ent->target) // starting point
 	{
 		last = world;
-		e = G_FindByString<&edict_t::targetname>(nullptr, ent->target);
+		e = G_FindByString<&gentity_t::targetname>(nullptr, ent->target);
 		while (e) {
 			last = e;
 			if (!e->target)
 				break;
-			e = G_FindByString<&edict_t::targetname>(nullptr, e->target);
+			e = G_FindByString<&gentity_t::targetname>(nullptr, e->target);
 		}
 	} else // end point
 	{
 		last = world;
-		e = G_FindByString<&edict_t::target>(nullptr, ent->targetname);
+		e = G_FindByString<&gentity_t::target>(nullptr, ent->targetname);
 		while (e) {
 			last = e;
 			if (!e->targetname)
 				break;
-			e = G_FindByString<&edict_t::target>(nullptr, e->targetname);
+			e = G_FindByString<&gentity_t::target>(nullptr, e->targetname);
 		}
 	}
 
@@ -318,7 +318,7 @@ static edict_t *hintpath_other_end(edict_t *ent) {
 // hintpath_go - starts a monster (self) moving towards the hintpath (point)
 //		disables all contrary AI flags.
 // =============
-static void hintpath_go(edict_t *self, edict_t *point) {
+static void hintpath_go(gentity_t *self, gentity_t *point) {
 	vec3_t dir;
 
 	dir = point->s.origin - self->s.origin;
@@ -336,7 +336,7 @@ static void hintpath_go(edict_t *self, edict_t *point) {
 // =============
 // hintpath_stop - bails a monster out of following hint paths
 // =============
-void hintpath_stop(edict_t *self) {
+void hintpath_stop(gentity_t *self) {
 	self->goalentity = nullptr;
 	self->movetarget = nullptr;
 	self->monsterinfo.last_hint_time = level.time;
@@ -368,11 +368,11 @@ void hintpath_stop(edict_t *self) {
 //		and the monster's enemy. if only one person is visible from the endpoints,
 //		it will not go for it.
 // =============
-bool monsterlost_checkhint(edict_t *self) {
-	edict_t *e, *monster_pathchain, *target_pathchain, *checkpoint = nullptr;
-	edict_t *closest;
+bool monsterlost_checkhint(gentity_t *self) {
+	gentity_t *e, *monster_pathchain, *target_pathchain, *checkpoint = nullptr;
+	gentity_t *closest;
 	float	 closest_range = 1000000;
-	edict_t *start, *destination;
+	gentity_t *start, *destination;
 	int		 count5 = 0;
 	float	 r;
 	int		 i;
@@ -642,8 +642,8 @@ bool monsterlost_checkhint(edict_t *self) {
 // =============
 // hint_path_touch - someone's touched the hint_path
 // =============
-static TOUCH(hint_path_touch) (edict_t *self, edict_t *other, const trace_t &tr, bool other_touching_self) -> void {
-	edict_t *e, *goal, *next = nullptr;
+static TOUCH(hint_path_touch) (gentity_t *self, gentity_t *other, const trace_t &tr, bool other_touching_self) -> void {
+	gentity_t *e, *goal, *next = nullptr;
 	bool goalFound = false;
 
 	// make sure we're the target of it's obsession
@@ -698,15 +698,15 @@ END - set this flag on the endpoints of each hintpath.
 
 "wait" - set this if you want the monster to freeze when they touch this hintpath
 */
-void SP_hint_path(edict_t *self) {
+void SP_hint_path(gentity_t *self) {
 	if (deathmatch->integer) {
-		G_FreeEdict(self);
+		G_FreeEntity(self);
 		return;
 	}
 
 	if (!self->targetname && !self->target) {
 		gi.Com_PrintFmt("{}: unlinked\n", *self);
-		G_FreeEdict(self);
+		G_FreeEntity(self);
 		return;
 	}
 
@@ -722,19 +722,19 @@ void SP_hint_path(edict_t *self) {
 // InitHintPaths - Called by InitGame (g_save) to enable quick exits if valid
 // ============
 void InitHintPaths() {
-	edict_t *e, *current;
+	gentity_t *e, *current;
 	int		 i;
 
 	hint_paths_present = 0;
 
 	// check all the hint_paths.
-	e = G_FindByString<&edict_t::classname>(nullptr, "hint_path");
+	e = G_FindByString<&gentity_t::classname>(nullptr, "hint_path");
 	if (e)
 		hint_paths_present = 1;
 	else
 		return;
 
-	memset(hint_path_start, 0, MAX_HINT_CHAINS * sizeof(edict_t *));
+	memset(hint_path_start, 0, MAX_HINT_CHAINS * sizeof(gentity_t *));
 	num_hint_paths = 0;
 	while (e) {
 		if (e->spawnflags.has(SPAWNFLAG_HINT_ENDPOINT)) {
@@ -752,14 +752,14 @@ void InitHintPaths() {
 				}
 			}
 		}
-		e = G_FindByString<&edict_t::classname>(e, "hint_path");
+		e = G_FindByString<&gentity_t::classname>(e, "hint_path");
 	}
 
 	for (i = 0; i < num_hint_paths; i++) {
 		current = hint_path_start[i];
 		current->hint_chain_id = i;
-		e = G_FindByString<&edict_t::targetname>(nullptr, current->target);
-		if (G_FindByString<&edict_t::targetname>(e, current->target)) {
+		e = G_FindByString<&gentity_t::targetname>(nullptr, current->target);
+		if (G_FindByString<&gentity_t::targetname>(e, current->target)) {
 			gi.Com_PrintFmt("{}: Forked path detected for chain {}, target {}\n",
 				*current, num_hint_paths, current->target);
 			hint_path_start[i]->hint_chain = nullptr;
@@ -777,8 +777,8 @@ void InitHintPaths() {
 			current->hint_chain_id = i;
 			if (!current->target)
 				break;
-			e = G_FindByString<&edict_t::targetname>(nullptr, current->target);
-			if (G_FindByString<&edict_t::targetname>(e, current->target)) {
+			e = G_FindByString<&gentity_t::targetname>(nullptr, current->target);
+			if (G_FindByString<&gentity_t::targetname>(e, current->target)) {
 				gi.Com_PrintFmt("{}: Forked path detected for chain {}, target {}\n",
 					*current, num_hint_paths, current->target);
 				hint_path_start[i]->hint_chain = nullptr;
@@ -796,7 +796,7 @@ void InitHintPaths() {
 // use to see if opponent is behind you (not to side)
 // if it looks a lot like infront, well, there's a reason
 
-bool inback(edict_t *self, edict_t *other) {
+bool inback(gentity_t *self, gentity_t *other) {
 	vec3_t vec;
 	float  dot;
 	vec3_t forward;
@@ -808,7 +808,7 @@ bool inback(edict_t *self, edict_t *other) {
 	return dot < -0.3f;
 }
 
-float realrange(edict_t *self, edict_t *other) {
+float realrange(gentity_t *self, gentity_t *other) {
 	vec3_t dir;
 
 	dir = self->s.origin - other->s.origin;
@@ -816,7 +816,7 @@ float realrange(edict_t *self, edict_t *other) {
 	return dir.length();
 }
 
-bool face_wall(edict_t *self) {
+bool face_wall(gentity_t *self) {
 	vec3_t	pt;
 	vec3_t	forward;
 	vec3_t	ang;
@@ -842,10 +842,10 @@ bool face_wall(edict_t *self) {
 // Monster "Bad" Areas
 //
 
-static TOUCH(badarea_touch) (edict_t *ent, edict_t *other, const trace_t &tr, bool other_touching_self) -> void {}
+static TOUCH(badarea_touch) (gentity_t *ent, gentity_t *other, const trace_t &tr, bool other_touching_self) -> void {}
 
-edict_t *SpawnBadArea(const vec3_t &mins, const vec3_t &maxs, gtime_t lifespan, edict_t *owner) {
-	edict_t *badarea;
+gentity_t *SpawnBadArea(const vec3_t &mins, const vec3_t &maxs, gtime_t lifespan, gentity_t *owner) {
+	gentity_t *badarea;
 	vec3_t	 origin;
 
 	origin = mins + maxs;
@@ -863,7 +863,7 @@ edict_t *SpawnBadArea(const vec3_t &mins, const vec3_t &maxs, gtime_t lifespan, 
 	gi.linkentity(badarea);
 
 	if (lifespan) {
-		badarea->think = G_FreeEdict;
+		badarea->think = G_FreeEntity;
 		badarea->nextthink = level.time + lifespan;
 	}
 	if (owner) {
@@ -873,40 +873,40 @@ edict_t *SpawnBadArea(const vec3_t &mins, const vec3_t &maxs, gtime_t lifespan, 
 	return badarea;
 }
 
-static BoxEdictsResult_t CheckForBadArea_BoxFilter(edict_t *hit, void *data) {
-	edict_t *&result = (edict_t *&)data;
+static BoxEntitiesResult_t CheckForBadArea_BoxFilter(gentity_t *hit, void *data) {
+	gentity_t *&result = (gentity_t *&)data;
 
 	if (hit->touch == badarea_touch) {
 		result = hit;
-		return BoxEdictsResult_t::End;
+		return BoxEntitiesResult_t::End;
 	}
 
-	return BoxEdictsResult_t::Skip;
+	return BoxEntitiesResult_t::Skip;
 }
 
 // CheckForBadArea
 //		This is a customized version of G_TouchTriggers that will check
 //		for bad area triggers and return them if they're touched.
-edict_t *CheckForBadArea(edict_t *ent) {
+gentity_t *CheckForBadArea(gentity_t *ent) {
 	vec3_t	 mins, maxs;
 
 	mins = ent->s.origin + ent->mins;
 	maxs = ent->s.origin + ent->maxs;
 
-	edict_t *hit = nullptr;
+	gentity_t *hit = nullptr;
 
-	gi.BoxEdicts(mins, maxs, nullptr, 0, AREA_TRIGGERS, CheckForBadArea_BoxFilter, &hit);
+	gi.BoxEntities(mins, maxs, nullptr, 0, AREA_TRIGGERS, CheckForBadArea_BoxFilter, &hit);
 
 	return hit;
 }
 
 constexpr float TESLA_DAMAGE_RADIUS = 128;
 
-bool MarkTeslaArea(edict_t *self, edict_t *tesla) {
+bool MarkTeslaArea(gentity_t *self, gentity_t *tesla) {
 	vec3_t	 mins, maxs;
-	edict_t *e;
-	edict_t *tail;
-	edict_t *area;
+	gentity_t *e;
+	gentity_t *tail;
+	gentity_t *area;
 
 	if (!tesla || !self)
 		return false;
@@ -926,7 +926,7 @@ bool MarkTeslaArea(edict_t *self, edict_t *tesla) {
 
 	// see if we can grab the trigger directly
 	if (tesla->teamchain && tesla->teamchain->inuse) {
-		edict_t *trigger;
+		gentity_t *trigger;
 
 		trigger = tesla->teamchain;
 
@@ -962,7 +962,7 @@ bool MarkTeslaArea(edict_t *self, edict_t *tesla) {
 // offset is how much time to miss by
 // aimdir is the resulting aim direction (pass in nullptr if you don't want it)
 // aimpoint is the resulting aimpoint (pass in nullptr if don't want it)
-void PredictAim(edict_t *self, edict_t *target, const vec3_t &start, float bolt_speed, bool eye_height, float offset, vec3_t *aimdir, vec3_t *aimpoint) {
+void PredictAim(gentity_t *self, gentity_t *target, const vec3_t &start, float bolt_speed, bool eye_height, float offset, vec3_t *aimdir, vec3_t *aimpoint) {
 	vec3_t dir, vec;
 	float  dist, time;
 
@@ -1015,7 +1015,7 @@ void PredictAim(edict_t *self, edict_t *target, const vec3_t &start, float bolt_
 
 // [Paril-KEX] find a pitch that will at some point land on or near the player.
 // very approximate. aim will be adjusted to the correct aim vector.
-bool M_CalculatePitchToFire(edict_t *self, const vec3_t &target, const vec3_t &start, vec3_t &aim, float speed, float time_remaining, bool mortar, bool destroy_on_touch) {
+bool M_CalculatePitchToFire(gentity_t *self, const vec3_t &target, const vec3_t &start, vec3_t &aim, float speed, float time_remaining, bool mortar, bool destroy_on_touch) {
 	constexpr float pitches[] = { -80.f, -70.f, -60.f, -50.f, -40.f, -30.f, -20.f, -10.f, -5.f };
 	float best_pitch = 0.f;
 	float best_dist = std::numeric_limits<float>::infinity();
@@ -1074,7 +1074,7 @@ bool M_CalculatePitchToFire(edict_t *self, const vec3_t &target, const vec3_t &s
 	return false;
 }
 
-bool below(edict_t *self, edict_t *other) {
+bool below(gentity_t *self, gentity_t *other) {
 	vec3_t vec;
 	float  dot;
 	vec3_t down;
@@ -1089,7 +1089,7 @@ bool below(edict_t *self, edict_t *other) {
 	return false;
 }
 
-void drawbbox(edict_t *self) {
+void drawbbox(gentity_t *self) {
 	int lines[4][3] = {
 		{ 1, 2, 4 },
 		{ 1, 2, 7 },
@@ -1165,7 +1165,7 @@ static inline bool G_SkillCheck(const std::initializer_list<float> &skills) {
 //
 // New dodge code
 //
-MONSTERINFO_DODGE(M_MonsterDodge) (edict_t *self, edict_t *attacker, gtime_t eta, trace_t *tr, bool gravity) -> void {
+MONSTERINFO_DODGE(M_MonsterDodge) (gentity_t *self, gentity_t *attacker, gtime_t eta, trace_t *tr, bool gravity) -> void {
 	float r = frandom();
 	float height;
 	bool  ducker = false, dodger = false;
@@ -1212,8 +1212,9 @@ MONSTERINFO_DODGE(M_MonsterDodge) (edict_t *self, edict_t *attacker, gtime_t eta
 		// if we're ducking already, or the shot is at our knees
 		if ((!ducker || !tr || tr->endpos[2] <= height) || (self->monsterinfo.aiflags & AI_DUCKED)) {
 			// on Easy & Normal, don't sidestep as often (25% on Easy, 50% on Normal)
-			if (!G_SkillCheck({ 0.25f, 0.50f, 1.0f, 1.0f })) {
-				self->monsterinfo.dodge_time = level.time + random_time(0.8_sec, 1.4_sec);
+			if (!G_SkillCheck({ 0.25f, 0.50f, 1.0f, 1.0f, 1.0f })) {
+				gtime_t delay = skill->integer > 3 ? random_time(400_ms, 500_ms) : random_time(0.8_sec, 1.4_sec);
+				self->monsterinfo.dodge_time = level.time + delay;
 				return;
 			} else {
 				if (tr) {
@@ -1238,7 +1239,8 @@ MONSTERINFO_DODGE(M_MonsterDodge) (edict_t *self, edict_t *attacker, gtime_t eta
 					self->monsterinfo.aiflags |= AI_DODGING;
 					self->monsterinfo.attack_state = AS_SLIDING;
 
-					self->monsterinfo.dodge_time = level.time + random_time(0.4_sec, 2.0_sec);
+					gtime_t delay = skill->integer > 3 ? random_time(400_ms, 500_ms) : random_time(0.4_sec, 2.0_sec);
+					self->monsterinfo.dodge_time = level.time + delay;
 				}
 				return;
 			}
@@ -1271,7 +1273,7 @@ MONSTERINFO_DODGE(M_MonsterDodge) (edict_t *self, edict_t *attacker, gtime_t eta
 	}
 }
 
-void monster_duck_down(edict_t *self) {
+void monster_duck_down(gentity_t *self) {
 	self->monsterinfo.aiflags |= AI_DUCKED;
 
 	self->maxs[2] = self->monsterinfo.base_height - 32;
@@ -1280,14 +1282,14 @@ void monster_duck_down(edict_t *self) {
 	gi.linkentity(self);
 }
 
-void monster_duck_hold(edict_t *self) {
+void monster_duck_hold(gentity_t *self) {
 	if (level.time >= self->monsterinfo.duck_wait_time)
 		self->monsterinfo.aiflags &= ~AI_HOLD_FRAME;
 	else
 		self->monsterinfo.aiflags |= AI_HOLD_FRAME;
 }
 
-MONSTERINFO_UNDUCK(monster_duck_up) (edict_t *self) -> void {
+MONSTERINFO_UNDUCK(monster_duck_up) (gentity_t *self) -> void {
 	if (!(self->monsterinfo.aiflags & AI_DUCKED))
 		return;
 
@@ -1302,7 +1304,7 @@ MONSTERINFO_UNDUCK(monster_duck_up) (edict_t *self) -> void {
 
 //=========================
 //=========================
-bool has_valid_enemy(edict_t *self) {
+bool has_valid_enemy(gentity_t *self) {
 	if (!self->enemy)
 		return false;
 
@@ -1315,7 +1317,7 @@ bool has_valid_enemy(edict_t *self) {
 	return true;
 }
 
-void TargetTesla(edict_t *self, edict_t *tesla) {
+void TargetTesla(gentity_t *self, gentity_t *tesla) {
 	if ((!self) || (!tesla))
 		return;
 
@@ -1346,15 +1348,15 @@ void TargetTesla(edict_t *self, edict_t *tesla) {
 // this returns a randomly selected coop player who is visible to self
 // returns nullptr if bad
 
-edict_t *PickCoopTarget(edict_t *self) {
-	edict_t **targets;
+gentity_t *PickCoopTarget(gentity_t *self) {
+	gentity_t **targets;
 	int		 num_targets = 0, targetID;
 
 	// if we're not in coop, this is a noop
-	if (!coop->integer)
+	if (!InCoopStyle())
 		return nullptr;
 
-	targets = (edict_t **)alloca(sizeof(edict_t *) * game.maxclients);
+	targets = (gentity_t **)alloca(sizeof(gentity_t *) * game.maxclients);
 
 	for (auto ec : active_clients())
 		if (visible(self, ec))
@@ -1372,7 +1374,7 @@ edict_t *PickCoopTarget(edict_t *self) {
 // only meant to be used in coop
 int CountPlayers() {
 	// if we're not in coop, this is a noop
-	if (!coop->integer)
+	if (!InCoopStyle())
 		return 1;
 
 	int count = 0;
@@ -1382,10 +1384,10 @@ int CountPlayers() {
 	return count;
 }
 
-static THINK(BossExplode_think) (edict_t *self) -> void {
+static THINK(BossExplode_think) (gentity_t *self) -> void {
 	// owner gone or changed
 	if (!self->owner->inuse || self->owner->s.modelindex != self->style || self->count != self->owner->spawn_count) {
-		G_FreeEdict(self);
+		G_FreeEntity(self);
 		return;
 	}
 
@@ -1405,12 +1407,12 @@ static THINK(BossExplode_think) (edict_t *self) -> void {
 	self->nextthink = level.time + random_time(50_ms, 200_ms);
 }
 
-void BossExplode(edict_t *self) {
+void BossExplode(gentity_t *self) {
 	// no blowy on deady
 	if (self->spawnflags.has(SPAWNFLAG_MONSTER_DEAD))
 		return;
 
-	edict_t *exploder = G_Spawn();
+	gentity_t *exploder = G_Spawn();
 	exploder->owner = self;
 	exploder->count = self->spawn_count;
 	exploder->style = self->s.modelindex;

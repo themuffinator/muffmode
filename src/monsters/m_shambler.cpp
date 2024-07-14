@@ -26,7 +26,7 @@ static cached_soundindex sound_boom;
 // misc
 //
 
-MONSTERINFO_SIGHT(shambler_sight) (edict_t *self, edict_t *other) -> void {
+MONSTERINFO_SIGHT(shambler_sight) (gentity_t *self, gentity_t *other) -> void {
 	gi.sound(self, CHAN_VOICE, sound_sight, 1, ATTN_NORM, 0);
 }
 
@@ -46,11 +46,11 @@ constexpr vec3_t lightning_right_hand[] = {
 	{ 27, -11, 83 }
 };
 
-static void shambler_lightning_update(edict_t *self) {
-	edict_t *lightning = self->beam;
+static void shambler_lightning_update(gentity_t *self) {
+	gentity_t *lightning = self->beam;
 
 	if (self->s.frame >= FRAME_magic01 + q_countof(lightning_left_hand)) {
-		G_FreeEdict(lightning);
+		G_FreeEntity(lightning);
 		self->beam = nullptr;
 		return;
 	}
@@ -62,21 +62,21 @@ static void shambler_lightning_update(edict_t *self) {
 	gi.linkentity(lightning);
 }
 
-static void shambler_windup(edict_t *self) {
+static void shambler_windup(gentity_t *self) {
 	gi.sound(self, CHAN_WEAPON, sound_windup, 1, ATTN_NORM, 0);
 
-	edict_t *lightning = self->beam = G_Spawn();
+	gentity_t *lightning = self->beam = G_Spawn();
 	lightning->s.modelindex = gi.modelindex("models/proj/lightning/tris.md2");
 	lightning->s.renderfx |= RF_BEAM;
 	lightning->owner = self;
 	shambler_lightning_update(self);
 }
 
-MONSTERINFO_IDLE(shambler_idle) (edict_t *self) -> void {
+MONSTERINFO_IDLE(shambler_idle) (gentity_t *self) -> void {
 	gi.sound(self, CHAN_VOICE, sound_idle, 1, ATTN_IDLE, 0);
 }
 
-static void shambler_maybe_idle(edict_t *self) {
+static void shambler_maybe_idle(gentity_t *self) {
 	if (frandom() > 0.8)
 		gi.sound(self, CHAN_VOICE, sound_idle, 1, ATTN_IDLE, 0);
 }
@@ -106,7 +106,7 @@ mframe_t shambler_frames_stand[] = {
 };
 MMOVE_T(shambler_move_stand) = { FRAME_stand01, FRAME_stand17, shambler_frames_stand, nullptr };
 
-MONSTERINFO_STAND(shambler_stand) (edict_t *self) -> void {
+MONSTERINFO_STAND(shambler_stand) (gentity_t *self) -> void {
 	M_SetAnimation(self, &shambler_move_stand);
 }
 
@@ -114,7 +114,7 @@ MONSTERINFO_STAND(shambler_stand) (edict_t *self) -> void {
 // walk
 //
 
-void shambler_walk(edict_t *self);
+void shambler_walk(gentity_t *self);
 
 mframe_t shambler_frames_walk[] = {
 	{ ai_walk, 10 }, // FIXME: add footsteps?
@@ -132,7 +132,7 @@ mframe_t shambler_frames_walk[] = {
 };
 MMOVE_T(shambler_move_walk) = { FRAME_walk01, FRAME_walk12, shambler_frames_walk, nullptr };
 
-MONSTERINFO_WALK(shambler_walk) (edict_t *self) -> void {
+MONSTERINFO_WALK(shambler_walk) (gentity_t *self) -> void {
 	M_SetAnimation(self, &shambler_move_walk);
 }
 
@@ -140,7 +140,7 @@ MONSTERINFO_WALK(shambler_walk) (edict_t *self) -> void {
 // run
 //
 
-void shambler_run(edict_t *self);
+void shambler_run(gentity_t *self);
 
 mframe_t shambler_frames_run[] = {
 	{ ai_run, 20 }, // FIXME: add footsteps?
@@ -152,7 +152,7 @@ mframe_t shambler_frames_run[] = {
 };
 MMOVE_T(shambler_move_run) = { FRAME_run01, FRAME_run06, shambler_frames_run, nullptr };
 
-MONSTERINFO_RUN(shambler_run) (edict_t *self) -> void {
+MONSTERINFO_RUN(shambler_run) (gentity_t *self) -> void {
 	if (self->enemy && self->enemy->client)
 		self->monsterinfo.aiflags |= AI_BRUTAL;
 	else
@@ -182,7 +182,7 @@ mframe_t shambler_frames_pain[] = {
 };
 MMOVE_T(shambler_move_pain) = { FRAME_pain01, FRAME_pain06, shambler_frames_pain, shambler_run };
 
-static PAIN(shambler_pain) (edict_t *self, edict_t *other, float kick, int damage, const mod_t &mod) -> void {
+static PAIN(shambler_pain) (gentity_t *self, gentity_t *other, float kick, int damage, const mod_t &mod) -> void {
 	if (level.time < self->timestamp)
 		return;
 
@@ -214,7 +214,7 @@ static PAIN(shambler_pain) (edict_t *self, edict_t *other, float kick, int damag
 	M_SetAnimation(self, &shambler_move_pain);
 }
 
-MONSTERINFO_SETSKIN(shambler_setskin) (edict_t *self) -> void {
+MONSTERINFO_SETSKIN(shambler_setskin) (gentity_t *self) -> void {
 	// FIXME: create pain skin?
 	//if (self->health < (self->max_health / 2))
 	//	self->s.skinnum |= 1;
@@ -226,7 +226,7 @@ MONSTERINFO_SETSKIN(shambler_setskin) (edict_t *self) -> void {
 // attacks
 //
 
-static void ShamblerSaveLoc(edict_t *self) {
+static void ShamblerSaveLoc(gentity_t *self) {
 	self->pos1 = self->enemy->s.origin; // save for aiming the shot
 	self->pos1[2] += self->enemy->viewheight;
 	self->monsterinfo.nextframe = FRAME_magic09;
@@ -237,7 +237,7 @@ static void ShamblerSaveLoc(edict_t *self) {
 
 constexpr spawnflags_t SPAWNFLAG_SHAMBLER_PRECISE = 1_spawnflag;
 
-static vec3_t FindShamblerOffset(edict_t *self) {
+static vec3_t FindShamblerOffset(gentity_t *self) {
 	vec3_t offset = { 0, 0, 48.f };
 
 	for (int i = 0; i < 8; i++) {
@@ -250,7 +250,7 @@ static vec3_t FindShamblerOffset(edict_t *self) {
 	return { 0, 0, 48.f };
 }
 
-static void ShamblerCastLightning(edict_t *self) {
+static void ShamblerCastLightning(gentity_t *self) {
 	if (!self->enemy)
 		return;
 
@@ -296,7 +296,7 @@ mframe_t shambler_frames_magic[] = {
 
 MMOVE_T(shambler_attack_magic) = { FRAME_magic01, FRAME_magic12, shambler_frames_magic, shambler_run };
 
-MONSTERINFO_ATTACK(shambler_attack) (edict_t *self) -> void {
+MONSTERINFO_ATTACK(shambler_attack) (gentity_t *self) -> void {
 	M_SetAnimation(self, &shambler_attack_magic);
 }
 
@@ -304,18 +304,18 @@ MONSTERINFO_ATTACK(shambler_attack) (edict_t *self) -> void {
 // melee
 //
 
-static void shambler_melee1(edict_t *self) {
+static void shambler_melee1(gentity_t *self) {
 	gi.sound(self, CHAN_WEAPON, sound_melee1, 1, ATTN_NORM, 0);
 }
 
-static void shambler_melee2(edict_t *self) {
+static void shambler_melee2(gentity_t *self) {
 	gi.sound(self, CHAN_WEAPON, sound_melee2, 1, ATTN_NORM, 0);
 }
 
-void sham_swingl9(edict_t *self);
-void sham_swingr9(edict_t *self);
+void sham_swingl9(gentity_t *self);
+void sham_swingr9(gentity_t *self);
 
-static void sham_smash10(edict_t *self) {
+static void sham_smash10(gentity_t *self) {
 	if (!self->enemy)
 		return;
 
@@ -334,7 +334,7 @@ static void sham_smash10(edict_t *self) {
 	// SpawnMeatSpray(self.origin + v_forward * 16, crandom() * 100 * v_right);
 };
 
-static void ShamClaw(edict_t *self) {
+static void ShamClaw(gentity_t *self) {
 	if (!self->enemy)
 		return;
 
@@ -395,14 +395,14 @@ mframe_t shambler_frames_swingr[] = {
 
 MMOVE_T(shambler_attack_swingr) = { FRAME_swingr01, FRAME_swingr09, shambler_frames_swingr, shambler_run };
 
-void sham_swingl9(edict_t *self) {
+void sham_swingl9(gentity_t *self) {
 	ai_charge(self, 8);
 
 	if (brandom() && self->enemy && range_to(self, self->enemy) < MELEE_DISTANCE)
 		M_SetAnimation(self, &shambler_attack_swingr);
 }
 
-void sham_swingr9(edict_t *self) {
+void sham_swingr9(gentity_t *self) {
 	ai_charge(self, 1);
 	ai_charge(self, 10);
 
@@ -410,7 +410,7 @@ void sham_swingr9(edict_t *self) {
 		M_SetAnimation(self, &shambler_attack_swingl);
 }
 
-MONSTERINFO_MELEE(shambler_melee) (edict_t *self) -> void {
+MONSTERINFO_MELEE(shambler_melee) (gentity_t *self) -> void {
 	float chance = frandom();
 	if (chance > 0.6 || self->health == 600)
 		M_SetAnimation(self, &shambler_attack_smash);
@@ -424,13 +424,13 @@ MONSTERINFO_MELEE(shambler_melee) (edict_t *self) -> void {
 // death
 //
 
-static void shambler_dead(edict_t *self) {
+static void shambler_dead(gentity_t *self) {
 	self->mins = { -16, -16, -24 };
 	self->maxs = { 16, 16, -0 };
 	monster_dead(self);
 }
 
-static void shambler_shrink(edict_t *self) {
+static void shambler_shrink(gentity_t *self) {
 	self->maxs[2] = 0;
 	self->svflags |= SVF_DEADMONSTER;
 	gi.linkentity(self);
@@ -451,14 +451,14 @@ mframe_t shambler_frames_death[] = {
 };
 MMOVE_T(shambler_move_death) = { FRAME_death01, FRAME_death11, shambler_frames_death, shambler_dead };
 
-static DIE(shambler_die) (edict_t *self, edict_t *inflictor, edict_t *attacker, int damage, const vec3_t &point, const mod_t &mod) -> void {
+static DIE(shambler_die) (gentity_t *self, gentity_t *inflictor, gentity_t *attacker, int damage, const vec3_t &point, const mod_t &mod) -> void {
 	if (self->beam) {
-		G_FreeEdict(self->beam);
+		G_FreeEntity(self->beam);
 		self->beam = nullptr;
 	}
 
 	if (self->beam2) {
-		G_FreeEdict(self->beam2);
+		G_FreeEntity(self->beam2);
 		self->beam2 = nullptr;
 	}
 
@@ -486,9 +486,9 @@ static DIE(shambler_die) (edict_t *self, edict_t *inflictor, edict_t *attacker, 
 	M_SetAnimation(self, &shambler_move_death);
 }
 
-void SP_monster_shambler(edict_t *self) {
+void SP_monster_shambler(gentity_t *self) {
 	if (!M_AllowSpawn(self)) {
-		G_FreeEdict(self);
+		G_FreeEntity(self);
 		return;
 	}
 

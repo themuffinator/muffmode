@@ -7,7 +7,7 @@
 #include "q_std.h"
 
 // define GAME_INCLUDE so that game.h does not define the
-// short, server-visible gclient_t and edict_t structures,
+// short, server-visible gclient_t and gentity_t structures,
 // because we define the full size ones in this file
 #define GAME_INCLUDE
 #include "game.h"
@@ -250,6 +250,9 @@ enum player_stat_t {
 
 	STAT_MINISCORE_FIRST_VAL,
 	STAT_MINISCORE_SECOND_VAL,
+
+	STAT_MONSTER_COUNT,
+	STAT_ROUND_NUMBER,
 
 	// don't use; just for verification
 	STAT_LAST

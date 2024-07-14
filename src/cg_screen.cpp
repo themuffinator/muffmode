@@ -141,7 +141,7 @@ static void CG_AddNotify(hud_data_t &data, const char *msg, bool is_chat) {
 		CG_Notify_CheckExpire(data);
 		i = max - 1;
 	}
-
+	
 	data.notify[i].message.assign(msg);
 	data.notify[i].is_active = true;
 	data.notify[i].is_chat = is_chat;
@@ -373,7 +373,7 @@ void CG_ParseCenterPrint(const char *str, int isplit, bool instant) {
 	}
 
 	// echo it to the console
-	//cgi.Com_Print("\n\n\35\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\37\n\n");
+	cgi.Com_Print("\n\n\35\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\37\n\n");
 
 	s = string.c_str();
 	do {
@@ -391,7 +391,7 @@ void CG_ParseCenterPrint(const char *str, int isplit, bool instant) {
 		line[i] = '\n';
 		line[i + 1] = 0;
 
-		//cgi.Com_Print(line);
+		cgi.Com_Print(line);
 
 		while (*s && *s != '\n')
 			s++;
@@ -400,7 +400,7 @@ void CG_ParseCenterPrint(const char *str, int isplit, bool instant) {
 			break;
 		s++;        // skip the \n
 	} while (1);
-	//cgi.Com_Print("\n\n\35\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\37\n\n");
+	cgi.Com_Print("\n\n\35\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\37\n\n");
 	CG_ClearNotify(isplit);
 
 	for (size_t line_end = 0; ; ) {
@@ -903,8 +903,8 @@ static void CG_ExecuteLayoutString(const char *s, vrect_t hud_vrect, vrect_t hud
 				if (strstr(token, "/players/")) {
 					w = h = 32;
 					
-				} else if (strstr(token, "p_compass_selected")) {
-					w = h = 16;
+				} else if (!strcmp(token, "wheel/p_compass_selected")) {
+					w = h = 12;
 					
 				} else {
 					cgi.Draw_GetPicSize(&w, &h, token);

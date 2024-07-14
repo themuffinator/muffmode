@@ -19,10 +19,10 @@ void P_Menu_Dirty() {
 // this is so that a static set of pmenu entries can be used
 // for multiple clients and changed without interference
 // note that arg will be freed when the menu is closed, it must be allocated memory
-menu_hnd_t *P_Menu_Open(edict_t *ent, const menu_t *entries, int cur, int num, void *arg, UpdateFunc_t UpdateFunc) {
-	menu_hnd_t *hnd;
-	const menu_t *p;
-	int			i;
+menu_hnd_t *P_Menu_Open(gentity_t *ent, const menu_t *entries, int cur, int num, void *arg, UpdateFunc_t UpdateFunc) {
+	menu_hnd_t		*hnd;
+	const menu_t	*p;
+	size_t			i;
 
 	if (!ent->client)
 		return nullptr;
@@ -70,7 +70,7 @@ menu_hnd_t *P_Menu_Open(edict_t *ent, const menu_t *entries, int cur, int num, v
 	return hnd;
 }
 
-void P_Menu_Close(edict_t *ent) {
+void P_Menu_Close(gentity_t *ent) {
 	menu_hnd_t *hnd;
 
 	if (!ent->client->menu)
@@ -83,9 +83,9 @@ void P_Menu_Close(edict_t *ent) {
 	gi.TagFree(hnd);
 	ent->client->menu = nullptr;
 	ent->client->showscores = false;
-
-	edict_t *e = ent->client->follow_target ? ent->client->follow_target : ent;
-	ent->client->ps.stats[STAT_SHOW_STATUSBAR] = e->client->resp.team == TEAM_SPECTATOR ? 0 : 1;
+	
+	gentity_t *e = ent->client->follow_target ? ent->client->follow_target : ent;
+	ent->client->ps.stats[STAT_SHOW_STATUSBAR] = !ClientIsPlaying(e->client) ? 0 : 1;
 }
 
 // only use on pmenu's that have been called with P_Menu_Open
@@ -97,7 +97,7 @@ void P_Menu_UpdateEntry(menu_t *entry, const char *text, int align, SelectFunc_t
 
 #include "g_statusbar.h"
 
-void P_Menu_Do_Update(edict_t *ent) {
+void P_Menu_Do_Update(gentity_t *ent) {
 	int			i;
 	menu_t		*p;
 	int			x;
@@ -164,7 +164,7 @@ void P_Menu_Do_Update(edict_t *ent) {
 	gi.WriteString(sb.sb.str().c_str());
 }
 
-void P_Menu_Update(edict_t *ent) {
+void P_Menu_Update(gentity_t *ent) {
 	if (!ent->client->menu) {
 		gi.Com_Print("Warning: ent has no menu\n");
 		return;
@@ -183,7 +183,7 @@ void P_Menu_Update(edict_t *ent) {
 	gi.local_sound(ent, CHAN_AUTO, gi.soundindex("misc/menu2.wav"), 1, ATTN_NONE, 0);
 }
 
-void P_Menu_Next(edict_t *ent) {
+void P_Menu_Next(gentity_t *ent) {
 	menu_hnd_t	*hnd;
 	int			i;
 	menu_t		*p;
@@ -216,7 +216,7 @@ void P_Menu_Next(edict_t *ent) {
 	P_Menu_Update(ent);
 }
 
-void P_Menu_Prev(edict_t *ent) {
+void P_Menu_Prev(gentity_t *ent) {
 	menu_hnd_t	*hnd;
 	int			i;
 	menu_t		*p;
@@ -250,7 +250,7 @@ void P_Menu_Prev(edict_t *ent) {
 	P_Menu_Update(ent);
 }
 
-void P_Menu_Select(edict_t *ent) {
+void P_Menu_Select(gentity_t *ent) {
 	menu_hnd_t	*hnd;
 	menu_t		*p;
 
@@ -272,5 +272,5 @@ void P_Menu_Select(edict_t *ent) {
 
 	if (p->SelectFunc)
 		p->SelectFunc(ent, hnd);
-	gi.local_sound(ent, CHAN_AUTO, gi.soundindex("misc/menu1.wav"), 1, ATTN_NONE, 0);
+	//gi.local_sound(ent, CHAN_AUTO, gi.soundindex("misc/menu1.wav"), 1, ATTN_NONE, 0);
 }

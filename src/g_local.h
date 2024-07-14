@@ -10,7 +10,7 @@
 constexpr const char *GAMEVERSION = "baseq2";
 
 constexpr const char *GAMEMOD_TITLE = "Muff Mode BETA";
-constexpr const char *GAMEMOD_VERSION = "0.15.5";
+constexpr const char *GAMEMOD_VERSION = "0.15.8";
 
 //==================================================================
 
@@ -21,6 +21,29 @@ constexpr const int32_t GIB_HEALTH = -40;
 constexpr const int32_t AMMO_INFINITE = 1000;
 
 constexpr size_t MAX_CLIENTS_KEX = 32; // absolute limit
+
+// gameplay rulesets
+enum ruleset_t : uint8_t {
+	RS_NONE,
+	RS_Q2RE,
+	RS_MM,
+	RS_Q3A,
+	RS_NUM_RULESETS
+};
+#define RS( x ) game.ruleset == (x)
+
+constexpr const char *rs_short_name[RS_NUM_RULESETS] = {
+	"",
+	"q2re",
+	"mm",
+	"q3a"
+};
+constexpr const char *rs_long_name[RS_NUM_RULESETS] = {
+	"",
+	"Quake II Rerelease",
+	"Muff Mode",
+	"Quake III Arena style"
+};
 
 enum team_t {
 	TEAM_NONE,
@@ -33,55 +56,81 @@ enum team_t {
 
 enum gametype_t {
 	GT_NONE,
-	GT_HORDE,
 	GT_FFA,
 	GT_DUEL,
 	GT_TDM,
 	GT_CTF,
 	GT_CA,
 	GT_FREEZE,
+	GT_STRIKE,
+	GT_RR,
+	GT_LMS,
+	GT_HORDE,
 	GT_NUM_GAMETYPES
 };
+constexpr gametype_t GT_FIRST = GT_FFA;
+constexpr gametype_t GT_LAST = GT_HORDE;
+
+enum gtf_t {
+	GTF_TEAMS	= 0x01,
+	GTF_CTF		= 0x02,
+	GTF_ARENA	= 0x04,
+	GTF_ROUNDS	= 0x08
+};
+
+extern int _gt[GT_NUM_GAMETYPES];
+
+#define GTF( x ) _gt[g_gametype->integer] & (x)
+#define GT( x ) g_gametype->integer == (int)(x)
+#define notGT( x ) g_gametype->integer != (int)(x)
 
 constexpr const char *gt_short_name[GT_NUM_GAMETYPES] = {
-	"none",
-	"horde",
+	"cmp",
 	"ffa",
 	"duel",
 	"tdm",
 	"ctf",
 	"ca",
-	"ft"
+	"ft",
+	"strike",
+	"rr",
+	"lms",
+	"horde"
 };
 constexpr const char *gt_short_name_upper[GT_NUM_GAMETYPES] = {
-	"none",
-	"HORDE",
+	"CMP",
 	"FFA",
 	"DUEL",
 	"TDM",
 	"CTF",
 	"CA",
-	"FT"
+	"FT",
+	"STRIKE",
+	"REDROVER",
+	"LMS",
+	"HORDE"
 };
 constexpr const char *gt_long_name[GT_NUM_GAMETYPES] = {
-	"none",
-	"Horde Mode",
+	"Campaign",
 	"Deathmatch",
 	"Duel",
 	"Team Deathmatch",
 	"Capture the Flag",
 	"Clan Arena",
-	"Freeze Tag"
+	"Freeze Tag",
+	"CaptureStrike",
+	"Red Rover",
+	"Last Man Standing",
+	"Horde Mode"
 };
-constexpr const char *gt_cvar[GT_NUM_GAMETYPES] = {
-	"none",
-	"horde",
-	"deathmatch",
-	"duel",
-	"teamplay",
-	"ctf",
-	"clanarena",
-	"freeze"
+
+enum monflags_t {
+	MF_NONE		= 0x00,
+	MF_GROUND	= 0x01,
+	MF_AIR		= 0x02,
+	MF_WATER	= 0x04,
+	MF_MEDIUM	= 0x08,
+	MF_BOSS		= 0x10
 };
 
 typedef enum {
@@ -108,6 +157,13 @@ typedef enum {
 	ROUND_ENDED			// round-based gametypes only: round has ended
 } roundst_t;
 
+enum playerspawn_t {
+	SPAWN_FULL_RAND,
+	SPAWN_FAR_HALF,
+	SPAWN_FARTHEST,
+	SPAWN_NEAREST
+};
+
 #define	RANK_TIED_FLAG		0x4000
 
 typedef enum {
@@ -129,7 +185,7 @@ enum grapple_state_t {
 
 struct vcmds_t {
 	const		char *name;
-	bool		(*val_func)(edict_t *ent);
+	bool		(*val_func)(gentity_t *ent);
 	void		(*func)();
 	int32_t		flag;
 	int8_t		min_args;
@@ -227,7 +283,7 @@ private:
 
 public:
 	template<typename... Args>
-	inline void LocClient_Print(edict_t *e, print_type_t level, const char *base, Args&& ...args) {
+	inline void LocClient_Print(gentity_t *e, print_type_t level, const char *base, Args&& ...args) {
 		static_assert(sizeof...(args) < MAX_LOCALIZATION_ARGS, "too many arguments to gi.LocClient_Print");
 		static_assert(((is_valid_loc_embed_v<Args>) && ...), "invalid argument passed to gi.LocClient_Print");
 
@@ -249,7 +305,7 @@ public:
 	}
 
 	template<typename... Args>
-	inline void LocCenter_Print(edict_t *e, const char *base, Args&& ...args) {
+	inline void LocCenter_Print(gentity_t *e, const char *base, Args&& ...args) {
 		static_assert(sizeof...(args) < MAX_LOCALIZATION_ARGS, "too many arguments to gi.LocCenter_Print");
 		static_assert(((is_valid_loc_embed_v<Args>) && ...), "invalid argument passed to gi.LocCenter_Print");
 
@@ -260,47 +316,47 @@ public:
 	}
 
 	// collision detection
-	[[nodiscard]] inline trace_t trace(const vec3_t &start, const vec3_t &mins, const vec3_t &maxs, const vec3_t &end, const edict_t *passent, contents_t contentmask) {
+	[[nodiscard]] inline trace_t trace(const vec3_t &start, const vec3_t &mins, const vec3_t &maxs, const vec3_t &end, const gentity_t *passent, contents_t contentmask) {
 		return game_import_t::trace(start, &mins, &maxs, end, passent, contentmask);
 	}
 
-	[[nodiscard]] inline trace_t traceline(const vec3_t &start, const vec3_t &end, const edict_t *passent, contents_t contentmask) {
+	[[nodiscard]] inline trace_t traceline(const vec3_t &start, const vec3_t &end, const gentity_t *passent, contents_t contentmask) {
 		return game_import_t::trace(start, nullptr, nullptr, end, passent, contentmask);
 	}
 
 	// [Paril-KEX] clip the box against the specified entity
-	[[nodiscard]] inline trace_t clip(edict_t *entity, const vec3_t &start, const vec3_t &mins, const vec3_t &maxs, const vec3_t &end, contents_t contentmask) {
+	[[nodiscard]] inline trace_t clip(gentity_t *entity, const vec3_t &start, const vec3_t &mins, const vec3_t &maxs, const vec3_t &end, contents_t contentmask) {
 		return game_import_t::clip(entity, start, &mins, &maxs, end, contentmask);
 	}
 
-	[[nodiscard]] inline trace_t clip(edict_t *entity, const vec3_t &start, const vec3_t &end, contents_t contentmask) {
+	[[nodiscard]] inline trace_t clip(gentity_t *entity, const vec3_t &start, const vec3_t &end, contents_t contentmask) {
 		return game_import_t::clip(entity, start, nullptr, nullptr, end, contentmask);
 	}
 
-	void unicast(edict_t *ent, bool reliable, uint32_t dupe_key = 0) {
+	void unicast(gentity_t *ent, bool reliable, uint32_t dupe_key = 0) {
 		game_import_t::unicast(ent, reliable, dupe_key);
 	}
 
-	void local_sound(edict_t *target, const vec3_t &origin, edict_t *ent, soundchan_t channel, int soundindex, float volume, float attenuation, float timeofs, uint32_t dupe_key = 0) {
+	void local_sound(gentity_t *target, const vec3_t &origin, gentity_t *ent, soundchan_t channel, int soundindex, float volume, float attenuation, float timeofs, uint32_t dupe_key = 0) {
 		game_import_t::local_sound(target, &origin, ent, channel, soundindex, volume, attenuation, timeofs, dupe_key);
 	}
 
-	void local_sound(edict_t *target, edict_t *ent, soundchan_t channel, int soundindex, float volume, float attenuation, float timeofs, uint32_t dupe_key = 0) {
+	void local_sound(gentity_t *target, gentity_t *ent, soundchan_t channel, int soundindex, float volume, float attenuation, float timeofs, uint32_t dupe_key = 0) {
 		game_import_t::local_sound(target, nullptr, ent, channel, soundindex, volume, attenuation, timeofs, dupe_key);
 	}
 
-	void local_sound(const vec3_t &origin, edict_t *ent, soundchan_t channel, int soundindex, float volume, float attenuation, float timeofs, uint32_t dupe_key = 0) {
+	void local_sound(const vec3_t &origin, gentity_t *ent, soundchan_t channel, int soundindex, float volume, float attenuation, float timeofs, uint32_t dupe_key = 0) {
 		game_import_t::local_sound(ent, &origin, ent, channel, soundindex, volume, attenuation, timeofs, dupe_key);
 	}
 
-	void local_sound(edict_t *ent, soundchan_t channel, int soundindex, float volume, float attenuation, float timeofs, uint32_t dupe_key = 0) {
+	void local_sound(gentity_t *ent, soundchan_t channel, int soundindex, float volume, float attenuation, float timeofs, uint32_t dupe_key = 0) {
 		game_import_t::local_sound(ent, nullptr, ent, channel, soundindex, volume, attenuation, timeofs, dupe_key);
 	}
 };
 
 extern local_game_import_t  gi;
 
-// edict->spawnflags
+// entity->spawnflags
 // these are set with checkboxes on each entity in the map editor.
 // the following 8 are reserved and should never be used by any entity.
 // (power cubes in coop use these after spawning as well)
@@ -793,7 +849,7 @@ static constexpr gitem_armor_t jacketarmor_info = { 25, 50, .30f, .00f };
 static constexpr gitem_armor_t combatarmor_info = { 50, 100, .60f, .30f };
 static constexpr gitem_armor_t bodyarmor_info = { 100, 200, .80f, .60f };
 
-// edict->movetype values
+// entity->movetype values
 enum movetype_t {
 	MOVETYPE_NONE,	 // never moves
 	MOVETYPE_NOCLIP, // origin and angles change with no interaction
@@ -811,7 +867,7 @@ enum movetype_t {
 	MOVETYPE_FREECAM, // spectator free cam
 };
 
-// edict->flags
+// entity->flags
 enum ent_flags_t : uint64_t {
 	FL_NONE					= 0, // no flags
 	FL_FLY					= bit_v<0>,
@@ -885,7 +941,7 @@ enum item_flags_t : uint32_t {
 MAKE_ENUM_BITFLAGS(item_flags_t);
 constexpr item_flags_t IF_TYPE_MASK = (IF_WEAPON | IF_AMMO | IF_TIMED | IF_POWERUP | IF_SPHERE | IF_ARMOR | IF_POWER_ARMOR | IF_KEY);
 
-// health edict_t->style
+// health gentity_t->style
 enum {
 	HEALTH_IGNORE_MAX = 1,
 	HEALTH_TIMED = 2
@@ -995,10 +1051,22 @@ enum item_id_t : int32_t {
 	IT_TECH_TIME_ACCEL,
 	IT_TECH_AUTODOC,
 
-	IT_FLASHLIGHT,
-	IT_COMPASS,
+	IT_AMMO_SHELLS_LARGE ,
+	IT_AMMO_SHELLS_SMALL,
+	IT_AMMO_BULLETS_LARGE,
+	IT_AMMO_BULLETS_SMALL,
+	IT_AMMO_CELLS_LARGE,
+	IT_AMMO_CELLS_SMALL,
+	IT_AMMO_ROCKETS_SMALL,
+	IT_AMMO_SLUGS_LARGE,
+	IT_AMMO_SLUGS_SMALL,
+
+	IT_TELEPORTER,
 
 	IT_FOODCUBE,
+
+	IT_FLASHLIGHT,
+	IT_COMPASS,
 
 	IT_TOTAL
 };
@@ -1014,10 +1082,10 @@ constexpr const char *ITEM_CTF_FLAG_BLUE = "item_flag_team_blue";
 struct gitem_t {
 	item_id_t		id;		   // matches item list index
 	const char		*classname; // spawning name
-	bool			(*pickup)(edict_t *ent, edict_t *other);
-	void			(*use)(edict_t *ent, gitem_t *item);
-	void			(*drop)(edict_t *ent, gitem_t *item);
-	void			(*weaponthink)(edict_t *ent);
+	bool			(*pickup)(gentity_t *ent, gentity_t *other);
+	void			(*use)(gentity_t *ent, gitem_t *item);
+	void			(*drop)(gentity_t *ent, gitem_t *item);
+	void			(*weaponthink)(gentity_t *ent);
 	const char		*pickup_sound;
 	const char		*world_model;
 	effects_t		world_model_flags;
@@ -1156,7 +1224,7 @@ struct level_entry_t {
 	int32_t visit_order;
 };
 
-#define NUM_SPAWN_SPOTS MAX_EDICTS
+#define NUM_SPAWN_SPOTS MAX_ENTITIES
 #define SPAWN_SPOT_INTERMISSION NUM_SPAWN_SPOTS-1
 
 //
@@ -1193,6 +1261,10 @@ struct game_locals_t {
 	std::vector<std::string> mapqueue;
 
 	gametype_t	gametype;
+	std::string motd;
+	int motd_modcount = 0;
+
+	ruleset_t	ruleset;
 };
 
 constexpr size_t MAX_HEALTH_BARS = 2;
@@ -1218,7 +1290,7 @@ struct ghost_t {
 	int		code;		// ghost code
 	team_t	team;		// team
 	int		score;		// score at time of disconnect
-	edict_t *ent;
+	gentity_t *ent;
 };
 
 typedef struct {
@@ -1278,7 +1350,7 @@ struct level_locals_t {
 	bool		respawn_intermission; // only set once for respawning players
 
 	// spawn spots	//Q3
-	edict_t		*spawn_spots[NUM_SPAWN_SPOTS];
+	gentity_t	*spawn_spots[NUM_SPAWN_SPOTS];
 	int			num_spawn_spots;
 	int			num_spawn_spots_team;
 	int			num_spawn_spots_free;
@@ -1293,15 +1365,15 @@ struct level_locals_t {
 	int32_t		found_goals;
 
 	int32_t		total_monsters;
-	std::array<edict_t *, MAX_EDICTS> monsters_registered; // only for debug
+	std::array<gentity_t *, MAX_ENTITIES> monsters_registered; // only for debug
 	int32_t		killed_monsters;
 
-	edict_t		*current_entity; // entity running from G_RunFrame
+	gentity_t	*current_entity; // entity running from G_RunFrame
 	int32_t		body_que;		 // dead bodies
 
 	int32_t		power_cubes; // ugly necessity for coop
 
-	edict_t		*disguise_violator;
+	gentity_t	*disguise_violator;
 	gtime_t		disguise_violation_time;
 	int32_t		disguise_icon; // [Paril-KEX]
 
@@ -1336,7 +1408,7 @@ struct level_locals_t {
 	vec3_t		current_poi;
 	int32_t		current_poi_image;
 	int32_t		current_poi_stage;
-	edict_t		*current_dynamic_poi;
+	gentity_t		*current_dynamic_poi;
 	vec3_t		*poi_points[MAX_SPLIT_PLAYERS]; // temporary storage for POIs in coop
 
 	// start items
@@ -1349,7 +1421,7 @@ struct level_locals_t {
 	// level is a hub map, and shouldn't be included in EOU stuff
 	bool		hub_map;
 	// active health bar entities
-	std::array<edict_t *, MAX_HEALTH_BARS> health_bar_entities;
+	std::array<gentity_t *, MAX_HEALTH_BARS> health_bar_entities;
 	int32_t		intermission_server_frame;
 	bool		deadly_kill_box;
 	bool		story_active;
@@ -1419,6 +1491,22 @@ struct level_locals_t {
 	gtime_t		no_players_time;
 
 	int			total_player_deaths;
+
+	bool		init;
+
+	std::string	entstring;
+
+	bool		strike_red_attacks;
+	bool		strike_flag_touch;
+	bool		strike_turn_red;
+	bool		strike_turn_blue;
+
+	gtime_t		horde_monster_spawn_time;
+	int8_t		horde_num_monsters_to_spawn;
+	bool		horde_all_spawned;
+
+	char		author[MAX_QPATH];
+	char		author2[MAX_QPATH];
 };
 
 struct shadow_light_temp_t {
@@ -1432,7 +1520,7 @@ void G_LoadShadowLights();
 
 // spawn_temp_t is only used to hold entity field values that
 // can be set from the editor, but aren't actualy present
-// in edict_t during gameplay.
+// in gentity_t during gameplay.
 // defaults can/should be set in the struct.
 struct spawn_temp_t {
 	// world vars
@@ -1501,17 +1589,17 @@ enum move_state_t {
 	static const save_data_list_t save__##n(#n, SAVE_FUNC_##ns, reinterpret_cast<const void *>(n)); \
 	auto n
 
-DEFINE_DATA_FUNC(moveinfo_endfunc, MOVEINFO_ENDFUNC, void, edict_t *self);
+DEFINE_DATA_FUNC(moveinfo_endfunc, MOVEINFO_ENDFUNC, void, gentity_t *self);
 #define MOVEINFO_ENDFUNC(n) \
-	SAVE_DATA_FUNC(n, MOVEINFO_ENDFUNC, void, edict_t *self)
+	SAVE_DATA_FUNC(n, MOVEINFO_ENDFUNC, void, gentity_t *self)
 
-DEFINE_DATA_FUNC(moveinfo_blocked, MOVEINFO_BLOCKED, void, edict_t *self, edict_t *other);
+DEFINE_DATA_FUNC(moveinfo_blocked, MOVEINFO_BLOCKED, void, gentity_t *self, gentity_t *other);
 #define MOVEINFO_BLOCKED(n) \
-	SAVE_DATA_FUNC(n, MOVEINFO_BLOCKED, void, edict_t *self, edict_t *other)
+	SAVE_DATA_FUNC(n, MOVEINFO_BLOCKED, void, gentity_t *self, gentity_t *other)
 
 // a struct that can store type-safe allocations
 // of a fixed amount of data. it self-destructs when
-// re-assigned. TODO: because edicts are still kind of
+// re-assigned. TODO: because gentities are still kind of
 // managed like C memory, the destructor may not be
 // called for a freed entity if this is stored as a member.
 template<typename T, int32_t tag>
@@ -1616,9 +1704,9 @@ struct moveinfo_t {
 };
 
 struct mframe_t {
-	void (*aifunc)(edict_t *self, float dist) = nullptr;
+	void (*aifunc)(gentity_t *self, float dist) = nullptr;
 	float dist = 0;
-	void (*thinkfunc)(edict_t *self) = nullptr;
+	void (*thinkfunc)(gentity_t *self) = nullptr;
 	int32_t lerp_frame = -1;
 };
 
@@ -1634,12 +1722,12 @@ struct mmove_t {
 	int32_t	  firstframe;
 	int32_t	  lastframe;
 	const mframe_t *frame;
-	void (*endfunc)(edict_t *self);
+	void (*endfunc)(gentity_t *self);
 	float sidestep_scale;
 
 #ifdef COMPILE_TIME_MOVE_CHECK
 	template<size_t N>
-	constexpr mmove_t(int32_t firstframe, int32_t lastframe, const mframe_t(&frames)[N], void (*endfunc)(edict_t *self) = nullptr, float sidestep_scale = 0.0f) :
+	constexpr mmove_t(int32_t firstframe, int32_t lastframe, const mframe_t(&frames)[N], void (*endfunc)(gentity_t *self) = nullptr, float sidestep_scale = 0.0f) :
 		firstframe(firstframe),
 		lastframe(lastframe),
 		frame(frames),
@@ -1664,69 +1752,69 @@ using save_mmove_t = save_data_t<mmove_t, SAVE_DATA_MMOVE>;
 	const mmove_t n
 #endif
 
-DEFINE_DATA_FUNC(monsterinfo_stand, MONSTERINFO_STAND, void, edict_t *self);
+DEFINE_DATA_FUNC(monsterinfo_stand, MONSTERINFO_STAND, void, gentity_t *self);
 #define MONSTERINFO_STAND(n) \
-	SAVE_DATA_FUNC(n, MONSTERINFO_STAND, void, edict_t *self)
+	SAVE_DATA_FUNC(n, MONSTERINFO_STAND, void, gentity_t *self)
 
-DEFINE_DATA_FUNC(monsterinfo_idle, MONSTERINFO_IDLE, void, edict_t *self);
+DEFINE_DATA_FUNC(monsterinfo_idle, MONSTERINFO_IDLE, void, gentity_t *self);
 #define MONSTERINFO_IDLE(n) \
-	SAVE_DATA_FUNC(n, MONSTERINFO_IDLE, void, edict_t *self)
+	SAVE_DATA_FUNC(n, MONSTERINFO_IDLE, void, gentity_t *self)
 
-DEFINE_DATA_FUNC(monsterinfo_search, MONSTERINFO_SEARCH, void, edict_t *self);
+DEFINE_DATA_FUNC(monsterinfo_search, MONSTERINFO_SEARCH, void, gentity_t *self);
 #define MONSTERINFO_SEARCH(n) \
-	SAVE_DATA_FUNC(n, MONSTERINFO_SEARCH, void, edict_t *self)
+	SAVE_DATA_FUNC(n, MONSTERINFO_SEARCH, void, gentity_t *self)
 
-DEFINE_DATA_FUNC(monsterinfo_walk, MONSTERINFO_WALK, void, edict_t *self);
+DEFINE_DATA_FUNC(monsterinfo_walk, MONSTERINFO_WALK, void, gentity_t *self);
 #define MONSTERINFO_WALK(n) \
-	SAVE_DATA_FUNC(n, MONSTERINFO_WALK, void, edict_t *self)
+	SAVE_DATA_FUNC(n, MONSTERINFO_WALK, void, gentity_t *self)
 
-DEFINE_DATA_FUNC(monsterinfo_run, MONSTERINFO_RUN, void, edict_t *self);
+DEFINE_DATA_FUNC(monsterinfo_run, MONSTERINFO_RUN, void, gentity_t *self);
 #define MONSTERINFO_RUN(n) \
-	SAVE_DATA_FUNC(n, MONSTERINFO_RUN, void, edict_t *self)
+	SAVE_DATA_FUNC(n, MONSTERINFO_RUN, void, gentity_t *self)
 
-DEFINE_DATA_FUNC(monsterinfo_dodge, MONSTERINFO_DODGE, void, edict_t *self, edict_t *attacker, gtime_t eta, trace_t *tr, bool gravity);
+DEFINE_DATA_FUNC(monsterinfo_dodge, MONSTERINFO_DODGE, void, gentity_t *self, gentity_t *attacker, gtime_t eta, trace_t *tr, bool gravity);
 #define MONSTERINFO_DODGE(n) \
-	SAVE_DATA_FUNC(n, MONSTERINFO_DODGE, void, edict_t *self, edict_t *attacker, gtime_t eta, trace_t *tr, bool gravity)
+	SAVE_DATA_FUNC(n, MONSTERINFO_DODGE, void, gentity_t *self, gentity_t *attacker, gtime_t eta, trace_t *tr, bool gravity)
 
-DEFINE_DATA_FUNC(monsterinfo_attack, MONSTERINFO_ATTACK, void, edict_t *self);
+DEFINE_DATA_FUNC(monsterinfo_attack, MONSTERINFO_ATTACK, void, gentity_t *self);
 #define MONSTERINFO_ATTACK(n) \
-	SAVE_DATA_FUNC(n, MONSTERINFO_ATTACK, void, edict_t *self)
+	SAVE_DATA_FUNC(n, MONSTERINFO_ATTACK, void, gentity_t *self)
 
-DEFINE_DATA_FUNC(monsterinfo_melee, MONSTERINFO_MELEE, void, edict_t *self);
+DEFINE_DATA_FUNC(monsterinfo_melee, MONSTERINFO_MELEE, void, gentity_t *self);
 #define MONSTERINFO_MELEE(n) \
-	SAVE_DATA_FUNC(n, MONSTERINFO_MELEE, void, edict_t *self)
+	SAVE_DATA_FUNC(n, MONSTERINFO_MELEE, void, gentity_t *self)
 
-DEFINE_DATA_FUNC(monsterinfo_sight, MONSTERINFO_SIGHT, void, edict_t *self, edict_t *other);
+DEFINE_DATA_FUNC(monsterinfo_sight, MONSTERINFO_SIGHT, void, gentity_t *self, gentity_t *other);
 #define MONSTERINFO_SIGHT(n) \
-	SAVE_DATA_FUNC(n, MONSTERINFO_SIGHT, void, edict_t *self, edict_t *other)
+	SAVE_DATA_FUNC(n, MONSTERINFO_SIGHT, void, gentity_t *self, gentity_t *other)
 
-DEFINE_DATA_FUNC(monsterinfo_checkattack, MONSTERINFO_CHECKATTACK, bool, edict_t *self);
+DEFINE_DATA_FUNC(monsterinfo_checkattack, MONSTERINFO_CHECKATTACK, bool, gentity_t *self);
 #define MONSTERINFO_CHECKATTACK(n) \
-	SAVE_DATA_FUNC(n, MONSTERINFO_CHECKATTACK, bool, edict_t *self)
+	SAVE_DATA_FUNC(n, MONSTERINFO_CHECKATTACK, bool, gentity_t *self)
 
-DEFINE_DATA_FUNC(monsterinfo_setskin, MONSTERINFO_SETSKIN, void, edict_t *self);
+DEFINE_DATA_FUNC(monsterinfo_setskin, MONSTERINFO_SETSKIN, void, gentity_t *self);
 #define MONSTERINFO_SETSKIN(n) \
-	SAVE_DATA_FUNC(n, MONSTERINFO_SETSKIN, void, edict_t *self)
+	SAVE_DATA_FUNC(n, MONSTERINFO_SETSKIN, void, gentity_t *self)
 
-DEFINE_DATA_FUNC(monsterinfo_blocked, MONSTERINFO_BLOCKED, bool, edict_t *self, float dist);
+DEFINE_DATA_FUNC(monsterinfo_blocked, MONSTERINFO_BLOCKED, bool, gentity_t *self, float dist);
 #define MONSTERINFO_BLOCKED(n) \
-	SAVE_DATA_FUNC(n, MONSTERINFO_BLOCKED, bool, edict_t *self, float dist)
+	SAVE_DATA_FUNC(n, MONSTERINFO_BLOCKED, bool, gentity_t *self, float dist)
 
-DEFINE_DATA_FUNC(monsterinfo_physicschange, MONSTERINFO_PHYSCHANGED, void, edict_t *self);
+DEFINE_DATA_FUNC(monsterinfo_physicschange, MONSTERINFO_PHYSCHANGED, void, gentity_t *self);
 #define MONSTERINFO_PHYSCHANGED(n) \
-	SAVE_DATA_FUNC(n, MONSTERINFO_PHYSCHANGED, void, edict_t *self)
+	SAVE_DATA_FUNC(n, MONSTERINFO_PHYSCHANGED, void, gentity_t *self)
 
-DEFINE_DATA_FUNC(monsterinfo_duck, MONSTERINFO_DUCK, bool, edict_t *self, gtime_t eta);
+DEFINE_DATA_FUNC(monsterinfo_duck, MONSTERINFO_DUCK, bool, gentity_t *self, gtime_t eta);
 #define MONSTERINFO_DUCK(n) \
-	SAVE_DATA_FUNC(n, MONSTERINFO_DUCK, bool, edict_t *self, gtime_t eta)
+	SAVE_DATA_FUNC(n, MONSTERINFO_DUCK, bool, gentity_t *self, gtime_t eta)
 
-DEFINE_DATA_FUNC(monsterinfo_unduck, MONSTERINFO_UNDUCK, void, edict_t *self);
+DEFINE_DATA_FUNC(monsterinfo_unduck, MONSTERINFO_UNDUCK, void, gentity_t *self);
 #define MONSTERINFO_UNDUCK(n) \
-	SAVE_DATA_FUNC(n, MONSTERINFO_UNDUCK, void, edict_t *self)
+	SAVE_DATA_FUNC(n, MONSTERINFO_UNDUCK, void, gentity_t *self)
 
-DEFINE_DATA_FUNC(monsterinfo_sidestep, MONSTERINFO_SIDESTEP, bool, edict_t *self);
+DEFINE_DATA_FUNC(monsterinfo_sidestep, MONSTERINFO_SIDESTEP, bool, gentity_t *self);
 #define MONSTERINFO_SIDESTEP(n) \
-	SAVE_DATA_FUNC(n, MONSTERINFO_SIDESTEP, bool, edict_t *self)
+	SAVE_DATA_FUNC(n, MONSTERINFO_SIDESTEP, bool, gentity_t *self)
 
 // combat styles, for navigation
 enum combat_style_t {
@@ -1796,17 +1884,17 @@ struct monsterinfo_t {
 
 	save_monsterinfo_blocked_t blocked;
 	gtime_t	 last_hint_time; // last time the monster checked for hintpaths.
-	edict_t *goal_hint;		 // which hint_path we're trying to get to
+	gentity_t *goal_hint;		 // which hint_path we're trying to get to
 	int32_t	 medicTries;
-	edict_t *badMedic1, *badMedic2; // these medics have declared this monster "unhealable"
-	edict_t *healer;				// this is who is healing this monster
+	gentity_t *badMedic1, *badMedic2; // these medics have declared this monster "unhealable"
+	gentity_t *healer;				// this is who is healing this monster
 	save_monsterinfo_duck_t duck;
 	save_monsterinfo_unduck_t unduck;
 	save_monsterinfo_sidestep_t sidestep;
 	float	 base_height;
 	gtime_t	 next_duck_time;
 	gtime_t	 duck_wait_time;
-	edict_t *last_player_enemy;
+	gentity_t *last_player_enemy;
 	// blindfire stuff .. the boolean says whether the monster will do it, and blind_fire_time is the timing
 	// (set in the monster) of the next shot
 	bool	blindfire;		// will the monster blindfire?
@@ -1818,7 +1906,7 @@ struct monsterinfo_t {
 	// used by the spawners to not spawn too much and keep track of #s of monsters spawned
 	int32_t	 monster_slots; // nb: for spawned monsters, this is how many slots we took from our commander
 	int32_t	 monster_used;
-	edict_t *commander;
+	gentity_t *commander;
 	// powerup timers, used by widow, our friend
 	gtime_t quad_time;
 	gtime_t invincibility_time;
@@ -1843,8 +1931,8 @@ struct monsterinfo_t {
 	gtime_t	  nav_path_cache_time; // cache nav_path result for this much time
 	combat_style_t combat_style; // pathing style
 
-	edict_t *damage_attacker;
-	edict_t *damage_inflictor;
+	gentity_t *damage_attacker;
+	gentity_t *damage_inflictor;
 	int32_t   damage_blood, damage_knockback;
 	vec3_t	  damage_from;
 	mod_t	  damage_mod;
@@ -1878,39 +1966,39 @@ struct monsterinfo_t {
 };
 
 // non-monsterinfo save stuff
-using save_prethink_t = save_data_t<void(*)(edict_t *self), SAVE_FUNC_PRETHINK>;
+using save_prethink_t = save_data_t<void(*)(gentity_t *self), SAVE_FUNC_PRETHINK>;
 #define PRETHINK(n) \
-	void n(edict_t *self); \
+	void n(gentity_t *self); \
 	static const save_data_list_t save__##n(#n, SAVE_FUNC_PRETHINK, reinterpret_cast<const void *>(n)); \
 	auto n
 
-using save_think_t = save_data_t<void(*)(edict_t *self), SAVE_FUNC_THINK>;
+using save_think_t = save_data_t<void(*)(gentity_t *self), SAVE_FUNC_THINK>;
 #define THINK(n) \
-	void n(edict_t *self); \
+	void n(gentity_t *self); \
 	static const save_data_list_t save__##n(#n, SAVE_FUNC_THINK, reinterpret_cast<const void *>(n)); \
 	auto n
 
-using save_touch_t = save_data_t<void(*)(edict_t *self, edict_t *other, const trace_t &tr, bool other_touching_self), SAVE_FUNC_TOUCH>;
+using save_touch_t = save_data_t<void(*)(gentity_t *self, gentity_t *other, const trace_t &tr, bool other_touching_self), SAVE_FUNC_TOUCH>;
 #define TOUCH(n) \
-	void n(edict_t *self, edict_t *other, const trace_t &tr, bool other_touching_self); \
+	void n(gentity_t *self, gentity_t *other, const trace_t &tr, bool other_touching_self); \
 	static const save_data_list_t save__##n(#n, SAVE_FUNC_TOUCH, reinterpret_cast<const void *>(n)); \
 	auto n
 
-using save_use_t = save_data_t<void(*)(edict_t *self, edict_t *other, edict_t *activator), SAVE_FUNC_USE>;
+using save_use_t = save_data_t<void(*)(gentity_t *self, gentity_t *other, gentity_t *activator), SAVE_FUNC_USE>;
 #define USE(n) \
-	void n(edict_t *self, edict_t *other, edict_t *activator); \
+	void n(gentity_t *self, gentity_t *other, gentity_t *activator); \
 	static const save_data_list_t save__##n(#n, SAVE_FUNC_USE, reinterpret_cast<const void *>(n)); \
 	auto n
 
-using save_pain_t = save_data_t<void(*)(edict_t *self, edict_t *other, float kick, int damage, const mod_t &mod), SAVE_FUNC_PAIN>;
+using save_pain_t = save_data_t<void(*)(gentity_t *self, gentity_t *other, float kick, int damage, const mod_t &mod), SAVE_FUNC_PAIN>;
 #define PAIN(n) \
-	void n(edict_t *self, edict_t *other, float kick, int damage, const mod_t &mod); \
+	void n(gentity_t *self, gentity_t *other, float kick, int damage, const mod_t &mod); \
 	static const save_data_list_t save__##n(#n, SAVE_FUNC_PAIN, reinterpret_cast<const void *>(n)); \
 	auto n
 
-using save_die_t = save_data_t<void(*)(edict_t *self, edict_t *inflictor, edict_t *attacker, int damage, const vec3_t &point, const mod_t &mod), SAVE_FUNC_DIE>;
+using save_die_t = save_data_t<void(*)(gentity_t *self, gentity_t *inflictor, gentity_t *attacker, int damage, const vec3_t &point, const mod_t &mod), SAVE_FUNC_DIE>;
 #define DIE(n) \
-	void n(edict_t *self, edict_t *inflictor, edict_t *attacker, int damage, const vec3_t &point, const mod_t &mod); \
+	void n(gentity_t *self, gentity_t *inflictor, gentity_t *attacker, int damage, const vec3_t &point, const mod_t &mod); \
 	static const save_data_list_t save__##n(#n, SAVE_FUNC_DIE, reinterpret_cast<const void *>(n)); \
 	auto n
 
@@ -1923,7 +2011,7 @@ extern level_locals_t level;
 extern game_export_t  globals;
 extern spawn_temp_t	  st;
 
-extern edict_t *g_edicts;
+extern gentity_t *g_entities;
 
 #include <random>
 extern std::mt19937 mt_rand;
@@ -2012,14 +2100,11 @@ template<typename T>
 extern cvar_t *hostname;
 
 extern cvar_t *deathmatch;
-extern cvar_t *duel;
 extern cvar_t *ctf;
 extern cvar_t *teamplay;
-extern cvar_t *freeze;
-extern cvar_t *clanarena;
+extern cvar_t *g_gametype;
 
 extern cvar_t *coop;
-extern cvar_t *horde;
 
 extern cvar_t *skill;
 extern cvar_t *fraglimit;
@@ -2030,7 +2115,7 @@ extern cvar_t *roundtimelimit;
 extern cvar_t *mercylimit;
 extern cvar_t *noplayerstime;
 
-extern cvar_t *ruleset;
+extern cvar_t *g_ruleset;
 
 extern cvar_t *password;
 extern cvar_t *spectator_password;
@@ -2039,7 +2124,6 @@ extern cvar_t *needpass;
 extern cvar_t *filterban;
 
 extern cvar_t *maxplayers;
-extern cvar_t *maxspectators;
 extern cvar_t *minplayers;
 
 extern cvar_t *ai_allow_dm_spawn;
@@ -2072,9 +2156,10 @@ extern cvar_t *g_allow_spec_vote;
 extern cvar_t *g_allow_techs;
 extern cvar_t *g_allow_vote_midgame;
 extern cvar_t *g_allow_voting;
+extern cvar_t *g_arena_dmg_armor;
+extern cvar_t *g_arena_start_armor;
+extern cvar_t *g_arena_start_health;
 extern cvar_t *g_cheats;
-extern cvar_t *g_clanarena_start_health;
-extern cvar_t *g_clanarena_start_armor;
 extern cvar_t *g_coop_enable_lives;
 extern cvar_t *g_coop_health_scaling;
 extern cvar_t *g_coop_instanced_items;
@@ -2105,7 +2190,6 @@ extern cvar_t *g_dm_no_stack_double;
 extern cvar_t *g_dm_overtime;
 extern cvar_t *g_dm_powerup_drop;
 extern cvar_t *g_dm_powerups_minplayers;
-extern cvar_t *g_dm_powerups_style;
 extern cvar_t *g_dm_random_items;
 extern cvar_t *g_dm_respawn_delay_min;
 extern cvar_t *g_dm_respawn_point_min_dist;
@@ -2116,9 +2200,9 @@ extern cvar_t *g_dm_spawnpads;
 extern cvar_t *g_dm_strong_mines;
 extern cvar_t *g_dm_weapons_stay;
 extern cvar_t *g_drop_cmds;
+extern cvar_t *g_entity_override_dir;
 extern cvar_t *g_entity_override_load;
 extern cvar_t *g_entity_override_save;
-extern cvar_t *g_expert;
 extern cvar_t *g_eyecam;
 extern cvar_t *g_fast_doors;
 extern cvar_t *g_frag_messages;
@@ -2147,7 +2231,7 @@ extern cvar_t *g_map_pool;
 extern cvar_t *g_match_lock;
 extern cvar_t *g_matchstats;
 extern cvar_t *g_maxvelocity;
-extern cvar_t *g_motd;
+extern cvar_t *g_motd_filename;
 extern cvar_t *g_mover_debug;
 extern cvar_t *g_mover_speed_scale;
 extern cvar_t *g_nadefest;
@@ -2158,15 +2242,21 @@ extern cvar_t *g_no_mines;
 extern cvar_t *g_no_nukes;
 extern cvar_t *g_no_powerups;
 extern cvar_t *g_no_spheres;
+extern cvar_t *g_owner_auto_join;
+extern cvar_t *g_gametype_cfg;
 extern cvar_t *g_quadhog;
 extern cvar_t *g_quick_weapon_switch;
 extern cvar_t *g_rollangle;
 extern cvar_t *g_rollspeed;
+extern cvar_t *g_round_countdown;
 extern cvar_t *g_select_empty;
 extern cvar_t *g_showhelp;
 extern cvar_t *g_showmotd;
 extern cvar_t *g_skip_view_modifiers;
 extern cvar_t *g_start_items;
+extern cvar_t *g_starting_health;
+extern cvar_t *g_starting_health_bonus;
+extern cvar_t *g_starting_armor;
 extern cvar_t *g_stopspeed;
 extern cvar_t *g_strict_saves;
 extern cvar_t *g_teamplay_allow_team_pick;
@@ -2174,9 +2264,11 @@ extern cvar_t *g_teamplay_armor_protect;
 extern cvar_t *g_teamplay_auto_balance;
 extern cvar_t *g_teamplay_force_balance;
 extern cvar_t *g_teamplay_item_drop_notice;
-extern cvar_t *g_teleporter_nofreeze;
+extern cvar_t *g_teleporter_freeze;
 extern cvar_t *g_vampiric_damage;
+extern cvar_t *g_vampiric_exp_min;
 extern cvar_t *g_vampiric_health_max;
+extern cvar_t *g_vampiric_percentile;
 extern cvar_t *g_vote_flags;
 extern cvar_t *g_vote_limit;
 extern cvar_t *g_warmup_countdown;
@@ -2186,7 +2278,7 @@ extern cvar_t *g_weapon_respawn_time;
 
 extern cvar_t *bot_name_prefix;
 
-#define world (&g_edicts[0])
+#define world (&g_entities[0])
 
 uint32_t GetUnicastKey();
 
@@ -2207,19 +2299,19 @@ extern gitem_t itemlist[IT_TOTAL];
 //
 // g_cmds.cpp
 //
-bool CheckFlood(edict_t *ent);
-void Cmd_Help_f(edict_t *ent);
-void Cmd_Score_f(edict_t *ent);
+bool CheckFlood(gentity_t *ent);
+void Cmd_Help_f(gentity_t *ent);
+void Cmd_Score_f(gentity_t *ent);
 
-void G_AssignPlayerSkin(edict_t *ent, const char *s);
+void G_AssignPlayerSkin(gentity_t *ent, const char *s);
 
 team_t PickTeam(int ignoreClientNum);
-void BroadcastTeamChange(edict_t *ent, int old_team, bool inactive, bool silent);
-bool AllowClientTeamSwitch(edict_t *ent);
-int TeamBalance();
-void Cmd_ReadyUp_f(edict_t *ent);
+void BroadcastTeamChange(gentity_t *ent, int old_team, bool inactive, bool silent);
+bool AllowClientTeamSwitch(gentity_t *ent);
+int TeamBalance(bool force);
+void Cmd_ReadyUp_f(gentity_t *ent);
 
-void VoteCommandStore(edict_t *ent);
+void VoteCommandStore(gentity_t *ent);
 vcmds_t *FindVoteCmdByName(const char *name);
 void Vote_Pass_Map();
 void Vote_Pass_RestartMatch();
@@ -2230,25 +2322,26 @@ void Vote_Pass_Cointoss();
 void Vote_Pass_Random();
 void Vote_Pass_Timelimit();
 void Vote_Pass_Scorelimit();
+bool TeamShuffle();
 
 //
 // g_items.cpp
 //
-void		QuadHog_DoSpawn(edict_t *ent);
-void		QuadHog_DoReset(edict_t *ent);
+void		QuadHog_DoSpawn(gentity_t *ent);
+void		QuadHog_DoReset(gentity_t *ent);
 void		QuadHog_SetupSpawn(gtime_t delay);
-void		QuadHog_Spawn(gitem_t *item, edict_t *spot, bool reset);
-void		Tech_DeadDrop(edict_t *ent);
+void		QuadHog_Spawn(gitem_t *item, gentity_t *spot, bool reset);
+void		Tech_DeadDrop(gentity_t *ent);
 void		Tech_Reset();
 void		Tech_SetupSpawn();
-gitem_t		*Tech_Held(edict_t *ent);
-int			Tech_ApplyDisruptorShield(edict_t *ent, int dmg);
-int			Tech_ApplyPowerAmp(edict_t *ent, int dmg);
-bool		Tech_ApplyPowerAmpSound(edict_t *ent);
-bool		Tech_ApplyTimeAccel(edict_t *ent);
-void		Tech_ApplyTimeAccelSound(edict_t *ent);
-void		Tech_ApplyAutoDoc(edict_t *ent);
-bool		Tech_HasRegeneration(edict_t *ent);
+gitem_t		*Tech_Held(gentity_t *ent);
+int			Tech_ApplyDisruptorShield(gentity_t *ent, int dmg);
+int			Tech_ApplyPowerAmp(gentity_t *ent, int dmg);
+bool		Tech_ApplyPowerAmpSound(gentity_t *ent);
+bool		Tech_ApplyTimeAccel(gentity_t *ent);
+void		Tech_ApplyTimeAccelSound(gentity_t *ent);
+void		Tech_ApplyAutoDoc(gentity_t *ent);
+bool		Tech_HasRegeneration(gentity_t *ent);
 void		PrecacheItem(gitem_t *it);
 bool		CheckItemEnabled(gitem_t *item);
 gitem_t		*CheckItemReplacements(gitem_t *item);
@@ -2256,31 +2349,31 @@ void		InitItems();
 void		SetItemNames();
 gitem_t		*FindItem(const char *pickup_name);
 gitem_t		*FindItemByClassname(const char *classname);
-edict_t		*Drop_Item(edict_t *ent, gitem_t *item);
-void		SetRespawn(edict_t *ent, gtime_t delay, bool hide_self = true);
-void		Change_Weapon(edict_t *ent);
-bool		SpawnItem(edict_t *ent, gitem_t *item);
-void		Think_Weapon(edict_t *ent);
-item_id_t	ArmorIndex(edict_t *ent);
-item_id_t	PowerArmorType(edict_t *ent);
+gentity_t		*Drop_Item(gentity_t *ent, gitem_t *item);
+void		SetRespawn(gentity_t *ent, gtime_t delay, bool hide_self = true);
+void		Change_Weapon(gentity_t *ent);
+bool		SpawnItem(gentity_t *ent, gitem_t *item);
+void		Think_Weapon(gentity_t *ent);
+item_id_t	ArmorIndex(gentity_t *ent);
+item_id_t	PowerArmorType(gentity_t *ent);
 gitem_t		*GetItemByIndex(item_id_t index);
 gitem_t		*GetItemByAmmo(ammo_t ammo);
 gitem_t		*GetItemByPowerup(powerup_t powerup);
-bool		Add_Ammo(edict_t *ent, gitem_t *item, int count);
-void		G_CheckPowerArmor(edict_t *ent);
-void		Touch_Item(edict_t *ent, edict_t *other, const trace_t &tr, bool other_touching_self);
-void		P_ToggleFlashlight(edict_t *ent, bool state);
-bool		Entity_IsVisibleToPlayer(edict_t *ent, edict_t *player);
-void		Compass_Update(edict_t *ent, bool first);
-item_id_t	DoRandomRespawn(edict_t *ent);
-void		RespawnItem(edict_t *ent);
-void		fire_doppelganger(edict_t *ent, const vec3_t &start, const vec3_t &aimdir);
+bool		Add_Ammo(gentity_t *ent, gitem_t *item, int count);
+void		G_CheckPowerArmor(gentity_t *ent);
+void		Touch_Item(gentity_t *ent, gentity_t *other, const trace_t &tr, bool other_touching_self);
+void		P_ToggleFlashlight(gentity_t *ent, bool state);
+bool		Entity_IsVisibleToPlayer(gentity_t *ent, gentity_t *player);
+void		Compass_Update(gentity_t *ent, bool first);
+item_id_t	DoRandomRespawn(gentity_t *ent);
+void		RespawnItem(gentity_t *ent);
+void		fire_doppelganger(gentity_t *ent, const vec3_t &start, const vec3_t &aimdir);
 
 //
 // g_utils.cpp
 //
-bool KillBox(edict_t *ent, bool from_spawning, mod_id_t mod = MOD_TELEFRAG, bool bsp_clipping = true);
-edict_t *G_Find(edict_t *from, std::function<bool(edict_t *e)> matcher);
+bool KillBox(gentity_t *ent, bool from_spawning, mod_id_t mod = MOD_TELEFRAG, bool bsp_clipping = true);
+gentity_t *G_Find(gentity_t *from, std::function<bool(gentity_t *e)> matcher);
 
 // utility template for getting the type of a field
 template<typename>
@@ -2291,30 +2384,30 @@ template<typename T>
 using member_object_type_t = typename member_object_type<std::remove_cv_t<T>>::type;
 
 template<auto M>
-edict_t *G_FindByString(edict_t *from, const std::string_view &value) {
+gentity_t *G_FindByString(gentity_t *from, const std::string_view &value) {
 	static_assert(std::is_same_v<member_object_type_t<decltype(M)>, const char *>, "can only use string member functions");
 
-	return G_Find(from, [&](edict_t *e) {
+	return G_Find(from, [&](gentity_t *e) {
 		return e->*M && strlen(e->*M) == value.length() && !Q_strncasecmp(e->*M, value.data(), value.length());
 		});
 }
 
-edict_t *findradius(edict_t *from, const vec3_t &org, float rad);
-edict_t *G_PickTarget(const char *targetname);
-void	 G_UseTargets(edict_t *ent, edict_t *activator);
-void	 G_PrintActivationMessage(edict_t *ent, edict_t *activator, bool coop_global);
+gentity_t *findradius(gentity_t *from, const vec3_t &org, float rad);
+gentity_t *G_PickTarget(const char *targetname);
+void	 G_UseTargets(gentity_t *ent, gentity_t *activator);
+void	 G_PrintActivationMessage(gentity_t *ent, gentity_t *activator, bool coop_global);
 void	 G_SetMovedir(vec3_t &angles, vec3_t &movedir);
 
-void	 G_InitEdict(edict_t *e);
-edict_t *G_Spawn();
-void	 G_FreeEdict(edict_t *e);
+void	 G_InitGentity(gentity_t *e);
+gentity_t *G_Spawn();
+void	 G_FreeEntity(gentity_t *e);
 
-void G_TouchTriggers(edict_t *ent);
-void G_TouchProjectiles(edict_t *ent, vec3_t previous_origin);
+void G_TouchTriggers(gentity_t *ent);
+void G_TouchProjectiles(gentity_t *ent, vec3_t previous_origin);
 
 char *G_CopyString(const char *in, int32_t tag);
 
-void G_PlayerNotifyGoal(edict_t *player);
+void G_PlayerNotifyGoal(gentity_t *player);
 
 const char *Teams_TeamName(team_t team);
 const char *Teams_OtherTeamName(team_t team);
@@ -2325,32 +2418,36 @@ void Horde_AdjustPlayerScore(gclient_t *cl, int32_t offset);
 void G_SetPlayerScore(gclient_t *cl, int32_t value);
 void G_AdjustTeamScore(team_t team, int32_t offset);
 void G_SetTeamScore(team_t team, int32_t value);
-const char *G_GetGametypeShortName(void);
 const char *G_PlaceString(int rank);
 bool ItemSpawnsEnabled();
-bool loc_CanSee(edict_t *targ, edict_t *inflictor);
-bool SetTeam(edict_t *ent, team_t desired_team, bool inactive, bool force, bool silent);
-const char *G_TimeString(const int64_t msec);
-const char *G_TimeStringMs(const int64_t msec);
+bool loc_CanSee(gentity_t *targ, gentity_t *inflictor);
+bool SetTeam(gentity_t *ent, team_t desired_team, bool inactive, bool force, bool silent);
+const char *G_TimeString(const int msec);
+const char *G_TimeStringMs(const int msec);
 void BroadcastSpectatorMessage(const char *msg);
-void BroadcastTeamMessage(team_t team, const char *msg);
+void BroadcastTeamMessage(team_t team, print_type_t level, const char *msg);
 team_t StringToTeamNum(const char *in);
 bool IsCombatDisabled();
+bool IsPickupsDisabled();
 gametype_t GT_IndexFromString(const char *in);
-bool IsRoundBased();
 bool IsScoringDisabled();
+void BroadcastReadyReminderMessage();
+void TeleportPlayerToRandomSpawnPoint(gentity_t *ent, bool fx);
+bool InCoopStyle();
 
 //
 // g_spawn.cpp
 //
-void  ED_CallSpawn(edict_t *ent);
+void  ED_CallSpawn(gentity_t *ent);
 char *ED_NewString(char *string);
+void GT_SetLongName(void);
+void GT_PrecacheAssets();
 
 //
 // g_target.cpp
 //
-void target_laser_think(edict_t *self);
-void target_laser_off(edict_t *self);
+void target_laser_think(gentity_t *self);
+void target_laser_off(gentity_t *self);
 
 constexpr spawnflags_t SPAWNFLAG_LASER_ON = 0x0001_spawnflag;
 constexpr spawnflags_t SPAWNFLAG_LASER_RED = 0x0002_spawnflag;
@@ -2385,17 +2482,17 @@ MAKE_ENUM_BITFLAGS(damageflags_t);
 //
 // g_combat.cpp
 //
-bool OnSameTeam(edict_t *ent1, edict_t *ent2);
-bool CanDamage(edict_t *targ, edict_t *inflictor);
-bool CheckTeamDamage(edict_t *targ, edict_t *attacker);
-void T_Damage(edict_t *targ, edict_t *inflictor, edict_t *attacker, const vec3_t &dir, const vec3_t &point,
+bool OnSameTeam(gentity_t *ent1, gentity_t *ent2);
+bool CanDamage(gentity_t *targ, gentity_t *inflictor);
+bool CheckTeamDamage(gentity_t *targ, gentity_t *attacker);
+void T_Damage(gentity_t *targ, gentity_t *inflictor, gentity_t *attacker, const vec3_t &dir, const vec3_t &point,
 	const vec3_t &normal, int damage, int knockback, damageflags_t dflags, mod_t mod);
-void T_RadiusDamage(edict_t *inflictor, edict_t *attacker, float damage, edict_t *ignore, float radius, damageflags_t dflags, mod_t mod);
-void Killed(edict_t *targ, edict_t *inflictor, edict_t *attacker, int damage, const vec3_t &point, mod_t mod);
+void T_RadiusDamage(gentity_t *inflictor, gentity_t *attacker, float damage, gentity_t *ignore, float radius, damageflags_t dflags, mod_t mod);
+void Killed(gentity_t *targ, gentity_t *inflictor, gentity_t *attacker, int damage, const vec3_t &point, mod_t mod);
 
-void T_RadiusNukeDamage(edict_t *inflictor, edict_t *attacker, float damage, edict_t *ignore, float radius, mod_t mod);
-void T_RadiusClassDamage(edict_t *inflictor, edict_t *attacker, float damage, char *ignoreClass, float radius, mod_t mod);
-void cleanupHealTarget(edict_t *ent);
+void T_RadiusNukeDamage(gentity_t *inflictor, gentity_t *attacker, float damage, gentity_t *ignore, float radius, mod_t mod);
+void T_RadiusClassDamage(gentity_t *inflictor, gentity_t *attacker, float damage, char *ignoreClass, float radius, mod_t mod);
+void cleanupHealTarget(gentity_t *ent);
 
 constexpr int32_t DEFAULT_BULLET_HSPREAD = 300;
 constexpr int32_t DEFAULT_BULLET_VSPREAD = 500;
@@ -2406,11 +2503,11 @@ constexpr int32_t DEFAULT_SSHOTGUN_COUNT = 20;
 //
 // g_func.cpp
 //
-void train_use(edict_t *self, edict_t *other, edict_t *activator);
-void func_train_find(edict_t *self);
-edict_t *plat_spawn_inside_trigger(edict_t *ent);
-void	 Move_Calc(edict_t *ent, const vec3_t &dest, void(*endfunc)(edict_t *self));
-void G_SetMoveinfoSounds(edict_t *self, const char *default_start, const char *default_mid, const char *default_end);
+void train_use(gentity_t *self, gentity_t *other, gentity_t *activator);
+void func_train_find(gentity_t *self);
+gentity_t *plat_spawn_inside_trigger(gentity_t *ent);
+void	 Move_Calc(gentity_t *ent, const vec3_t &dest, void(*endfunc)(gentity_t *self));
+void G_SetMoveinfoSounds(gentity_t *self, const char *default_start, const char *default_mid, const char *default_end);
 
 constexpr spawnflags_t SPAWNFLAG_TRAIN_START_ON = 1_spawnflag;
 
@@ -2423,44 +2520,44 @@ constexpr spawnflags_t SPAWNFLAG_DOOR_REVERSE = 2_spawnflag;
 //
 // g_monster.cpp
 //
-void monster_muzzleflash(edict_t *self, const vec3_t &start, monster_muzzleflash_id_t id);
-void monster_fire_bullet(edict_t *self, const vec3_t &start, const vec3_t &dir, int damage, int kick, int hspread,
+void monster_muzzleflash(gentity_t *self, const vec3_t &start, monster_muzzleflash_id_t id);
+void monster_fire_bullet(gentity_t *self, const vec3_t &start, const vec3_t &dir, int damage, int kick, int hspread,
 	int vspread, monster_muzzleflash_id_t flashtype);
-void monster_fire_shotgun(edict_t *self, const vec3_t &start, const vec3_t &aimdir, int damage, int kick, int hspread,
+void monster_fire_shotgun(gentity_t *self, const vec3_t &start, const vec3_t &aimdir, int damage, int kick, int hspread,
 	int vspread, int count, monster_muzzleflash_id_t flashtype);
-void monster_fire_blaster(edict_t *self, const vec3_t &start, const vec3_t &dir, int damage, int speed,
+void monster_fire_blaster(gentity_t *self, const vec3_t &start, const vec3_t &dir, int damage, int speed,
 	monster_muzzleflash_id_t flashtype, effects_t effect);
-void monster_fire_flechette(edict_t *self, const vec3_t &start, const vec3_t &dir, int damage, int speed,
+void monster_fire_flechette(gentity_t *self, const vec3_t &start, const vec3_t &dir, int damage, int speed,
 	monster_muzzleflash_id_t flashtype);
-void monster_fire_grenade(edict_t *self, const vec3_t &start, const vec3_t &aimdir, int damage, int speed,
+void monster_fire_grenade(gentity_t *self, const vec3_t &start, const vec3_t &aimdir, int damage, int speed,
 	monster_muzzleflash_id_t flashtype, float right_adjust, float up_adjust);
-void monster_fire_rocket(edict_t *self, const vec3_t &start, const vec3_t &dir, int damage, int speed,
+void monster_fire_rocket(gentity_t *self, const vec3_t &start, const vec3_t &dir, int damage, int speed,
 	monster_muzzleflash_id_t flashtype);
-void monster_fire_railgun(edict_t *self, const vec3_t &start, const vec3_t &aimdir, int damage, int kick,
+void monster_fire_railgun(gentity_t *self, const vec3_t &start, const vec3_t &aimdir, int damage, int kick,
 	monster_muzzleflash_id_t flashtype);
-void monster_fire_bfg(edict_t *self, const vec3_t &start, const vec3_t &aimdir, int damage, int speed, int kick,
+void monster_fire_bfg(gentity_t *self, const vec3_t &start, const vec3_t &aimdir, int damage, int speed, int kick,
 	float damage_radius, monster_muzzleflash_id_t flashtype);
-bool M_CheckClearShot(edict_t *self, const vec3_t &offset);
-bool M_CheckClearShot(edict_t *self, const vec3_t &offset, vec3_t &start);
-vec3_t M_ProjectFlashSource(edict_t *self, const vec3_t &offset, const vec3_t &forward, const vec3_t &right);
-bool M_droptofloor_generic(vec3_t &origin, const vec3_t &mins, const vec3_t &maxs, bool ceiling, edict_t *ignore, contents_t mask, bool allow_partial);
-bool M_droptofloor(edict_t *ent);
-void monster_think(edict_t *self);
-void monster_dead_think(edict_t *self);
-void monster_dead(edict_t *self);
-void walkmonster_start(edict_t *self);
-void swimmonster_start(edict_t *self);
-void flymonster_start(edict_t *self);
-void monster_death_use(edict_t *self);
-void M_CatagorizePosition(edict_t *self, const vec3_t &in_point, water_level_t &waterlevel, contents_t &watertype);
-void M_WorldEffects(edict_t *ent);
-bool M_CheckAttack(edict_t *self);
-void M_CheckGround(edict_t *ent, contents_t mask);
-void monster_use(edict_t *self, edict_t *other, edict_t *activator);
-void M_ProcessPain(edict_t *e);
-bool M_ShouldReactToPain(edict_t *self, const mod_t &mod);
-void M_SetAnimation(edict_t *self, const save_mmove_t &move, bool instant = true);
-bool M_AllowSpawn(edict_t *self);
+bool M_CheckClearShot(gentity_t *self, const vec3_t &offset);
+bool M_CheckClearShot(gentity_t *self, const vec3_t &offset, vec3_t &start);
+vec3_t M_ProjectFlashSource(gentity_t *self, const vec3_t &offset, const vec3_t &forward, const vec3_t &right);
+bool M_droptofloor_generic(vec3_t &origin, const vec3_t &mins, const vec3_t &maxs, bool ceiling, gentity_t *ignore, contents_t mask, bool allow_partial);
+bool M_droptofloor(gentity_t *ent);
+void monster_think(gentity_t *self);
+void monster_dead_think(gentity_t *self);
+void monster_dead(gentity_t *self);
+void walkmonster_start(gentity_t *self);
+void swimmonster_start(gentity_t *self);
+void flymonster_start(gentity_t *self);
+void monster_death_use(gentity_t *self);
+void M_CatagorizePosition(gentity_t *self, const vec3_t &in_point, water_level_t &waterlevel, contents_t &watertype);
+void M_WorldEffects(gentity_t *ent);
+bool M_CheckAttack(gentity_t *self);
+void M_CheckGround(gentity_t *ent, contents_t mask);
+void monster_use(gentity_t *self, gentity_t *other, gentity_t *activator);
+void M_ProcessPain(gentity_t *e);
+bool M_ShouldReactToPain(gentity_t *self, const mod_t &mod);
+void M_SetAnimation(gentity_t *self, const save_mmove_t &move, bool instant = true);
+bool M_AllowSpawn(gentity_t *self);
 
 // Paril: used in N64. causes them to be mad at the player
 // regardless of circumstance.
@@ -2468,32 +2565,32 @@ constexpr size_t HACKFLAG_ATTACK_PLAYER = 1;
 // used in N64, appears to change their behavior for the end scene.
 constexpr size_t HACKFLAG_END_CUTSCENE = 4;
 
-bool monster_start(edict_t *self);
-void monster_start_go(edict_t *self);
+bool monster_start(gentity_t *self);
+void monster_start_go(gentity_t *self);
 
-void monster_fire_ionripper(edict_t *self, const vec3_t &start, const vec3_t &dir, int damage, int speed,
+void monster_fire_ionripper(gentity_t *self, const vec3_t &start, const vec3_t &dir, int damage, int speed,
 	monster_muzzleflash_id_t flashtype, effects_t effect);
-void monster_fire_heat(edict_t *self, const vec3_t &start, const vec3_t &dir, int damage, int speed,
+void monster_fire_heat(gentity_t *self, const vec3_t &start, const vec3_t &dir, int damage, int speed,
 	monster_muzzleflash_id_t flashtype, float lerp_factor);
-void monster_fire_dabeam(edict_t *self, int damage, bool secondary, void(*update_func)(edict_t *self));
-void dabeam_update(edict_t *self, bool damage);
-void monster_fire_blueblaster(edict_t *self, const vec3_t &start, const vec3_t &dir, int damage, int speed,
+void monster_fire_dabeam(gentity_t *self, int damage, bool secondary, void(*update_func)(gentity_t *self));
+void dabeam_update(gentity_t *self, bool damage);
+void monster_fire_blueblaster(gentity_t *self, const vec3_t &start, const vec3_t &dir, int damage, int speed,
 	monster_muzzleflash_id_t flashtype, effects_t effect);
 void G_Monster_CheckCoopHealthScaling();
 
-void monster_fire_blaster2(edict_t *self, const vec3_t &start, const vec3_t &dir, int damage, int speed,
+void monster_fire_blaster2(gentity_t *self, const vec3_t &start, const vec3_t &dir, int damage, int speed,
 	monster_muzzleflash_id_t flashtype, effects_t effect);
-void monster_fire_disruptor(edict_t *self, const vec3_t &start, const vec3_t &dir, int damage, int speed, edict_t *enemy,
+void monster_fire_disruptor(gentity_t *self, const vec3_t &start, const vec3_t &dir, int damage, int speed, gentity_t *enemy,
 	monster_muzzleflash_id_t flashtype);
-void monster_fire_heatbeam(edict_t *self, const vec3_t &start, const vec3_t &dir, const vec3_t &offset, int damage,
+void monster_fire_heatbeam(gentity_t *self, const vec3_t &start, const vec3_t &dir, const vec3_t &offset, int damage,
 	int kick, monster_muzzleflash_id_t flashtype);
-void stationarymonster_start(edict_t *self);
-void monster_done_dodge(edict_t *self);
+void stationarymonster_start(gentity_t *self);
+void monster_done_dodge(gentity_t *self);
 
-stuck_result_t G_FixStuckObject(edict_t *self, vec3_t check);
+stuck_result_t G_FixStuckObject(gentity_t *self, vec3_t check);
 
 // this is for the count of monsters
-int32_t M_SlotsLeft(edict_t *self);
+int32_t M_SlotsLeft(gentity_t *self);
 
 // shared with monsters
 constexpr spawnflags_t SPAWNFLAG_MONSTER_AMBUSH = 1_spawnflag;
@@ -2512,15 +2609,15 @@ constexpr spawnflags_t SPAWNFLAG_FIXBOT_WORKING = 32_spawnflag;
 //
 // g_misc.cpp
 //
-void ThrowClientHead(edict_t *self, int damage);
-void gib_die(edict_t *self, edict_t *inflictor, edict_t *attacker, int damage, const vec3_t &point, const mod_t &mod);
-edict_t *ThrowGib(edict_t *self, const char *gibname, int damage, gib_type_t type, float scale);
-void BecomeExplosion1(edict_t *self);
-void misc_viper_use(edict_t *self, edict_t *other, edict_t *activator);
-void misc_strogg_ship_use(edict_t *self, edict_t *other, edict_t *activator);
+void ThrowClientHead(gentity_t *self, int damage);
+void gib_die(gentity_t *self, gentity_t *inflictor, gentity_t *attacker, int damage, const vec3_t &point, const mod_t &mod);
+gentity_t *ThrowGib(gentity_t *self, const char *gibname, int damage, gib_type_t type, float scale);
+void BecomeExplosion1(gentity_t *self);
+void misc_viper_use(gentity_t *self, gentity_t *other, gentity_t *activator);
+void misc_strogg_ship_use(gentity_t *self, gentity_t *other, gentity_t *activator);
 void VelocityForDamage(int damage, vec3_t &v);
-void ClipGibVelocity(edict_t *ent);
-void TeleportPlayer(edict_t *player, vec3_t origin, vec3_t angles);
+void ClipGibVelocity(gentity_t *ent);
+void TeleportPlayer(gentity_t *player, vec3_t origin, vec3_t angles);
 
 constexpr spawnflags_t SPAWNFLAG_PATH_CORNER_TELEPORT = 1_spawnflag;
 
@@ -2534,14 +2631,14 @@ constexpr size_t CLOCK_MESSAGE_SIZE = 9;
 //
 // g_ai.cpp
 //
-edict_t *AI_GetSightClient(edict_t *self);
+gentity_t *AI_GetSightClient(gentity_t *self);
 
-void ai_stand(edict_t *self, float dist);
-void ai_move(edict_t *self, float dist);
-void ai_walk(edict_t *self, float dist);
-void ai_turn(edict_t *self, float dist);
-void ai_run(edict_t *self, float dist);
-void ai_charge(edict_t *self, float dist);
+void ai_stand(gentity_t *self, float dist);
+void ai_move(gentity_t *self, float dist);
+void ai_walk(gentity_t *self, float dist);
+void ai_turn(gentity_t *self, float dist);
+void ai_run(gentity_t *self, float dist);
+void ai_charge(gentity_t *self, float dist);
 
 constexpr float RANGE_MELEE = 20; // bboxes basically touching
 constexpr float RANGE_NEAR = 440;
@@ -2549,63 +2646,63 @@ constexpr float RANGE_MID = 940;
 
 // [Paril-KEX] adjusted to return an actual distance, measured
 // in a way that is consistent regardless of what is fighting what
-float range_to(edict_t *self, edict_t *other);
+float range_to(gentity_t *self, gentity_t *other);
 
-void FoundTarget(edict_t *self);
-void HuntTarget(edict_t *self, bool animate_state = true);
-bool infront(edict_t *self, edict_t *other);
-bool visible(edict_t *self, edict_t *other, bool through_glass = true);
-bool FacingIdeal(edict_t *self);
+void FoundTarget(gentity_t *self);
+void HuntTarget(gentity_t *self, bool animate_state = true);
+bool infront(gentity_t *self, gentity_t *other);
+bool visible(gentity_t *self, gentity_t *other, bool through_glass = true);
+bool FacingIdeal(gentity_t *self);
 // [Paril-KEX] generic function
-bool M_CheckAttack_Base(edict_t *self, float stand_ground_chance, float melee_chance, float near_chance, float mid_chance, float far_chance, float strafe_scalar);
+bool M_CheckAttack_Base(gentity_t *self, float stand_ground_chance, float melee_chance, float near_chance, float mid_chance, float far_chance, float strafe_scalar);
 
 //
 // g_weapon.cpp
 //
 void Weapon_Stats_Hit(gclient_t *cl, mod_t mod);
-bool fire_hit(edict_t *self, vec3_t aim, int damage, int kick);
-void fire_bullet(edict_t *self, const vec3_t &start, const vec3_t &aimdir, int damage, int kick, int hspread,
+bool fire_hit(gentity_t *self, vec3_t aim, int damage, int kick);
+void fire_bullet(gentity_t *self, const vec3_t &start, const vec3_t &aimdir, int damage, int kick, int hspread,
 	int vspread, mod_t mod);
-void fire_shotgun(edict_t *self, const vec3_t &start, const vec3_t &aimdir, int damage, int kick, int hspread,
+void fire_shotgun(gentity_t *self, const vec3_t &start, const vec3_t &aimdir, int damage, int kick, int hspread,
 	int vspread, int count, mod_t mod);
-void blaster_touch(edict_t *self, edict_t *other, const trace_t &tr, bool other_touching_self);
-void fire_blaster(edict_t *self, const vec3_t &start, const vec3_t &aimdir, int damage, int speed, effects_t effect,
+void blaster_touch(gentity_t *self, gentity_t *other, const trace_t &tr, bool other_touching_self);
+void fire_blaster(gentity_t *self, const vec3_t &start, const vec3_t &aimdir, int damage, int speed, effects_t effect,
 	mod_t mod);
-void fire_blueblaster(edict_t *self, const vec3_t &start, const vec3_t &aimdir, int damage, int speed,
+void fire_blueblaster(gentity_t *self, const vec3_t &start, const vec3_t &aimdir, int damage, int speed,
 	effects_t effect);
-void fire_greenblaster(edict_t *self, const vec3_t &start, const vec3_t &aimdir, int damage, int speed, effects_t effect,
+void fire_greenblaster(gentity_t *self, const vec3_t &start, const vec3_t &aimdir, int damage, int speed, effects_t effect,
 	bool hyper);
-void Grenade_Explode(edict_t *ent);
-void fire_grenade(edict_t *self, const vec3_t &start, const vec3_t &aimdir, int damage, int speed, gtime_t timer,
+void Grenade_Explode(gentity_t *ent);
+void fire_grenade(gentity_t *self, const vec3_t &start, const vec3_t &aimdir, int damage, int speed, gtime_t timer,
 	float damage_radius, float right_adjust, float up_adjust, bool monster);
-void fire_handgrenade(edict_t *self, const vec3_t &start, const vec3_t &aimdir, int damage, int speed, gtime_t timer,
+void fire_handgrenade(gentity_t *self, const vec3_t &start, const vec3_t &aimdir, int damage, int speed, gtime_t timer,
 	float damage_radius, bool held);
-void rocket_touch(edict_t *ent, edict_t *other, const trace_t &tr, bool other_touching_self);
-edict_t *fire_rocket(edict_t *self, const vec3_t &start, const vec3_t &dir, int damage, int speed, float damage_radius,
+void rocket_touch(gentity_t *ent, gentity_t *other, const trace_t &tr, bool other_touching_self);
+gentity_t *fire_rocket(gentity_t *self, const vec3_t &start, const vec3_t &dir, int damage, int speed, float damage_radius,
 	int radius_damage);
-void fire_rail(edict_t *self, const vec3_t &start, const vec3_t &aimdir, int damage, int kick);
-void fire_bfg(edict_t *self, const vec3_t &start, const vec3_t &dir, int damage, int speed, float damage_radius);
-void fire_ionripper(edict_t *self, const vec3_t &start, const vec3_t &aimdir, int damage, int speed, effects_t effect);
-void fire_heat(edict_t *self, const vec3_t &start, const vec3_t &dir, int damage, int speed, float damage_radius,
+void fire_rail(gentity_t *self, const vec3_t &start, const vec3_t &aimdir, int damage, int kick);
+void fire_bfg(gentity_t *self, const vec3_t &start, const vec3_t &dir, int damage, int speed, float damage_radius);
+void fire_ionripper(gentity_t *self, const vec3_t &start, const vec3_t &aimdir, int damage, int speed, effects_t effect);
+void fire_heat(gentity_t *self, const vec3_t &start, const vec3_t &dir, int damage, int speed, float damage_radius,
 	int radius_damage, float turn_fraction);
-void fire_plasma(edict_t *self, const vec3_t &start, const vec3_t &dir, int damage, int speed, float damage_radius,
+void fire_phalanx(gentity_t *self, const vec3_t &start, const vec3_t &dir, int damage, int speed, float damage_radius,
 	int radius_damage);
-void fire_trap(edict_t *self, const vec3_t &start, const vec3_t &aimdir, int speed);
-void fire_plasmabeam(edict_t *self, const vec3_t &start, const vec3_t &aimdir, const vec3_t &offset, int damage, int kick,
+void fire_trap(gentity_t *self, const vec3_t &start, const vec3_t &aimdir, int speed);
+void fire_plasmabeam(gentity_t *self, const vec3_t &start, const vec3_t &aimdir, const vec3_t &offset, int damage, int kick,
 	bool monster);
-void fire_disruptor(edict_t *self, const vec3_t &start, const vec3_t &dir, int damage, int speed, edict_t *enemy);
-void fire_flechette(edict_t *self, const vec3_t &start, const vec3_t &dir, int damage, int speed, int kick);
-void fire_prox(edict_t *self, const vec3_t &start, const vec3_t &aimdir, int damage, int speed);
-void fire_nuke(edict_t *self, const vec3_t &start, const vec3_t &aimdir, int speed);
-bool fire_player_melee(edict_t *self, const vec3_t &start, const vec3_t &aim, int reach, int damage, int kick, mod_t mod);
-void fire_tesla(edict_t *self, const vec3_t &start, const vec3_t &aimdir, int damage, int speed);
+void fire_disruptor(gentity_t *self, const vec3_t &start, const vec3_t &dir, int damage, int speed, gentity_t *enemy);
+void fire_flechette(gentity_t *self, const vec3_t &start, const vec3_t &dir, int damage, int speed, int kick);
+void fire_prox(gentity_t *self, const vec3_t &start, const vec3_t &aimdir, int damage, int speed);
+void fire_nuke(gentity_t *self, const vec3_t &start, const vec3_t &aimdir, int speed);
+bool fire_player_melee(gentity_t *self, const vec3_t &start, const vec3_t &aim, int reach, int damage, int kick, mod_t mod);
+void fire_tesla(gentity_t *self, const vec3_t &start, const vec3_t &aimdir, int damage, int speed);
 
-void fire_disintegrator(edict_t *self, const vec3_t &start, const vec3_t &dir, int speed);
-vec3_t P_CurrentKickAngles(edict_t *ent);
-vec3_t P_CurrentKickOrigin(edict_t *ent);
-void P_AddWeaponKick(edict_t *ent, const vec3_t &origin, const vec3_t &angles);
+void fire_disintegrator(gentity_t *self, const vec3_t &start, const vec3_t &dir, int speed);
+vec3_t P_CurrentKickAngles(gentity_t *ent);
+vec3_t P_CurrentKickOrigin(gentity_t *ent);
+void P_AddWeaponKick(gentity_t *ent, const vec3_t &origin, const vec3_t &angles);
 
-void Nuke_Explode(edict_t *ent);
+void Nuke_Explode(gentity_t *ent);
 
 // we won't ever pierce more than this many entities for a single trace.
 constexpr size_t MAX_PIERCE = 16;
@@ -2614,14 +2711,14 @@ constexpr size_t MAX_PIERCE = 16;
 // the stuff we are piercing.
 struct pierce_args_t {
 	// stuff we pierced
-	std::array<edict_t *, MAX_PIERCE> pierced;
+	std::array<gentity_t *, MAX_PIERCE> pierced;
 	std::array<solid_t, MAX_PIERCE> pierce_solidities;
 	size_t num_pierced = 0;
 	// the last trace that was done, when piercing stopped
 	trace_t tr;
 
 	// mark entity as pierced
-	inline bool mark(edict_t *ent);
+	inline bool mark(gentity_t *ent);
 
 	// restore entities' previous solidities
 	inline void restore();
@@ -2635,14 +2732,14 @@ struct pierce_args_t {
 	}
 };
 
-void pierce_trace(const vec3_t &start, const vec3_t &end, edict_t *ignore, pierce_args_t &pierce, contents_t mask);
+void pierce_trace(const vec3_t &start, const vec3_t &end, gentity_t *ignore, pierce_args_t &pierce, contents_t mask);
 
 //
 // g_ptrail.cpp
 //
-void PlayerTrail_Add(edict_t *player);
-void PlayerTrail_Destroy(edict_t *player);
-edict_t *PlayerTrail_Pick(edict_t *self, bool next);
+void PlayerTrail_Add(gentity_t *player);
+void PlayerTrail_Destroy(gentity_t *player);
+gentity_t *PlayerTrail_Pick(gentity_t *self, bool next);
 
 //
 // g_client.cpp
@@ -2652,56 +2749,56 @@ constexpr spawnflags_t SPAWNFLAG_CHANGELEVEL_NO_END_OF_UNIT = 16_spawnflag;
 constexpr spawnflags_t SPAWNFLAG_CHANGELEVEL_FADE_OUT = 32_spawnflag;
 constexpr spawnflags_t SPAWNFLAG_CHANGELEVEL_IMMEDIATE_LEAVE = 64_spawnflag;
 
-void ClientSetEliminated(edict_t *self);
-void ClientRespawn(edict_t *ent);
-void BeginIntermission(edict_t *targ);
-void ClientSpawn(edict_t *ent);
-void InitClientPersistant(edict_t *ent, gclient_t *client);
+void ClientSetEliminated(gentity_t *self);
+void ClientRespawn(gentity_t *ent);
+void BeginIntermission(gentity_t *targ);
+void ClientSpawn(gentity_t *ent);
+void InitClientPersistant(gentity_t *ent, gclient_t *client);
 void InitBodyQue();
-void CopyToBodyQue(edict_t *ent);
-void ClientBeginServerFrame(edict_t *ent);
-void ClientUserinfoChanged(edict_t *ent, const char *userinfo);
-void Match_Ghost_Assign(edict_t *ent);
-void Match_Ghost_DoAssign(edict_t *ent);
-void P_AssignClientSkinnum(edict_t *ent);
-void P_ForceFogTransition(edict_t *ent, bool instant);
-void P_SendLevelPOI(edict_t *ent);
-unsigned int P_GetLobbyUserNum(const edict_t *player);
+void CopyToBodyQue(gentity_t *ent);
+void ClientBeginServerFrame(gentity_t *ent);
+void ClientUserinfoChanged(gentity_t *ent, const char *userinfo);
+void Match_Ghost_Assign(gentity_t *ent);
+void Match_Ghost_DoAssign(gentity_t *ent);
+void P_AssignClientSkinnum(gentity_t *ent);
+void P_ForceFogTransition(gentity_t *ent, bool instant);
+void P_SendLevelPOI(gentity_t *ent);
+unsigned int P_GetLobbyUserNum(const gentity_t *player);
 void G_UpdateLevelEntry();
 void G_EndOfUnitMessage();
-bool SelectSpawnPoint(edict_t *ent, vec3_t &origin, vec3_t &angles, bool force_spawn, bool &landmark);
+bool SelectSpawnPoint(gentity_t *ent, vec3_t &origin, vec3_t &angles, bool force_spawn, bool &landmark);
 
 struct select_spawn_result_t {
-	edict_t *spot;
+	gentity_t *spot;
 	bool		any_valid = false; // set if a spawn point was found, even if it was taken
 };
 
-select_spawn_result_t SelectDeathmatchSpawnPoint(edict_t *ent, vec3_t avoid_point, int mode, bool force_spawn, bool fallback_to_ctf_or_start, bool intermission, bool initial);
-void G_PostRespawn(edict_t *self);
+select_spawn_result_t SelectDeathmatchSpawnPoint(gentity_t *ent, vec3_t avoid_point, playerspawn_t mode, bool force_spawn, bool fallback_to_ctf_or_start, bool intermission, bool initial);
+void G_PostRespawn(gentity_t *self);
 
 //
 // g_ctf.cpp
 //
-bool CTF_PickupFlag(edict_t *ent, edict_t *other);
-void CTF_DropFlag(edict_t *ent, gitem_t *item);
-void CTF_ClientEffects(edict_t *player);
-void CTF_DeadDropFlag(edict_t *self);
-void CTF_FlagSetup(edict_t *ent);
+bool CTF_PickupFlag(gentity_t *ent, gentity_t *other);
+void CTF_DropFlag(gentity_t *ent, gitem_t *item);
+void CTF_ClientEffects(gentity_t *player);
+void CTF_DeadDropFlag(gentity_t *self);
+void CTF_FlagSetup(gentity_t *ent);
 void CTF_ResetTeamFlag(team_t team);
 void CTF_ResetFlags();
-void CTF_ScoreBonuses(edict_t *targ, edict_t *inflictor, edict_t *attacker);
-void CTF_CheckHurtCarrier(edict_t *targ, edict_t *attacker);
+void CTF_ScoreBonuses(gentity_t *targ, gentity_t *inflictor, gentity_t *attacker);
+void CTF_CheckHurtCarrier(gentity_t *targ, gentity_t *attacker);
 
 
 //
 // g_menu.cpp
 //
-void G_Menu_Join_Open(edict_t *ent);
+void G_Menu_Join_Open(gentity_t *ent);
 
 //
 // g_player.cpp
 //
-void player_die(edict_t *self, edict_t *inflictor, edict_t *attacker, int damage, const vec3_t &point, const mod_t &mod);
+void player_die(gentity_t *self, gentity_t *inflictor, gentity_t *attacker, int damage, const vec3_t &point, const mod_t &mod);
 
 //
 // g_svcmds.cpp
@@ -2712,48 +2809,48 @@ bool G_FilterPacket(const char *from);
 //
 // p_view.cpp
 //
-void ClientEndServerFrame(edict_t *ent);
-void G_LagCompensate(edict_t *from_player, const vec3_t &start, const vec3_t &dir);
+void ClientEndServerFrame(gentity_t *ent);
+void G_LagCompensate(gentity_t *from_player, const vec3_t &start, const vec3_t &dir);
 void G_UnLagCompensate();
 
 //
 // p_hud.cpp
 //
-void MoveClientToIntermission(edict_t *ent);
-void G_SetStats(edict_t *ent);
-void G_SetCoopStats(edict_t *ent);
-void G_SetSpectatorStats(edict_t *ent);
-void G_CheckChaseStats(edict_t *ent);
-void ValidateSelectedItem(edict_t *ent);
-void DeathmatchScoreboardMessage(edict_t *ent, edict_t *killer);
-void TeamsScoreboardMessage(edict_t *ent, edict_t *killer);
+void MoveClientToIntermission(gentity_t *ent);
+void G_SetStats(gentity_t *ent);
+void G_SetCoopStats(gentity_t *ent);
+void G_SetSpectatorStats(gentity_t *ent);
+void G_CheckChaseStats(gentity_t *ent);
+void ValidateSelectedItem(gentity_t *ent);
+void DeathmatchScoreboardMessage(gentity_t *ent, gentity_t *killer);
+void TeamsScoreboardMessage(gentity_t *ent, gentity_t *killer);
 void G_ReportMatchDetails(bool is_end);
 
 //
 // p_weapon.cpp
 //
-void PlayerNoise(edict_t *who, const vec3_t &where, player_noise_t type);
-void P_ProjectSource(edict_t *ent, const vec3_t &angles, vec3_t distance, vec3_t &result_start, vec3_t &result_dir);
-void NoAmmoWeaponChange(edict_t *ent, bool sound);
-void Weapon_Generic(edict_t *ent, int FRAME_ACTIVATE_LAST, int FRAME_FIRE_LAST, int FRAME_IDLE_LAST,
+void PlayerNoise(gentity_t *who, const vec3_t &where, player_noise_t type);
+void P_ProjectSource(gentity_t *ent, const vec3_t &angles, vec3_t distance, vec3_t &result_start, vec3_t &result_dir);
+void NoAmmoWeaponChange(gentity_t *ent, bool sound);
+void Weapon_Generic(gentity_t *ent, int FRAME_ACTIVATE_LAST, int FRAME_FIRE_LAST, int FRAME_IDLE_LAST,
 	int FRAME_DEACTIVATE_LAST, const int *pause_frames, const int *fire_frames,
-	void (*fire)(edict_t *ent));
-void Weapon_Repeating(edict_t *ent, int FRAME_ACTIVATE_LAST, int FRAME_FIRE_LAST, int FRAME_IDLE_LAST,
-	int FRAME_DEACTIVATE_LAST, const int *pause_frames, void (*fire)(edict_t *ent));
-void Throw_Generic(edict_t *ent, int FRAME_FIRE_LAST, int FRAME_IDLE_LAST, int FRAME_PRIME_SOUND,
+	void (*fire)(gentity_t *ent));
+void Weapon_Repeating(gentity_t *ent, int FRAME_ACTIVATE_LAST, int FRAME_FIRE_LAST, int FRAME_IDLE_LAST,
+	int FRAME_DEACTIVATE_LAST, const int *pause_frames, void (*fire)(gentity_t *ent));
+void Throw_Generic(gentity_t *ent, int FRAME_FIRE_LAST, int FRAME_IDLE_LAST, int FRAME_PRIME_SOUND,
 	const char *prime_sound, int FRAME_THROW_HOLD, int FRAME_THROW_FIRE, const int *pause_frames,
-	int EXPLODE, const char *primed_sound, void (*fire)(edict_t *ent, bool held), bool extra_idle_frame);
-byte P_DamageModifier(edict_t *ent);
+	int EXPLODE, const char *primed_sound, void (*fire)(gentity_t *ent, bool held), bool extra_idle_frame);
+byte P_DamageModifier(gentity_t *ent);
 bool InfiniteAmmoOn(gitem_t *item);
-void Weapon_PowerupSound(edict_t *ent);
+void Weapon_PowerupSound(gentity_t *ent);
 
 // GRAPPLE
-void Weapon_Grapple(edict_t *ent);
+void Weapon_Grapple(gentity_t *ent);
 void Weapon_Grapple_DoReset(gclient_t *cl);
-void Weapon_Grapple_Pull(edict_t *self);
+void Weapon_Grapple_Pull(gentity_t *self);
 
 // HOOK
-void Weapon_Hook(edict_t *ent);
+void Weapon_Hook(gentity_t *ent);
 
 constexpr gtime_t GRENADE_TIMER = 3_sec;
 constexpr float GRENADE_MINSPEED = 400.f;
@@ -2768,13 +2865,13 @@ extern byte damage_multiplier;
 // m_move.cpp
 //
 bool M_CheckBottom_Fast_Generic(const vec3_t &absmins, const vec3_t &absmaxs, bool ceiling);
-bool M_CheckBottom_Slow_Generic(const vec3_t &origin, const vec3_t &absmins, const vec3_t &absmaxs, edict_t *ignore, contents_t mask, bool ceiling, bool allow_any_step_height);
-bool M_CheckBottom(edict_t *ent);
-bool G_CloseEnough(edict_t *ent, edict_t *goal, float dist);
-bool M_walkmove(edict_t *ent, float yaw, float dist);
-void M_MoveToGoal(edict_t *ent, float dist);
-void M_ChangeYaw(edict_t *ent);
-bool ai_check_move(edict_t *self, float dist);
+bool M_CheckBottom_Slow_Generic(const vec3_t &origin, const vec3_t &absmins, const vec3_t &absmaxs, gentity_t *ignore, contents_t mask, bool ceiling, bool allow_any_step_height);
+bool M_CheckBottom(gentity_t *ent);
+bool G_CloseEnough(gentity_t *ent, gentity_t *goal, float dist);
+bool M_walkmove(gentity_t *ent, float yaw, float dist);
+void M_MoveToGoal(gentity_t *ent, float dist);
+void M_ChangeYaw(gentity_t *ent);
+bool ai_check_move(gentity_t *self, float dist);
 
 //
 // g_phys.cpp
@@ -2782,28 +2879,28 @@ bool ai_check_move(edict_t *self, float dist);
 constexpr float g_friction = 6;
 constexpr float g_waterfriction = 1;
 
-void		G_RunEntity(edict_t *ent);
-bool		G_RunThink(edict_t *ent);
-void		G_AddRotationalFriction(edict_t *ent);
-void		G_AddGravity(edict_t *ent);
-void		G_CheckVelocity(edict_t *ent);
-void		G_FlyMove(edict_t *ent, float time, contents_t mask);
-contents_t	G_GetClipMask(edict_t *ent);
-void		G_Impact(edict_t *e1, const trace_t &trace);
+void		G_RunEntity(gentity_t *ent);
+bool		G_RunThink(gentity_t *ent);
+void		G_AddRotationalFriction(gentity_t *ent);
+void		G_AddGravity(gentity_t *ent);
+void		G_CheckVelocity(gentity_t *ent);
+void		G_FlyMove(gentity_t *ent, float time, contents_t mask);
+contents_t	G_GetClipMask(gentity_t *ent);
+void		G_Impact(gentity_t *e1, const trace_t &trace);
 
 //
 // g_main.cpp
 //
 void SaveClientData();
-void FetchClientEntData(edict_t *ent);
+void FetchClientEntData(gentity_t *ent);
 void Match_Start();
 void Match_End();
 void Match_Reset();
+void Round_End();
 void SetIntermissionPoint(void);
 void FindIntermissionPoint(void);
 void CalculateRanks();
 void CheckDMExitRules();
-void GT_Change(gametype_t gt);
 int GT_ScoreLimit();
 const char *GT_ScoreLimitString();
 void G_RevertVote(gclient_t *client);
@@ -2815,19 +2912,23 @@ void UnReadyAll();
 void QueueIntermission(const char *msg, bool boo, bool reset);
 void Match_Reset();
 int MQ_Count();
-bool MQ_Add(edict_t *ent, const char *mapname);
-edict_t *CreateTargetChangeLevel(const char *map);
+bool MQ_Add(gentity_t *ent, const char *mapname);
+gentity_t *CreateTargetChangeLevel(const char *map);
 bool InAMatch();
+void ChangeGametype(gametype_t gt);
+void GT_Changes();
+void SpawnEntities(const char *mapname, const char *entities, const char *spawnpoint);
+void G_LoadMOTD();
 
 //
 // g_chase.cpp
 //
-void FreeFollower(edict_t *ent);
-void FreeClientFollowers(edict_t *ent);
-void UpdateChaseCam(edict_t *ent);
-void FollowNext(edict_t *ent);
-void FollowPrev(edict_t *ent);
-void GetFollowTarget(edict_t *ent);
+void FreeFollower(gentity_t *ent);
+void FreeClientFollowers(gentity_t *ent);
+void UpdateChaseCam(gentity_t *ent);
+void FollowNext(gentity_t *ent);
+void FollowPrev(gentity_t *ent);
+void GetFollowTarget(gentity_t *ent);
 
 //====================
 // ROGUE PROTOTYPES
@@ -2835,7 +2936,7 @@ void GetFollowTarget(edict_t *ent);
 //
 // g_rogue_newai.cpp
 //
-bool	 blocked_checkplat(edict_t *self, float dist);
+bool	 blocked_checkplat(gentity_t *self, float dist);
 
 enum class blocked_jump_result_t {
 	NO_JUMP,
@@ -2844,40 +2945,40 @@ enum class blocked_jump_result_t {
 	JUMP_JUMP_DOWN
 };
 
-blocked_jump_result_t blocked_checkjump(edict_t *self, float dist);
-bool	 monsterlost_checkhint(edict_t *self);
-bool	 inback(edict_t *self, edict_t *other);
-float	 realrange(edict_t *self, edict_t *other);
-edict_t *SpawnBadArea(const vec3_t &mins, const vec3_t &maxs, gtime_t lifespan, edict_t *owner);
-edict_t *CheckForBadArea(edict_t *ent);
-bool	 MarkTeslaArea(edict_t *self, edict_t *tesla);
+blocked_jump_result_t blocked_checkjump(gentity_t *self, float dist);
+bool	 monsterlost_checkhint(gentity_t *self);
+bool	 inback(gentity_t *self, gentity_t *other);
+float	 realrange(gentity_t *self, gentity_t *other);
+gentity_t *SpawnBadArea(const vec3_t &mins, const vec3_t &maxs, gtime_t lifespan, gentity_t *owner);
+gentity_t *CheckForBadArea(gentity_t *ent);
+bool	 MarkTeslaArea(gentity_t *self, gentity_t *tesla);
 void	 InitHintPaths();
-void PredictAim(edict_t *self, edict_t *target, const vec3_t &start, float bolt_speed, bool eye_height, float offset, vec3_t *aimdir,
+void PredictAim(gentity_t *self, gentity_t *target, const vec3_t &start, float bolt_speed, bool eye_height, float offset, vec3_t *aimdir,
 	vec3_t *aimpoint);
-bool M_CalculatePitchToFire(edict_t *self, const vec3_t &target, const vec3_t &start, vec3_t &aim, float speed, float time_remaining, bool mortar, bool destroy_on_touch = false);
-bool below(edict_t *self, edict_t *other);
-void drawbbox(edict_t *self);
-void M_MonsterDodge(edict_t *self, edict_t *attacker, gtime_t eta, trace_t *tr, bool gravity);
-void monster_duck_down(edict_t *self);
-void monster_duck_hold(edict_t *self);
-void monster_duck_up(edict_t *self);
-bool has_valid_enemy(edict_t *self);
-void TargetTesla(edict_t *self, edict_t *tesla);
-void hintpath_stop(edict_t *self);
-edict_t *PickCoopTarget(edict_t *self);
+bool M_CalculatePitchToFire(gentity_t *self, const vec3_t &target, const vec3_t &start, vec3_t &aim, float speed, float time_remaining, bool mortar, bool destroy_on_touch = false);
+bool below(gentity_t *self, gentity_t *other);
+void drawbbox(gentity_t *self);
+void M_MonsterDodge(gentity_t *self, gentity_t *attacker, gtime_t eta, trace_t *tr, bool gravity);
+void monster_duck_down(gentity_t *self);
+void monster_duck_hold(gentity_t *self);
+void monster_duck_up(gentity_t *self);
+bool has_valid_enemy(gentity_t *self);
+void TargetTesla(gentity_t *self, gentity_t *tesla);
+void hintpath_stop(gentity_t *self);
+gentity_t *PickCoopTarget(gentity_t *self);
 int		 CountPlayers();
-bool	 monster_jump_finished(edict_t *self);
-void BossExplode(edict_t *self);
+bool	 monster_jump_finished(gentity_t *self);
+void BossExplode(gentity_t *self);
 
 // g_rogue_func
-void plat2_spawn_danger_area(edict_t *ent);
-void plat2_kill_danger_area(edict_t *ent);
+void plat2_spawn_danger_area(gentity_t *ent);
+void plat2_kill_danger_area(gentity_t *ent);
 
 // g_rogue_spawn
-edict_t *CreateMonster(const vec3_t &origin, const vec3_t &angles, const char *classname);
-edict_t *CreateFlyMonster(const vec3_t &origin, const vec3_t &angles, const vec3_t &mins, const vec3_t &maxs,
+gentity_t *CreateMonster(const vec3_t &origin, const vec3_t &angles, const char *classname);
+gentity_t *CreateFlyMonster(const vec3_t &origin, const vec3_t &angles, const vec3_t &mins, const vec3_t &maxs,
 	const char *classname);
-edict_t *CreateGroundMonster(const vec3_t &origin, const vec3_t &angles, const vec3_t &mins, const vec3_t &maxs,
+gentity_t *CreateGroundMonster(const vec3_t &origin, const vec3_t &angles, const vec3_t &mins, const vec3_t &maxs,
 	const char *classname, float height);
 bool	 FindSpawnPoint(const vec3_t &startpoint, const vec3_t &mins, const vec3_t &maxs, vec3_t &spawnpoint,
 	float maxMoveUp, bool drop = true);
@@ -2890,14 +2991,14 @@ void	 Widowlegs_Spawn(const vec3_t &startpos, const vec3_t &angles);
 //
 // g_rogue_sphere.cpp
 //
-void Defender_Launch(edict_t *self);
-void Vengeance_Launch(edict_t *self);
-void Hunter_Launch(edict_t *self);
+void Defender_Launch(gentity_t *self);
+void Vengeance_Launch(gentity_t *self);
+void Hunter_Launch(gentity_t *self);
 
 //
 // p_client.cpp
 //
-void RemoveAttackingPainDaemons(edict_t *self);
+void RemoveAttackingPainDaemons(gentity_t *self);
 bool G_ShouldPlayersCollide(bool weaponry);
 bool P_UseCoopInstancedItems();
 
@@ -2994,64 +3095,99 @@ struct client_match_stats_t {
 
 // client data that stays across multiple level loads
 struct client_persistant_t {
-	char		 userinfo[MAX_INFO_STRING];
-	char		 social_id[MAX_INFO_VALUE];
-	char		 netname[MAX_NETNAME];
-	handedness_t hand;
-	auto_switch_t autoswitch;
-	int32_t autoshield; // see AUTO_SHIELD_*
+	char			userinfo[MAX_INFO_STRING];
+	char			social_id[MAX_INFO_VALUE];
+	char			netname[MAX_NETNAME];
+	handedness_t	hand;
+	auto_switch_t	autoswitch;
+	int32_t			autoshield; // see AUTO_SHIELD_*
 
-	bool connected, spawned; // a loadgame will leave valid entities that
+	bool			connected, spawned; // a loadgame will leave valid entities that
 	// just don't have a connection yet
 
-// values saved and restored from edicts when changing levels
-	int32_t		health;
-	int32_t		max_health;
-	ent_flags_t savedFlags;
+// values saved and restored from gentities when changing levels
+	int32_t			health;
+	int32_t			max_health;
+	ent_flags_t		saved_flags;
 
-	item_id_t selected_item;
-	gtime_t   selected_item_time;
+	item_id_t		selected_item;
+	gtime_t			selected_item_time;
 	std::array<int32_t, IT_TOTAL>	  inventory;
 
 	// ammo capacities
 	std::array<int16_t, AMMO_MAX> max_ammo;
 
-	gitem_t *weapon;
-	gitem_t *lastweapon;
+	gitem_t			*weapon;
+	gitem_t			*lastweapon;
 
-	int32_t power_cubes; // used for tracking the cubes in coop games
-	int32_t score;		 // for calculating total unit score in coop games
+	int32_t			power_cubes; // used for tracking the cubes in coop games
+	int32_t			score;		 // for calculating total unit score in coop games
 
-	int32_t game_help1changed, game_help2changed;
-	int32_t helpchanged; // flash F1 icon if non 0, play sound
+	int32_t			game_help1changed, game_help2changed;
+	int32_t			helpchanged; // flash F1 icon if non 0, play sound
 	// and increment only if 1, 2, or 3
-	gtime_t help_time;
+	gtime_t			help_time;
 
-	bool spectator; // client wants to be a spectator
-	bool bob_skip; // [Paril-KEX] client wants no movement bob
+	bool			bob_skip; // [Paril-KEX] client wants no movement bob
 
 	// [Paril-KEX] fog that we want to achieve; density rgb skyfogfactor
 	std::array<float, 5> wanted_fog;
-	height_fog_t wanted_heightfog;
+	height_fog_t	wanted_heightfog;
 	// relative time value, copied from last touched trigger
-	gtime_t fog_transition_time;
-	gtime_t megahealth_time; // relative megahealth time value
-	int32_t lives; // player lives left (1 = no respawns remaining)
-	uint8_t n64_crouch_warn_times;
-	gtime_t n64_crouch_warning;
+	gtime_t			fog_transition_time;
+	gtime_t			megahealth_time; // relative megahealth time value
+	int32_t			lives; // player lives left (1 = no respawns remaining)
+	uint8_t			n64_crouch_warn_times;
+	gtime_t			n64_crouch_warning;
 
 	//q3:
 	player_team_state_t team_state;	// status in teamplay games
-	bool	ingame;
+	bool			ingame;
 
-	int32_t dmg_scorer;		// for clan arena scoring from damage dealt
-	int32_t	dmg_team;		// for team damage checks and warnings
+	int32_t			dmg_scorer;		// for clan arena scoring from damage dealt
+	int32_t			dmg_team;		// for team damage checks and warnings
 
-	int		skin_icon_index;
-	char	skin[MAX_INFO_VALUE];
+	int				skin_icon_index;
+	char			skin[MAX_INFO_VALUE];
 
-	int32_t	vote_count;			// to prevent people from constantly calling votes
-	int			voted;
+	int32_t			vote_count;			// to prevent people from constantly calling votes
+	int				voted;
+
+	int32_t			health_bonus;
+	gtime_t			health_bonus_timer;
+};
+
+// player config vars:
+struct client_config_t {
+	bool			show_id;
+	bool			show_timer;
+	bool			show_fragmessages;
+	int				killbeep_num;
+};
+
+// client data that stays across deathmatch level changes, handled differently to client_persistent_t
+struct client_session_t {
+	client_config_t	pc;
+
+	bool			initialised;
+
+	team_t			team;
+	spectator_state_t	spectator_state;
+	int8_t			spectator_client;	// for chasecam and follow mode
+
+	// client flags
+	bool			admin;
+	bool			is_888;
+	bool			is_a_bot;
+
+	// inactivity timer
+	bool			inactive;
+	gtime_t			inactivity_time;
+	bool			inactivity_warning;
+
+	// duel stats
+	bool			duel_queued;
+	int				wins, losses;
 };
 
 // client data that stays across deathmatch respawns
@@ -3063,38 +3199,21 @@ struct client_respawn_t {
 
 	bool				spectator; // client is a spectator
 
-	team_t				team;
 	int32_t				ctf_state;
 	gtime_t				ctf_lasthurtcarrier;
 	gtime_t				ctf_lastreturnedflag;
 	gtime_t				ctf_flagsince;
 	gtime_t				ctf_lastfraggedcarrier;
-	bool				id_state;
 	gtime_t				lastidtime;
 	bool				voted;
 	bool				ready;
-	bool				admin;
 	ghost_t				*ghost; // for ghost codes
 
 /*freeze*/
-	edict_t				*thawer;
+	gentity_t			*thawer;
 	int					help;
 	int					thawed;
 /*freeze*/
-
-	bool				inactive;
-
-	gtime_t				inactivity_time;
-	bool				inactivity_warning;
-
-	//q3
-	gtime_t				team_join_time;
-	gtime_t				team_delay_time;
-	int					spectator_time;		// for determining next-in-line to play
-	spectator_state_t	spectator_state;
-	int8_t				spectator_client;	// for chasecam and follow mode
-	int					wins, losses;		// duel stats
-	bool				duel_queued;
 
 	int32_t				kill_count;	// for rampage award, reset on respawn
 
@@ -3104,17 +3223,10 @@ struct client_respawn_t {
 
 	int					rank;
 
-	bool				timer_state;
-	bool				fragmessage_state;
-	int					killbeep_num;
-
-	bool				initialised;
-
-	bool				is_a_bot;
-
 	char				netname[MAX_NETNAME];
 
-	bool				is_888;
+	gtime_t				team_join_time;
+	gtime_t				team_delay_time;
 };
 
 // [Paril-KEX] seconds until we are fully invisible after
@@ -3148,6 +3260,7 @@ struct gclient_t {
 	// private to game
 	client_persistant_t pers;
 	client_respawn_t	resp;
+	client_session_t	sess;
 	pmove_state_t		old_pmove; // for detecting out-of-pmove changes
 
 	bool showscores;	// set layout stat
@@ -3185,36 +3298,36 @@ struct gclient_t {
 
 	float killer_yaw; // when dead, look at killer
 
-	weaponstate_t weaponstate;
+	weaponstate_t	weaponstate;
 	struct {
-		vec3_t	angles, origin;
-		gtime_t	time, total;
+		vec3_t		angles, origin;
+		gtime_t		time, total;
 	} kick;
-	gtime_t		  quake_time;
-	vec3_t		  kick_origin;
-	float		  v_dmg_roll, v_dmg_pitch;
-	gtime_t		  v_dmg_time; // damage kicks
-	gtime_t		  fall_time;
-	float		  fall_value; // for view drop on fall
-	float		  damage_alpha;
-	float		  bonus_alpha;
-	vec3_t		  damage_blend;
-	vec3_t		  v_angle, v_forward; // aiming direction
-	float		  bobtime;			  // so off-ground doesn't change it
-	vec3_t		  oldviewangles;
-	vec3_t		  oldvelocity;
-	edict_t		*oldgroundentity; // [Paril-KEX]
-	gtime_t		  flash_time; // [Paril-KEX] for high tickrate
+	gtime_t			quake_time;
+	vec3_t			kick_origin;
+	float			v_dmg_roll, v_dmg_pitch;
+	gtime_t			v_dmg_time; // damage kicks
+	gtime_t			fall_time;
+	float			fall_value; // for view drop on fall
+	float			damage_alpha;
+	float			bonus_alpha;
+	vec3_t			damage_blend;
+	vec3_t			v_angle, v_forward; // aiming direction
+	float			bobtime;			  // so off-ground doesn't change it
+	vec3_t			oldviewangles;
+	vec3_t			oldvelocity;
+	gentity_t			*oldgroundentity; // [Paril-KEX]
+	gtime_t			flash_time; // [Paril-KEX] for high tickrate
 
-	gtime_t		  next_drown_time;
-	water_level_t old_waterlevel;
-	int32_t		  breather_sound;
+	gtime_t			next_drown_time;
+	water_level_t	old_waterlevel;
+	int32_t			breather_sound;
 
-	int32_t machinegun_shots; // for weapon raising
+	int32_t			machinegun_shots; // for weapon raising
 
 	// animation vars
 	int32_t			anim_end;
-	anim_priority_t anim_priority;
+	anim_priority_t	anim_priority;
 	bool			anim_duck;
 	bool			anim_run;
 	gtime_t			anim_time;
@@ -3242,14 +3355,14 @@ struct gclient_t {
 	gtime_t respawn_min_time; // can't respawn before time > this
 	gtime_t respawn_time; // can respawn when time > this
 
-	edict_t *follow_target; // player we are following
+	gentity_t *follow_target; // player we are following
 	bool	 follow_update; // need to update follow info?
 
 	gtime_t ir_time;
 	gtime_t nuke_time;
 	gtime_t tracker_pain_time;
 
-	edict_t *owned_sphere; // this points to the player's sphere
+	gentity_t *owned_sphere; // this points to the player's sphere
 
 	gtime_t empty_click_sound;
 
@@ -3258,7 +3371,7 @@ struct gclient_t {
 	gtime_t		menutime; // time to update menu
 	bool		menudirty;
 
-	edict_t		*grapple_ent;			// entity of grapple
+	gentity_t		*grapple_ent;			// entity of grapple
 	int32_t		grapple_state;			// true if pulling
 	gtime_t		grapple_release_time;	// time of grapple release
 
@@ -3271,7 +3384,7 @@ struct gclient_t {
 	gtime_t		vampire_expiretime;
 
 	// used for player trails.
-	edict_t *trail_head, *trail_tail;
+	gentity_t *trail_head, *trail_tail;
 	// whether to use weapon chains
 	bool no_weapon_chains;
 
@@ -3290,11 +3403,11 @@ struct gclient_t {
 	gtime_t last_damage_time;
 
 	// [Paril-KEX] these are now per-player, to work better in coop
-	edict_t *sight_entity;
+	gentity_t *sight_entity;
 	gtime_t	 sight_entity_time;
-	edict_t *sound_entity;
+	gentity_t *sound_entity;
 	gtime_t	 sound_entity_time;
-	edict_t *sound2_entity;
+	gentity_t *sound2_entity;
 	gtime_t  sound2_entity_time;
 	// saved positions for lag compensation
 	uint8_t	 num_lag_origins; // 0 to MAX_LAG_ORIGINS, how many we can go back
@@ -3327,9 +3440,9 @@ struct gclient_t {
 	// saved - for coop; last time we were in a firing state
 	gtime_t	 last_firing_time;
 
-/*freeze*/
 	bool		eliminated;
-	edict_t		*viewed;
+/*freeze*/
+	gentity_t		*viewed;
 	float		thaw_time;
 	float		frozen_time;
 	float		moan_time;
@@ -3348,6 +3461,8 @@ struct gclient_t {
 	gtime_t		pu_last_message_time;
 
 	gtime_t		last_888_message_time;
+
+	gtime_t		time_residual;
 };
 
 // ==========================================
@@ -3364,10 +3479,10 @@ MAKE_ENUM_BITFLAGS(plat2flags_t);
 
 #include <bitset>
 
-struct edict_t {
-	edict_t() = delete;
-	edict_t(const edict_t &) = delete;
-	edict_t(edict_t &&) = delete;
+struct gentity_t {
+	gentity_t() = delete;
+	gentity_t(const gentity_t &) = delete;
+	gentity_t(gentity_t &&) = delete;
 
 	// shared with server; do not touch members until the "private" section
 	entity_state_t s;
@@ -3390,7 +3505,7 @@ struct edict_t {
 	vec3_t	   absmin, absmax, size;
 	solid_t	   solid;
 	contents_t clipmask;
-	edict_t *owner;
+	gentity_t *owner;
 
 	//================================
 
@@ -3421,7 +3536,7 @@ struct edict_t {
 	const char *healthtarget;
 	const char *itemtarget; // [Paril-KEX]
 	const char *combattarget;
-	edict_t *target_ent;
+	gentity_t *target_ent;
 
 	float  speed, accel, decel;
 	vec3_t movedir;
@@ -3434,8 +3549,8 @@ struct edict_t {
 	float	gravity; // per entity gravity multiplier (1.0 is normal)
 	// use for lowgrav artifact, flares
 
-	edict_t *goalentity;
-	edict_t *movetarget;
+	gentity_t *goalentity;
+	gentity_t *movetarget;
 	float	 yaw_speed;
 	float	 ideal_yaw;
 
@@ -3467,22 +3582,22 @@ struct edict_t {
 	bool	deadflag;
 	bool	takedamage;
 	int32_t dmg;
-	int32_t radius_dmg;
-	float	dmg_radius;
+	int32_t splash_damage;
+	float	splash_radius;
 	int32_t sounds; // make this a spawntemp var?
 	int32_t count;
 
-	edict_t *chain;
-	edict_t *enemy;
-	edict_t *oldenemy;
-	edict_t *activator;
-	edict_t *groundentity;
+	gentity_t *chain;
+	gentity_t *enemy;
+	gentity_t *oldenemy;
+	gentity_t *activator;
+	gentity_t *groundentity;
 	int32_t	 groundentity_linkcount;
-	edict_t *teamchain;
-	edict_t *teammaster;
+	gentity_t *teamchain;
+	gentity_t *teammaster;
 
-	edict_t *mynoise; // can go in client only
-	edict_t *mynoise2;
+	gentity_t *mynoise; // can go in client only
+	gentity_t *mynoise2;
 
 	int32_t noise_index;
 	int32_t noise_index2;
@@ -3513,10 +3628,10 @@ struct edict_t {
 	plat2flags_t plat2flags;
 	vec3_t		 offset;
 	vec3_t		 gravityVector;
-	edict_t		*bad_area;
-	edict_t		*hint_chain;
-	edict_t		*monster_hint_chain;
-	edict_t		*target_hint_chain;
+	gentity_t		*bad_area;
+	gentity_t		*hint_chain;
+	gentity_t		*monster_hint_chain;
+	gentity_t		*target_hint_chain;
 	int32_t		 hint_chain_id;
 
 	char clock_message[CLOCK_MESSAGE_SIZE];
@@ -3524,11 +3639,11 @@ struct edict_t {
 	// Paril: we died on this frame, apply knockback even if we're dead
 	gtime_t dead_time;
 	// used for dabeam monsters
-	edict_t *beam, *beam2;
+	gentity_t *beam, *beam2;
 	// proboscus for Parasite
-	edict_t *proboscus;
+	gentity_t *proboscus;
 	// for vooping things
-	edict_t *disintegrator;
+	gentity_t *disintegrator;
 	gtime_t disintegrator_time;
 	int32_t hackflags; // n64
 
@@ -3584,6 +3699,9 @@ struct edict_t {
 
 	const char *cvar;
 	const char *cvarvalue;
+
+	const char *author;
+	const char *author2;
 //-muff
 
 	// team for spawn spot
@@ -3601,40 +3719,40 @@ constexpr spawnflags_t SF_SPHERE_FLAGS = SF_DOPPELGANGER;
 struct dm_game_rt {
 	void (*GameInit)();
 	void (*PostInitSetup)();
-	void (*ClientBegin)(edict_t *ent);
-	bool (*SelectSpawnPoint)(edict_t *ent, vec3_t &origin, vec3_t &angles, bool force_spawn);
-	void (*PlayerDeath)(edict_t *targ, edict_t *inflictor, edict_t *attacker);
-	void (*Score)(edict_t *attacker, edict_t *victim, int scoreChange, const mod_t &mod);
-	void (*PlayerEffects)(edict_t *ent);
-	void (*DogTag)(edict_t *ent, edict_t *killer, const char **pic);
-	void (*PlayerDisconnect)(edict_t *ent);
-	int (*ChangeDamage)(edict_t *targ, edict_t *attacker, int damage, mod_t mod);
-	int (*ChangeKnockback)(edict_t *targ, edict_t *attacker, int knockback, mod_t mod);
+	void (*ClientBegin)(gentity_t *ent);
+	bool (*SelectSpawnPoint)(gentity_t *ent, vec3_t &origin, vec3_t &angles, bool force_spawn);
+	void (*PlayerDeath)(gentity_t *targ, gentity_t *inflictor, gentity_t *attacker);
+	void (*Score)(gentity_t *attacker, gentity_t *victim, int scoreChange, const mod_t &mod);
+	void (*PlayerEffects)(gentity_t *ent);
+	void (*DogTag)(gentity_t *ent, gentity_t *killer, const char **pic);
+	void (*PlayerDisconnect)(gentity_t *ent);
+	int (*ChangeDamage)(gentity_t *targ, gentity_t *attacker, int damage, mod_t mod);
+	int (*ChangeKnockback)(gentity_t *targ, gentity_t *attacker, int knockback, mod_t mod);
 	int (*CheckDMExitRules)();
 };
 
 // [Paril-KEX]
-inline void monster_footstep(edict_t *self) {
+inline void monster_footstep(gentity_t *self) {
 	if (self->groundentity)
 		self->s.event = EV_OTHER_FOOTSTEP;
 }
 
 // [Kex] helpers
 // TFilter must be a type that is invokable with the
-// signature bool(edict_t *); it must return true if
+// signature bool(gentity_t *); it must return true if
 // the entity given is valid for the given filter
 template<typename TFilter>
 struct entity_iterator_t {
 	using iterator_category = std::random_access_iterator_tag;
-	using value_type = edict_t *;
-	using reference = edict_t *;
-	using pointer = edict_t *;
+	using value_type = gentity_t *;
+	using reference = gentity_t *;
+	using pointer = gentity_t *;
 	using difference_type = ptrdiff_t;
 
 private:
 	uint32_t index;
 	uint32_t end_index; // where the end index is located for this iterator
-	// index < globals.num_edicts are valid
+	// index < globals.num_entities are valid
 	TFilter filter;
 
 	// this doubles as the "end" iterator
@@ -3661,10 +3779,10 @@ private:
 public:
 	// note: index is not affected by filter. it is up to
 	// the caller to ensure this index is filtered.
-	constexpr entity_iterator_t(uint32_t i, uint32_t end_index = -1) : index(i), end_index((end_index >= globals.num_edicts) ? globals.num_edicts : end_index) {}
+	constexpr entity_iterator_t(uint32_t i, uint32_t end_index = -1) : index(i), end_index((end_index >= globals.num_entities) ? globals.num_entities : end_index) {}
 
-	inline reference operator*() { throw_if_out_of_range(); return &g_edicts[index]; }
-	inline pointer operator->() { throw_if_out_of_range(); return &g_edicts[index]; }
+	inline reference operator*() { throw_if_out_of_range(); return &g_entities[index]; }
+	inline pointer operator->() { throw_if_out_of_range(); return &g_entities[index]; }
 
 	inline entity_iterator_t &operator++() {
 		throw_if_out_of_range();
@@ -3695,7 +3813,7 @@ public:
 	inline entity_iterator_t operator-(const difference_type &offset) const { return *this + (-offset); }
 
 	// comparison. hopefully this won't break anything, but == and != use the
-	// clamped index (so -1 and num_edicts will be equal technically since they
+	// clamped index (so -1 and num_entities will be equal technically since they
 	// are the same "invalid" entity) but <= and >= will affect them properly.
 	inline bool operator==(const entity_iterator_t &it) const { return clamped_index() == it.clamped_index(); }
 	inline bool operator!=(const entity_iterator_t &it) const { return clamped_index() != it.clamped_index(); }
@@ -3704,11 +3822,11 @@ public:
 	inline bool operator<=(const entity_iterator_t &it) const { return index <= it.index; }
 	inline bool operator>=(const entity_iterator_t &it) const { return index >= it.index; }
 
-	inline edict_t *operator[](const difference_type &offset) const { return *(*this + offset); }
+	inline gentity_t *operator[](const difference_type &offset) const { return *(*this + offset); }
 };
 
 // iterate over range of entities, with the specified filter.
-// can be "open-ended" (automatically expand with num_edicts)
+// can be "open-ended" (automatically expand with num_entities)
 // by leaving the max unset.
 template<typename TFilter>
 struct entity_iterable_t {
@@ -3719,7 +3837,7 @@ private:
 	// find the first entity that matches the filter, from the specified index,
 	// in the specified direction
 	inline uint32_t find_matched_index(uint32_t index, int32_t direction) {
-		while (index < globals.num_edicts && !filter(&g_edicts[index]))
+		while (index < globals.num_entities && !filter(&g_entities[index]))
 			index += direction;
 
 		return index;
@@ -3745,7 +3863,7 @@ public:
 
 // inuse clients that are connected; may not be spawned yet, however
 struct active_clients_filter_t {
-	inline bool operator()(edict_t *ent) const {
+	inline bool operator()(gentity_t *ent) const {
 		return (ent->inuse && ent->client && ent->client->pers.connected);
 	}
 };
@@ -3756,7 +3874,7 @@ inline entity_iterable_t<active_clients_filter_t> active_clients() {
 
 // inuse players that are connected; may not be spawned yet, however
 struct active_players_filter_t {
-	inline bool operator()(edict_t *ent) const {
+	inline bool operator()(gentity_t *ent) const {
 		return (ent->inuse && ent->client && ent->client->pers.connected && ClientIsPlaying(ent->client));
 	}
 };
@@ -3823,13 +3941,13 @@ struct gib_def_t {
 // convenience function to throw different gib types
 // NOTE: always throw the head gib *last* since self's size is used
 // to position the gibs!
-inline void ThrowGibs(edict_t *self, int32_t damage, std::initializer_list<gib_def_t> gibs) {
+inline void ThrowGibs(gentity_t *self, int32_t damage, std::initializer_list<gib_def_t> gibs) {
 	for (auto &gib : gibs)
 		for (size_t i = 0; i < gib.count; i++)
 			ThrowGib(self, gib.gibname, damage, gib.type, gib.scale * (self->s.scale ? self->s.scale : 1));
 }
 
-inline bool M_CheckGib(edict_t *self, const mod_t &mod) {
+inline bool M_CheckGib(gentity_t *self, const mod_t &mod) {
 	if (self->deadflag) {
 		if (mod.id == MOD_CRUSH)
 			return true;
@@ -3840,14 +3958,14 @@ inline bool M_CheckGib(edict_t *self, const mod_t &mod) {
 
 // Fmt support for entities
 template<>
-struct fmt::formatter<edict_t> {
+struct fmt::formatter<gentity_t> {
 	template<typename ParseContext>
 	constexpr auto parse(ParseContext &ctx) {
 		return ctx.begin();
 	}
 
 	template<typename FormatContext>
-	auto format(const edict_t &p, FormatContext &ctx) -> decltype(ctx.out()) {
+	auto format(const gentity_t &p, FormatContext &ctx) -> decltype(ctx.out()) {
 		if (p.linked)
 			return fmt::format_to(ctx.out(), FMT_STRING("{} @ {}"), p.classname, (p.absmax + p.absmin) * 0.5f);
 		return fmt::format_to(ctx.out(), FMT_STRING("{} @ {}"), p.classname, p.s.origin);
@@ -3856,7 +3974,7 @@ struct fmt::formatter<edict_t> {
 
 // POI tags used by this mod
 enum pois_t : uint16_t {
-	POI_OBJECTIVE = MAX_EDICTS, // current objective
+	POI_OBJECTIVE = MAX_ENTITIES, // current objective
 	POI_RED_FLAG, // red flag/carrier
 	POI_BLUE_FLAG, // blue flag/carrier
 	POI_PING,
@@ -3864,7 +3982,7 @@ enum pois_t : uint16_t {
 };
 
 // implementation of pierce stuff
-inline bool pierce_args_t::mark(edict_t *ent) {
+inline bool pierce_args_t::mark(gentity_t *ent) {
 	// ran out of pierces
 	if (num_pierced == MAX_PIERCE)
 		return false;

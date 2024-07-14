@@ -23,8 +23,8 @@ static void G_Menu_SetLevelName(menu_t *p) {
 	static char levelname[33];
 
 	levelname[0] = '*';
-	if (g_edicts[0].message)
-		Q_strlcpy(levelname + 1, g_edicts[0].message, sizeof(levelname) - 1);
+	if (g_entities[0].message)
+		Q_strlcpy(levelname + 1, g_entities[0].message, sizeof(levelname) - 1);
 	else
 		Q_strlcpy(levelname + 1, level.mapname, sizeof(levelname) - 1);
 	levelname[sizeof(levelname) - 1] = 0;
@@ -34,7 +34,7 @@ static void G_Menu_SetLevelName(menu_t *p) {
 /*----------------------------------------------------------------------------------*/
 /* ADMIN */
 
-void G_Menu_ReturnToMain(edict_t *ent, menu_hnd_t *p);
+void G_Menu_ReturnToMain(gentity_t *ent, menu_hnd_t *p);
 
 struct admin_settings_t {
 	int	 timelimit;
@@ -45,10 +45,10 @@ struct admin_settings_t {
 	bool match_lock;
 };
 
-void G_Menu_Admin_UpdateSettings(edict_t *ent, menu_hnd_t *setmenu);
-void G_Menu_Admin(edict_t *ent, menu_hnd_t *p);
+void G_Menu_Admin_UpdateSettings(gentity_t *ent, menu_hnd_t *setmenu);
+void G_Menu_Admin(gentity_t *ent, menu_hnd_t *p);
 
-static void G_Menu_Admin_SettingsApply(edict_t *ent, menu_hnd_t *p) {
+static void G_Menu_Admin_SettingsApply(gentity_t *ent, menu_hnd_t *p) {
 	admin_settings_t *settings = (admin_settings_t *)p->arg;
 
 	if (settings->timelimit != timelimit->integer) {
@@ -92,12 +92,12 @@ static void G_Menu_Admin_SettingsApply(edict_t *ent, menu_hnd_t *p) {
 	G_Menu_Admin(ent, p);
 }
 
-static void G_Menu_Admin_SettingsCancel(edict_t *ent, menu_hnd_t *p) {
+static void G_Menu_Admin_SettingsCancel(gentity_t *ent, menu_hnd_t *p) {
 	P_Menu_Close(ent);
 	G_Menu_Admin(ent, p);
 }
 
-static void G_Menu_Admin_ChangeMatchLen(edict_t *ent, menu_hnd_t *p) {
+static void G_Menu_Admin_ChangeMatchLen(gentity_t *ent, menu_hnd_t *p) {
 	admin_settings_t *settings = (admin_settings_t *)p->arg;
 
 	settings->timelimit = (settings->timelimit % 60) + 5;
@@ -107,54 +107,54 @@ static void G_Menu_Admin_ChangeMatchLen(edict_t *ent, menu_hnd_t *p) {
 	G_Menu_Admin_UpdateSettings(ent, p);
 }
 
-static void G_Menu_Admin_ChangeMatchSetupLen(edict_t *ent, menu_hnd_t *p) {
+static void G_Menu_Admin_ChangeMatchSetupLen(gentity_t *ent, menu_hnd_t *p) {
 	admin_settings_t *settings = (admin_settings_t *)p->arg;
 
 	G_Menu_Admin_UpdateSettings(ent, p);
 }
 
-static void G_Menu_Admin_ChangeMatchStartLen(edict_t *ent, menu_hnd_t *p) {
+static void G_Menu_Admin_ChangeMatchStartLen(gentity_t *ent, menu_hnd_t *p) {
 	admin_settings_t *settings = (admin_settings_t *)p->arg;
 
 	G_Menu_Admin_UpdateSettings(ent, p);
 }
 
-static void G_Menu_Admin_ChangeWeapStay(edict_t *ent, menu_hnd_t *p) {
+static void G_Menu_Admin_ChangeWeapStay(gentity_t *ent, menu_hnd_t *p) {
 	admin_settings_t *settings = (admin_settings_t *)p->arg;
 
 	settings->weaponsstay = !settings->weaponsstay;
 	G_Menu_Admin_UpdateSettings(ent, p);
 }
 
-static void G_Menu_Admin_ChangeInstantItems(edict_t *ent, menu_hnd_t *p) {
+static void G_Menu_Admin_ChangeInstantItems(gentity_t *ent, menu_hnd_t *p) {
 	admin_settings_t *settings = (admin_settings_t *)p->arg;
 
 	settings->instantitems = !settings->instantitems;
 	G_Menu_Admin_UpdateSettings(ent, p);
 }
 
-static void G_Menu_Admin_ChangePowerupDrop(edict_t *ent, menu_hnd_t *p) {
+static void G_Menu_Admin_ChangePowerupDrop(gentity_t *ent, menu_hnd_t *p) {
 	admin_settings_t *settings = (admin_settings_t *)p->arg;
 
 	settings->pu_drop = !settings->pu_drop;
 	G_Menu_Admin_UpdateSettings(ent, p);
 }
 
-static void G_Menu_Admin_ChangeInstantWeap(edict_t *ent, menu_hnd_t *p) {
+static void G_Menu_Admin_ChangeInstantWeap(gentity_t *ent, menu_hnd_t *p) {
 	admin_settings_t *settings = (admin_settings_t *)p->arg;
 
 	settings->instantweap = !settings->instantweap;
 	G_Menu_Admin_UpdateSettings(ent, p);
 }
 
-static void G_Menu_Admin_ChangeMatchLock(edict_t *ent, menu_hnd_t *p) {
+static void G_Menu_Admin_ChangeMatchLock(gentity_t *ent, menu_hnd_t *p) {
 	admin_settings_t *settings = (admin_settings_t *)p->arg;
 
 	settings->match_lock = !settings->match_lock;
 	G_Menu_Admin_UpdateSettings(ent, p);
 }
 
-void G_Menu_Admin_UpdateSettings(edict_t *ent, menu_hnd_t *setmenu) {
+void G_Menu_Admin_UpdateSettings(gentity_t *ent, menu_hnd_t *setmenu) {
 	int				  i = 2;
 	admin_settings_t *settings = (admin_settings_t *)setmenu->arg;
 
@@ -200,7 +200,7 @@ const menu_t def_setmenu[] = {
 	{ "$g_pc_return", MENU_ALIGN_LEFT, G_Menu_ReturnToMain }
 };
 
-static void G_Menu_Admin_Settings(edict_t *ent, menu_hnd_t *p) {
+static void G_Menu_Admin_Settings(gentity_t *ent, menu_hnd_t *p) {
 	admin_settings_t *settings;
 	menu_hnd_t *menu;
 
@@ -219,7 +219,7 @@ static void G_Menu_Admin_Settings(edict_t *ent, menu_hnd_t *p) {
 	G_Menu_Admin_UpdateSettings(ent, menu);
 }
 
-static void G_Menu_Admin_MatchSet(edict_t *ent, menu_hnd_t *p) {
+static void G_Menu_Admin_MatchSet(gentity_t *ent, menu_hnd_t *p) {
 	P_Menu_Close(ent);
 
 	if (level.match_state <= matchst_t::MATCH_COUNTDOWN) {
@@ -231,7 +231,7 @@ static void G_Menu_Admin_MatchSet(edict_t *ent, menu_hnd_t *p) {
 	}
 }
 
-static void G_Menu_Admin_Cancel(edict_t *ent, menu_hnd_t *p) {
+static void G_Menu_Admin_Cancel(gentity_t *ent, menu_hnd_t *p) {
 	P_Menu_Close(ent);
 }
 
@@ -256,7 +256,7 @@ menu_t adminmenu[] = {
 	{ "$g_pc_return", MENU_ALIGN_LEFT, G_Menu_ReturnToMain }
 };
 
-void G_Menu_Admin(edict_t *ent, menu_hnd_t *p) {
+void G_Menu_Admin(gentity_t *ent, menu_hnd_t *p) {
 	adminmenu[3].text[0] = '\0';
 	adminmenu[3].SelectFunc = nullptr;
 	adminmenu[4].text[0] = '\0';
@@ -298,7 +298,7 @@ const menu_t pmstatsmenu[] = {
 	{ "$g_pc_return", MENU_ALIGN_LEFT, G_Menu_ReturnToMain }
 };
 
-static void G_Menu_PMStats_Update(edict_t *ent) {
+static void G_Menu_PMStats_Update(gentity_t *ent) {
 
 	if (!g_matchstats->integer) return;
 
@@ -306,7 +306,7 @@ static void G_Menu_PMStats_Update(edict_t *ent) {
 	client_match_stats_t *st = &ent->client->mstats;
 	int i = 0;
 	char value[MAX_INFO_VALUE] = { 0 };
-	gi.Info_ValueForKey(g_edicts[1].client->pers.userinfo, "name", value, sizeof(value));
+	gi.Info_ValueForKey(g_entities[1].client->pers.userinfo, "name", value, sizeof(value));
 
 	Q_strlcpy(entries[i].text, "Player Stats for Match", sizeof(entries[i].text));
 	i++;
@@ -350,7 +350,7 @@ static void G_Menu_PMStats_Update(edict_t *ent) {
 	}
 }
 
-static void G_Menu_PMStats(edict_t *ent, menu_hnd_t *p) {
+static void G_Menu_PMStats(gentity_t *ent, menu_hnd_t *p) {
 	P_Menu_Close(ent);
 	P_Menu_Open(ent, pmstatsmenu, -1, sizeof(pmstatsmenu) / sizeof(menu_t), nullptr, G_Menu_PMStats_Update);
 }
@@ -432,34 +432,34 @@ const menu_t pmcallvotemenu_timelimit[] = {
 	{ "$g_pc_return", MENU_ALIGN_LEFT, G_Menu_ReturnToMain }
 };
 
-static void G_Menu_CallVote_Map(edict_t *ent, menu_hnd_t *p) {
+static void G_Menu_CallVote_Map(gentity_t *ent, menu_hnd_t *p) {
 	
 }
 
-static void G_Menu_CallVote_NextMap(edict_t *ent, menu_hnd_t *p) {
+static void G_Menu_CallVote_NextMap(gentity_t *ent, menu_hnd_t *p) {
 	level.vote = FindVoteCmdByName("nextmap");
 	level.vote_arg = nullptr;
 	VoteCommandStore(ent);
 	P_Menu_Close(ent);
 }
 
-static void G_Menu_CallVote_Restart(edict_t *ent, menu_hnd_t *p) {
+static void G_Menu_CallVote_Restart(gentity_t *ent, menu_hnd_t *p) {
 	level.vote = FindVoteCmdByName("restart");
 	level.vote_arg = nullptr;
 	VoteCommandStore(ent);
 	P_Menu_Close(ent);
 }
 
-static void G_Menu_CallVote_GameType(edict_t *ent, menu_hnd_t *p) {
+static void G_Menu_CallVote_GameType(gentity_t *ent, menu_hnd_t *p) {
 	
 }
 
-static void G_Menu_CallVote_TimeLimit_Update(edict_t *ent) {
+static void G_Menu_CallVote_TimeLimit_Update(gentity_t *ent) {
 
 	level.vote_arg = nullptr;
 }
 
-static void G_Menu_CallVote_TimeLimit(edict_t *ent, menu_hnd_t *p) {
+static void G_Menu_CallVote_TimeLimit(gentity_t *ent, menu_hnd_t *p) {
 	level.vote = FindVoteCmdByName("timelimit");
 	level.vote_arg = nullptr;
 	VoteCommandStore(ent);
@@ -467,17 +467,17 @@ static void G_Menu_CallVote_TimeLimit(edict_t *ent, menu_hnd_t *p) {
 	P_Menu_Open(ent, pmcallvotemenu_timelimit, -1, sizeof(pmcallvotemenu_timelimit) / sizeof(menu_t), nullptr, G_Menu_CallVote_TimeLimit_Update);
 }
 
-static void G_Menu_CallVote_ScoreLimit(edict_t *ent, menu_hnd_t *p) {
+static void G_Menu_CallVote_ScoreLimit(gentity_t *ent, menu_hnd_t *p) {
 }
 
-static void G_Menu_CallVote_ShuffleTeams(edict_t *ent, menu_hnd_t *p) {
+static void G_Menu_CallVote_ShuffleTeams(gentity_t *ent, menu_hnd_t *p) {
 	level.vote = FindVoteCmdByName("shuffle");
 	level.vote_arg = nullptr;
 	VoteCommandStore(ent);
 	P_Menu_Close(ent);
 }
 
-static void G_Menu_CallVote_BalanceTeams(edict_t *ent, menu_hnd_t *p) {
+static void G_Menu_CallVote_BalanceTeams(gentity_t *ent, menu_hnd_t *p) {
 	level.vote = FindVoteCmdByName("balance");
 	level.vote_arg = nullptr;
 	VoteCommandStore(ent);
@@ -485,22 +485,22 @@ static void G_Menu_CallVote_BalanceTeams(edict_t *ent, menu_hnd_t *p) {
 	
 }
 
-static void G_Menu_CallVote_Unlagged(edict_t *ent, menu_hnd_t *p) {
+static void G_Menu_CallVote_Unlagged(gentity_t *ent, menu_hnd_t *p) {
 	
 }
 
-static void G_Menu_CallVote_Cointoss(edict_t *ent, menu_hnd_t *p) {
+static void G_Menu_CallVote_Cointoss(gentity_t *ent, menu_hnd_t *p) {
 	level.vote = FindVoteCmdByName("cointoss");
 	level.vote_arg = nullptr;
 	VoteCommandStore(ent);
 	P_Menu_Close(ent);
 }
 
-static void G_Menu_CallVote_Random(edict_t *ent, menu_hnd_t *p) {
+static void G_Menu_CallVote_Random(gentity_t *ent, menu_hnd_t *p) {
 	
 }
 
-static void G_Menu_CallVote_Update(edict_t *ent) {
+static void G_Menu_CallVote_Update(gentity_t *ent) {
 	menu_t *entries = ent->client->menu->entries;
 	int i = 0;
 
@@ -531,7 +531,7 @@ static void G_Menu_CallVote_Update(edict_t *ent) {
 	entries[cvmenu_random].SelectFunc = G_Menu_CallVote_Random;
 }
 
-static void G_Menu_CallVote(edict_t *ent, menu_hnd_t *p) {
+static void G_Menu_CallVote(gentity_t *ent, menu_hnd_t *p) {
 	P_Menu_Close(ent);
 	P_Menu_Open(ent, pmcallvotemenu, -1, sizeof(pmcallvotemenu) / sizeof(menu_t), nullptr, G_Menu_CallVote_Update);
 }
@@ -559,7 +559,7 @@ const menu_t votemenu[] = {
 	{ "$g_pc_return", MENU_ALIGN_LEFT, G_Menu_ReturnToMain }
 };
 
-static void G_Menu_Vote_Update(edict_t *ent) {
+static void G_Menu_Vote_Update(gentity_t *ent) {
 
 	if (!g_matchstats->integer) return;
 
@@ -567,7 +567,7 @@ static void G_Menu_Vote_Update(edict_t *ent) {
 	client_match_stats_t *st = &ent->client->mstats;
 	int i = 0;
 	char value[MAX_INFO_VALUE] = { 0 };
-	gi.Info_ValueForKey(g_edicts[1].client->pers.userinfo, "name", value, sizeof(value));
+	gi.Info_ValueForKey(g_entities[1].client->pers.userinfo, "name", value, sizeof(value));
 
 	Q_strlcpy(entries[i].text, "Player Stats for Match", sizeof(entries[i].text));
 	i++;
@@ -611,36 +611,36 @@ static void G_Menu_Vote_Update(edict_t *ent) {
 	}
 }
 
-void G_Menu_Vote_Open(edict_t *ent) {
+void G_Menu_Vote_Open(gentity_t *ent) {
 	P_Menu_Open(ent, votemenu, -1, sizeof(votemenu) / sizeof(menu_t), nullptr, G_Menu_Vote_Update);
 }
 
 
 /*-----------------------------------------------------------------------*/
 
-static void G_Menu_Join_Team_Free(edict_t *ent, menu_hnd_t *p) {
+static void G_Menu_Join_Team_Free(gentity_t *ent, menu_hnd_t *p) {
 	SetTeam(ent, TEAM_FREE, false, false, false);
 }
 
-static void G_Menu_Join_Team_Red(edict_t *ent, menu_hnd_t *p) {
+static void G_Menu_Join_Team_Red(gentity_t *ent, menu_hnd_t *p) {
 	SetTeam(ent, !g_teamplay_allow_team_pick->integer ? PickTeam(-1) : TEAM_RED, false, false, false);
 }
 
-static void G_Menu_Join_Team_Blue(edict_t *ent, menu_hnd_t *p) {
+static void G_Menu_Join_Team_Blue(gentity_t *ent, menu_hnd_t *p) {
 	if (!g_teamplay_allow_team_pick->integer)
 		return;
 
 	SetTeam(ent, TEAM_BLUE, false, false, false);
 }
 
-static void G_Menu_Join_Team_Spec(edict_t *ent, menu_hnd_t *p) {
+static void G_Menu_Join_Team_Spec(gentity_t *ent, menu_hnd_t *p) {
 	SetTeam(ent, TEAM_SPECTATOR, false, false, false);
 }
 
-void G_Menu_ReturnToMain(edict_t *ent, menu_hnd_t *p);
-void G_Menu_ChaseCam(edict_t *ent, menu_hnd_t *p);
-void G_Menu_HostInfo(edict_t *ent, menu_hnd_t *p);
-void G_Menu_ServerInfo(edict_t *ent, menu_hnd_t *p);
+void G_Menu_ReturnToMain(gentity_t *ent, menu_hnd_t *p);
+void G_Menu_ChaseCam(gentity_t *ent, menu_hnd_t *p);
+void G_Menu_HostInfo(gentity_t *ent, menu_hnd_t *p);
+void G_Menu_ServerInfo(gentity_t *ent, menu_hnd_t *p);
 
 static const int jmenu_hostname = 0;
 static const int jmenu_gametype = 1;
@@ -767,7 +767,7 @@ const menu_t svinfomenu[] = {
 	{ "$g_pc_return", MENU_ALIGN_LEFT, G_Menu_ReturnToMain }
 };
 
-static void G_Menu_NoChaseCamUpdate(edict_t *ent) {
+static void G_Menu_NoChaseCamUpdate(gentity_t *ent) {
 	menu_t *entries = ent->client->menu->entries;
 
 	G_Menu_SetGamemodName(&entries[jmenu_gamemod]);
@@ -775,7 +775,7 @@ static void G_Menu_NoChaseCamUpdate(edict_t *ent) {
 	G_Menu_SetLevelName(&entries[jmenu_level]);
 }
 
-void G_Menu_ChaseCam(edict_t *ent, menu_hnd_t *p) {
+void G_Menu_ChaseCam(gentity_t *ent, menu_hnd_t *p) {
 	SetTeam(ent, TEAM_SPECTATOR, false, false, false);
 
 	if (ent->client->follow_target) {
@@ -790,13 +790,13 @@ void G_Menu_ChaseCam(edict_t *ent, menu_hnd_t *p) {
 	P_Menu_Open(ent, nochasemenu, -1, sizeof(nochasemenu) / sizeof(menu_t), nullptr, G_Menu_NoChaseCamUpdate);
 }
 
-void G_Menu_ReturnToMain(edict_t *ent, menu_hnd_t *p) {
+void G_Menu_ReturnToMain(gentity_t *ent, menu_hnd_t *p) {
 	P_Menu_Close(ent);
 	G_Menu_Join_Open(ent);
 	gi.local_sound(ent, CHAN_AUTO, gi.soundindex("misc/menu3.wav"), 1, ATTN_NONE, 0);
 }
 
-static void G_Menu_HostInfo_Update(edict_t *ent) {
+static void G_Menu_HostInfo_Update(gentity_t *ent) {
 	menu_t *entries = ent->client->menu->entries;
 	int		i = 0;
 	bool	limits = false;
@@ -809,9 +809,9 @@ static void G_Menu_HostInfo_Update(edict_t *ent) {
 		i++;
 	}
 
-	if (g_edicts[1].client) {
+	if (g_entities[1].client) {
 		char value[MAX_INFO_VALUE] = { 0 };
-		gi.Info_ValueForKey(g_edicts[1].client->pers.userinfo, "name", value, sizeof(value));
+		gi.Info_ValueForKey(g_entities[1].client->pers.userinfo, "name", value, sizeof(value));
 
 		if (value[0]) {
 			Q_strlcpy(entries[i].text, "Host:", sizeof(entries[i].text));
@@ -822,31 +822,30 @@ static void G_Menu_HostInfo_Update(edict_t *ent) {
 		}
 	}
 
-	if (g_motd->string[0]) {
+	if (game.motd.size()) {
 		Q_strlcpy(entries[i].text, "Message of the Day:", sizeof(entries[i].text));
 		i++;
 		// 26 char line width
 		// 9 lines
 		// = 234
 
-		Q_strlcpy(entries[i].text, G_Fmt("{}", g_motd->string).data(), sizeof(entries[i].text));
+		Q_strlcpy(entries[i].text, G_Fmt("{}", game.motd.c_str()).data(), sizeof(entries[i].text));
 	}
 }
 
-void G_Menu_HostInfo(edict_t *ent, menu_hnd_t *p) {
+void G_Menu_HostInfo(gentity_t *ent, menu_hnd_t *p) {
 	P_Menu_Close(ent);
 	P_Menu_Open(ent, hostinfomenu, -1, sizeof(hostinfomenu) / sizeof(menu_t), nullptr, G_Menu_HostInfo_Update);
 }
 
-static void G_Menu_ServerInfo_Update(edict_t *ent) {
+static void G_Menu_ServerInfo_Update(gentity_t *ent) {
 	menu_t *entries = ent->client->menu->entries;
 	int		i = 0;
 	bool	limits = false;
-	bool	noitems = clanarena->integer || g_instagib->integer || g_nadefest->integer;
-	bool	infiniteammo = g_instagib->integer || g_nadefest->integer;
+	bool	infiniteammo = InfiniteAmmoOn(nullptr);
 	bool	items = ItemSpawnsEnabled();
 	int		scorelimit = GT_ScoreLimit();
-
+	
 	Q_strlcpy(entries[i].text, "Match Info", sizeof(entries[i].text));
 	i++;
 
@@ -855,11 +854,26 @@ static void G_Menu_ServerInfo_Update(edict_t *ent) {
 
 	Q_strlcpy(entries[i].text, level.gametype_name, sizeof(entries[i].text));
 	i++;
-
-	if (level.mapname[0]) {
-		Q_strlcpy(entries[i].text, G_Fmt("map: {}", level.mapname).data(), sizeof(entries[i].text));
+	
+	if (level.level_name[0]) {
+		Q_strlcpy(entries[i].text, G_Fmt("map: {}", level.level_name).data(), sizeof(entries[i].text));
 		i++;
 	}
+	if (level.mapname[0]) {
+		Q_strlcpy(entries[i].text, G_Fmt("mapname: {}", level.mapname).data(), sizeof(entries[i].text));
+		i++;
+	}
+	if (level.author[0]) {
+		Q_strlcpy(entries[i].text, G_Fmt("author: {}", level.author).data(), sizeof(entries[i].text));
+		i++;
+	}
+	if (level.author2[0] && level.author[0]) {
+		Q_strlcpy(entries[i].text, G_Fmt("      {}", level.author2).data(), sizeof(entries[i].text));
+		i++;
+	}
+
+	Q_strlcpy(entries[i].text, G_Fmt("ruleset: {}", rs_long_name[(int)game.ruleset]).data(), sizeof(entries[i].text));
+	i++;
 
 	if (scorelimit) {
 		Q_strlcpy(entries[i].text, G_Fmt("{} limit: {}", GT_ScoreLimitString(), scorelimit).data(), sizeof(entries[i].text));
@@ -868,7 +882,7 @@ static void G_Menu_ServerInfo_Update(edict_t *ent) {
 	}
 
 	if (timelimit->value > 0) {
-		Q_strlcpy(entries[i].text, G_Fmt("time limit: {}", G_TimeString(timelimit->value * 1000)).data(), sizeof(entries[i].text));
+		Q_strlcpy(entries[i].text, G_Fmt("time limit: {}", G_TimeString(timelimit->value * 60000)).data(), sizeof(entries[i].text));
 		i++;
 		limits = true;
 	}
@@ -939,19 +953,19 @@ static void G_Menu_ServerInfo_Update(edict_t *ent) {
 		i++;
 	}
 
-	if (g_teleporter_nofreeze->integer) {
+	if (g_teleporter_freeze->integer) {
 		if (i >= 16) return;
-		Q_strlcpy(entries[i].text, "no teleporter freeze", sizeof(entries[i].text));
+		Q_strlcpy(entries[i].text, "teleporter freeze", sizeof(entries[i].text));
 		i++;
 	}
 
-	if (Teams() && g_teamplay_force_balance->integer) {
+	if (Teams() && g_teamplay_force_balance->integer && notGT(GT_RR)) {
 		if (i >= 16) return;
 		Q_strlcpy(entries[i].text, "forced team balancing", sizeof(entries[i].text));
 		i++;
 	}
 
-	if (g_dm_random_items->integer && !noitems) {
+	if (g_dm_random_items->integer && items) {
 		if (i >= 16) return;
 		Q_strlcpy(entries[i].text, "random items", sizeof(entries[i].text));
 		i++;
@@ -993,7 +1007,7 @@ static void G_Menu_ServerInfo_Update(edict_t *ent) {
 		i++;
 	}
 
-	if (!noitems) {
+	if (items) {
 		if (i >= 16) return;
 		if (g_no_items->integer) {
 			Q_strlcpy(entries[i].text, "no items", sizeof(entries[i].text));
@@ -1025,12 +1039,6 @@ static void G_Menu_ServerInfo_Update(edict_t *ent) {
 		i++;
 	}
 
-	if (g_dm_powerups_style->integer && !noitems) {
-		if (i >= 16) return;
-		Q_strlcpy(entries[i].text, "arena powerups (2 min)", sizeof(entries[i].text));
-		i++;
-	}
-
 	if (g_mover_speed_scale->value != 1.0f) {
 		if (i >= 16) return;
 		Q_strlcpy(entries[i].text, G_Fmt("mover speed scale: {}", g_mover_speed_scale->value).data(), sizeof(entries[i].text));
@@ -1039,12 +1047,12 @@ static void G_Menu_ServerInfo_Update(edict_t *ent) {
 
 }
 
-void G_Menu_ServerInfo(edict_t *ent, menu_hnd_t *p) {
+void G_Menu_ServerInfo(gentity_t *ent, menu_hnd_t *p) {
 	P_Menu_Close(ent);
 	P_Menu_Open(ent, svinfomenu, -1, sizeof(svinfomenu) / sizeof(menu_t), nullptr, G_Menu_ServerInfo_Update);
 }
 
-static void G_Menu_GameRules_Update(edict_t *ent) {
+static void G_Menu_GameRules_Update(gentity_t *ent) {
 	menu_t *entries = ent->client->menu->entries;
 	int		i = 0;
 	bool	limits = false;
@@ -1054,21 +1062,21 @@ static void G_Menu_GameRules_Update(edict_t *ent) {
 	Q_strlcpy(entries[i].text, G_Fmt("{}", level.gametype_name).data(), sizeof(entries[i].text)); i++;
 }
 
-static void G_Menu_GameRules(edict_t *ent, menu_hnd_t *p) {
+static void G_Menu_GameRules(gentity_t *ent, menu_hnd_t *p) {
 	P_Menu_Close(ent);
 	P_Menu_Open(ent, svinfomenu, -1, sizeof(svinfomenu) / sizeof(menu_t), nullptr, G_Menu_GameRules_Update);
 }
 
-static void G_Menu_Join_Update(edict_t *ent) {
+static void G_Menu_Join_Update(gentity_t *ent) {
 	menu_t *entries = ent->client->menu->entries;
 	int		pmax = maxplayers->integer;
 	uint8_t	num_red = 0, num_blue = 0, num_free = 0, num_queue = 0;
 
 	for (auto ec : active_clients()) {
-		if (duel->integer && ec->client->resp.team == TEAM_SPECTATOR && ec->client->resp.duel_queued) {
+		if (GT(GT_DUEL) && ec->client->sess.team == TEAM_SPECTATOR && ec->client->sess.duel_queued) {
 			num_queue++;
 		} else {
-			switch (ec->client->resp.team) {
+			switch (ec->client->sess.team) {
 			case TEAM_FREE:
 				num_free++;
 				break;
@@ -1115,11 +1123,11 @@ static void G_Menu_Join_Update(edict_t *ent) {
 		if (level.locked[TEAM_FREE] || level.match_state == matchst_t::MATCH_IN_PROGRESS && g_match_lock->integer) {
 			Q_strlcpy(entries[jmenu_free_join].text, "Match LOCKED during play", sizeof(entries[jmenu_free_join].text));
 			entries[jmenu_free_join].SelectFunc = nullptr;
-		} else if (duel->integer && level.num_playing_clients == 2) {
+		} else if (GT(GT_DUEL) && level.num_playing_clients == 2) {
 			Q_strlcpy(entries[jmenu_free_join].text, G_Fmt("Join Queue to Play ({}/{})", num_queue, pmax - 2).data(), sizeof(entries[jmenu_free_join].text));
 			entries[jmenu_free_join].SelectFunc = G_Menu_Join_Team_Free;
 		} else {
-			Q_strlcpy(entries[jmenu_free_join].text, G_Fmt("Join Match ({}/{})", num_free, duel->integer ? 2 : pmax).data(), sizeof(entries[jmenu_free_join].text));
+			Q_strlcpy(entries[jmenu_free_join].text, G_Fmt("Join Match ({}/{})", num_free, GT(GT_DUEL) ? 2 : pmax).data(), sizeof(entries[jmenu_free_join].text));
 			entries[jmenu_free_join].SelectFunc = G_Menu_Join_Team_Free;
 		}
 	}
@@ -1184,7 +1192,7 @@ static void G_Menu_Join_Update(edict_t *ent) {
 	}
 
 	int admin_index = Teams() ? jmenu_teams_admin : jmenu_free_admin;
-	if (ent->client->resp.admin) {
+	if (ent->client->sess.admin) {
 		Q_strlcpy(entries[admin_index].text, "Admin", sizeof(entries[admin_index].text));
 		entries[admin_index].SelectFunc = G_Menu_Admin;
 	} else {
@@ -1195,13 +1203,13 @@ static void G_Menu_Join_Update(edict_t *ent) {
 	Q_strlcpy(entries[jmenu_notice].text, "github.com/themuffinator", sizeof(entries[jmenu_notice].text));
 }
 
-void G_Menu_Join_Open(edict_t *ent) {
+void G_Menu_Join_Open(gentity_t *ent) {
 	if (Teams()) {
 		team_t team = TEAM_SPECTATOR;
 		uint8_t num_red = 0, num_blue = 0;
 
 		for (auto ec : active_clients()) {
-			switch (ec->client->resp.team) {
+			switch (ec->client->sess.team) {
 			case TEAM_RED:
 				num_red++;
 				break;

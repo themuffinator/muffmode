@@ -6,14 +6,14 @@
 Fire an origin based temp entity event to the clients.
 "style"		type byte
 */
-static USE(Use_Target_Tent) (edict_t *ent, edict_t *other, edict_t *activator) -> void {
+static USE(Use_Target_Tent) (gentity_t *ent, gentity_t *other, gentity_t *activator) -> void {
 	gi.WriteByte(svc_temp_entity);
 	gi.WriteByte(ent->style);
 	gi.WritePosition(ent->s.origin);
 	gi.multicast(ent->s.origin, MULTICAST_PVS, false);
 }
 
-void SP_target_temp_entity(edict_t *ent) {
+void SP_target_temp_entity(gentity_t *ent) {
 	if (level.is_n64 && ent->style == 27)
 		ent->style = TE_TELEPORT_EFFECT;
 
@@ -43,7 +43,7 @@ constexpr spawnflags_t SPAWNFLAG_SPEAKER_LOOPED_OFF = 2_spawnflag;
 constexpr spawnflags_t SPAWNFLAG_SPEAKER_RELIABLE = 4_spawnflag;
 constexpr spawnflags_t SPAWNFLAG_SPEAKER_NO_STEREO = 8_spawnflag;
 
-static USE(Use_Target_Speaker) (edict_t *ent, edict_t *other, edict_t *activator) -> void {
+static USE(Use_Target_Speaker) (gentity_t *ent, gentity_t *other, gentity_t *activator) -> void {
 	soundchan_t chan;
 
 	if (ent->spawnflags.has(SPAWNFLAG_SPEAKER_LOOPED_ON | SPAWNFLAG_SPEAKER_LOOPED_OFF)) { // looping sound toggles
@@ -62,7 +62,7 @@ static USE(Use_Target_Speaker) (edict_t *ent, edict_t *other, edict_t *activator
 	}
 }
 
-void SP_target_speaker(edict_t *ent) {
+void SP_target_speaker(gentity_t *ent) {
 	if (!st.noise) {
 		gi.Com_PrintFmt("{}: no noise set\n", *ent);
 		return;
@@ -111,8 +111,8 @@ void SP_target_speaker(edict_t *ent) {
 constexpr spawnflags_t SPAWNFLAG_HELP_HELP1 = 1_spawnflag;
 constexpr spawnflags_t SPAWNFLAG_SET_POI = 2_spawnflag;
 
-extern void target_poi_use(edict_t *ent, edict_t *other, edict_t *activator);
-static USE(Use_Target_Help) (edict_t *ent, edict_t *other, edict_t *activator) -> void {
+extern void target_poi_use(gentity_t *ent, gentity_t *other, gentity_t *activator);
+static USE(Use_Target_Help) (gentity_t *ent, gentity_t *other, gentity_t *activator) -> void {
 	if (ent->spawnflags.has(SPAWNFLAG_HELP_HELP1)) {
 		if (strcmp(game.helpmessage1, ent->message)) {
 			Q_strlcpy(game.helpmessage1, ent->message, sizeof(game.helpmessage1));
@@ -133,15 +133,15 @@ static USE(Use_Target_Help) (edict_t *ent, edict_t *other, edict_t *activator) -
 /*QUAKED target_help (1 0 1) (-16 -16 -24) (16 16 24) HELP1 SETPOI x x x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
 When fired, the "message" key becomes the current personal computer string, and the message light will be set on all clients status bars.
 */
-void SP_target_help(edict_t *ent) {
+void SP_target_help(gentity_t *ent) {
 	if (deathmatch->integer) { // auto-remove for deathmatch
-		G_FreeEdict(ent);
+		G_FreeEntity(ent);
 		return;
 	}
 
 	if (!ent->message) {
 		gi.Com_PrintFmt("{}: no message\n", *ent);
-		G_FreeEdict(ent);
+		G_FreeEntity(ent);
 		return;
 	}
 
@@ -161,25 +161,25 @@ void SP_target_help(edict_t *ent) {
 Counts a secret found.
 These are single use targets.
 */
-static USE(use_target_secret) (edict_t *ent, edict_t *other, edict_t *activator) -> void {
+static USE(use_target_secret) (gentity_t *ent, gentity_t *other, gentity_t *activator) -> void {
 	gi.sound(ent, CHAN_VOICE, ent->noise_index, 1, ATTN_NORM, 0);
 
 	level.found_secrets++;
 
 	G_UseTargets(ent, activator);
-	G_FreeEdict(ent);
+	G_FreeEntity(ent);
 }
 
-static THINK(G_VerifyTargetted) (edict_t *ent) -> void {
+static THINK(G_VerifyTargetted) (gentity_t *ent) -> void {
 	if (!ent->targetname || !*ent->targetname)
 		gi.Com_PrintFmt("WARNING: missing targetname on {}\n", *ent);
-	else if (!G_FindByString<&edict_t::target>(nullptr, ent->targetname))
+	else if (!G_FindByString<&gentity_t::target>(nullptr, ent->targetname))
 		gi.Com_PrintFmt("WARNING: doesn't appear to be anything targeting {}\n", *ent);
 }
 
-void SP_target_secret(edict_t *ent) {
+void SP_target_secret(gentity_t *ent) {
 	if (deathmatch->integer) { // auto-remove for deathmatch
-		G_FreeEdict(ent);
+		G_FreeEntity(ent);
 		return;
 	}
 
@@ -196,7 +196,7 @@ void SP_target_secret(edict_t *ent) {
 
 //==========================================================
 // [Paril-KEX] notify this player of a goal change
-void G_PlayerNotifyGoal(edict_t *player) {
+void G_PlayerNotifyGoal(gentity_t *player) {
 	// no goals in DM
 	if (deathmatch->integer)
 		return;
@@ -272,7 +272,7 @@ These are single use targets.
 */
 constexpr spawnflags_t SPAWNFLAG_GOAL_KEEP_MUSIC = 1_spawnflag;
 
-static USE(use_target_goal) (edict_t *ent, edict_t *other, edict_t *activator) -> void {
+static USE(use_target_goal) (gentity_t *ent, gentity_t *other, gentity_t *activator) -> void {
 	gi.sound(ent, CHAN_VOICE, ent->noise_index, 1, ATTN_NORM, 0);
 
 	level.found_goals++;
@@ -294,12 +294,12 @@ static USE(use_target_goal) (edict_t *ent, edict_t *other, edict_t *activator) -
 	}
 
 	G_UseTargets(ent, activator);
-	G_FreeEdict(ent);
+	G_FreeEntity(ent);
 }
 
-void SP_target_goal(edict_t *ent) {
+void SP_target_goal(gentity_t *ent) {
 	if (deathmatch->integer) { // auto-remove for deathmatch
-		G_FreeEdict(ent);
+		G_FreeEntity(ent);
 		return;
 	}
 
@@ -319,7 +319,7 @@ Spawns an explosion temporary entity when used.
 "delay"		wait this long before going off
 "dmg"		how much radius damage should be done, defaults to 0
 */
-static THINK(target_explosion_explode) (edict_t *self) -> void {
+static THINK(target_explosion_explode) (gentity_t *self) -> void {
 	float save;
 
 	gi.WriteByte(svc_temp_entity);
@@ -335,7 +335,7 @@ static THINK(target_explosion_explode) (edict_t *self) -> void {
 	self->delay = save;
 }
 
-static USE(use_target_explosion) (edict_t *self, edict_t *other, edict_t *activator) -> void {
+static USE(use_target_explosion) (gentity_t *self, gentity_t *other, gentity_t *activator) -> void {
 	self->activator = activator;
 
 	if (!self->delay) {
@@ -347,7 +347,7 @@ static USE(use_target_explosion) (edict_t *self, edict_t *other, edict_t *activa
 	self->nextthink = level.time + gtime_t::from_sec(self->delay);
 }
 
-void SP_target_explosion(edict_t *ent) {
+void SP_target_explosion(gentity_t *ent) {
 	ent->use = use_target_explosion;
 	ent->svflags = SVF_NOCLIENT;
 }
@@ -357,14 +357,13 @@ void SP_target_explosion(edict_t *ent) {
 /*QUAKED target_changelevel (1 0 0) (-8 -8 -8) (8 8 8) END_OF_UNIT x x CLEAR_INVENTORY NO_END_OF_UNIT FADE_OUT IMMEDIATE_LEAVE x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
 Changes level to "map" when fired
 */
-static USE(use_target_changelevel) (edict_t *self, edict_t *other, edict_t *activator) -> void {
+static USE(use_target_changelevel) (gentity_t *self, gentity_t *other, gentity_t *activator) -> void {
 	if (level.intermission_time)
 		return; // already activated
 
-	if (!deathmatch->integer && !coop->integer) {
-		if (g_edicts[1].health <= 0)
+	if (!deathmatch->integer && !coop->integer)
+		if (g_entities[1].health <= 0)
 			return;
-	}
 
 	// if noexit, do a ton of damage to other
 	if (deathmatch->integer && !g_dm_allow_exit->integer && other != world) {
@@ -414,10 +413,10 @@ static USE(use_target_changelevel) (edict_t *self, edict_t *other, edict_t *acti
 	BeginIntermission(self);
 }
 
-void SP_target_changelevel(edict_t *ent) {
+void SP_target_changelevel(gentity_t *ent) {
 	if (!ent->map) {
 		gi.Com_PrintFmt("{}: no map\n", *ent);
-		G_FreeEdict(ent);
+		G_FreeEntity(ent);
 		return;
 	}
 
@@ -443,7 +442,7 @@ Set "sounds" to one of the following:
 		useful for lava/sparks
 */
 
-static USE(use_target_splash) (edict_t *self, edict_t *other, edict_t *activator) -> void {
+static USE(use_target_splash) (gentity_t *self, gentity_t *other, gentity_t *activator) -> void {
 	gi.WriteByte(svc_temp_entity);
 	gi.WriteByte(TE_SPLASH);
 	gi.WriteByte(self->count);
@@ -456,7 +455,7 @@ static USE(use_target_splash) (edict_t *self, edict_t *other, edict_t *activator
 		T_RadiusDamage(self, activator, (float)self->dmg, nullptr, (float)self->dmg + 40, DAMAGE_NONE, MOD_SPLASH);
 }
 
-void SP_target_splash(edict_t *self) {
+void SP_target_splash(gentity_t *self) {
 	self->use = use_target_splash;
 	G_SetMovedir(self->s.angles, self->movedir);
 
@@ -484,10 +483,14 @@ For gibs:
 	speed how fast it should be moving otherwise it
 	will just be dropped
 */
-void ED_CallSpawn(edict_t *ent);
+void ED_CallSpawn(gentity_t *ent);
 
-static USE(use_target_spawner) (edict_t *self, edict_t *other, edict_t *activator) -> void {
-	edict_t *ent;
+static USE(use_target_spawner) (gentity_t *self, gentity_t *other, gentity_t *activator) -> void {
+	// don't trigger spawn monsters in horde mode
+	if (GT(GT_HORDE) && !Q_strncasecmp("monster_", self->target, 8))
+		return;
+
+	gentity_t *ent;
 
 	ent = G_Spawn();
 	ent->classname = self->target;
@@ -511,7 +514,7 @@ static USE(use_target_spawner) (edict_t *self, edict_t *other, edict_t *activato
 	ent->s.renderfx |= RF_IR_VISIBLE;
 }
 
-void SP_target_spawner(edict_t *self) {
+void SP_target_spawner(gentity_t *self) {
 	self->use = use_target_spawner;
 	self->svflags = SVF_NOCLIENT;
 	if (self->speed) {
@@ -532,7 +535,7 @@ speed	default is 1000
 constexpr spawnflags_t SPAWNFLAG_BLASTER_NOTRAIL = 1_spawnflag;
 constexpr spawnflags_t SPAWNFLAG_BLASTER_NOEFFECTS = 2_spawnflag;
 
-static USE(use_target_blaster) (edict_t *self, edict_t *other, edict_t *activator) -> void {
+static USE(use_target_blaster) (gentity_t *self, gentity_t *other, gentity_t *activator) -> void {
 	effects_t effect;
 
 	if (self->spawnflags.has(SPAWNFLAG_BLASTER_NOEFFECTS))
@@ -546,7 +549,7 @@ static USE(use_target_blaster) (edict_t *self, edict_t *other, edict_t *activato
 	gi.sound(self, CHAN_VOICE, self->noise_index, 1, ATTN_NORM, 0);
 }
 
-void SP_target_blaster(edict_t *self) {
+void SP_target_blaster(gentity_t *self) {
 	self->use = use_target_blaster;
 	G_SetMovedir(self->s.angles, self->movedir);
 	self->noise_index = gi.soundindex("weapons/laser2.wav");
@@ -564,12 +567,12 @@ void SP_target_blaster(edict_t *self) {
 /*QUAKED target_crosslevel_trigger (.5 .5 .5) (-8 -8 -8) (8 8 8) TRIGGER1 TRIGGER2 TRIGGER3 TRIGGER4 TRIGGER5 TRIGGER6 TRIGGER7 TRIGGER8 NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
 Once this trigger is touched/used, any trigger_crosslevel_target with the same trigger number is automatically used when a level is started within the same unit.  It is OK to check multiple triggers.  Message, delay, target, and killtarget also work.
 */
-static USE(trigger_crosslevel_trigger_use) (edict_t *self, edict_t *other, edict_t *activator) -> void {
+static USE(trigger_crosslevel_trigger_use) (gentity_t *self, gentity_t *other, gentity_t *activator) -> void {
 	game.cross_level_flags |= self->spawnflags.value;
-	G_FreeEdict(self);
+	G_FreeEntity(self);
 }
 
-void SP_target_crosslevel_trigger(edict_t *self) {
+void SP_target_crosslevel_trigger(gentity_t *self) {
 	self->svflags = SVF_NOCLIENT;
 	self->use = trigger_crosslevel_trigger_use;
 }
@@ -580,14 +583,14 @@ killtarget also work.
 
 "delay"		delay before using targets if the trigger has been activated (default 1)
 */
-static THINK(target_crosslevel_target_think) (edict_t *self) -> void {
+static THINK(target_crosslevel_target_think) (gentity_t *self) -> void {
 	if (self->spawnflags.value == (game.cross_level_flags & SFL_CROSS_TRIGGER_MASK & self->spawnflags.value)) {
 		G_UseTargets(self, self);
-		G_FreeEdict(self);
+		G_FreeEntity(self);
 	}
 }
 
-void SP_target_crosslevel_target(edict_t *self) {
+void SP_target_crosslevel_target(gentity_t *self) {
 	if (!self->delay)
 		self->delay = 1;
 	self->svflags = SVF_NOCLIENT;
@@ -607,11 +610,11 @@ WINDOWSTOP - stops at CONTENTS_WINDOW
 constexpr spawnflags_t SPAWNFLAG_LASER_STOPWINDOW = 0x0080_spawnflag;
 
 struct laser_pierce_t : pierce_args_t {
-	edict_t *self;
+	gentity_t *self;
 	int32_t count;
 	bool damaged_thing = false;
 
-	inline laser_pierce_t(edict_t *self, int32_t count) :
+	inline laser_pierce_t(gentity_t *self, int32_t count) :
 		pierce_args_t(),
 		self(self),
 		count(count) {}
@@ -648,7 +651,7 @@ struct laser_pierce_t : pierce_args_t {
 	}
 };
 
-static THINK(target_laser_think) (edict_t *self) -> void {
+static THINK(target_laser_think) (gentity_t *self) -> void {
 	int32_t count;
 
 	if (self->spawnflags.has(SPAWNFLAG_LASER_ZAP))
@@ -686,7 +689,7 @@ static THINK(target_laser_think) (edict_t *self) -> void {
 	gi.linkentity(self);
 }
 
-static void target_laser_on(edict_t *self) {
+static void target_laser_on(gentity_t *self) {
 	if (!self->activator)
 		self->activator = self;
 	self->spawnflags |= SPAWNFLAG_LASER_ZAP | SPAWNFLAG_LASER_ON;
@@ -695,14 +698,14 @@ static void target_laser_on(edict_t *self) {
 	target_laser_think(self);
 }
 
-void target_laser_off(edict_t *self) {
+void target_laser_off(gentity_t *self) {
 	self->spawnflags &= ~SPAWNFLAG_LASER_ON;
 	self->svflags |= SVF_NOCLIENT;
 	self->flags &= ~FL_TRAP;
 	self->nextthink = 0_ms;
 }
 
-static USE(target_laser_use) (edict_t *self, edict_t *other, edict_t *activator) -> void {
+static USE(target_laser_use) (gentity_t *self, gentity_t *other, gentity_t *activator) -> void {
 	self->activator = activator;
 	if (self->spawnflags.has(SPAWNFLAG_LASER_ON))
 		target_laser_off(self);
@@ -710,8 +713,8 @@ static USE(target_laser_use) (edict_t *self, edict_t *other, edict_t *activator)
 		target_laser_on(self);
 }
 
-static THINK(target_laser_start) (edict_t *self) -> void {
-	edict_t *ent;
+static THINK(target_laser_start) (gentity_t *self) -> void {
+	gentity_t *ent;
 
 	self->movetype = MOVETYPE_NONE;
 	self->solid = SOLID_NOT;
@@ -757,7 +760,7 @@ static THINK(target_laser_start) (edict_t *self) -> void {
 
 	if (!self->enemy) {
 		if (self->target) {
-			ent = G_FindByString<&edict_t::targetname>(nullptr, self->target);
+			ent = G_FindByString<&gentity_t::targetname>(nullptr, self->target);
 			if (!ent)
 				gi.Com_PrintFmt("{}: {} is a bad target\n", *self, self->target);
 			else {
@@ -788,7 +791,7 @@ static THINK(target_laser_start) (edict_t *self) -> void {
 		target_laser_off(self);
 }
 
-void SP_target_laser(edict_t *self) {
+void SP_target_laser(gentity_t *self) {
 	// let everything else get spawned before we start firing
 	self->think = target_laser_start;
 	self->flags |= FL_TRAP_LASER_FIELD;
@@ -804,7 +807,7 @@ message		two letters; starting lightlevel and ending lightlevel
 
 constexpr spawnflags_t SPAWNFLAG_LIGHTRAMP_TOGGLE = 1_spawnflag;
 
-static THINK(target_lightramp_think) (edict_t *self) -> void {
+static THINK(target_lightramp_think) (gentity_t *self) -> void {
 	char style[2];
 
 	style[0] = (char)('a' + self->movedir[0] + ((level.time - self->timestamp) / gi.frame_time_s).seconds() * self->movedir[2]);
@@ -824,14 +827,14 @@ static THINK(target_lightramp_think) (edict_t *self) -> void {
 	}
 }
 
-static USE(target_lightramp_use) (edict_t *self, edict_t *other, edict_t *activator) -> void {
+static USE(target_lightramp_use) (gentity_t *self, gentity_t *other, gentity_t *activator) -> void {
 	if (!self->enemy) {
-		edict_t *e;
+		gentity_t *e;
 
 		// check all the targets
 		e = nullptr;
 		while (1) {
-			e = G_FindByString<&edict_t::targetname>(e, self->target);
+			e = G_FindByString<&gentity_t::targetname>(e, self->target);
 			if (!e)
 				break;
 			if (strcmp(e->classname, "light") != 0) {
@@ -843,7 +846,7 @@ static USE(target_lightramp_use) (edict_t *self, edict_t *other, edict_t *activa
 
 		if (!self->enemy) {
 			gi.Com_PrintFmt("{}: target {} not found\n", *self, self->target);
-			G_FreeEdict(self);
+			G_FreeEntity(self);
 			return;
 		}
 	}
@@ -852,21 +855,21 @@ static USE(target_lightramp_use) (edict_t *self, edict_t *other, edict_t *activa
 	target_lightramp_think(self);
 }
 
-void SP_target_lightramp(edict_t *self) {
+void SP_target_lightramp(gentity_t *self) {
 	if (!self->message || strlen(self->message) != 2 || self->message[0] < 'a' || self->message[0] > 'z' || self->message[1] < 'a' || self->message[1] > 'z' || self->message[0] == self->message[1]) {
 		gi.Com_PrintFmt("{}: bad ramp ({})\n", *self, self->message ? self->message : "null string");
-		G_FreeEdict(self);
+		G_FreeEntity(self);
 		return;
 	}
 
 	if (deathmatch->integer) {
-		G_FreeEdict(self);
+		G_FreeEntity(self);
 		return;
 	}
 
 	if (!self->target) {
 		gi.Com_PrintFmt("{}: no target\n", *self);
-		G_FreeEdict(self);
+		G_FreeEntity(self);
 		return;
 	}
 
@@ -893,9 +896,9 @@ constexpr spawnflags_t SPAWNFLAGS_EARTHQUAKE_TOGGLE = 2_spawnflag;
 [[maybe_unused]] constexpr spawnflags_t SPAWNFLAGS_EARTHQUAKE_UNKNOWN_ROGUE = 4_spawnflag;
 constexpr spawnflags_t SPAWNFLAGS_EARTHQUAKE_ONE_SHOT = 8_spawnflag;
 
-static THINK(target_earthquake_think) (edict_t *self) -> void {
+static THINK(target_earthquake_think) (gentity_t *self) -> void {
 	uint32_t i;
-	edict_t *e;
+	gentity_t *e;
 
 	if (!(self->spawnflags & SPAWNFLAGS_EARTHQUAKE_SILENT)) {
 		if (self->last_move_time < level.time) {
@@ -904,7 +907,7 @@ static THINK(target_earthquake_think) (edict_t *self) -> void {
 		}
 	}
 
-	for (i = 1, e = g_edicts + i; i < globals.num_edicts; i++, e++) {
+	for (i = 1, e = g_entities + i; i < globals.num_entities; i++, e++) {
 		if (!e->inuse)
 			continue;
 		if (!e->client)
@@ -917,12 +920,12 @@ static THINK(target_earthquake_think) (edict_t *self) -> void {
 		self->nextthink = level.time + 10_hz;
 }
 
-static USE(target_earthquake_use) (edict_t *self, edict_t *other, edict_t *activator) -> void {
+static USE(target_earthquake_use) (gentity_t *self, gentity_t *other, gentity_t *activator) -> void {
 	if (self->spawnflags.has(SPAWNFLAGS_EARTHQUAKE_ONE_SHOT)) {
 		uint32_t i;
-		edict_t *e;
+		gentity_t *e;
 
-		for (i = 1, e = g_edicts + i; i < globals.num_edicts; i++, e++) {
+		for (i = 1, e = g_entities + i; i < globals.num_entities; i++, e++) {
 			if (!e->inuse)
 				continue;
 			if (!e->client)
@@ -952,7 +955,7 @@ static USE(target_earthquake_use) (edict_t *self, edict_t *other, edict_t *activ
 	self->activator = activator;
 }
 
-void SP_target_earthquake(edict_t *self) {
+void SP_target_earthquake(gentity_t *self) {
 	if (!self->targetname)
 		gi.Com_PrintFmt("{}: untargeted\n", *self);
 
@@ -983,10 +986,10 @@ constexpr size_t HACKFLAG_TELEPORT_OUT = 2;
 constexpr size_t HACKFLAG_SKIPPABLE = 64;
 constexpr size_t HACKFLAG_END_OF_UNIT = 128;
 
-static void camera_lookat_pathtarget(edict_t *self, vec3_t origin, vec3_t *dest) {
+static void camera_lookat_pathtarget(gentity_t *self, vec3_t origin, vec3_t *dest) {
 	if (self->pathtarget) {
-		edict_t *pt = nullptr;
-		pt = G_FindByString<&edict_t::targetname>(pt, self->pathtarget);
+		gentity_t *pt = nullptr;
+		pt = G_FindByString<&gentity_t::targetname>(pt, self->pathtarget);
 		if (pt) {
 			float yaw, pitch;
 			vec3_t delta = pt->s.origin - origin;
@@ -1007,7 +1010,7 @@ static void camera_lookat_pathtarget(edict_t *self, vec3_t origin, vec3_t *dest)
 	}
 }
 
-static THINK(update_target_camera) (edict_t *self) -> void {
+static THINK(update_target_camera) (gentity_t *self) -> void {
 	bool do_skip = false;
 
 	// only allow skipping after 2 seconds
@@ -1069,13 +1072,13 @@ static THINK(update_target_camera) (edict_t *self) -> void {
 		if (self->killtarget) {
 			// destroy dummy player
 			if (self->enemy)
-				G_FreeEdict(self->enemy);
+				G_FreeEntity(self->enemy);
 
-			edict_t *t = nullptr;
+			gentity_t *t = nullptr;
 			level.intermission_time = 0_ms;
 			level.level_intermission_set = true;
 
-			while ((t = G_FindByString<&edict_t::targetname>(t, self->killtarget))) {
+			while ((t = G_FindByString<&gentity_t::targetname>(t, self->killtarget))) {
 				t->use(t, self, self->activator);
 			}
 
@@ -1094,11 +1097,11 @@ static THINK(update_target_camera) (edict_t *self) -> void {
 	self->nextthink = level.time + FRAME_TIME_S;
 }
 
-void G_SetClientFrame(edict_t *ent);
+void G_SetClientFrame(gentity_t *ent);
 
 extern float xyspeed;
 
-static THINK(target_camera_dummy_think) (edict_t *self) -> void {
+static THINK(target_camera_dummy_think) (gentity_t *self) -> void {
 	// bit of a hack, but this will let the dummy
 	// move like a player
 	self->client = self->owner->client;
@@ -1115,7 +1118,7 @@ static THINK(target_camera_dummy_think) (edict_t *self) -> void {
 	self->nextthink = level.time + 10_hz;
 }
 
-static USE(use_target_camera) (edict_t *self, edict_t *other, edict_t *activator) -> void {
+static USE(use_target_camera) (gentity_t *self, gentity_t *other, gentity_t *activator) -> void {
 	if (self->sounds)
 		gi.configstring(CS_CDTRACK, G_Fmt("{}", self->sounds).data());
 
@@ -1133,7 +1136,7 @@ static USE(use_target_camera) (edict_t *self, edict_t *other, edict_t *activator
 
 	// spawn fake player dummy where we were
 	if (activator->client) {
-		edict_t *dummy = self->enemy = G_Spawn();
+		gentity_t *dummy = self->enemy = G_Spawn();
 		dummy->owner = activator;
 		dummy->clipmask = activator->clipmask;
 		dummy->s.origin = activator->s.origin;
@@ -1161,7 +1164,7 @@ static USE(use_target_camera) (edict_t *self, edict_t *other, edict_t *activator
 	// move all clients to the intermission point
 	for (auto ce : active_clients()) {
 		// respawn any dead clients
-		if (ce->health <= 0) {
+		if (ce->health <= 0 || ce->client->eliminated) {
 			// give us our max health back since it will reset
 			// to pers.health; in instanced items we'd lose the items
 			// we touched so we always want to respawn with our max.
@@ -1186,9 +1189,9 @@ static USE(use_target_camera) (edict_t *self, edict_t *other, edict_t *activator
 		G_EndOfUnitMessage();
 }
 
-void SP_target_camera(edict_t *self) {
+void SP_target_camera(gentity_t *self) {
 	if (deathmatch->integer) { // auto-remove for deathmatch
-		G_FreeEdict(self);
+		G_FreeEntity(self);
 		return;
 	}
 
@@ -1200,12 +1203,12 @@ void SP_target_camera(edict_t *self) {
 [Sam-KEX] Changes gravity, as seen in the N64 version
 */
 
-static USE(use_target_gravity) (edict_t *self, edict_t *other, edict_t *activator) -> void {
+static USE(use_target_gravity) (gentity_t *self, gentity_t *other, gentity_t *activator) -> void {
 	gi.cvar_set("g_gravity", G_Fmt("{}", self->gravity).data());
 	level.gravity = self->gravity;
 }
 
-void SP_target_gravity(edict_t *self) {
+void SP_target_gravity(gentity_t *self) {
 	self->use = use_target_gravity;
 	self->gravity = atof(st.gravity);
 }
@@ -1214,16 +1217,16 @@ void SP_target_gravity(edict_t *self) {
 [Sam-KEX] Plays a sound fx, as seen in the N64 version
 */
 
-static THINK(update_target_soundfx) (edict_t *self) -> void {
+static THINK(update_target_soundfx) (gentity_t *self) -> void {
 	gi.positioned_sound(self->s.origin, self, CHAN_VOICE, self->noise_index, self->volume, self->attenuation, 0);
 }
 
-static USE(use_target_soundfx) (edict_t *self, edict_t *other, edict_t *activator) -> void {
+static USE(use_target_soundfx) (gentity_t *self, gentity_t *other, gentity_t *activator) -> void {
 	self->think = update_target_soundfx;
 	self->nextthink = level.time + gtime_t::from_sec(self->delay);
 }
 
-void SP_target_soundfx(edict_t *self) {
+void SP_target_soundfx(gentity_t *self) {
 	if (!self->volume)
 		self->volume = 1.0;
 
@@ -1232,7 +1235,7 @@ void SP_target_soundfx(edict_t *self) {
 	else if (self->attenuation == -1) // use -1 so 0 defaults to 1
 		self->attenuation = 0;
 
-	self->noise_index = atoi(st.noise);
+	self->noise_index = strtoul(st.noise, nullptr, 10);
 
 	switch (self->noise_index) {
 	case 1:
@@ -1266,7 +1269,7 @@ constexpr spawnflags_t SPAWNFLAG_TARGET_LIGHT_START_ON = 1_spawnflag;
 constexpr spawnflags_t SPAWNFLAG_TARGET_LIGHT_NO_LERP = 2_spawnflag; // not used in N64, but I'll use it for this
 constexpr spawnflags_t SPAWNFLAG_TARGET_LIGHT_FLICKER = 4_spawnflag;
 
-static THINK(target_light_flicker_think) (edict_t *self) -> void {
+static THINK(target_light_flicker_think) (gentity_t *self) -> void {
 	if (brandom())
 		self->svflags ^= SVF_NOCLIENT;
 
@@ -1274,7 +1277,7 @@ static THINK(target_light_flicker_think) (edict_t *self) -> void {
 }
 
 // think function handles interpolation from start to finish.
-static THINK(target_light_think) (edict_t *self) -> void {
+static THINK(target_light_think) (gentity_t *self) -> void {
 	if (self->spawnflags.has(SPAWNFLAG_TARGET_LIGHT_FLICKER))
 		target_light_flicker_think(self);
 
@@ -1319,7 +1322,7 @@ static THINK(target_light_think) (edict_t *self) -> void {
 	self->nextthink = level.time + 10_hz;
 }
 
-static USE(target_light_use) (edict_t *self, edict_t *other, edict_t *activator) -> void {
+static USE(target_light_use) (gentity_t *self, gentity_t *other, gentity_t *activator) -> void {
 	self->health = !self->health;
 
 	if (self->health)
@@ -1343,7 +1346,7 @@ static USE(target_light_use) (edict_t *self, edict_t *other, edict_t *activator)
 	}
 }
 
-void SP_target_light(edict_t *self) {
+void SP_target_light(gentity_t *self) {
 	self->s.modelindex = 1;
 	self->s.renderfx = RF_CUSTOM_LIGHT;
 	self->s.frame = st.radius ? st.radius : 150;
@@ -1434,7 +1437,7 @@ static float distance_to_poi(vec3_t start, vec3_t end) {
 	return std::numeric_limits<float>::infinity();
 }
 
-USE(target_poi_use) (edict_t *ent, edict_t *other, edict_t *activator) -> void {
+USE(target_poi_use) (gentity_t *ent, gentity_t *other, gentity_t *activator) -> void {
 	// we were disabled, so remove the disable check
 	if (ent->spawnflags.has(SPAWNFLAG_POI_DISABLED))
 		ent->spawnflags &= ~SPAWNFLAG_POI_DISABLED;
@@ -1445,7 +1448,7 @@ USE(target_poi_use) (edict_t *ent, edict_t *other, edict_t *activator) -> void {
 
 	// teamed POIs work a bit differently
 	if (ent->team) {
-		edict_t *poi_master = ent->teammaster;
+		gentity_t *poi_master = ent->teammaster;
 
 		// unset ent, since we need to find one that matches
 		ent = nullptr;
@@ -1453,9 +1456,9 @@ USE(target_poi_use) (edict_t *ent, edict_t *other, edict_t *activator) -> void {
 		float best_distance = std::numeric_limits<float>::infinity();
 		int32_t best_style = std::numeric_limits<int32_t>::max();
 
-		edict_t *dummy_fallback = nullptr;
+		gentity_t *dummy_fallback = nullptr;
 
-		for (edict_t *poi = poi_master; poi; poi = poi->teamchain) {
+		for (gentity_t *poi = poi_master; poi; poi = poi->teamchain) {
 			// currently disabled
 			if (poi->spawnflags.has(SPAWNFLAG_POI_DISABLED))
 				continue;
@@ -1543,7 +1546,7 @@ USE(target_poi_use) (edict_t *ent, edict_t *other, edict_t *activator) -> void {
 		// pick the dummy POI, since it isn't supposed to get freed
 		// FIXME maybe store the team string instead?
 
-		for (edict_t *m = ent->teammaster; m; m = m->teamchain)
+		for (gentity_t *m = ent->teammaster; m; m = m->teamchain)
 			if (m->spawnflags.has(SPAWNFLAG_POI_DUMMY)) {
 				level.current_dynamic_poi = m;
 				break;
@@ -1555,23 +1558,23 @@ USE(target_poi_use) (edict_t *ent, edict_t *other, edict_t *activator) -> void {
 		level.current_dynamic_poi = nullptr;
 }
 
-static THINK(target_poi_setup) (edict_t *self) -> void {
+static THINK(target_poi_setup) (gentity_t *self) -> void {
 	if (self->team) {
 		// copy dynamic/nearest over to all teammates
 		if (self->spawnflags.has((SPAWNFLAG_POI_NEAREST | SPAWNFLAG_POI_DYNAMIC)))
-			for (edict_t *m = self->teammaster; m; m = m->teamchain)
+			for (gentity_t *m = self->teammaster; m; m = m->teamchain)
 				m->spawnflags |= self->spawnflags & (SPAWNFLAG_POI_NEAREST | SPAWNFLAG_POI_DYNAMIC);
 
-		for (edict_t *m = self->teammaster; m; m = m->teamchain) {
+		for (gentity_t *m = self->teammaster; m; m = m->teamchain) {
 			if (strcmp(m->classname, "target_poi"))
 				gi.Com_PrintFmt("WARNING: {} is teamed with target_poi's; unintentional\n", *m);
 		}
 	}
 }
 
-void SP_target_poi(edict_t *self) {
+void SP_target_poi(gentity_t *self) {
 	if (deathmatch->integer) { // auto-remove for deathmatch
-		G_FreeEdict(self);
+		G_FreeEntity(self);
 		return;
 	}
 
@@ -1597,11 +1600,11 @@ void SP_target_poi(edict_t *self) {
 Change music when used
 */
 
-static USE(use_target_music) (edict_t *ent, edict_t *other, edict_t *activator) -> void {
+static USE(use_target_music) (gentity_t *ent, gentity_t *other, gentity_t *activator) -> void {
 	gi.configstring(CS_CDTRACK, G_Fmt("{}", ent->sounds).data());
 }
 
-void SP_target_music(edict_t *self) {
+void SP_target_music(gentity_t *self) {
 	self->use = use_target_music;
 }
 
@@ -1611,15 +1614,15 @@ Hook up health bars to monsters.
 "message" is their name
 */
 
-static USE(use_target_healthbar) (edict_t *ent, edict_t *other, edict_t *activator) -> void {
-	edict_t *target = G_PickTarget(ent->target);
+static USE(use_target_healthbar) (gentity_t *ent, gentity_t *other, gentity_t *activator) -> void {
+	gentity_t *target = G_PickTarget(ent->target);
 
 	if (!target || ent->health != target->spawn_count) {
 		if (target)
 			gi.Com_PrintFmt("{}: target {} changed from what it used to be\n", *ent, *target);
 		else
 			gi.Com_PrintFmt("{}: no target\n", *ent);
-		G_FreeEdict(ent);
+		G_FreeEntity(ent);
 		return;
 	}
 
@@ -1634,16 +1637,16 @@ static USE(use_target_healthbar) (edict_t *ent, edict_t *other, edict_t *activat
 	}
 
 	gi.Com_PrintFmt("{}: too many health bars\n", *ent);
-	G_FreeEdict(ent);
+	G_FreeEntity(ent);
 }
 
-static THINK(check_target_healthbar) (edict_t *ent) -> void {
-	edict_t *target = G_PickTarget(ent->target);
+static THINK(check_target_healthbar) (gentity_t *ent) -> void {
+	gentity_t *target = G_PickTarget(ent->target);
 	if (!target || !(target->svflags & SVF_MONSTER)) {
 		if (target != nullptr) {
 			gi.Com_PrintFmt("{}: target {} does not appear to be a monster\n", *ent, *target);
 		}
-		G_FreeEdict(ent);
+		G_FreeEntity(ent);
 		return;
 	}
 
@@ -1651,21 +1654,21 @@ static THINK(check_target_healthbar) (edict_t *ent) -> void {
 	ent->health = target->spawn_count;
 }
 
-void SP_target_healthbar(edict_t *self) {
+void SP_target_healthbar(gentity_t *self) {
 	if (deathmatch->integer) {
-		G_FreeEdict(self);
+		G_FreeEntity(self);
 		return;
 	}
 
 	if (!self->target || !*self->target) {
 		gi.Com_PrintFmt("{}: missing target\n", *self);
-		G_FreeEdict(self);
+		G_FreeEntity(self);
 		return;
 	}
 
 	if (!self->message) {
 		gi.Com_PrintFmt("{}: missing message\n", *self);
-		G_FreeEdict(self);
+		G_FreeEntity(self);
 		return;
 	}
 
@@ -1678,7 +1681,7 @@ void SP_target_healthbar(edict_t *self) {
 Auto save on command.
 */
 
-static USE(use_target_autosave) (edict_t *ent, edict_t *other, edict_t *activator) -> void {
+static USE(use_target_autosave) (gentity_t *ent, gentity_t *other, gentity_t *activator) -> void {
 	gtime_t save_time = gtime_t::from_sec(gi.cvar("g_athena_auto_save_min_time", "60", CVAR_NOSET)->value);
 
 	if (level.time - level.next_auto_save > save_time) {
@@ -1687,9 +1690,9 @@ static USE(use_target_autosave) (edict_t *ent, edict_t *other, edict_t *activato
 	}
 }
 
-void SP_target_autosave(edict_t *self) {
+void SP_target_autosave(gentity_t *self) {
 	if (deathmatch->integer) {
-		G_FreeEdict(self);
+		G_FreeEntity(self);
 		return;
 	}
 
@@ -1703,7 +1706,7 @@ Change sky parameters.
 "skyrotate"	speed of rotation in degrees/second
 */
 
-static USE(use_target_sky) (edict_t *self, edict_t *other, edict_t *activator) -> void {
+static USE(use_target_sky) (gentity_t *self, gentity_t *other, gentity_t *activator) -> void {
 	if (self->map)
 		gi.configstring(CS_SKY, self->map);
 
@@ -1726,7 +1729,7 @@ static USE(use_target_sky) (edict_t *self, edict_t *other, edict_t *activator) -
 		gi.configstring(CS_SKYAXIS, G_Fmt("{}", self->movedir).data());
 }
 
-void SP_target_sky(edict_t *self) {
+void SP_target_sky(gentity_t *self) {
 	self->use = use_target_sky;
 	if (st.was_key_specified("sky"))
 		self->map = st.sky;
@@ -1749,14 +1752,14 @@ void SP_target_sky(edict_t *self) {
 /*QUAKED target_crossunit_trigger (.5 .5 .5) (-8 -8 -8) (8 8 8) TRIGGER1 TRIGGER2 TRIGGER3 TRIGGER4 TRIGGER5 TRIGGER6 TRIGGER7 TRIGGER8
 Once this trigger is touched/used, any trigger_crossunit_target with the same trigger number is automatically used when a level is started within the same unit.  It is OK to check multiple triggers.  Message, delay, target, and killtarget also work.
 */
-static USE(trigger_crossunit_trigger_use) (edict_t *self, edict_t *other, edict_t *activator) -> void {
+static USE(trigger_crossunit_trigger_use) (gentity_t *self, gentity_t *other, gentity_t *activator) -> void {
 	game.cross_unit_flags |= self->spawnflags.value;
-	G_FreeEdict(self);
+	G_FreeEntity(self);
 }
 
-void SP_target_crossunit_trigger(edict_t *self) {
+void SP_target_crossunit_trigger(gentity_t *self) {
 	if (deathmatch->integer) {
-		G_FreeEdict(self);
+		G_FreeEntity(self);
 		return;
 	}
 
@@ -1770,16 +1773,16 @@ If multiple triggers are checked, all must be true. Delay, target and killtarget
 
 "delay"		delay before using targets if the trigger has been activated (default 1)
 */
-static THINK(target_crossunit_target_think) (edict_t *self) -> void {
+static THINK(target_crossunit_target_think) (gentity_t *self) -> void {
 	if (self->spawnflags.value == (game.cross_unit_flags & SFL_CROSS_TRIGGER_MASK & self->spawnflags.value)) {
 		G_UseTargets(self, self);
-		G_FreeEdict(self);
+		G_FreeEntity(self);
 	}
 }
 
-void SP_target_crossunit_target(edict_t *self) {
+void SP_target_crossunit_target(gentity_t *self) {
 	if (deathmatch->integer) {
-		G_FreeEdict(self);
+		G_FreeEntity(self);
 		return;
 	}
 
@@ -1796,15 +1799,15 @@ Give an achievement.
 
 "achievement"		cheevo to give
 */
-static USE(use_target_achievement) (edict_t *self, edict_t *other, edict_t *activator) -> void {
+static USE(use_target_achievement) (gentity_t *self, gentity_t *other, gentity_t *activator) -> void {
 	gi.WriteByte(svc_achievement);
 	gi.WriteString(self->map);
 	gi.multicast(vec3_origin, MULTICAST_ALL, true);
 }
 
-void SP_target_achievement(edict_t *self) {
+void SP_target_achievement(gentity_t *self) {
 	if (deathmatch->integer) {
-		G_FreeEdict(self);
+		G_FreeEntity(self);
 		return;
 	}
 
@@ -1812,18 +1815,14 @@ void SP_target_achievement(edict_t *self) {
 	self->use = use_target_achievement;
 }
 
-static USE(use_target_story) (edict_t *self, edict_t *other, edict_t *activator) -> void {
-	if (self->message && *self->message)
-		level.story_active = true;
-	else
-		level.story_active = false;
-
+static USE(use_target_story) (gentity_t *self, gentity_t *other, gentity_t *activator) -> void {
+	level.story_active = !!(self->message && *self->message);
 	gi.configstring(CONFIG_STORY_SCORELIMIT, self->message ? self->message : "");
 }
 
-void SP_target_story(edict_t *self) {
+void SP_target_story(gentity_t *self) {
 	if (deathmatch->integer) {
-		G_FreeEdict(self);
+		G_FreeEntity(self);
 		return;
 	}
 
@@ -1833,7 +1832,7 @@ void SP_target_story(edict_t *self) {
 /*QUAKED target_mal_laser (1 0 0) (-4 -4 -4) (4 4 4) START_ON RED GREEN BLUE YELLOW ORANGE FAT x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
 Mal's laser
 */
-static void target_mal_laser_on(edict_t *self) {
+static void target_mal_laser_on(gentity_t *self) {
 	if (!self->activator)
 		self->activator = self;
 	self->spawnflags |= SPAWNFLAG_LASER_ZAP | SPAWNFLAG_LASER_ON;
@@ -1843,7 +1842,7 @@ static void target_mal_laser_on(edict_t *self) {
 	self->nextthink = level.time + gtime_t::from_sec(self->wait + self->delay);
 }
 
-static USE(target_mal_laser_use) (edict_t *self, edict_t *other, edict_t *activator) -> void {
+static USE(target_mal_laser_use) (gentity_t *self, gentity_t *other, gentity_t *activator) -> void {
 	self->activator = activator;
 	if (self->spawnflags.has(SPAWNFLAG_LASER_ON))
 		target_laser_off(self);
@@ -1851,23 +1850,23 @@ static USE(target_mal_laser_use) (edict_t *self, edict_t *other, edict_t *activa
 		target_mal_laser_on(self);
 }
 
-void mal_laser_think(edict_t *self);
+void mal_laser_think(gentity_t *self);
 
-static THINK(mal_laser_think2) (edict_t *self) -> void {
+static THINK(mal_laser_think2) (gentity_t *self) -> void {
 	self->svflags |= SVF_NOCLIENT;
 	self->think = mal_laser_think;
 	self->nextthink = level.time + gtime_t::from_sec(self->wait);
 	self->spawnflags |= SPAWNFLAG_LASER_ZAP;
 }
 
-THINK(mal_laser_think) (edict_t *self) -> void {
+THINK(mal_laser_think) (gentity_t *self) -> void {
 	self->svflags &= ~SVF_NOCLIENT;
 	target_laser_think(self);
 	self->think = mal_laser_think2;
 	self->nextthink = level.time + 100_ms;
 }
 
-void SP_target_mal_laser(edict_t *self) {
+void SP_target_mal_laser(gentity_t *self) {
 	self->movetype = MOVETYPE_NONE;
 	self->solid = SOLID_NOT;
 	self->s.renderfx |= RF_BEAM;
@@ -1945,7 +1944,7 @@ good colors to use:
 232 - blood
 */
 
-static USE(use_target_steam) (edict_t *self, edict_t *other, edict_t *activator) -> void {
+static USE(use_target_steam) (gentity_t *self, gentity_t *other, gentity_t *activator) -> void {
 	// FIXME - this needs to be a global
 	static int nextid;
 	vec3_t	   point;
@@ -1995,13 +1994,13 @@ static USE(use_target_steam) (edict_t *self, edict_t *other, edict_t *activator)
 	}
 }
 
-static THINK(target_steam_start) (edict_t *self) -> void {
-	edict_t *ent;
+static THINK(target_steam_start) (gentity_t *self) -> void {
+	gentity_t *ent;
 
 	self->use = use_target_steam;
 
 	if (self->target) {
-		ent = G_FindByString<&edict_t::targetname>(nullptr, self->target);
+		ent = G_FindByString<&gentity_t::targetname>(nullptr, self->target);
 		if (!ent)
 			gi.Com_PrintFmt("{}: target {} not found\n", *self, self->target);
 		self->enemy = ent;
@@ -2027,7 +2026,7 @@ static THINK(target_steam_start) (edict_t *self) -> void {
 	gi.linkentity(self);
 }
 
-void SP_target_steam(edict_t *self) {
+void SP_target_steam(gentity_t *self) {
 	self->style = (int)self->speed;
 
 	if (self->target) {
@@ -2041,12 +2040,12 @@ void SP_target_steam(edict_t *self) {
 // target_anger
 //==========================================================
 
-static USE(target_anger_use) (edict_t *self, edict_t *other, edict_t *activator) -> void {
-	edict_t *target;
-	edict_t *t;
+static USE(target_anger_use) (gentity_t *self, gentity_t *other, gentity_t *activator) -> void {
+	gentity_t *target;
+	gentity_t *t;
 
 	t = nullptr;
-	target = G_FindByString<&edict_t::targetname>(t, self->killtarget);
+	target = G_FindByString<&gentity_t::targetname>(t, self->killtarget);
 
 	if (target && self->target) {
 		// Make whatever a "good guy" so the monster will try to kill it!
@@ -2057,7 +2056,7 @@ static USE(target_anger_use) (edict_t *self, edict_t *other, edict_t *activator)
 		}
 
 		t = nullptr;
-		while ((t = G_FindByString<&edict_t::targetname>(t, self->target))) {
+		while ((t = G_FindByString<&gentity_t::targetname>(t, self->target))) {
 			if (t == self) {
 				gi.Com_Print("WARNING: entity used itself.\n");
 			} else {
@@ -2085,15 +2084,15 @@ entity you want to anger, and killtarget the entity you want it to be angry at.
 target - entity to piss off
 killtarget - entity to be pissed off at
 */
-void SP_target_anger(edict_t *self) {
+void SP_target_anger(gentity_t *self) {
 	if (!self->target) {
 		gi.Com_Print("target_anger without target!\n");
-		G_FreeEdict(self);
+		G_FreeEntity(self);
 		return;
 	}
 	if (!self->killtarget) {
 		gi.Com_Print("target_anger without killtarget!\n");
-		G_FreeEdict(self);
+		G_FreeEntity(self);
 		return;
 	}
 
@@ -2105,12 +2104,12 @@ void SP_target_anger(edict_t *self) {
 // target_killplayers
 // ***********************************
 
-USE(target_killplayers_use) (edict_t *self, edict_t *other, edict_t *activator) -> void {
-	edict_t *ent;
+USE(target_killplayers_use) (gentity_t *self, gentity_t *other, gentity_t *activator) -> void {
+	gentity_t *ent;
 	level.deadly_kill_box = true;
 
 	// kill any visible monsters
-	for (ent = g_edicts; ent < &g_edicts[globals.num_edicts]; ent++) {
+	for (ent = g_entities; ent < &g_entities[globals.num_entities]; ent++) {
 		if (!ent->inuse)
 			continue;
 		if (ent->health < 1)
@@ -2137,7 +2136,7 @@ USE(target_killplayers_use) (edict_t *self, edict_t *other, edict_t *activator) 
 /*QUAKED target_killplayers (1 0 0) (-8 -8 -8) (8 8 8) x x x x x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
 When triggered, this will kill all the players on the map.
 */
-void SP_target_killplayers(edict_t *self) {
+void SP_target_killplayers(gentity_t *self) {
 	self->use = target_killplayers_use;
 	self->svflags = SVF_NOCLIENT;
 }
@@ -2145,16 +2144,16 @@ void SP_target_killplayers(edict_t *self) {
 /*QUAKED target_blacklight (1 0 1) (-16 -16 -24) (16 16 24) x x x x x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
 Pulsing black light with sphere in the center
 */
-static THINK(blacklight_think) (edict_t *self) -> void {
+static THINK(blacklight_think) (gentity_t *self) -> void {
 	self->s.angles[PITCH] += frandom(10);
 	self->s.angles[YAW] += frandom(10);
 	self->s.angles[ROLL] += frandom(10);
 	self->nextthink = level.time + FRAME_TIME_MS;
 }
 
-void SP_target_blacklight(edict_t *ent) {
+void SP_target_blacklight(gentity_t *ent) {
 	if (deathmatch->integer) { // auto-remove for deathmatch
-		G_FreeEdict(ent);
+		G_FreeEntity(ent);
 		return;
 	}
 
@@ -2173,9 +2172,9 @@ void SP_target_blacklight(edict_t *ent) {
 /*QUAKED target_orb (1 0 1) (-16 -16 -24) (16 16 24) x x x x x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
 Translucent pulsing orb with speckles
 */
-void SP_target_orb(edict_t *ent) {
+void SP_target_orb(gentity_t *ent) {
 	if (deathmatch->integer) { // auto-remove for deathmatch
-		G_FreeEdict(ent);
+		G_FreeEntity(ent);
 		return;
 	}
 
@@ -2198,7 +2197,7 @@ void SP_target_orb(edict_t *ent) {
 /*QUAKED target_remove_powerups (1 0 0) (-8 -8 -8) (8 8 8) x x x x x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
 Takes away all the activator's powerups, techs, held items, keys and CTF flags.
 */
-static USE(target_remove_powerups_use) (edict_t *ent, edict_t *other, edict_t *activator) -> void {
+static USE(target_remove_powerups_use) (gentity_t *ent, gentity_t *other, gentity_t *activator) -> void {
 	if (!activator->client)
 		return;
 
@@ -2269,7 +2268,7 @@ static USE(target_remove_powerups_use) (edict_t *ent, edict_t *other, edict_t *a
 	}
 }
 
-void SP_target_remove_powerups(edict_t *ent) {
+void SP_target_remove_powerups(gentity_t *ent) {
 	ent->use = target_remove_powerups_use;
 }
 
@@ -2279,7 +2278,7 @@ void SP_target_remove_powerups(edict_t *ent) {
 Takes away all the activator's weapons and ammo (except blaster).
 BLASTER : also remove blaster
 */
-static USE(target_remove_weapons_use) (edict_t *ent, edict_t *other, edict_t *activator) -> void {
+static USE(target_remove_weapons_use) (gentity_t *ent, gentity_t *other, gentity_t *activator) -> void {
 	if (!activator->client)
 		return;
 	
@@ -2300,7 +2299,7 @@ static USE(target_remove_weapons_use) (edict_t *ent, edict_t *other, edict_t *ac
 	activator->client->pers.lastweapon = activator->client->pers.weapon;
 }
 
-void SP_target_remove_weapons(edict_t *ent) {
+void SP_target_remove_weapons(gentity_t *ent) {
 	ent->use = target_remove_weapons_use;
 }
 
@@ -2309,25 +2308,25 @@ void SP_target_remove_weapons(edict_t *ent) {
 /*QUAKED target_give (1 0 0) (-8 -8 -8) (8 8 8) x x x x x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
 Gives the activator the targetted item.
 */
-static USE(target_give_use) (edict_t *ent, edict_t *other, edict_t *activator) -> void {
+static USE(target_give_use) (gentity_t *ent, gentity_t *other, gentity_t *activator) -> void {
 	if (!activator->client)
 		return;
 
 	ent->item->pickup(ent, other);
 }
 
-void SP_target_give(edict_t *ent) {
-	edict_t *target_ent = G_PickTarget(ent->target);
+void SP_target_give(gentity_t *ent) {
+	gentity_t *target_ent = G_PickTarget(ent->target);
 	if (!target_ent || !target_ent->classname[0]) {
 		gi.Com_PrintFmt("{}: Invalid target entity, removing.\n", *ent);
-		G_FreeEdict(ent);
+		G_FreeEntity(ent);
 		return;
 	}
 
 	gitem_t *it = FindItemByClassname(target_ent->classname);
 	if (!it || !it->pickup) {
 		gi.Com_PrintFmt("{}: Targetted entity is not an item, removing.\n", *ent);
-		G_FreeEdict(ent);
+		G_FreeEntity(ent);
 		return;
 	}
 	
@@ -2343,17 +2342,17 @@ Sets a delay before firing its targets.
 "wait" seconds to pause before firing targets.
 "random" delay variance, total delay = delay +/- random seconds
 */
-static THINK(target_delay_think) (edict_t *ent) -> void {
+static THINK(target_delay_think) (gentity_t *ent) -> void {
 	G_UseTargets(ent, ent->activator);
 }
 
-static USE(target_delay_use) (edict_t *ent, edict_t *other, edict_t *activator) -> void {
+static USE(target_delay_use) (gentity_t *ent, gentity_t *other, gentity_t *activator) -> void {
 	ent->nextthink = gtime_t::from_ms(level.time.milliseconds() + (ent->wait + ent->random * crandom()) * 1000);
 	ent->think = target_delay_think;
 	ent->activator = activator;
 }
 
-void SP_target_delay(edict_t *ent) {
+void SP_target_delay(gentity_t *ent) {
 	if (!ent->wait)
 		ent->wait = 1;
 	ent->use = target_delay_use;
@@ -2367,7 +2366,7 @@ Sends a center-printed message to clients.
 "message"	text to print
 If "private", only the activator gets the message. If no checks, all clients get the message.
 */
-static USE(target_print_use) (edict_t *ent, edict_t *other, edict_t *activator) -> void {
+static USE(target_print_use) (gentity_t *ent, gentity_t *other, gentity_t *activator) -> void {
 	if (activator && activator->client && ent->spawnflags.has(4_spawnflag)) {
 		gi.LocClient_Print(activator, PRINT_CENTER, "{}", ent->message);
 		return;
@@ -2375,19 +2374,19 @@ static USE(target_print_use) (edict_t *ent, edict_t *other, edict_t *activator) 
 
 	if (ent->spawnflags.has(3_spawnflag)) {
 		if (ent->spawnflags.has(1_spawnflag))
-			BroadcastTeamMessage(TEAM_RED, G_Fmt("{}", ent->message).data());
+			BroadcastTeamMessage(TEAM_RED, PRINT_CENTER, G_Fmt("{}", ent->message).data());
 		if (ent->spawnflags.has(2_spawnflag))
-			BroadcastTeamMessage(TEAM_BLUE, G_Fmt("{}", ent->message).data());
+			BroadcastTeamMessage(TEAM_BLUE, PRINT_CENTER, G_Fmt("{}", ent->message).data());
 		return;
 	}
 
 	gi.LocBroadcast_Print(PRINT_CENTER, "{}", ent->message);
 }
 
-void SP_target_print(edict_t *ent) {
+void SP_target_print(gentity_t *ent) {
 	if (!ent->message[0]) {
 		gi.Com_PrintFmt("{}: No message, removing.\n", *ent);
-		G_FreeEdict(ent);
+		G_FreeEntity(ent);
 		return;
 	}
 	ent->use = target_print_use;
@@ -2401,44 +2400,31 @@ The activator will be teleported to the targetted destination.
 If no target set, it will find a player spawn point instead.
 */
 
-static void TeleportPlayerToSpawnPoint(edict_t *ent) {
-	bool	valid_spawn = false;
-	vec3_t	spawn_origin, spawn_angles;
-	bool	is_landmark = false;
-
-	valid_spawn = SelectSpawnPoint(ent, spawn_origin, spawn_angles, true, is_landmark);
-
-	if (!valid_spawn)
-		return;
-
-	TeleportPlayer(ent, spawn_origin, spawn_angles);
-}
-
-static USE(target_teleporter_use) (edict_t *ent, edict_t *other, edict_t *activator) -> void {
+static USE(target_teleporter_use) (gentity_t *ent, gentity_t *other, gentity_t *activator) -> void {
 	if (!activator || !activator->client)
 		return;
 
 	// no target point to teleport to, teleport to a spawn point
 	if (!ent->target_ent) {
-		TeleportPlayerToSpawnPoint(activator);
+		TeleportPlayerToRandomSpawnPoint(activator, true);
 		return;
 	}
 
 	TeleportPlayer(activator, ent->target_ent->s.origin, ent->target_ent->s.angles);
 }
 
-void SP_target_teleporter(edict_t *ent) {
+void SP_target_teleporter(gentity_t *ent) {
 	
 	if (!ent->target[0]) {
 		//gi.Com_PrintFmt("{}: Couldn't find teleporter destination, removing.\n", ent);
-		//G_FreeEdict(ent);
+		//G_FreeEntity(ent);
 		//return;
 	}
 	
 	ent->target_ent = G_PickTarget(ent->target);
 	if (!ent->target_ent) {
 		//gi.Com_PrintFmt("{}: Couldn't find teleporter destination, removing.\n", ent);
-		//G_FreeEdict(ent);
+		//G_FreeEntity(ent);
 		//return;
 	}
 
@@ -2451,14 +2437,14 @@ void SP_target_teleporter(edict_t *ent) {
 Kills the activator.
 */
 
-static USE(target_kill_use) (edict_t *self, edict_t *other, edict_t *activator) -> void {
+static USE(target_kill_use) (gentity_t *self, gentity_t *other, gentity_t *activator) -> void {
 	if (!activator)
 		return;
 	T_Damage(activator, self, self, vec3_origin, self->s.origin, vec3_origin, 100000, 0, DAMAGE_NO_PROTECTION, MOD_UNKNOWN);
 
 }
 
-void SP_target_kill(edict_t *self) {
+void SP_target_kill(gentity_t *self) {
 	self->use = target_kill_use;
 	self->svflags = SVF_NOCLIENT;
 }
@@ -2470,16 +2456,16 @@ When targetted sets a cvar to a value.
 "cvar" : name of cvar to set
 "cvarValue" : value to set cvar to
 */
-static USE(target_cvar_use) (edict_t *self, edict_t *other, edict_t *activator) -> void {
+static USE(target_cvar_use) (gentity_t *self, gentity_t *other, gentity_t *activator) -> void {
 	if (!activator || !activator->client)
 		return;
 
 	gi.cvar_set(self->cvar, self->cvarvalue);
 }
 
-void SP_target_cvar(edict_t *ent) {
+void SP_target_cvar(gentity_t *ent) {
 	if (!ent->cvar[0] || !ent->cvarvalue[0]) {
-		G_FreeEdict(ent);
+		G_FreeEntity(ent);
 		return;
 	}
 
@@ -2498,18 +2484,18 @@ Skill levels are:
 2 = Hard
 3 = Nightmare/Hard+
 */
-static USE(target_setskill_use) (edict_t *self, edict_t *other, edict_t *activator) -> void {
+static USE(target_setskill_use) (gentity_t *self, gentity_t *other, gentity_t *activator) -> void {
 	if (!activator || !activator->client)
 		return;
 	
-	int skill_level = clamp(atoi(self->message), 0, 3);
+	int skill_level = clamp(atoi(self->message), 0, 4);
 	gi.cvar_set("skill", G_Fmt("{}", skill_level).data());
 }
 
-void SP_target_setskill(edict_t *ent) {
+void SP_target_setskill(gentity_t *ent) {
 	if (!ent->message[0]) {
 		gi.Com_PrintFmt("{}: No message key set, removing.\n", *ent);
-		G_FreeEdict(ent);
+		G_FreeEntity(ent);
 		return;
 	}
 
@@ -2524,14 +2510,14 @@ The activator is given this many points.
 
 TEAM : also adjust team score
 */
-static USE(target_score_use) (edict_t *self, edict_t *other, edict_t *activator) -> void {
+static USE(target_score_use) (gentity_t *self, gentity_t *other, gentity_t *activator) -> void {
 	if (!activator || !activator->client)
 		return;
 
-	G_AdjustPlayerScore(activator->client, self->count, !!teamplay->integer || self->spawnflags.has(1_spawnflag), self->count);
+	G_AdjustPlayerScore(activator->client, self->count, GT(GT_TDM) || self->spawnflags.has(1_spawnflag), self->count);
 }
 
-void SP_target_score(edict_t *ent) {
+void SP_target_score(gentity_t *ent) {
 	if (!ent->count)
 		ent->count = 1;
 
@@ -2547,12 +2533,12 @@ dmg		default is 120
 speed	default is 600
 */
 
-static USE(use_target_shooter_grenade) (edict_t *self, edict_t *other, edict_t *activator) -> void {
+static USE(use_target_shooter_grenade) (gentity_t *self, gentity_t *other, gentity_t *activator) -> void {
 	fire_grenade(self, self->s.origin, self->movedir, self->dmg, (int)self->speed, 2.5_sec, self->dmg, (crandom_open() * 10.0f), (200 + crandom_open() * 10.0f), true);
 	gi.sound(self, CHAN_VOICE, self->noise_index, 1, ATTN_NORM, 0);
 }
 
-void SP_target_shooter_grenade(edict_t *self) {
+void SP_target_shooter_grenade(gentity_t *self) {
 	self->use = use_target_shooter_grenade;
 	G_SetMovedir(self->s.angles, self->movedir);
 	self->noise_index = gi.soundindex("weapons/grenlf1a.wav");
@@ -2574,12 +2560,12 @@ dmg		default is 120
 speed	default is 600
 */
 
-static USE(use_target_shooter_rocket) (edict_t *self, edict_t *other, edict_t *activator) -> void {
+static USE(use_target_shooter_rocket) (gentity_t *self, gentity_t *other, gentity_t *activator) -> void {
 	fire_rocket(self, self->s.origin, self->movedir, self->dmg, (int)self->speed, self->dmg, self->dmg);
 	gi.sound(self, CHAN_VOICE, self->noise_index, 1, ATTN_NORM, 0);
 }
 
-void SP_target_shooter_rocket(edict_t *self) {
+void SP_target_shooter_rocket(gentity_t *self) {
 	self->use = use_target_shooter_rocket;
 	G_SetMovedir(self->s.angles, self->movedir);
 	self->noise_index = gi.soundindex("weapons/rocklf1a.wav");
@@ -2601,12 +2587,12 @@ dmg			default is 200 in DM, 500 in campaigns
 speed		default is 400
 */
 
-static USE(use_target_shooter_bfg) (edict_t *self, edict_t *other, edict_t *activator) -> void {
+static USE(use_target_shooter_bfg) (gentity_t *self, gentity_t *other, gentity_t *activator) -> void {
 	fire_bfg(self, self->s.origin, self->movedir, self->dmg, (int)self->speed, 1000);
 	gi.sound(self, CHAN_VOICE, self->noise_index, 1, ATTN_NORM, 0);
 }
 
-void SP_target_shooter_bfg(edict_t *self) {
+void SP_target_shooter_bfg(gentity_t *self) {
 	self->use = use_target_shooter_bfg;
 	G_SetMovedir(self->s.angles, self->movedir);
 	self->noise_index = gi.soundindex("makron/bfg_fire.wav");
@@ -2628,12 +2614,12 @@ dmg			default is 90
 speed		default is 600
 */
 
-static USE(use_target_shooter_prox) (edict_t *self, edict_t *other, edict_t *activator) -> void {
+static USE(use_target_shooter_prox) (gentity_t *self, gentity_t *other, gentity_t *activator) -> void {
 	fire_prox(self, self->s.origin, self->movedir, self->dmg, (int)self->speed);
 	gi.sound(self, CHAN_VOICE, self->noise_index, 1, ATTN_NORM, 0);
 }
 
-void SP_target_shooter_prox(edict_t *self) {
+void SP_target_shooter_prox(gentity_t *self) {
 	self->use = use_target_shooter_prox;
 	G_SetMovedir(self->s.angles, self->movedir);
 	self->noise_index = gi.soundindex("weapons/proxlr1a.wav");
@@ -2655,12 +2641,12 @@ dmg			default is 20 in DM and 50 in campaigns
 speed		default is 800
 */
 
-static USE(use_target_shooter_ionripper) (edict_t *self, edict_t *other, edict_t *activator) -> void {
+static USE(use_target_shooter_ionripper) (gentity_t *self, gentity_t *other, gentity_t *activator) -> void {
 	fire_ionripper(self, self->s.origin, self->movedir, self->dmg, (int)self->speed, EF_IONRIPPER);
 	gi.sound(self, CHAN_VOICE, self->noise_index, 1, ATTN_NORM, 0);
 }
 
-void SP_target_shooter_ionripper(edict_t *self) {
+void SP_target_shooter_ionripper(gentity_t *self) {
 	self->use = use_target_shooter_ionripper;
 	G_SetMovedir(self->s.angles, self->movedir);
 	self->noise_index = gi.soundindex("weapons/rippfire.wav");
@@ -2682,12 +2668,12 @@ dmg			default is 80
 speed		default is 725
 */
 
-static USE(use_target_shooter_phalanx) (edict_t *self, edict_t *other, edict_t *activator) -> void {
-	fire_plasma(self, self->s.origin, self->movedir, self->dmg, (int)self->speed, 120, 30);
+static USE(use_target_shooter_phalanx) (gentity_t *self, gentity_t *other, gentity_t *activator) -> void {
+	fire_phalanx(self, self->s.origin, self->movedir, self->dmg, (int)self->speed, 120, 30);
 	gi.sound(self, CHAN_VOICE, self->noise_index, 1, ATTN_NORM, 0);
 }
 
-void SP_target_shooter_phalanx(edict_t *self) {
+void SP_target_shooter_phalanx(gentity_t *self) {
 	self->use = use_target_shooter_phalanx;
 	G_SetMovedir(self->s.angles, self->movedir);
 	self->noise_index = gi.soundindex("weapons/plasshot.wav");
@@ -2709,12 +2695,12 @@ dmg			default is 10
 speed		default is 1150
 */
 
-static USE(use_target_shooter_flechette) (edict_t *self, edict_t *other, edict_t *activator) -> void {
+static USE(use_target_shooter_flechette) (gentity_t *self, gentity_t *other, gentity_t *activator) -> void {
 	fire_flechette(self, self->s.origin, self->movedir, self->dmg, (int)self->speed, 0);
 	gi.sound(self, CHAN_VOICE, self->noise_index, 1, ATTN_NORM, 0);
 }
 
-void SP_target_shooter_flechette(edict_t *self) {
+void SP_target_shooter_flechette(gentity_t *self) {
 	self->use = use_target_shooter_flechette;
 	G_SetMovedir(self->s.angles, self->movedir);
 	self->noise_index = gi.soundindex("weapons/nail1.wav");
