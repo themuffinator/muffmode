@@ -820,15 +820,15 @@ static const std::initializer_list<field_t> entity_fields = {
 		}
 	},
 
-	//muff
-		FIELD_AUTO(gametype),
-		FIELD_AUTO(not_gametype),
-		FIELD_AUTO(notteam),
-		FIELD_AUTO(notfree),
-		FIELD_AUTO(cvar),
-		FIELD_AUTO(cvarvalue),
-	//-muff
-		FIELD_AUTO_NAMED("monster_slots", monsterinfo.monster_slots)
+//muff
+	FIELD_AUTO(gametype),
+	FIELD_AUTO(not_gametype),
+	FIELD_AUTO(notteam),
+	FIELD_AUTO(notfree),
+	FIELD_AUTO(cvar),
+	FIELD_AUTO(cvarvalue),
+//-muff
+	FIELD_AUTO_NAMED("monster_slots", monsterinfo.monster_slots)
 };
 
 #undef AUTO_LOADER_FUNC
@@ -1116,14 +1116,13 @@ static void G_FindTeams() {
 static inline bool G_InhibitEntity(gentity_t *ent) {
 	if (ent->gametype) {
 		const char *s = strstr(ent->gametype, gt_spawn_string[g_gametype->integer]);
-		if (!s) {
+		if (!s)
 			return true;
-		}
-	} else if (ent->not_gametype) {
+	}
+	if (ent->not_gametype) {
 		const char *s = strstr(ent->not_gametype, gt_spawn_string[g_gametype->integer]);
-		if (s) {
+		if (s)
 			return true;
-		}
 	}
 
 	// dm-only
@@ -1301,7 +1300,7 @@ static void PrecacheAssets() {
 }
 
 #define	MAX_READ	0x10000		// read in blocks of 64k
-void FS_Read(void *buffer, int len, FILE *f) {
+static void FS_Read(void *buffer, int len, FILE *f) {
 	int		block, remaining;
 	int		read;
 	byte *buf;
@@ -1751,7 +1750,7 @@ void SpawnEntities(const char *mapname, const char *entities, const char *spawnp
 	}
 
 	if (inhibit)
-		gi.Com_PrintFmt("{}: {} entities inhibited.\n", __FUNCTION__, inhibit);
+		gi.Com_PrintFmt("{} entities inhibited.\n", __FUNCTION__, inhibit);
 
 	// precache start_items
 	PrecacheStartItems();
