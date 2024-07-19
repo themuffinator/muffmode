@@ -274,7 +274,7 @@ bool Pickup_Weapon(gentity_t *ent, gentity_t *other) {
 							ammo->id == IT_AMMO_ROCKETS ||
 							ammo->id == IT_AMMO_SLUGS)
 						count *= 2;
-				} else if (RS(RS_NONE)) {
+				} else if (RS(RS_Q2RE)) {
 					if (ammo->id == IT_AMMO_SLUGS)
 						count *= 2;
 				}
