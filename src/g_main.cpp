@@ -1128,6 +1128,67 @@ static void Monsters_KillAll() {
 	}
 }
 
+static void Entities_ItemTeams_Reset() {
+	gentity_t	*ent;
+	size_t		i;
+
+	gentity_t	*master;
+	int			count, choice;
+
+	for (ent = g_entities + 1, i = 1; i < globals.num_entities; i++, ent++) {
+		if (!ent->inuse)
+			continue;
+
+		if (!ent->item)
+			continue;
+
+		if (!ent->team)
+			continue;
+
+		if (!ent->teammaster)
+			continue;
+
+		master = ent->teammaster;
+
+		ent->svflags |= SVF_NOCLIENT;
+		ent->solid = SOLID_NOT;
+		gi.linkentity(ent);
+
+		for (count = 0, ent = master; ent; ent = ent->chain, count++)
+			;
+
+		choice = irandom(count);
+		for (count = 0, ent = master; count < choice; ent = ent->chain, count++)
+			;
+	}
+	/*
+	for (ent = g_entities + 1, i = 1; i < globals.num_entities; i++, ent++) {
+		if (!ent->inuse)
+			continue;
+
+		if (!ent->team)
+			continue;
+
+		if (!ent->item)
+			continue;
+
+		ent->flags &= ~FL_TEAMSLAVE;
+		ent->chain = ent->teamchain;
+		ent->teamchain = nullptr;
+
+		ent->svflags |= SVF_NOCLIENT;
+		ent->solid = SOLID_NOT;
+
+		if (ent == ent->teammaster) {
+			ent->nextthink = level.time + 10_hz;
+			if (!ent->think)
+				ent->think = RespawnItem;
+		} else
+			ent->nextthink = 0_sec;
+	}
+	*/
+}
+
 /*
 ============
 Entities_Reset
@@ -1182,6 +1243,8 @@ static void Entities_Reset(bool reset_players, bool reset_ghost, bool reset_scor
 
 	Monsters_KillAll();
 
+	Entities_ItemTeams_Reset();
+
 	// reset item spawns and gibs/corpses, remove dropped items and projectiles
 	for (ent = g_entities + 1, i = 1; i < globals.num_entities; i++, ent++) {
 		if (!ent->inuse)
@@ -1214,7 +1277,8 @@ static void Entities_Reset(bool reset_players, bool reset_ghost, bool reset_scor
 						ent->solid = SOLID_NOT;
 
 						ent->nextthink = level.time + gtime_t::from_sec(irandom(30, 60));
-						ent->think = RespawnItem;
+						if (!ent->think)
+							ent->think = RespawnItem;
 					}
 					continue;
 				} else {
@@ -1317,7 +1381,7 @@ void Match_Start() {
 	if (!deathmatch->integer)
 		return;
 
-	level.match_time = level.time;	// +gtime_t::from_min(timelimit->value);
+	level.match_time = level.time;
 	level.overtime = 0_sec;
 
 	const char *s = G_TimeString(timelimit->value ? timelimit->value * 1000 : 0);
