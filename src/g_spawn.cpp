@@ -530,6 +530,21 @@ void ED_CallSpawn(gentity_t *ent) {
 		ent->classname = ITEM_CTF_FLAG_RED;
 	else if (!strcmp(ent->classname, "item_flag_team2"))
 		ent->classname = ITEM_CTF_FLAG_BLUE;
+
+	if (RS(RS_Q1)) {
+		if (!strcmp(ent->classname, "weapon_machinegun"))
+			ent->classname = GetItemByIndex(IT_WEAPON_ETF_RIFLE)->classname;
+		else if (!strcmp(ent->classname, "weapon_chaingun"))
+			ent->classname = GetItemByIndex(IT_WEAPON_PLASMABEAM)->classname;
+		else if (!strcmp(ent->classname, "weapon_railgun"))
+			ent->classname = GetItemByIndex(IT_WEAPON_HYPERBLASTER)->classname;
+		else if (!strcmp(ent->classname, "ammo_slugs"))
+			ent->classname = GetItemByIndex(IT_AMMO_CELLS)->classname;
+		else if (!strcmp(ent->classname, "ammo_bullets"))
+			ent->classname = GetItemByIndex(IT_AMMO_FLECHETTES)->classname;
+		else if (!strcmp(ent->classname, "ammo_grenades"))
+			ent->classname = GetItemByIndex(IT_AMMO_ROCKETS_SMALL)->classname;
+	}
 	// pmm
 
 	SpawnEnt_MapFixes(ent);
