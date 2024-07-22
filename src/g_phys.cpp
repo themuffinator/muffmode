@@ -101,7 +101,8 @@ bool G_RunThink(gentity_t *ent) {
 
 	ent->nextthink = 0_ms;
 	if (!ent->think)
-		gi.Com_Error("nullptr ent->think");
+		//gi.Com_Error("nullptr ent->think");
+		return true;
 	ent->think(ent);
 
 	return false;
@@ -887,7 +888,7 @@ static void G_Physics_Step(gentity_t *ent) {
 
 		if (ent->groundentity)
 			if (!wasonground)
-				if (hitsound)
+				if (hitsound && !(RS(RS_Q1)))
 					ent->s.event = EV_FOOTSTEP;
 	}
 
