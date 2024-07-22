@@ -195,10 +195,15 @@ static const char *ClientSkinOverride(const char *s) {
 //=======================================================================
 // PLAYER CONFIGS
 //=======================================================================
-
+/*
 static void PCfg_WriteConfig(gentity_t *ent) {
+	if (!std::strcmp(ent->client->pers.social_id, "me_a_bot"))
+		return;
+
 	const char *name = G_Fmt("baseq2/pcfg/wtest/{}.cfg", ent->client->pers.social_id).data();
+	char *buffer = nullptr;
 	std::string string;
+	string.clear();
 
 	FILE *f = std::fopen(name, "wb");
 	if (!f)
@@ -209,13 +214,13 @@ static void PCfg_WriteConfig(gentity_t *ent) {
 	string += G_Fmt("show_id {}\n", ent->client->sess.pc.show_id ? 1 : 0).data();
 	string += G_Fmt("show_fragmessages {}\n", ent->client->sess.pc.show_fragmessages ? 1 : 0).data();
 	string += G_Fmt("show_timer {}\n", ent->client->sess.pc.show_timer ? 1 : 0).data();
-	string += G_Fmt("killbeep_num {}\n", ent->client->sess.pc.killbeep_num).data();
+	string += G_Fmt("killbeep_num {}\n", (int)ent->client->sess.pc.killbeep_num).data();
 
-	std::fwrite(string.c_str(), 1, strlen(string.c_str()), f);
+	std::fwrite(buffer, 1, strlen(buffer), f);
 	std::fclose(f);
 	gi.Com_PrintFmt("Player config written to: \"{}\"\n", name);
 }
-
+*/
 static void PCfg_ClientInitPConfig(gentity_t *ent) {
 	bool	file_exists = false;
 	bool	cfg_valid = true;
@@ -669,6 +674,8 @@ static void TossClientItems(gentity_t *self) {
 		else if (!wp->drop)
 			wp = nullptr;
 		else if (RS(RS_Q3A) && wp->id == IT_WEAPON_MACHINEGUN)
+			wp = nullptr;
+		else if (RS(RS_Q1) && wp->id == IT_WEAPON_SHOTGUN)
 			wp = nullptr;
 
 		if (wp) {
@@ -1212,23 +1219,29 @@ void InitClientPersistant(gentity_t *ent, gclient_t *client) {
 				client->pers.max_ammo[AMMO_TESLA] = 5;
 				*/
 				client->pers.inventory[IT_AMMO_SHELLS] = 50;
-				client->pers.inventory[IT_AMMO_BULLETS] = 200;
-				client->pers.inventory[IT_AMMO_GRENADES] = 50;
+				if (!(RS(RS_Q1))) {
+					client->pers.inventory[IT_AMMO_BULLETS] = 200;
+					client->pers.inventory[IT_AMMO_GRENADES] = 50;
+				}
 				client->pers.inventory[IT_AMMO_ROCKETS] = 50;
 				client->pers.inventory[IT_AMMO_CELLS] = 200;
-				client->pers.inventory[IT_AMMO_SLUGS] = 50;
+				if (!(RS(RS_Q1)))
+					client->pers.inventory[IT_AMMO_SLUGS] = 50;
 
 				client->pers.inventory[IT_WEAPON_BLASTER] = 1;
 				client->pers.inventory[IT_WEAPON_SHOTGUN] = 1;
 				if (!(RS(RS_Q3A)))
 					client->pers.inventory[IT_WEAPON_SSHOTGUN] = 1;
-				client->pers.inventory[IT_WEAPON_MACHINEGUN] = 1;
-				client->pers.inventory[IT_WEAPON_CHAINGUN] = 1;
+				if (!(RS(RS_Q1))) {
+					client->pers.inventory[IT_WEAPON_MACHINEGUN] = 1;
+					client->pers.inventory[IT_WEAPON_CHAINGUN] = 1;
+				}
 				client->pers.inventory[IT_WEAPON_GLAUNCHER] = 1;
 				client->pers.inventory[IT_WEAPON_RLAUNCHER] = 1;
 				client->pers.inventory[IT_WEAPON_HYPERBLASTER] = 1;
 				client->pers.inventory[IT_WEAPON_PLASMABEAM] = 1;
-				client->pers.inventory[IT_WEAPON_RAILGUN] = 1;
+				if (!(RS(RS_Q1)))
+					client->pers.inventory[IT_WEAPON_RAILGUN] = 1;
 			} else {
 				if (RS(RS_Q3A)) {
 					client->pers.max_ammo.fill(200);
@@ -1244,6 +1257,20 @@ void InitClientPersistant(gentity_t *ent, gclient_t *client) {
 					client->pers.inventory[IT_WEAPON_CHAINFIST] = 1;
 					client->pers.inventory[IT_WEAPON_MACHINEGUN] = 1;
 					client->pers.inventory[IT_AMMO_BULLETS] = (GT(GT_TDM)) ? 50 : 100;
+				} else if (RS(RS_Q1)) {
+					client->pers.max_ammo.fill(200);
+					client->pers.max_ammo[AMMO_BULLETS] = 200;
+					client->pers.max_ammo[AMMO_SHELLS] = 200;
+					client->pers.max_ammo[AMMO_CELLS] = 200;
+
+					client->pers.max_ammo[AMMO_TRAP] = 200;
+					client->pers.max_ammo[AMMO_FLECHETTES] = 200;
+					client->pers.max_ammo[AMMO_DISRUPTOR] = 200;
+					client->pers.max_ammo[AMMO_TESLA] = 200;
+
+					client->pers.inventory[IT_WEAPON_CHAINFIST] = 1;
+					client->pers.inventory[IT_WEAPON_SHOTGUN] = 1;
+					client->pers.inventory[IT_AMMO_SHELLS] = 10;
 				} else {
 					// fill with 50s, since it's our most common value
 					client->pers.max_ammo.fill(50);
@@ -1320,8 +1347,8 @@ void InitClientPersistant(gentity_t *ent, gclient_t *client) {
 static void InitClientResp(gclient_t *client) {
 	bool showed_help = client->resp.showed_help;
 	team_t team = client->sess.team;
-	gtime_t	team_delay_time = client->resp.team_delay_time;
-	gtime_t	team_join_time = client->resp.team_join_time;
+	//gtime_t	team_delay_time = client->resp.team_delay_time;
+	//gtime_t	team_join_time = client->resp.team_join_time;
 
 	char netname[MAX_NETNAME];
 	Q_strlcpy(netname, client->resp.netname, sizeof(netname));
@@ -1334,8 +1361,8 @@ static void InitClientResp(gclient_t *client) {
 
 	client->resp.entertime = level.time;
 	client->resp.coop_respawn = client->pers;
-	client->resp.team_delay_time = team_delay_time;
-	client->resp.team_join_time = team_join_time;
+	//client->resp.team_delay_time = team_delay_time;
+	//client->resp.team_join_time = team_join_time;
 
 	client->resp.kill_count = 0;
 
@@ -3450,18 +3477,17 @@ bool ClientConnect(gentity_t *ent, char *userinfo, const char *social_id, bool i
 	// count current clients and rank for scoreboard
 	CalculateRanks();
 
-	PCfg_WriteConfig(ent);
-	//PCfg_ClientInitPConfig(ent);
+	//PCfg_WriteConfig(ent);
+	PCfg_ClientInitPConfig(ent);
 
 	memset(&ent->client->mstats, 0, sizeof(ent->client->mstats));
 
 	// [Paril-KEX] force a state update
 	ent->sv.init = false;
 
-
 	gi.WriteByte(svc_stufftext);
-	//gi.WriteString("bind F3 readyup\n");
-	gi.WriteString("say hello\n");
+	gi.WriteString("bind F3 readyup\n");
+	//gi.WriteString("say hello\n");
 	gi.unicast(ent, true);
 
 	return true;
