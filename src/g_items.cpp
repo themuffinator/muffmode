@@ -169,10 +169,10 @@ void fire_doppelganger(gentity_t *ent, const vec3_t &start, const vec3_t &aimdir
 
 //======================================================================
 
-constexpr gtime_t DEFENDER_LIFESPAN		= 30_sec;
-constexpr gtime_t HUNTER_LIFESPAN		= 30_sec;
-constexpr gtime_t VENGEANCE_LIFESPAN	= 30_sec;
-constexpr gtime_t MINIMUM_FLY_TIME		= 15_sec;
+constexpr gtime_t DEFENDER_LIFESPAN		= 10_sec;	//30_sec;
+constexpr gtime_t HUNTER_LIFESPAN		= 10_sec;	//30_sec;
+constexpr gtime_t VENGEANCE_LIFESPAN	= 10_sec;	//30_sec;
+constexpr gtime_t MINIMUM_FLY_TIME		= 10_sec;	//15_sec;
 
 void LookAtKiller(gentity_t *self, gentity_t *inflictor, gentity_t *attacker);
 
@@ -212,8 +212,7 @@ static DIE(sphere_if_idle_die) (gentity_t *self, gentity_t *inflictor, gentity_t
 // *************************
 
 static void sphere_fly(gentity_t *self) {
-	vec3_t dest;
-	vec3_t dir;
+	vec3_t dest, dir;
 
 	if (level.time >= gtime_t::from_sec(self->wait)) {
 		sphere_think_explode(self);
@@ -257,7 +256,7 @@ static void sphere_chase(gentity_t *self, int stupidChase) {
 		dir = dest - self->s.origin;
 		dir.normalize();
 		self->s.angles = vectoangles(dir);
-		self->velocity = dir * 500;
+		self->velocity = dir * 300;	// 500;
 		self->monsterinfo.saved_goal = dest;
 	} else if (!self->monsterinfo.saved_goal) {
 		dir = self->enemy->s.origin - self->s.origin;
@@ -657,7 +656,8 @@ gentity_t *Sphere_Spawn(gentity_t *owner, spawnflags_t spawnflags) {
 	sphere->yaw_speed = 40;
 	sphere->monsterinfo.attack_finished = 0_ms;
 	sphere->spawnflags = spawnflags; // need this for the HUD to recognize sphere
-	sphere->takedamage = false;
+	sphere->takedamage = true;	// false;
+	sphere->health = 20;
 
 	switch ((spawnflags & SF_SPHERE_TYPE).value) {
 	case SF_SPHERE_DEFENDER.value:
@@ -1340,7 +1340,7 @@ THINK(RespawnItem) (gentity_t *ent) -> void {
 		int			count, choice;
 		
 		if (!ent->teammaster)
-			gi.Com_ErrorFmt("{}: bad teammaster", __FUNCTION__);
+			gi.Com_ErrorFmt("{}: {}: bad teammaster", __FUNCTION__, *ent);
 
 		master = ent->teammaster;
 
@@ -1408,7 +1408,7 @@ void SetRespawn(gentity_t *ent, gtime_t delay, bool hide_self) {
 		return;
 
 	// already respawning
-	if (ent->think == RespawnItem && ent->nextthink >= level.time)
+	if (ent->think && ent->nextthink >= level.time)
 		return;
 
 	ent->flags |= FL_RESPAWN;
@@ -1422,11 +1422,12 @@ void SetRespawn(gentity_t *ent, gtime_t delay, bool hide_self) {
 	gtime_t t = 0_sec;
 	if (ent->random) {
 		t += gtime_t::from_ms((crandom() * ent->random) * 1000);
-		if (t < FRAME_TIME_MS) {
+		if (t < FRAME_TIME_MS)
 			t = FRAME_TIME_MS;
-		}
 	}
+
 	ent->nextthink = level.time + delay + t;
+
 	// 4x longer delay in horde
 	if (GT(GT_HORDE))
 		ent->nextthink += delay*3;
@@ -1501,6 +1502,11 @@ static bool Pickup_Powerup(gentity_t *ent, gentity_t *other) {
 
 	other->client->pers.inventory[ent->item->id]++;
 
+	if (g_quadhog->integer && ent->item->id == IT_POWERUP_QUAD) {
+		G_FreeEntity(ent);
+		return true;
+	}
+
 	bool is_dropped_from_death = ent->spawnflags.has(SPAWNFLAG_ITEM_DROPPED_PLAYER) && !ent->spawnflags.has(SPAWNFLAG_ITEM_DROPPED);
 
 	if (IsInstantItemsEnabled() || is_dropped_from_death) {
@@ -1533,18 +1539,12 @@ static bool Pickup_Powerup(gentity_t *ent, gentity_t *other) {
 			ent->item->use(other, ent->item);
 	}
 
-	if (g_quadhog->integer && ent->item->id == IT_POWERUP_QUAD) {
-		//ent->think = nullptr;
-		//ent->nextthink = 0_ms;
-		G_FreeEntity(ent);
-	}
-
 	int count = ent->item->quantity;
 
 	if (deathmatch->integer && (RS(RS_MM) || RS(RS_Q3A)) && !ent->spawnflags.has(SPAWNFLAG_ITEM_DROPPED | SPAWNFLAG_ITEM_DROPPED_PLAYER))
 		count = 120;
 
-	if (!!(!(RS(RS_MM))) && (ent->item->id == IT_POWERUP_PROTECTION || ent->item->id == IT_POWERUP_INVISIBILITY))
+	if (RS(RS_Q2RE) && (ent->item->id == IT_POWERUP_PROTECTION || ent->item->id == IT_POWERUP_INVISIBILITY))
 		count = 300;
 
 	if (!is_dropped_from_death)
@@ -2297,6 +2297,26 @@ item_id_t ArmorIndex(gentity_t *ent) {
 	return IT_NULL;
 }
 
+static bool Pickup_Armor_Q3(gentity_t *ent, gentity_t *other, int32_t base_count) {
+	if (other->client->pers.inventory[IT_ARMOR_COMBAT] >= other->client->pers.max_health * 2)
+		return false;
+
+	if (ent->item->id == IT_ARMOR_SHARD && !ent->count)
+		base_count = 5;
+
+	other->client->pers.inventory[IT_ARMOR_COMBAT] += base_count;
+	if (other->client->pers.inventory[IT_ARMOR_COMBAT] > other->client->pers.max_health * 2)
+		other->client->pers.inventory[IT_ARMOR_COMBAT] = other->client->pers.max_health * 2;
+
+	other->client->pers.inventory[IT_ARMOR_SHARD] = 0;
+	other->client->pers.inventory[IT_ARMOR_JACKET] = 0;
+	other->client->pers.inventory[IT_ARMOR_BODY] = 0;
+
+	SetRespawn(ent, 25_sec);
+
+	return true;
+}
+
 static bool Pickup_Armor(gentity_t *ent, gentity_t *other) {
 	item_id_t			 old_armor_index;
 	const gitem_armor_t *oldinfo;
@@ -2309,27 +2329,10 @@ static bool Pickup_Armor(gentity_t *ent, gentity_t *other) {
 	newinfo = ent->item->armor_info;
 
 	// [Paril-KEX] for g_start_items
-	int32_t base_count = ent->count ? ent->count : newinfo ? newinfo->base_count : 0;
+	int32_t base_count = ent->count ? ent->count : newinfo ? (RS(RS_Q1) ? newinfo->max_count : newinfo->base_count) : 0;
 
-	if (RS(RS_Q3A)) {
-		if (other->client->pers.inventory[IT_ARMOR_COMBAT] >= other->client->pers.max_health * 2)
-			return false;
-
-		if (ent->item->id == IT_ARMOR_SHARD && !ent->count)
-			base_count = 5;
-
-		other->client->pers.inventory[IT_ARMOR_COMBAT] += base_count;
-		if (other->client->pers.inventory[IT_ARMOR_COMBAT] > other->client->pers.max_health * 2)
-			other->client->pers.inventory[IT_ARMOR_COMBAT] = other->client->pers.max_health * 2;
-
-		other->client->pers.inventory[IT_ARMOR_SHARD] = 0;
-		other->client->pers.inventory[IT_ARMOR_JACKET] = 0;
-		other->client->pers.inventory[IT_ARMOR_BODY] = 0;
-
-		SetRespawn(ent, 25_sec);
-
-		return true;
-	}
+	if (RS(RS_Q3A))
+		return Pickup_Armor_Q3(ent, other, base_count);
 
 	old_armor_index = ArmorIndex(other);
 
@@ -2375,6 +2378,9 @@ static bool Pickup_Armor(gentity_t *ent, gentity_t *other) {
 			newcount = other->client->pers.inventory[old_armor_index] + salvagecount;
 			if (newcount > oldinfo->max_count)
 				newcount = oldinfo->max_count;
+
+			if (RS(RS_Q1) && other->client->pers.inventory[old_armor_index] * oldinfo->normal_protection >= newcount * newinfo->normal_protection)
+				return false;
 
 			// if we're already maxed out then we don't need the new armor
 			if (other->client->pers.inventory[old_armor_index] >= newcount)
@@ -2710,11 +2716,10 @@ static THINK(FinishSpawningItem) (gentity_t *ent) -> void {
 	
 		if (ent == ent->teammaster) {
 			ent->nextthink = level.time + 10_hz;
-			ent->think = RespawnItem;
-		} else {
+			if (!ent->think)
+				ent->think = RespawnItem;
+		} else
 			ent->nextthink = 0_sec;
-			ent->think = nullptr;
-		}
 	}
 
 	if (ent->spawnflags.has(SPAWNFLAG_ITEM_NO_TOUCH)) {
@@ -2740,7 +2745,8 @@ static THINK(FinishSpawningItem) (gentity_t *ent) -> void {
 		ent->solid = SOLID_NOT;
 
 		ent->nextthink = level.time + gtime_t::from_sec(r);
-		ent->think = RespawnItem;
+		if (!ent->think)
+			ent->think = RespawnItem;
 		return;
 	}
 
@@ -4474,9 +4480,9 @@ model="models/items/legacyhead/tris.md2"
 		/* world_model_flags */ EF_ROTATE | EF_BOB,
 		/* view_model */ nullptr,
 		/* icon */ "i_fixme",
-		/* use_name */  "Legacy Head",
-		/* pickup_name */  "$item_legacy_head",
-		/* pickup_name_definite */ "$item_legacy_head_def",
+		/* use_name */  "Ranger's Head",
+		/* pickup_name */  "Ranger's Head",
+		/* pickup_name_definite */ "Ranger's Head",
 		/* quantity */ 60,
 		/* ammo */ IT_NULL,
 		/* chain */ IT_NULL,
