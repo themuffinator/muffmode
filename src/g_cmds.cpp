@@ -1655,7 +1655,7 @@ static bool AllowTeamSwitch(gentity_t *ent, team_t desired_team) {
 		return false;
 	}
 
-	if (maxplayers->integer && level.num_playing_clients >= maxplayers->integer) {
+	if (desired_team != TEAM_SPECTATOR && maxplayers->integer && level.num_playing_clients >= maxplayers->integer) {
 		gi.LocClient_Print(ent, PRINT_HIGH, "Maximum player count has been reached.\n");
 		return false; // ignore the request
 	}
