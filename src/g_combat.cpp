@@ -696,13 +696,13 @@ void T_Damage(gentity_t *targ, gentity_t *inflictor, gentity_t *attacker, const 
 	if (!(dflags & DAMAGE_NO_PROTECTION)) {
 		if (targ == attacker && GTF(GTF_ARENA)) {
 			take = 0;
-			save = damage;
+			save = 0;	// damage;
 		}
 
 		// check for protection powerup
 		if (take && client && client->pu_time_protection > level.time) {
 			gi.sound(targ, CHAN_AUX, gi.soundindex("items/protect3.wav"), 1, ATTN_NORM, 0);
-			take = RS(RS_Q2RE) ? 0 : 0.5;
+			take = RS(RS_Q2RE) ? 0 : ceil(take/2);
 		}
 	}
 
@@ -714,7 +714,7 @@ void T_Damage(gentity_t *targ, gentity_t *inflictor, gentity_t *attacker, const 
 	// this option will do damage both to the armor and person. originally for DPU rounds
 	if ((dflags & DAMAGE_DESTROY_ARMOR)) {
 		if (!(targ->flags & FL_GODMODE) && !(dflags & DAMAGE_NO_PROTECTION) &&
-			!(client && client->pu_time_protection > level.time)) {
+				!(client && client->pu_time_protection > level.time)) {
 			take = damage;
 		}
 	}
