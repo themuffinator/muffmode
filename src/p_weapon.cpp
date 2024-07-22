@@ -1282,10 +1282,16 @@ static void Weapon_RocketLauncher_Fire(gentity_t *ent) {
 		speed = 650;
 		break;
 	case RS_Q3A:
-		damage = irandom(100, 120);
+		damage = 100;
 		splash_radius = 120;
 		splash_damage = 120;
 		speed = 900;
+		break;
+	case RS_Q1:
+		damage = irandom(100, 120);
+		splash_radius = 120;
+		splash_damage = 120;
+		speed = 1000;
 		break;
 	default:
 		damage = irandom(100, 120);
