@@ -28,6 +28,7 @@ enum ruleset_t : uint8_t {
 	RS_Q2RE,
 	RS_MM,
 	RS_Q3A,
+	RS_Q1,
 	RS_NUM_RULESETS
 };
 #define RS( x ) game.ruleset == (x)
@@ -36,13 +37,15 @@ constexpr const char *rs_short_name[RS_NUM_RULESETS] = {
 	"",
 	"q2re",
 	"mm",
-	"q3a"
+	"q3a",
+	"q",
 };
 constexpr const char *rs_long_name[RS_NUM_RULESETS] = {
 	"",
-	"Quake II Rerelease",
+	"QUAKE II Rerelease",
 	"Muff Mode",
-	"Quake III Arena style"
+	"QUAKE III Arena style",
+	"QUAKE style",
 };
 
 enum team_t {
@@ -3948,10 +3951,8 @@ inline void ThrowGibs(gentity_t *self, int32_t damage, std::initializer_list<gib
 }
 
 inline bool M_CheckGib(gentity_t *self, const mod_t &mod) {
-	if (self->deadflag) {
-		if (mod.id == MOD_CRUSH)
-			return true;
-	}
+	if (self->deadflag && mod.id == MOD_CRUSH)
+		return true;
 
 	return self->health <= self->gib_health;
 }
