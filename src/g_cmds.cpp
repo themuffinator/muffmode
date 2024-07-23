@@ -2557,12 +2557,12 @@ VoteCommandStore
 */
 void VoteCommandStore(gentity_t *ent) {
 	// start the voting, the caller automatically votes yes
-	level.voteclient = ent->client;
+	level.vote_client = ent->client;
 	level.vote_time = level.time;
 	level.vote_yes = 1;
 	level.vote_no = 0;
 
-	gi.LocBroadcast_Print(PRINT_CENTER, "{} called a vote:\n{}{}\n", level.voteclient->resp.netname, gi.argv(1), (gi.argc() > 2 && strlen(level.vote->args)) ? G_Fmt(" {}", gi.argv(2)).data() : "");
+	gi.LocBroadcast_Print(PRINT_CENTER, "{} called a vote:\n{}{}\n", level.vote_client->resp.netname, gi.argv(1), (gi.argc() > 2 && strlen(level.vote->args)) ? G_Fmt(" {}", gi.argv(2)).data() : "");
 
 	for (auto ec : active_clients())
 		ec->client->pers.voted = 0;
@@ -2577,7 +2577,7 @@ void VoteCommandStore(gentity_t *ent) {
 
 		gi.local_sound(ec, CHAN_AUTO, gi.soundindex("world/fish.wav"), 1, ATTN_NONE, 0);
 
-		if (ec->client == level.voteclient)
+		if (ec->client == level.vote_client)
 			continue;
 
 		if (!ClientIsPlaying(ec->client) && !g_allow_spec_vote->integer)
@@ -2702,7 +2702,7 @@ void G_RevertVote(gclient_t *client) {
 	if (!level.vote_time)
 		return;
 
-	if (!level.voteclient)
+	if (!level.vote_client)
 		return;
 
 	if (client->pers.voted == 1) {
@@ -2967,11 +2967,11 @@ static void Cmd_ForceVote_f(gentity_t *ent) {
 	if (arg[0] == 'y' || arg[0] == 'Y' || arg[0] == '1') {
 		gi.Broadcast_Print(PRINT_HIGH, "[ADMIN]: Passed the vote.\n");
 		level.vote_execute_time = level.time + 3_sec;
-		level.voteclient = nullptr;
+		level.vote_client = nullptr;
 	} else {
 		gi.Broadcast_Print(PRINT_HIGH, "[ADMIN]: Failed the vote.\n");
 		level.vote_time = 0_sec;
-		level.voteclient = nullptr;
+		level.vote_client = nullptr;
 	}
 }
 

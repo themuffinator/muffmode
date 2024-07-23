@@ -1435,7 +1435,7 @@ struct level_locals_t {
 	char		gametype_name[64];
 
 	//voting
-	gclient_t	*voteclient;
+	gclient_t	*vote_client;
 	gtime_t		vote_time;				// level.time vote was called
 	gtime_t		vote_execute_time;		// time the vote is executed
 	int8_t		vote_yes;

@@ -11,7 +11,7 @@ bool Vote_Menu_Active(gentity_t *ent) {
 	if (!level.vote_time)
 		return false;
 
-	if (!level.voteclient)
+	if (!level.vote_client)
 		return false;
 
 	if (ent->client->pers.voted)
@@ -594,7 +594,7 @@ static void G_Menu_Vote_Update(gentity_t *ent) {
 
 	menu_t *entries = ent->client->menu->entries;
 	int i = 2;
-	Q_strlcpy(entries[i].text, G_Fmt("{} called a vote:", level.voteclient->resp.netname).data(), sizeof(entries[i].text));
+	Q_strlcpy(entries[i].text, G_Fmt("{} called a vote:", level.vote_client->resp.netname).data(), sizeof(entries[i].text));
 	
 	i = 4;
 	Q_strlcpy(entries[i].text, G_Fmt("{} {}", level.vote->name, level.vote_arg).data(), sizeof(entries[i].text));

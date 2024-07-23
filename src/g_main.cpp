@@ -2006,7 +2006,7 @@ static void CheckVote(void) {
 	if (!level.vote_time)
 		return;
 
-	if (!level.voteclient)
+	if (!level.vote_client)
 		return;
 
 	if (level.time - level.vote_time >= 30_sec) {
