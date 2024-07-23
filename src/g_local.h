@@ -1435,6 +1435,7 @@ struct level_locals_t {
 	char		gametype_name[64];
 
 	//voting
+	gclient_t	*voteclient;
 	gtime_t		vote_time;				// level.time vote was called
 	gtime_t		vote_execute_time;		// time the vote is executed
 	int8_t		vote_yes;
@@ -2797,6 +2798,8 @@ void CTF_CheckHurtCarrier(gentity_t *targ, gentity_t *attacker);
 // g_menu.cpp
 //
 void G_Menu_Join_Open(gentity_t *ent);
+void G_Menu_Vote_Open(gentity_t *ent);
+bool Vote_Menu_Active(gentity_t *ent);
 
 //
 // g_player.cpp

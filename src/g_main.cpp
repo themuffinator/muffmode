@@ -2006,8 +2006,11 @@ static void CheckVote(void) {
 	if (!level.vote_time)
 		return;
 
+	if (!level.voteclient)
+		return;
+
 	if (level.time - level.vote_time >= 30_sec) {
-		gi.LocBroadcast_Print(PRINT_HIGH, "Vote failed.\n");
+		gi.LocBroadcast_Print(PRINT_HIGH, "Vote timed out.\n");
 	} else {
 		if (level.vote_yes > level.num_voting_clients / 2) {
 			// execute the command, then remove the vote

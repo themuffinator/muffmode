@@ -7,6 +7,19 @@
 
 constexpr const char *BREAKER = "\35\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\37";
 
+bool Vote_Menu_Active(gentity_t *ent) {
+	if (!level.vote_time)
+		return false;
+
+	if (!level.voteclient)
+		return false;
+
+	if (ent->client->pers.voted)
+		return false;
+
+	return true;
+}
+
 static void G_Menu_SetHostName(menu_t *p) {
 	Q_strlcpy(p->text, hostname->string, sizeof(p->text));
 }
@@ -538,77 +551,82 @@ static void G_Menu_CallVote(gentity_t *ent, menu_hnd_t *p) {
 #endif
 /*-----------------------------------------------------------------------*/
 
+static void G_Menu_Vote_Yes(gentity_t *ent, menu_hnd_t *p) {
+	level.vote_yes++;
+	ent->client->pers.voted = 1;
+
+	gi.LocClient_Print(ent, PRINT_HIGH, "Vote cast.\n");
+	P_Menu_Close(ent);
+}
+
+static void G_Menu_Vote_No(gentity_t *ent, menu_hnd_t *p) {
+	level.vote_no++;
+	ent->client->pers.voted = -1;
+
+	gi.LocClient_Print(ent, PRINT_HIGH, "Vote cast.\n");
+	P_Menu_Close(ent);
+}
+
 const menu_t votemenu[] = {
 	{ "", MENU_ALIGN_CENTER, nullptr },
-	{ "", MENU_ALIGN_LEFT, nullptr },
+	{ "", MENU_ALIGN_CENTER, nullptr },
 	{ "Voting Menu", MENU_ALIGN_CENTER, nullptr },	//x called a vote
+	{ "", MENU_ALIGN_CENTER, nullptr },
 	{ "", MENU_ALIGN_CENTER, nullptr },				//vote type, eg: map q2dm1
-	{ "", MENU_ALIGN_LEFT, nullptr },
-	{ "", MENU_ALIGN_LEFT, nullptr },				// GET READY TO VOTE...	/ vote yes
-	{ "", MENU_ALIGN_LEFT, nullptr },				// vote no
-	{ "", MENU_ALIGN_LEFT, nullptr },
-	{ "", MENU_ALIGN_LEFT, nullptr },
-	{ "", MENU_ALIGN_LEFT, nullptr },
-	{ "", MENU_ALIGN_LEFT, nullptr },
-	{ "", MENU_ALIGN_LEFT, nullptr },
-	{ "", MENU_ALIGN_LEFT, nullptr },
-	{ "", MENU_ALIGN_LEFT, nullptr },
-	{ "", MENU_ALIGN_LEFT, nullptr },
-	{ "", MENU_ALIGN_LEFT, nullptr },
-	{ "", MENU_ALIGN_LEFT, nullptr },
-	{ "$g_pc_return", MENU_ALIGN_LEFT, G_Menu_ReturnToMain }
+	{ "", MENU_ALIGN_CENTER, nullptr },
+	{ "", MENU_ALIGN_CENTER, nullptr },
+	{ "", MENU_ALIGN_CENTER, G_Menu_Vote_Yes },		// GET READY TO VOTE...	/ vote yes
+	{ "", MENU_ALIGN_CENTER, G_Menu_Vote_No },		// COUNTDOWN... / vote no
+	{ "", MENU_ALIGN_CENTER, nullptr },
+	{ "", MENU_ALIGN_CENTER, nullptr },
+	{ "", MENU_ALIGN_CENTER, nullptr },
+	{ "", MENU_ALIGN_CENTER, nullptr },
+	{ "", MENU_ALIGN_CENTER, nullptr },
+	{ "", MENU_ALIGN_CENTER, nullptr },
+	{ "", MENU_ALIGN_CENTER, nullptr },
+	{ "", MENU_ALIGN_CENTER, nullptr },
+	{ "", MENU_ALIGN_CENTER, nullptr }
 };
 
 static void G_Menu_Vote_Update(gentity_t *ent) {
-
-	if (!g_matchstats->integer) return;
+	if (!Vote_Menu_Active(ent))
+		return;
 
 	menu_t *entries = ent->client->menu->entries;
-	client_match_stats_t *st = &ent->client->mstats;
-	int i = 0;
-	char value[MAX_INFO_VALUE] = { 0 };
-	gi.Info_ValueForKey(g_entities[1].client->pers.userinfo, "name", value, sizeof(value));
+	int i = 2;
+	Q_strlcpy(entries[i].text, G_Fmt("{} called a vote:", level.voteclient->resp.netname).data(), sizeof(entries[i].text));
+	
+	i = 4;
+	Q_strlcpy(entries[i].text, G_Fmt("{} {}", level.vote->name, level.vote_arg).data(), sizeof(entries[i].text));
 
-	Q_strlcpy(entries[i].text, "Player Stats for Match", sizeof(entries[i].text));
-	i++;
+	if (level.vote_time + 3_sec > level.time) {
+		i = 7;
+		Q_strlcpy(entries[i].text, "GET READY TO VOTE!", sizeof(entries[i].text));
+		entries[i].SelectFunc = nullptr;
 
-	if (value[0]) {
-		Q_strlcpy(entries[i].text, G_Fmt("{}", value).data(), sizeof(entries[i].text));
-		i++;
+		i = 8;
+		int time = (3_sec - level.time - level.vote_time).seconds<int>();
+		Q_strlcpy(entries[i].text, G_Fmt("{}...", time).data(), sizeof(entries[i].text));
+		entries[i].SelectFunc = nullptr;
+		return;
 	}
 
-	Q_strlcpy(entries[i].text, BREAKER, sizeof(entries[i].text));
-	i++;
+	i = 7;
+	Q_strlcpy(entries[i].text, "[ YES ]", sizeof(entries[i].text));
+	entries[i].SelectFunc = G_Menu_Vote_Yes;
+	i = 8;
+	Q_strlcpy(entries[i].text, "[ NO ]", sizeof(entries[i].text));
+	entries[i].SelectFunc = G_Menu_Vote_No;
 
-	Q_strlcpy(entries[i].text, G_Fmt("kills: {}", st->total_kills).data(), sizeof(entries[i].text));
-	i++;
-	Q_strlcpy(entries[i].text, G_Fmt("deaths: {}", st->total_deaths).data(), sizeof(entries[i].text));
-	i++;
-	if (st->total_kills) {
-		float val = st->total_kills > 0 ? ((float)st->total_kills / (float)st->total_deaths) : 0;
-		Q_strlcpy(entries[i].text, G_Fmt("k/d ratio: {:2}", val).data(), sizeof(entries[i].text));
-		i++;
+	int timeout = (30_sec - level.time - level.vote_time).seconds<int>();
+
+	if (timeout < 0) {
+		P_Menu_Close(ent);
+		return;
 	}
-	i++;
-	Q_strlcpy(entries[i].text, G_Fmt("dmg dealt: {}", st->total_dmg_dealt).data(), sizeof(entries[i].text));
-	i++;
-	Q_strlcpy(entries[i].text, G_Fmt("dmg received: {}", st->total_dmg_received).data(), sizeof(entries[i].text));
-	i++;
-	if (st->total_dmg_dealt) {
-		float val = st->total_dmg_dealt ? ((float)st->total_dmg_dealt / (float)st->total_dmg_received) : 0;
-		Q_strlcpy(entries[i].text, G_Fmt("dmg ratio: {:02}", val).data(), sizeof(entries[i].text));
-		i++;
-	}
-	i++;
-	Q_strlcpy(entries[i].text, G_Fmt("shots fired: {}", st->total_shots).data(), sizeof(entries[i].text));
-	i++;
-	Q_strlcpy(entries[i].text, G_Fmt("shots on target: {}", st->total_hits).data(), sizeof(entries[i].text));
-	i++;
-	if (st->total_hits) {
-		int val = st->total_hits ? ((float)st->total_hits / (float)st->total_shots) * 100. : 0;
-		Q_strlcpy(entries[i].text, G_Fmt("total accuracy: {}%", val).data(), sizeof(entries[i].text));
-		i++;
-	}
+
+	i = 16;
+	Q_strlcpy(entries[i].text, G_Fmt("{}", timeout).data(), sizeof(entries[i].text));
 }
 
 void G_Menu_Vote_Open(gentity_t *ent) {
@@ -1204,6 +1222,9 @@ static void G_Menu_Join_Update(gentity_t *ent) {
 }
 
 void G_Menu_Join_Open(gentity_t *ent) {
+	if (Vote_Menu_Active(ent))
+		return;
+
 	if (Teams()) {
 		team_t team = TEAM_SPECTATOR;
 		uint8_t num_red = 0, num_blue = 0;

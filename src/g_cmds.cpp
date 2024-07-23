@@ -777,6 +777,9 @@ static void Cmd_Inven_f(gentity_t *ent) {
 	globals.server_flags &= ~SERVER_FLAG_SLOW_TIME;
 
 	if (deathmatch->integer && ent->client->menu) {
+		if (Vote_Menu_Active(ent))
+			return;
+
 		P_Menu_Close(ent);
 		ent->client->follow_update = true;
 		if (!ent->client->initial_menu_closure) {
@@ -792,6 +795,9 @@ static void Cmd_Inven_f(gentity_t *ent) {
 	}
 
 	if (deathmatch->integer) {
+		if (Vote_Menu_Active(ent))
+			return;
+
 		G_Menu_Join_Open(ent);
 		return;
 	}
@@ -2550,12 +2556,13 @@ VoteCommandStore
 =================
 */
 void VoteCommandStore(gentity_t *ent) {
-	gi.LocBroadcast_Print(PRINT_CENTER, "{} called a vote:\n{}{}\n", ent->client->resp.netname, gi.argv(1), (gi.argc() > 2 && strlen(level.vote->args)) ? G_Fmt(" {}", gi.argv(2)).data() : "");
-
 	// start the voting, the caller automatically votes yes
+	level.voteclient = ent->client;
 	level.vote_time = level.time;
 	level.vote_yes = 1;
 	level.vote_no = 0;
+
+	gi.LocBroadcast_Print(PRINT_CENTER, "{} called a vote:\n{}{}\n", level.voteclient->resp.netname, gi.argv(1), (gi.argc() > 2 && strlen(level.vote->args)) ? G_Fmt(" {}", gi.argv(2)).data() : "");
 
 	for (auto ec : active_clients())
 		ec->client->pers.voted = 0;
@@ -2563,6 +2570,21 @@ void VoteCommandStore(gentity_t *ent) {
 	ent->client->pers.voted = 1;
 
 	ent->client->pers.vote_count++;
+
+	for (auto ec : active_players()) {
+		if (ec->svflags & SVF_BOT)
+			continue;
+
+		gi.local_sound(ec, CHAN_AUTO, gi.soundindex("world/fish.wav"), 1, ATTN_NONE, 0);
+
+		if (ec->client == level.voteclient)
+			continue;
+
+		if (!ClientIsPlaying(ec->client) && !g_allow_spec_vote->integer)
+			continue;
+
+		G_Menu_Vote_Open(ec);
+	}
 }
 
 /*
@@ -2678,6 +2700,9 @@ static void Cmd_Vote_f(gentity_t *ent) {
 
 void G_RevertVote(gclient_t *client) {
 	if (!level.vote_time)
+		return;
+
+	if (!level.voteclient)
 		return;
 
 	if (client->pers.voted == 1) {
@@ -2942,9 +2967,11 @@ static void Cmd_ForceVote_f(gentity_t *ent) {
 	if (arg[0] == 'y' || arg[0] == 'Y' || arg[0] == '1') {
 		gi.Broadcast_Print(PRINT_HIGH, "[ADMIN]: Passed the vote.\n");
 		level.vote_execute_time = level.time + 3_sec;
+		level.voteclient = nullptr;
 	} else {
 		gi.Broadcast_Print(PRINT_HIGH, "[ADMIN]: Failed the vote.\n");
 		level.vote_time = 0_sec;
+		level.voteclient = nullptr;
 	}
 }
 

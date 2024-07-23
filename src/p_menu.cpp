@@ -170,11 +170,11 @@ void P_Menu_Update(gentity_t *ent) {
 		return;
 	}
 
-	if (level.time - ent->client->menutime >= 1_sec) {
+	if (level.time - ent->client->menutime >= 500_ms) {
 		// been a second or more since last update, update now
 		P_Menu_Do_Update(ent);
 		gi.unicast(ent, true);
-		ent->client->menutime = level.time + 1_sec;
+		ent->client->menutime = level.time + 500_ms;
 		ent->client->menudirty = false;
 	}
 
