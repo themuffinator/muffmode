@@ -2575,7 +2575,7 @@ void VoteCommandStore(gentity_t *ent) {
 		if (ec->svflags & SVF_BOT)
 			continue;
 
-		gi.local_sound(ec, CHAN_AUTO, gi.soundindex("world/fish.wav"), 1, ATTN_NONE, 0);
+		gi.local_sound(ec, CHAN_AUTO, gi.soundindex("misc/pc_up.wav"), 1, ATTN_NONE, 0);
 
 		if (ec->client == level.vote_client)
 			continue;
