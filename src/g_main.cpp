@@ -122,6 +122,7 @@ cvar_t *g_dm_force_respawn_time;
 cvar_t *g_dm_instant_items;
 cvar_t *g_dm_intermission_shots;
 cvar_t *g_dm_no_fall_damage;
+cvar_t *g_dm_no_humans_start;
 cvar_t *g_dm_no_quad_drop;
 cvar_t *g_dm_no_quadfire_drop;
 cvar_t *g_dm_no_self_damage;
@@ -968,6 +969,7 @@ static void InitGame() {
 	g_dm_instant_items = gi.cvar("g_dm_instant_items", "1", CVAR_NOFLAGS);
 	g_dm_intermission_shots = gi.cvar("g_dm_intermission_shots", "0", CVAR_NOFLAGS);
 	g_dm_no_fall_damage = gi.cvar("g_dm_no_fall_damage", "0", CVAR_NOFLAGS);
+	g_dm_no_humans_start = gi.cvar("g_dm_no_humans_start", "1", CVAR_NOFLAGS);
 	g_dm_no_quad_drop = gi.cvar("g_dm_no_quad_drop", "0", CVAR_NOFLAGS);
 	g_dm_no_quadfire_drop = gi.cvar("g_dm_no_quadfire_drop", "0", CVAR_NOFLAGS);
 	g_dm_no_self_damage = gi.cvar("g_dm_no_self_damage", "0", CVAR_NOFLAGS);
@@ -1598,7 +1600,7 @@ static bool CheckReady() {
 		return false;
 
 	// start if only bots
-	if (!count_humans && count_bots)
+	if (!count_humans && count_bots && g_dm_no_humans_start->integer)
 		return true;
 
 	// wait if no ready humans
