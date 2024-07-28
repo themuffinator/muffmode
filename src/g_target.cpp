@@ -2460,11 +2460,11 @@ static USE(target_cvar_use) (gentity_t *self, gentity_t *other, gentity_t *activ
 	if (!activator || !activator->client)
 		return;
 
-	gi.cvar_set(self->cvar, self->cvarvalue);
+	gi.cvar_set(st.cvar, st.cvarvalue);
 }
 
 void SP_target_cvar(gentity_t *ent) {
-	if (!ent->cvar[0] || !ent->cvarvalue[0]) {
+	if (!st.cvar[0] || !st.cvarvalue[0]) {
 		G_FreeEntity(ent);
 		return;
 	}

@@ -1418,6 +1418,8 @@ struct level_locals_t {
 	const char	*start_items;
 	// disable grappling hook
 	bool		no_grapple;
+	// disable spawn pads
+	bool		no_dm_spawnpads;
 
 	// saved gravity
 	float		gravity;
@@ -1564,6 +1566,7 @@ struct spawn_temp_t {
 	int fade_end_dist = 384;
 	const char *start_items;
 	int no_grapple = 0;
+	int no_dm_spawnpads = 0;
 	float health_multiplier = 1.0f;
 
 	const char *reinforcements; // [Paril-KEX]
@@ -1575,6 +1578,12 @@ struct spawn_temp_t {
 	inline bool was_key_specified(const char *key) const {
 		return keys_specified.find(key) != keys_specified.end();
 	}
+
+	const char *cvar;
+	const char *cvarvalue;
+
+	const char *author;
+	const char *author2;
 };
 
 enum move_state_t {
@@ -3704,12 +3713,6 @@ struct gentity_t {
 	gvec3_t		origin2;
 
 	bool		skip;
-
-	const char *cvar;
-	const char *cvarvalue;
-
-	const char *author;
-	const char *author2;
 //-muff
 
 	// team for spawn spot

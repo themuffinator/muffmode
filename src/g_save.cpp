@@ -657,6 +657,7 @@ FIELD_AUTO(current_dynamic_poi),
 
 FIELD_LEVEL_STRING(start_items),
 FIELD_AUTO(no_grapple),
+FIELD_AUTO(no_dm_spawnpads),
 FIELD_AUTO(gravity),
 FIELD_AUTO(hub_map),
 FIELD_AUTO(health_bar_entities),

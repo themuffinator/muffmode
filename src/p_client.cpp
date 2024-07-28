@@ -40,7 +40,8 @@ void SP_info_player_deathmatch(gentity_t *self) {
 		return;
 	}
 	if (g_dm_spawnpads->integer > 1 || (g_dm_spawnpads->integer == 1 && ItemSpawnsEnabled() && notGT(GT_HORDE)))
-		SP_misc_teleporter_dest(self);
+		if (!level.no_dm_spawnpads)
+			SP_misc_teleporter_dest(self);
 }
 
 /*QUAKED info_player_team_red (1 0 0) (-16 -16 -24) (16 16 32) x x x x x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
@@ -1101,7 +1102,8 @@ static void Player_GiveStartItems(gentity_t *ent, const char *ptr) {
 		gitem_t *item = FindItemByClassname(item_name);
 
 		if (!item || !item->pickup)
-			gi.Com_ErrorFmt("Invalid g_start_item entry: {}\n", item_name);
+			continue;
+			//gi.Com_ErrorFmt("Invalid g_start_item entry: {}\n", item_name);
 
 		int32_t count = 1;
 
@@ -1307,20 +1309,18 @@ void InitClientPersistant(gentity_t *ent, gclient_t *client) {
 				}
 			}
 
+			if (*g_start_items->string)
+				Player_GiveStartItems(ent, g_start_items->string);
+			if (level.start_items && *level.start_items)
+				Player_GiveStartItems(ent, level.start_items);
+
 			if (!deathmatch->integer || level.match_state < matchst_t::MATCH_IN_PROGRESS)
 				// compass also used for ready status toggling in deathmatch
 				client->pers.inventory[IT_COMPASS] = 1;
 
-			if (*g_start_items->string)
-				Player_GiveStartItems(ent, g_start_items->string);
-
-			if (level.start_items && *level.start_items)
-				Player_GiveStartItems(ent, level.start_items);
-
 			bool give_grapple = (!strcmp(g_allow_grapple->string, "auto")) ?
 				(GTF(GTF_CTF) ? !level.no_grapple : 0) :
 				(g_allow_grapple->integer && !g_grapple_offhand->integer);
-
 			if (give_grapple)
 				client->pers.inventory[IT_WEAPON_GRAPPLE] = 1;
 		}
@@ -2870,7 +2870,7 @@ static void G_SetLevelEntry() {
 		return;
 	// map is a hub map, so we shouldn't bother tracking any of this.
 	// the next map will pick up as the start.
-	else if (level.hub_map)
+	if (level.hub_map)
 		return;
 
 	level_entry_t *found_entry = nullptr;

@@ -740,8 +740,6 @@ static const std::initializer_list<field_t> entity_fields = {
 	FIELD_AUTO(killtarget),
 	FIELD_AUTO(combattarget),
 	FIELD_AUTO(message),
-	FIELD_AUTO(author),
-	FIELD_AUTO(author2),
 	FIELD_AUTO(team),
 	FIELD_AUTO(wait),
 	FIELD_AUTO(delay),
@@ -840,8 +838,6 @@ static const std::initializer_list<field_t> entity_fields = {
 	FIELD_AUTO(not_gametype),
 	FIELD_AUTO(notteam),
 	FIELD_AUTO(notfree),
-	FIELD_AUTO(cvar),
-	FIELD_AUTO(cvarvalue),
 //-muff
 	FIELD_AUTO_NAMED("monster_slots", monsterinfo.monster_slots)
 };
@@ -901,6 +897,7 @@ static const std::initializer_list<temp_field_t> temp_fields = {
 	FIELD_AUTO(fade_end_dist),
 	FIELD_AUTO(start_items),
 	FIELD_AUTO(no_grapple),
+	FIELD_AUTO(no_dm_spawnpads),
 	FIELD_AUTO(health_multiplier),
 
 	FIELD_AUTO(reinforcements),
@@ -908,7 +905,12 @@ static const std::initializer_list<temp_field_t> temp_fields = {
 	FIELD_AUTO(noise_middle),
 	FIELD_AUTO(noise_end),
 
-	FIELD_AUTO(loop_count)
+	FIELD_AUTO(loop_count),
+
+	FIELD_AUTO(cvar),
+	FIELD_AUTO(cvarvalue),
+	FIELD_AUTO(author),
+	FIELD_AUTO(author2)
 };
 // clang-format on
 
@@ -2068,12 +2070,18 @@ void GT_SetLongName(void) {
 /*QUAKED worldspawn (0 0 0) ?
 
 Only used for the world.
-"sky"	environment map name
-"skyaxis"	vector axis for rotating sky
-"skyrotate"	speed of rotation in degrees/second
-"sounds"	music cd track number
-"gravity"	800 is default gravity
-"message"	text to print at user logon
+"sky"				environment map name
+"skyaxis"			vector axis for rotating sky
+"skyrotate"			speed of rotation in degrees/second
+"sounds"			music cd track number
+"gravity"			800 is default gravity
+"message"			text to print at user logon
+"author"			sets level author name
+"author2"			sets another level author name
+"start_items"		give players these items on spawn
+"no_grapple"		disables grappling hook
+"no_dm_spawnpads"	disables spawn pads in deathmatch
+"hub_map"			in campaigns, sets as hub map
 */
 void SP_worldspawn(gentity_t *ent) {
 	Q_strlcpy(level.gamemod_name, G_Fmt("{} v{}", GAMEMOD_TITLE, GAMEMOD_VERSION).data(), sizeof(level.gamemod_name));
@@ -2116,10 +2124,10 @@ void SP_worldspawn(gentity_t *ent) {
 	} else
 		Q_strlcpy(level.level_name, level.mapname, sizeof(level.level_name));
 
-	if (ent->author && ent->author[0])
-		Q_strlcpy(level.author, ent->author, sizeof(level.author));
-	if (ent->author2 && ent->author2[0])
-		Q_strlcpy(level.author2, ent->author2, sizeof(level.author2));
+	if (st.author && st.author[0])
+		Q_strlcpy(level.author, st.author, sizeof(level.author));
+	if (st.author2 && st.author2[0])
+		Q_strlcpy(level.author2, st.author2, sizeof(level.author2));
 
 	if (st.sky && st.sky[0])
 		gi.configstring(CS_SKY, st.sky);
@@ -2165,7 +2173,10 @@ void SP_worldspawn(gentity_t *ent) {
 		level.start_items = st.start_items;
 
 	if (st.no_grapple)
-		level.no_grapple = st.no_grapple;
+		level.no_grapple = true;
+
+	if (st.no_dm_spawnpads)
+		level.no_dm_spawnpads = true;
 
 	gi.configstring(CS_MAXCLIENTS, G_Fmt("{}", game.maxclients).data());
 
