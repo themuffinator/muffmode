@@ -18,6 +18,7 @@ Enhanced HUD info and a number of changable settings.
 3. Download the latest [Muff Mode release](https://github.com/themuffinator/muffmode/releases/tag/latest).
 4. Extract the entire zip to your "Quake 2" folder (not rerelease), allow file replacements (unless you already have Muff Mode, this should only replace the .dll).
 5. Load the game up as normal. A range of configs can be executed to apply settings once a game has been set up.
+6. Once a lobby has been set up, you can execute the included server config vis ``exec muff-sv.cfg``.
 
 ## What's in the Bag?
 Muff Mode includes the game logic, a server config, bot files and some map entity overrides all straight out of the bag!
