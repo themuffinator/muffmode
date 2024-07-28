@@ -2008,15 +2008,16 @@ static void CheckVote(void) {
 
 	if (!level.vote_client)
 		return;
-
+	
 	if (level.time - level.vote_time >= 30_sec) {
 		gi.LocBroadcast_Print(PRINT_HIGH, "Vote timed out.\n");
 	} else {
-		if (level.vote_yes > level.num_voting_clients / 2) {
+		int halfpoint = level.num_voting_clients / 2;
+		if (level.vote_yes > halfpoint) {
 			// execute the command, then remove the vote
 			gi.LocBroadcast_Print(PRINT_HIGH, "Vote passed.\n");
 			level.vote_execute_time = level.time + 3_sec;
-		} else if (level.vote_no >= level.num_voting_clients / 2) {
+		} else if (level.vote_no >= halfpoint) {
 			// same behavior as a timeout
 			gi.LocBroadcast_Print(PRINT_HIGH, "Vote failed.\n");
 		} else {
@@ -2300,6 +2301,7 @@ void CalculateRanks() {
 	level.num_living_blue = 0;
 	level.num_playing_red = 0;
 	level.num_playing_blue = 0;
+	level.num_voting_clients = 0;
 
 	for (auto ec : active_clients()) {
 		cl = ec->client;
@@ -2309,15 +2311,20 @@ void CalculateRanks() {
 		level.sorted_clients[level.num_connected_clients] = ec->client - game.clients;
 		level.num_connected_clients++;
 
-		if (!ClientIsPlaying(cl))
+		if (!ClientIsPlaying(cl)) {
+			if (g_allow_spec_vote->integer)
+				level.num_voting_clients++;
 			continue;
+		}
 
 		level.num_nonspectator_clients++;
 
 		// decide if this should be auto-followed
 		level.num_playing_clients++;
-		if (!(ec->svflags & SVF_BOT) && !cl->sess.is_a_bot)
+		if (!(ec->svflags & SVF_BOT) && !cl->sess.is_a_bot) {
 			level.num_playing_human_clients++;
+			level.num_voting_clients++;
+		}
 		if (level.follow1 == -1)
 			level.follow1 = ec->client - game.clients;
 		else if (level.follow2 == -1)

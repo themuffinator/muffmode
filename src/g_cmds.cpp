@@ -527,6 +527,13 @@ static void Cmd_NoVisible_f(gentity_t *ent) {
 	Cmd_Print_State(ent, ent->flags & FL_NOVISIBLE);
 }
 
+/*
+==================
+Cmd_AlertAll_f
+
+argv(0) alertall
+==================
+*/
 static void Cmd_AlertAll_f(gentity_t *ent) {
 	for (size_t i = 0; i < globals.num_entities; i++) {
 		gentity_t *t = &g_entities[i];
@@ -562,7 +569,7 @@ static void Cmd_Use_f(gentity_t *ent) {
 	item_id_t	index;
 	gitem_t		*it;
 	const char	*s = gi.args();
-	const char *cmd = gi.argv(0);
+	const char	*cmd = gi.argv(0);
 
 	if (!Q_strcasecmp(cmd, "use_index") || !Q_strcasecmp(cmd, "use_index_only")) {
 		it = GetItemByIndex((item_id_t)atoi(s));
@@ -779,7 +786,7 @@ static void Cmd_Inven_f(gentity_t *ent) {
 	if (deathmatch->integer && ent->client->menu) {
 		if (Vote_Menu_Active(ent))
 			return;
-
+		//gi.Client_Print(ent, PRINT_HIGH, "ARGH!\n");
 		P_Menu_Close(ent);
 		ent->client->follow_update = true;
 		if (!ent->client->initial_menu_closure) {
@@ -1078,9 +1085,8 @@ Cmd_Where_f
 =================
 */
 static void Cmd_Where_f(gentity_t *ent) {
-	if (ent == nullptr || ent->client == nullptr) {
+	if (ent == nullptr || ent->client == nullptr)
 		return;
-	}
 
 	const vec3_t &origin = ent->s.origin;
 
@@ -1096,21 +1102,17 @@ Cmd_Clear_AI_Enemy_f
 =================
 */
 static void Cmd_Clear_AI_Enemy_f(gentity_t *ent) {
-	const int numEntities = globals.num_entities;
-	for (int entnum = 1; entnum < numEntities; ++entnum) {
-		gentity_t *entity = &g_entities[entnum];
-		if (!entity->inuse) {
+	for (size_t i = 1; i < globals.num_entities; i++) {
+		gentity_t *entity = &g_entities[i];
+		if (!entity->inuse)
 			continue;
-		}
-
-		if ((entity->svflags & SVF_MONSTER) == 0) {
+		if ((entity->svflags & SVF_MONSTER) == 0)
 			continue;
-		}
 
 		entity->monsterinfo.aiflags |= AI_FORGET_ENEMY;
 	}
 
-	gi.LocClient_Print(ent, PRINT_HIGH, "Cmd_Clear_AI_Enemy: Clear All AI Enemies...\n");
+	gi.LocClient_Print(ent, PRINT_HIGH, "{}: Clear All AI Enemies...\n", __FUNCTION__);
 }
 
 /*
@@ -1123,11 +1125,19 @@ static void Cmd_PutAway_f(gentity_t *ent) {
 	ent->client->showhelp = false;
 	ent->client->showinventory = false;
 
+	gentity_t *e = ent->client->follow_target ? ent->client->follow_target : ent;
+	ent->client->ps.stats[STAT_SHOW_STATUSBAR] = !ClientIsPlaying(e->client) || e->client->eliminated ? 0 : 1;
+
 	globals.server_flags &= ~SERVER_FLAG_SLOW_TIME;
 
-	if (deathmatch->integer && ent->client->menu)
-		P_Menu_Close(ent);
 	ent->client->follow_update = true;
+
+	if (deathmatch->integer && ent->client->menu) {
+		if (Vote_Menu_Active(ent))
+			return;
+		//gi.Client_Print(ent, PRINT_HIGH, "ARGH! 2\n");
+		P_Menu_Close(ent);
+	}
 }
 
 static int PlayerSortByScore(const void *a, const void *b) {
@@ -2043,7 +2053,7 @@ Cmd_Team_f
 =================
 */
 static void Cmd_Team_f(gentity_t *ent) {
-	if (gi.argc() != 2) {
+	if (gi.argc() == 1) {
 		switch (ent->client->sess.team) {
 		case TEAM_SPECTATOR:
 			gi.LocClient_Print(ent, PRINT_HIGH, "You are spectating.\n");
@@ -2053,7 +2063,7 @@ static void Cmd_Team_f(gentity_t *ent) {
 			break;
 		case TEAM_RED:
 		case TEAM_BLUE:
-			gi.LocClient_Print(ent, PRINT_HIGH, "Your team: {}.\n", Teams_TeamName(ent->client->sess.team));
+			gi.LocClient_Print(ent, PRINT_HIGH, "Your team: {}\n", Teams_TeamName(ent->client->sess.team));
 			break;
 		default:
 			break;
@@ -2236,7 +2246,7 @@ static void Cmd_Stats_f(gentity_t *ent) {
 
 static void Cmd_Boot_f(gentity_t *ent) {
 	if (gi.argc() < 2) {
-		gi.LocClient_Print(ent, PRINT_HIGH, "Usage: {} [clientnum]\n", gi.argv(0));
+		gi.LocClient_Print(ent, PRINT_HIGH, "Usage: {} [client name/num]\n", gi.argv(0));
 		return;
 	}
 
@@ -2245,29 +2255,24 @@ static void Cmd_Boot_f(gentity_t *ent) {
 		return;
 	}
 
-	uint32_t i = strtoul(gi.argv(1), nullptr, 10);
-	if (i < 1 || i > game.maxclients) {
+	gentity_t *targ = ClientEntFromString(gi.argv(1));
+
+	if (targ == nullptr) {
 		gi.LocClient_Print(ent, PRINT_HIGH, "Invalid client number.\n");
 		return;
 	}
 
-	gentity_t *targ = g_entities + i;
-	if (!targ->inuse) {
-		gi.LocClient_Print(ent, PRINT_HIGH, "That client number is not connected.\n");
-		return;
-	}
-	
-	if (i == 0) {
+	if (targ == &g_entities[1]) {
 		gi.LocClient_Print(ent, PRINT_HIGH, "You cannot kick the lobby owner.\n");
 		return;
 	}
 	
-	if (game.clients[i].sess.admin && ent != &g_entities[1]) {
+	if (targ->client->sess.admin) {
 		gi.LocClient_Print(ent, PRINT_HIGH, "You cannot kick an admin.\n");
 		return;
 	}
 
-	gi.AddCommandString(G_Fmt("kick {}\n", i - 1).data());
+	gi.AddCommandString(G_Fmt("kick {}\n", targ - g_entities).data());
 }
 
 /*----------------------------------------------------------------*/
@@ -2292,10 +2297,9 @@ static bool Vote_Val_Map(gentity_t *ent) {
 	char *token;
 	const char *mlist = g_map_list->string;
 
-	while (*(token = COM_Parse(&mlist))) {
+	while (*(token = COM_Parse(&mlist)))
 		if (!Q_strcasecmp(token, gi.argv(2)))
 			break;
-	}
 
 	if (!*token) {
 		gi.LocClient_Print(ent, PRINT_HIGH, "Unknown map.\n");
@@ -2327,7 +2331,7 @@ static bool Vote_Val_Gametype(gentity_t *ent) {
 	return true;
 }
 static ruleset_t RS_IndexFromString(const char *in) {
-	for (size_t i = RS_NONE + 1; i < ruleset_t::RS_NUM_RULESETS; i++) {
+	for (size_t i = 1; i < (int)RS_NUM_RULESETS; i++) {
 		if (!strcmp(in, rs_short_name[i]))
 			return (ruleset_t)i;
 		if (!strcmp(in, rs_long_name[i]))
@@ -2338,15 +2342,20 @@ static ruleset_t RS_IndexFromString(const char *in) {
 
 static void Vote_Pass_Ruleset() {
 	ruleset_t rs = RS_IndexFromString(level.vote_arg.data());
-	if (rs == RS_NONE)
+	if (rs == ruleset_t::RS_NONE)
 		return;
 
 	gi.cvar_forceset("g_ruleset", G_Fmt("{}", (int)rs).data());
 }
 
 static bool Vote_Val_Ruleset(gentity_t *ent) {
-	if (RS_IndexFromString(gi.argv(2)) == ruleset_t::RS_NONE) {
+	ruleset_t desired_rs = RS_IndexFromString(gi.argv(2));
+	if (desired_rs == ruleset_t::RS_NONE) {
 		gi.Client_Print(ent, PRINT_HIGH, "Invalid ruleset.\n");
+		return false;
+	}
+	if ((int)desired_rs == g_ruleset->integer) {
+		gi.Client_Print(ent, PRINT_HIGH, "Ruleset currently active.\n");
 		return false;
 	}
 
@@ -2370,15 +2379,15 @@ static bool Vote_Val_ShuffleTeams(gentity_t *ent) {
 }
 
 static void Vote_Pass_Unlagged() {
-	int argi = atoi(level.vote_arg.data());
-
+	int argi = strtoul(level.vote_arg.data(), nullptr, 10);
+	
 	gi.LocBroadcast_Print(PRINT_HIGH, "Lag compensation has been {}.\n", argi ? "ENABLED" : "DISABLED");
 
 	gi.cvar_forceset("g_lag_compensation", argi ? "1" : "0");
 }
 
 static bool Vote_Val_Unlagged(gentity_t *ent) {
-	int arg = atoi(gi.argv(2));
+	int arg = strtoul(gi.argv(2), nullptr, 10);
 	
 	if ((g_lag_compensation->integer && arg)
 			|| (!g_lag_compensation->integer && !arg)) {
@@ -2390,7 +2399,7 @@ static bool Vote_Val_Unlagged(gentity_t *ent) {
 }
 
 static bool Vote_Val_Random(gentity_t *ent) {
-	int arg = atoi(gi.argv(2));
+	int arg = strtoul(gi.argv(2), nullptr, 10);
 
 	if (arg > 100 || arg < 2)
 		return false;
@@ -2408,8 +2417,8 @@ void Vote_Pass_Random() {
 
 void Vote_Pass_Timelimit() {
 	const char *s = level.vote_arg.data();
-	int argi = atoi(s);
-
+	int argi = strtoul(s, nullptr, 10);
+	
 	if (!argi)
 		gi.LocBroadcast_Print(PRINT_HIGH, "Time limit has been DISABLED.\n");
 	else
@@ -2419,9 +2428,9 @@ void Vote_Pass_Timelimit() {
 }
 
 static bool Vote_Val_Timelimit(gentity_t *ent) {
-	int argi = atoi(gi.argv(2));
-
-	if (argi < 0) {
+	int argi = strtoul(gi.argv(2), nullptr, 10);
+	
+	if (argi < 0 || argi > 1440) {
 		gi.LocClient_Print(ent, PRINT_HIGH, "Invalid time limit value.\n");
 		return false;
 	}
@@ -2434,8 +2443,8 @@ static bool Vote_Val_Timelimit(gentity_t *ent) {
 }
 
 void Vote_Pass_Scorelimit() {
-	int argi = atoi(level.vote_arg.data());
-
+	int argi = strtoul(level.vote_arg.data(), nullptr, 10);
+	
 	if (argi)
 		gi.LocBroadcast_Print(PRINT_HIGH, "Score limit has been set to {}.\n", argi);
 	else
@@ -2445,8 +2454,8 @@ void Vote_Pass_Scorelimit() {
 }
 
 static bool Vote_Val_Scorelimit(gentity_t *ent) {
-	int argi = atoi(gi.argv(2));
-
+	int argi = strtoul(gi.argv(2), nullptr, 10);
+	
 	if (argi < 0) {
 		gi.LocClient_Print(ent, PRINT_HIGH, "Invalid score limit value.\n");
 		return false;
@@ -2561,13 +2570,11 @@ void VoteCommandStore(gentity_t *ent) {
 	level.vote_time = level.time;
 	level.vote_yes = 1;
 	level.vote_no = 0;
-
-	gi.LocBroadcast_Print(PRINT_CENTER, "{} called a vote:\n{}{}\n", level.vote_client->resp.netname, gi.argv(1), (gi.argc() > 2 && strlen(level.vote->args)) ? G_Fmt(" {}", gi.argv(2)).data() : "");
+	
+	gi.LocBroadcast_Print(PRINT_CENTER, "{} called a vote:\n{}{}\n", level.vote_client->resp.netname, level.vote->name, level.vote_arg[0] ? G_Fmt(" {}", level.vote_arg).data() : "");
 
 	for (auto ec : active_clients())
-		ec->client->pers.voted = 0;
-
-	ent->client->pers.voted = 1;
+		ec->client->pers.voted = ec == ent ? 1 : 0;
 
 	ent->client->pers.vote_count++;
 
@@ -2583,6 +2590,12 @@ void VoteCommandStore(gentity_t *ent) {
 		if (!ClientIsPlaying(ec->client) && !g_allow_spec_vote->integer)
 			continue;
 
+		ec->client->showinventory = false;
+		ec->client->showhelp = false;
+		ec->client->showscores = false;
+		gentity_t *e = ec->client->follow_target ? ec->client->follow_target : ec;
+		ec->client->ps.stats[STAT_SHOW_STATUSBAR] = !ClientIsPlaying(e->client) ? 0 : 1;
+		P_Menu_Close(ec);
 		G_Menu_Vote_Open(ec);
 	}
 }
@@ -2661,9 +2674,14 @@ Cmd_Vote_f
 static void Cmd_Vote_f(gentity_t *ent) {
 	if (!deathmatch->integer)
 		return;
+
+	if (!ClientIsPlaying(ent->client)) {
+		gi.LocClient_Print(ent, PRINT_HIGH, "Not allowed to vote as spectator.\n");
+		return;
+	}
 	
 	if (gi.argc() < 2) {
-		gi.LocClient_Print(ent, PRINT_HIGH, "Usage: {} [yes/no]\n", gi.argv(0));
+		gi.LocClient_Print(ent, PRINT_HIGH, "Usage: {} [yes/no]\nCasts your vote in current voting session.\n", gi.argv(0));
 		return;
 	}
 
@@ -2674,11 +2692,6 @@ static void Cmd_Vote_f(gentity_t *ent) {
 
 	if (ent->client->pers.voted != 0) {
 		gi.LocClient_Print(ent, PRINT_HIGH, "Vote already cast.\n");
-		return;
-	}
-
-	if (!ClientIsPlaying(ent->client)) {
-		gi.LocClient_Print(ent, PRINT_HIGH, "Not allowed to vote as spectator.\n");
 		return;
 	}
 
@@ -2716,22 +2729,6 @@ void G_RevertVote(gclient_t *client) {
 	}
 }
 
-gentity_t *ClientEntFromString(const char *in) {
-	// check by nick first
-	for (auto ec : active_clients()) {
-		if (!Q_strcasecmp(in, ec->client->resp.netname)) {
-			return ec;
-		}
-	}
-
-	// otherwise check client num
-	size_t num = atoi(in);
-	if (num >= 0 && num < game.maxclients) {
-		return &g_entities[&game.clients[num] - game.clients + 1];
-	}
-	return nullptr;
-}
-
 /*
 =================
 Cmd_Follow_f
@@ -2743,20 +2740,25 @@ static void Cmd_Follow_f(gentity_t *ent) {
 		return;
 	}
 	if (gi.argc() < 2) {
-		gi.LocClient_Print(ent, PRINT_HIGH, "Usage: {} [clientname/clientnum]\n", gi.argv(0));
+		gi.LocClient_Print(ent, PRINT_HIGH, "Usage: {} [client name/num]\nFollows the specified player.", gi.argv(0));
 		return;
 	}
 
 	gentity_t *follow_ent = ClientEntFromString(gi.argv(1));
 
-	if (!follow_ent)
+	if (!follow_ent || !follow_ent->inuse) {
+		gi.Client_Print(ent, PRINT_HIGH, "Invalid client specified.\n");
 		return;
-
-	if (follow_ent->inuse && ClientIsPlaying(follow_ent->client)) {
-		ent->client->follow_target = follow_ent;
-		ent->client->follow_update = true;
-		UpdateChaseCam(ent);
 	}
+
+	if (ClientIsPlaying(follow_ent->client)) {
+		gi.Client_Print(ent, PRINT_HIGH, "Specified client is not playing.\n");
+		return;
+	}
+
+	ent->client->follow_target = follow_ent;
+	ent->client->follow_update = true;
+	UpdateChaseCam(ent);
 }
 
 /*----------------------------------------------------------------*/
@@ -2822,37 +2824,18 @@ Cmd_SetTeam_f
 */
 static void Cmd_SetTeam_f(gentity_t *ent) {
 	if (gi.argc() < 2) {
-		gi.LocClient_Print(ent, PRINT_HIGH, "Usage: {} [playername/num] [team]\n", gi.argv(0));
+		gi.LocClient_Print(ent, PRINT_HIGH, "Usage: {} [client name/num] [team]\n", gi.argv(0));
 		return;
 	}
 
-	char name[MAX_NETNAME];
-	gentity_t *targ = nullptr;
-
-	Q_strlcpy(name, gi.argv(1), sizeof(name));
-
-	// check by nick first
-	for (auto ec : active_clients()) {
-		if (!Q_strcasecmp(name, ec->client->resp.netname)) {
-			targ = ec;
-			break;
-		}
-	}
-
-	// otherwise check client num
-	if (!targ) {
-		size_t num = atoi(gi.argv(1));
-		if (num >= 0 && num < game.maxclients) {
-			targ = &g_entities[&game.clients[num] - game.clients + 1];
-		}
-	}
+	gentity_t *targ = ClientEntFromString(gi.argv(1));
 
 	if (!targ || !targ->inuse || !targ->client) {
 		gi.LocClient_Print(ent, PRINT_HIGH, "Invalid client name or number.\n");
 		return;
 	}
 
-	if (gi.argc() < 3) {
+	if (gi.argc() == 2) {
 		gi.LocClient_Print(ent, PRINT_HIGH, "{} is on {} team.\n", targ->client->resp.netname, gi.argv(0));
 		return;
 	}
@@ -2864,7 +2847,7 @@ static void Cmd_SetTeam_f(gentity_t *ent) {
 	}
 
 	if (targ->client->sess.team == team) {
-		gi.LocClient_Print(ent, PRINT_HIGH, "{} is already on {} team.\n", targ->client->resp.netname, gi.argv(0));
+		gi.LocClient_Print(ent, PRINT_HIGH, "{} is already on {} team.\n", targ->client->resp.netname, Teams_TeamName(team));
 		return;
 	}
 
@@ -2926,7 +2909,7 @@ static void Cmd_EndMatch_f(gentity_t *ent) {
 		gi.LocClient_Print(ent, PRINT_HIGH, "Match has already ended.\n");
 		return;
 	}
-	QueueIntermission("Admin has forced the match to end.", true, false);
+	QueueIntermission("[ADMIN]: Forced match end.", true, false);
 }
 
 /*
@@ -2944,7 +2927,7 @@ static void Cmd_ResetMatch_f(gentity_t *ent) {
 		return;
 	}
 	
-	gi.LocBroadcast_Print(PRINT_HIGH, "[ADMIN]: Match reset.\n");
+	gi.LocBroadcast_Print(PRINT_HIGH, "[ADMIN]: Forced match reset.\n");
 	Match_Reset();
 }
 
@@ -3023,7 +3006,7 @@ static void Cmd_Ruleset_f(gentity_t *ent) {
 
 static void Cmd_SetMap_f(gentity_t *ent) {
 	if (gi.argc() < 2) {
-		gi.LocClient_Print(ent, PRINT_HIGH, "Usage: {} [mapname]\n", gi.argv(0));
+		gi.LocClient_Print(ent, PRINT_HIGH, "Usage: {} [mapname]\nChanges to a map within the map list.", gi.argv(0));
 		return;
 	}
 
@@ -3058,13 +3041,13 @@ static void Cmd_Admin_f(gentity_t *ent) {
 		gi.LocClient_Print(ent, PRINT_HIGH, "Administration is disabled\n");
 		return;
 	}
-
+	
 	if (gi.argc() > 1) {
 		if (ent->client->sess.admin) {
 			gi.Client_Print(ent, PRINT_HIGH, "You already have administrative rights.\n");
 			return;
 		}
-		if (admin_password->string && *admin_password->string && strcmp(admin_password->string, gi.argv(1)) == 0) {
+		if (admin_password->string && *admin_password->string && Q_strcasecmp(admin_password->string, gi.argv(1)) == 0) {
 			if (!ent->client->sess.admin) {
 				ent->client->sess.admin = true;
 				gi.LocBroadcast_Print(PRINT_HIGH, "{} has become an admin.\n", ent->client->resp.netname);
@@ -3338,7 +3321,7 @@ cmds_t client_cmds[] = {
 	{"setmap",			Cmd_SetMap_f,			CF_ADMIN_ONLY | CF_ALLOW_INT | CF_ALLOW_SPEC},
 	{"setteam",			Cmd_SetTeam_f,			CF_ADMIN_ONLY | CF_ALLOW_INT | CF_ALLOW_SPEC},
 	{"shuffle",			Cmd_Shuffle_f,			CF_ADMIN_ONLY | CF_ALLOW_INT | CF_ALLOW_SPEC},
-	{"spawn",			Cmd_Spawn_f,			CF_ADMIN_ONLY | CF_ALLOW_SPEC | CF_CHEAT_PROTECT},
+	{"spawn",			Cmd_Spawn_f,			CF_ADMIN_ONLY | CF_ALLOW_SPEC},
 	{"startmatch",		Cmd_StartMatch_f,		CF_ADMIN_ONLY | CF_ALLOW_INT | CF_ALLOW_SPEC},
 	{"stats",			Cmd_Stats_f,			CF_ALLOW_INT | CF_ALLOW_SPEC},
 	{"target",			Cmd_Target_f,			CF_ALLOW_DEAD | CF_ALLOW_SPEC | CF_CHEAT_PROTECT},

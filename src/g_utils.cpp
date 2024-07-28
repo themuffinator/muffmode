@@ -974,3 +974,22 @@ void TeleportPlayerToRandomSpawnPoint(gentity_t *ent, bool fx) {
 bool InCoopStyle() {
 	return coop->integer || GT(GT_HORDE);
 }
+
+/*
+=================
+ClientEntFromString
+=================
+*/
+gentity_t *ClientEntFromString(const char *in) {
+	// check by nick first
+	for (auto ec : active_clients())
+		if (!strcmp(in, ec->client->resp.netname))
+			return ec;
+
+	// otherwise check client num
+	uint32_t num = strtoul(in, nullptr, 10);
+	if (num >= 0 && num < game.maxclients)
+		return &g_entities[&game.clients[num] - game.clients + 1];
+
+	return nullptr;
+}

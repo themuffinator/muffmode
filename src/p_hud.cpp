@@ -810,6 +810,14 @@ void Cmd_Score_f(gentity_t *ent) {
 	if (level.intermission_time)
 		return;
 
+	if (Vote_Menu_Active(ent)) {
+		ent->client->showinventory = false;
+		ent->client->showhelp = false;
+		gentity_t *e = ent->client->follow_target ? ent->client->follow_target : ent;
+		ent->client->ps.stats[STAT_SHOW_STATUSBAR] = !ClientIsPlaying(e->client) ? 0 : 1;
+		return;
+	}
+
 	ent->client->showinventory = false;
 	ent->client->showhelp = false;
 

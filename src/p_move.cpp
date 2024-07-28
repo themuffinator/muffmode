@@ -231,7 +231,7 @@ static trace_t PM_Trace(const vec3_t &start, const vec3_t &mins, const vec3_t &m
 }
 
 // only here to satisfy pm_trace_t
-inline trace_t PM_Trace_Auto(const vec3_t &start, const vec3_t &mins, const vec3_t &maxs, const vec3_t &end) {
+static inline trace_t PM_Trace_Auto(const vec3_t &start, const vec3_t &mins, const vec3_t &maxs, const vec3_t &end) {
 	return PM_Trace(start, mins, maxs, end);
 }
 

@@ -1915,8 +1915,8 @@ static void G_InitStatusbar() {
 		sb.ifstat(STAT_MINISCORE_FIRST_PIC).xr(-28).yb(-57).stat_string(STAT_SCORELIMIT).endifstat();
 
 		// crosshair id
-		sb.ifstat(STAT_CROSSHAIR_ID_VIEW).xv(122).yb(-168).stat_pname(STAT_CROSSHAIR_ID_VIEW).endifstat();	//112 -58
-		sb.ifstat(STAT_CROSSHAIR_ID_VIEW_COLOR).xv(156).yb(-162).pic(STAT_CROSSHAIR_ID_VIEW_COLOR).endifstat();	//106 -160 //96 -58
+		sb.ifstat(STAT_CROSSHAIR_ID_VIEW).xv(122).yb(-128).stat_pname(STAT_CROSSHAIR_ID_VIEW).endifstat();	//112 -58
+		sb.ifstat(STAT_CROSSHAIR_ID_VIEW_COLOR).xv(156).yb(-118).pic(STAT_CROSSHAIR_ID_VIEW_COLOR).endifstat();	//106 -160 //96 -58
 	}
 
 	gi.configstring(CS_STATUSBAR, sb.sb.str().c_str());

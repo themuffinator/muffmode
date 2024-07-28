@@ -28,8 +28,9 @@ menu_hnd_t *P_Menu_Open(gentity_t *ent, const menu_t *entries, int cur, int num,
 		return nullptr;
 
 	if (ent->client->menu) {
-		gi.Com_Print("Warning: ent already has a menu\n");
-		P_Menu_Close(ent);
+		gi.Com_Print("Warning: client already has a menu.\n");
+		if (!Vote_Menu_Active(ent))
+			P_Menu_Close(ent);
 	}
 
 	hnd = (menu_hnd_t *)gi.TagMalloc(sizeof(*hnd), TAG_LEVEL);
@@ -170,11 +171,11 @@ void P_Menu_Update(gentity_t *ent) {
 		return;
 	}
 
-	if (level.time - ent->client->menutime >= 500_ms) {
+	if (level.time - ent->client->menutime >= 1_sec) {
 		// been a second or more since last update, update now
 		P_Menu_Do_Update(ent);
 		gi.unicast(ent, true);
-		ent->client->menutime = level.time + 500_ms;
+		ent->client->menutime = level.time + 1_sec;
 		ent->client->menudirty = false;
 	}
 

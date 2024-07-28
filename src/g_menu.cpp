@@ -8,7 +8,7 @@
 constexpr const char *BREAKER = "\35\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\37";
 
 bool Vote_Menu_Active(gentity_t *ent) {
-	if (!level.vote_time)
+	if (level.vote_time <= 0_sec)
 		return false;
 
 	if (!level.vote_client)
@@ -369,7 +369,6 @@ static void G_Menu_PMStats(gentity_t *ent, menu_hnd_t *p) {
 }
 
 /*-----------------------------------------------------------------------*/
-#if 0
 static const int cvmenu_map = 3;
 static const int cvmenu_nextmap = 4;
 static const int cvmenu_restart = 5;
@@ -382,20 +381,35 @@ static const int cvmenu_unlagged = 11;
 static const int cvmenu_cointoss = 12;
 static const int cvmenu_random = 13;
 
+void G_Menu_CallVote_Map(gentity_t *ent, menu_hnd_t *p);
+void G_Menu_CallVote_NextMap(gentity_t *ent, menu_hnd_t *p);
+void G_Menu_CallVote_Restart(gentity_t *ent, menu_hnd_t *p);
+void G_Menu_CallVote_GameType(gentity_t *ent, menu_hnd_t *p);
+void G_Menu_CallVote_TimeLimit_Update(gentity_t *ent);
+void G_Menu_CallVote_TimeLimit(gentity_t *ent, menu_hnd_t *p);
+void G_Menu_CallVote_ScoreLimit(gentity_t *ent, menu_hnd_t *p);
+void G_Menu_CallVote_ShuffleTeams(gentity_t *ent, menu_hnd_t *p);
+void G_Menu_CallVote_BalanceTeams(gentity_t *ent, menu_hnd_t *p);
+void G_Menu_CallVote_Unlagged(gentity_t *ent, menu_hnd_t *p);
+void G_Menu_CallVote_Cointoss(gentity_t *ent, menu_hnd_t *p);
+void G_Menu_CallVote_Random(gentity_t *ent, menu_hnd_t *p);
+
+void G_Menu_CallVote_Map_Selection(gentity_t *ent, menu_hnd_t *p);
+
 const menu_t pmcallvotemenu[] = {
 	{ "Call a Vote", MENU_ALIGN_CENTER, nullptr },
 	{ "", MENU_ALIGN_CENTER, nullptr },
-	{ "", MENU_ALIGN_LEFT, nullptr },
-	{ "", MENU_ALIGN_LEFT, nullptr },
-	{ "", MENU_ALIGN_LEFT, nullptr },
-	{ "", MENU_ALIGN_LEFT, nullptr },
-	{ "", MENU_ALIGN_LEFT, nullptr },
-	{ "", MENU_ALIGN_LEFT, nullptr },
-	{ "", MENU_ALIGN_LEFT, nullptr },
-	{ "", MENU_ALIGN_LEFT, nullptr },
-	{ "", MENU_ALIGN_LEFT, nullptr },
-	{ "", MENU_ALIGN_LEFT, nullptr },
-	{ "", MENU_ALIGN_LEFT, nullptr },
+	{ "change map", MENU_ALIGN_LEFT, G_Menu_CallVote_Map },
+	{ "go to next map", MENU_ALIGN_LEFT, G_Menu_CallVote_NextMap },
+	{ "restart match", MENU_ALIGN_LEFT, G_Menu_CallVote_Restart },
+	{ "change gametype", MENU_ALIGN_LEFT, G_Menu_CallVote_GameType },
+	{ "change time limit", MENU_ALIGN_LEFT, G_Menu_CallVote_TimeLimit },
+	{ "change score limit", MENU_ALIGN_LEFT, G_Menu_CallVote_ScoreLimit },
+	{ "shuffle teams", MENU_ALIGN_LEFT, G_Menu_CallVote_ShuffleTeams },
+	{ "balance teams", MENU_ALIGN_LEFT, G_Menu_CallVote_BalanceTeams },
+	{ "lag compensation", MENU_ALIGN_LEFT, G_Menu_CallVote_Unlagged },
+	{ "generate heads/tails", MENU_ALIGN_LEFT, G_Menu_CallVote_Cointoss },
+	{ "generate random number", MENU_ALIGN_LEFT, G_Menu_CallVote_Random },
 	{ "", MENU_ALIGN_LEFT, nullptr },
 	{ "", MENU_ALIGN_LEFT, nullptr },
 	{ "", MENU_ALIGN_LEFT, nullptr },
@@ -406,22 +420,22 @@ const menu_t pmcallvotemenu[] = {
 const menu_t pmcallvotemenu_map[] = {
 	{ "Choose a Map", MENU_ALIGN_CENTER, nullptr },
 	{ "", MENU_ALIGN_CENTER, nullptr },
-	{ "", MENU_ALIGN_LEFT, nullptr },
-	{ "", MENU_ALIGN_LEFT, nullptr },
-	{ "", MENU_ALIGN_LEFT, nullptr },
-	{ "", MENU_ALIGN_LEFT, nullptr },
-	{ "", MENU_ALIGN_LEFT, nullptr },
-	{ "", MENU_ALIGN_LEFT, nullptr },
-	{ "", MENU_ALIGN_LEFT, nullptr },
-	{ "", MENU_ALIGN_LEFT, nullptr },
-	{ "", MENU_ALIGN_LEFT, nullptr },
-	{ "", MENU_ALIGN_LEFT, nullptr },
-	{ "", MENU_ALIGN_LEFT, nullptr },
-	{ "", MENU_ALIGN_LEFT, nullptr },
-	{ "", MENU_ALIGN_LEFT, nullptr },
-	{ "", MENU_ALIGN_LEFT, nullptr },
-	{ "", MENU_ALIGN_LEFT, nullptr },
-	{ "$g_pc_return", MENU_ALIGN_LEFT, G_Menu_ReturnToMain }
+	{ "", MENU_ALIGN_LEFT, G_Menu_CallVote_Map_Selection },
+	{ "", MENU_ALIGN_LEFT, G_Menu_CallVote_Map_Selection },
+	{ "", MENU_ALIGN_LEFT, G_Menu_CallVote_Map_Selection },
+	{ "", MENU_ALIGN_LEFT, G_Menu_CallVote_Map_Selection },
+	{ "", MENU_ALIGN_LEFT, G_Menu_CallVote_Map_Selection },
+	{ "", MENU_ALIGN_LEFT, G_Menu_CallVote_Map_Selection },
+	{ "", MENU_ALIGN_LEFT, G_Menu_CallVote_Map_Selection },
+	{ "", MENU_ALIGN_LEFT, G_Menu_CallVote_Map_Selection },
+	{ "", MENU_ALIGN_LEFT, G_Menu_CallVote_Map_Selection },
+	{ "", MENU_ALIGN_LEFT, G_Menu_CallVote_Map_Selection },
+	{ "", MENU_ALIGN_LEFT, G_Menu_CallVote_Map_Selection },
+	{ "", MENU_ALIGN_LEFT, G_Menu_CallVote_Map_Selection },
+	{ "", MENU_ALIGN_LEFT, G_Menu_CallVote_Map_Selection },
+	{ "", MENU_ALIGN_LEFT, G_Menu_CallVote_Map_Selection },
+	{ "", MENU_ALIGN_LEFT, G_Menu_CallVote_Map_Selection },
+	{ "", MENU_ALIGN_LEFT, G_Menu_CallVote_Map_Selection }
 };
 
 const menu_t pmcallvotemenu_timelimit[] = {
@@ -445,72 +459,117 @@ const menu_t pmcallvotemenu_timelimit[] = {
 	{ "$g_pc_return", MENU_ALIGN_LEFT, G_Menu_ReturnToMain }
 };
 
-static void G_Menu_CallVote_Map(gentity_t *ent, menu_hnd_t *p) {
-	
+void G_Menu_CallVote_Map_Selection(gentity_t *ent, menu_hnd_t *p) {
+
+	vcmds_t *cc = FindVoteCmdByName("map");
+
+	level.vote = cc;
+	level.vote_arg = std::string("q2dm1");	//TODO: store selected map name for use here
+
+	VoteCommandStore(ent);
+	P_Menu_Close(ent);
 }
 
-static void G_Menu_CallVote_NextMap(gentity_t *ent, menu_hnd_t *p) {
+inline std::vector<std::string> str_split(const std::string_view &str, char by) {
+	std::vector<std::string> out;
+	size_t start, end = 0;
+
+	while ((start = str.find_first_not_of(by, end)) != std::string_view::npos) {
+		end = str.find(by, start);
+		out.push_back(std::string{ str.substr(start, end - start) });
+	}
+
+	return out;
+}
+
+static void G_Menu_CallVote_Map_Update(gentity_t *ent) {
+
+	menu_t *entries = ent->client->menu->entries;
+	int i = 2;
+	size_t num = 0;
+
+	auto values = str_split(g_map_list->string, ' ');
+
+	if (!values.size())
+		return;
+
+	for (i = 2; i < 15; i++)
+		entries[i].SelectFunc = nullptr;
+
+	for (num = 0, i = 2; num < values.size(), num < 15; num++, i++) {
+		Q_strlcpy(entries[i].text, values[num].c_str(), sizeof(entries[i].text));
+		entries[i].SelectFunc = G_Menu_CallVote_Map_Selection;
+	}
+}
+
+void G_Menu_CallVote_Map(gentity_t *ent, menu_hnd_t *p) {
+	P_Menu_Close(ent);
+	P_Menu_Open(ent, pmcallvotemenu_map, -1, sizeof(pmcallvotemenu_map) / sizeof(menu_t), nullptr, G_Menu_CallVote_Map_Update);
+}
+
+void G_Menu_CallVote_NextMap(gentity_t *ent, menu_hnd_t *p) {
 	level.vote = FindVoteCmdByName("nextmap");
 	level.vote_arg = nullptr;
 	VoteCommandStore(ent);
 	P_Menu_Close(ent);
 }
 
-static void G_Menu_CallVote_Restart(gentity_t *ent, menu_hnd_t *p) {
+void G_Menu_CallVote_Restart(gentity_t *ent, menu_hnd_t *p) {
 	level.vote = FindVoteCmdByName("restart");
 	level.vote_arg = nullptr;
 	VoteCommandStore(ent);
 	P_Menu_Close(ent);
 }
 
-static void G_Menu_CallVote_GameType(gentity_t *ent, menu_hnd_t *p) {
-	
+void G_Menu_CallVote_GameType(gentity_t *ent, menu_hnd_t *p) {
+
 }
 
-static void G_Menu_CallVote_TimeLimit_Update(gentity_t *ent) {
+void G_Menu_CallVote_TimeLimit_Update(gentity_t *ent) {
 
 	level.vote_arg = nullptr;
 }
 
-static void G_Menu_CallVote_TimeLimit(gentity_t *ent, menu_hnd_t *p) {
-	level.vote = FindVoteCmdByName("timelimit");
-	level.vote_arg = nullptr;
-	VoteCommandStore(ent);
+void G_Menu_CallVote_TimeLimit(gentity_t *ent, menu_hnd_t *p) {
+	//level.vote = FindVoteCmdByName("timelimit");
+	//level.vote_arg = nullptr;
+	//VoteCommandStore(ent);
 	P_Menu_Close(ent);
 	P_Menu_Open(ent, pmcallvotemenu_timelimit, -1, sizeof(pmcallvotemenu_timelimit) / sizeof(menu_t), nullptr, G_Menu_CallVote_TimeLimit_Update);
 }
 
-static void G_Menu_CallVote_ScoreLimit(gentity_t *ent, menu_hnd_t *p) {
+void G_Menu_CallVote_ScoreLimit(gentity_t *ent, menu_hnd_t *p) {
+
 }
 
-static void G_Menu_CallVote_ShuffleTeams(gentity_t *ent, menu_hnd_t *p) {
+void G_Menu_CallVote_ShuffleTeams(gentity_t *ent, menu_hnd_t *p) {
 	level.vote = FindVoteCmdByName("shuffle");
 	level.vote_arg = nullptr;
 	VoteCommandStore(ent);
 	P_Menu_Close(ent);
 }
 
-static void G_Menu_CallVote_BalanceTeams(gentity_t *ent, menu_hnd_t *p) {
+void G_Menu_CallVote_BalanceTeams(gentity_t *ent, menu_hnd_t *p) {
 	level.vote = FindVoteCmdByName("balance");
 	level.vote_arg = nullptr;
 	VoteCommandStore(ent);
 	P_Menu_Close(ent);
-	
+
 }
 
-static void G_Menu_CallVote_Unlagged(gentity_t *ent, menu_hnd_t *p) {
-	
+void G_Menu_CallVote_Unlagged(gentity_t *ent, menu_hnd_t *p) {
+
 }
 
-static void G_Menu_CallVote_Cointoss(gentity_t *ent, menu_hnd_t *p) {
+void G_Menu_CallVote_Cointoss(gentity_t *ent, menu_hnd_t *p) {
 	level.vote = FindVoteCmdByName("cointoss");
 	level.vote_arg = nullptr;
 	VoteCommandStore(ent);
 	P_Menu_Close(ent);
 }
 
-static void G_Menu_CallVote_Random(gentity_t *ent, menu_hnd_t *p) {
-	
+void G_Menu_CallVote_Random(gentity_t *ent, menu_hnd_t *p) {
+
 }
 
 static void G_Menu_CallVote_Update(gentity_t *ent) {
@@ -520,7 +579,7 @@ static void G_Menu_CallVote_Update(gentity_t *ent) {
 	Q_strlcpy(entries[i].text, "Call a Vote", sizeof(entries[i].text));
 	i++;
 	i++;
-
+	/*
 	entries[cvmenu_map].SelectFunc = G_Menu_CallVote_Map;
 	i++;
 	entries[cvmenu_nextmap].SelectFunc = G_Menu_CallVote_NextMap;
@@ -542,13 +601,13 @@ static void G_Menu_CallVote_Update(gentity_t *ent) {
 	entries[cvmenu_cointoss].SelectFunc = G_Menu_CallVote_Cointoss;
 	i++;
 	entries[cvmenu_random].SelectFunc = G_Menu_CallVote_Random;
+	*/
 }
 
 static void G_Menu_CallVote(gentity_t *ent, menu_hnd_t *p) {
 	P_Menu_Close(ent);
 	P_Menu_Open(ent, pmcallvotemenu, -1, sizeof(pmcallvotemenu) / sizeof(menu_t), nullptr, G_Menu_CallVote_Update);
 }
-#endif
 /*-----------------------------------------------------------------------*/
 
 static void G_Menu_Vote_Yes(gentity_t *ent, menu_hnd_t *p) {
@@ -572,25 +631,34 @@ const menu_t votemenu[] = {
 	{ "", MENU_ALIGN_CENTER, nullptr },
 	{ "Voting Menu", MENU_ALIGN_CENTER, nullptr },	//x called a vote
 	{ "", MENU_ALIGN_CENTER, nullptr },
-	{ "", MENU_ALIGN_CENTER, nullptr },				//vote type, eg: map q2dm1
+	{ "none", MENU_ALIGN_CENTER, nullptr },				//vote type, eg: map q2dm1
 	{ "", MENU_ALIGN_CENTER, nullptr },
 	{ "", MENU_ALIGN_CENTER, nullptr },
-	{ "", MENU_ALIGN_CENTER, G_Menu_Vote_Yes },		// GET READY TO VOTE...	/ vote yes
-	{ "", MENU_ALIGN_CENTER, G_Menu_Vote_No },		// COUNTDOWN... / vote no
-	{ "", MENU_ALIGN_CENTER, nullptr },
-	{ "", MENU_ALIGN_CENTER, nullptr },
-	{ "", MENU_ALIGN_CENTER, nullptr },
+	{ "[ YES ]", MENU_ALIGN_CENTER, G_Menu_Vote_Yes },	// GET READY TO VOTE...	/ vote yes
+	{ "[ NO ]", MENU_ALIGN_CENTER, G_Menu_Vote_No },	// COUNTDOWN... / vote no
 	{ "", MENU_ALIGN_CENTER, nullptr },
 	{ "", MENU_ALIGN_CENTER, nullptr },
 	{ "", MENU_ALIGN_CENTER, nullptr },
 	{ "", MENU_ALIGN_CENTER, nullptr },
 	{ "", MENU_ALIGN_CENTER, nullptr },
+	{ "", MENU_ALIGN_CENTER, nullptr },
+	{ "", MENU_ALIGN_CENTER, nullptr },
+	{ "30", MENU_ALIGN_CENTER, nullptr },
 	{ "", MENU_ALIGN_CENTER, nullptr }
 };
 
 static void G_Menu_Vote_Update(gentity_t *ent) {
-	if (!Vote_Menu_Active(ent))
+	if (!Vote_Menu_Active(ent)) {
+		P_Menu_Close(ent);
 		return;
+	}
+
+	int timeout = 30 - (level.time - level.vote_time).seconds<int>();
+
+	if (timeout <= 0) {
+		P_Menu_Close(ent);
+		return;
+	}
 
 	menu_t *entries = ent->client->menu->entries;
 	int i = 2;
@@ -605,7 +673,7 @@ static void G_Menu_Vote_Update(gentity_t *ent) {
 		entries[i].SelectFunc = nullptr;
 
 		i = 8;
-		int time = (3_sec - level.time - level.vote_time).seconds<int>();
+		int time = 3 - (level.time - level.vote_time).seconds<int>();
 		Q_strlcpy(entries[i].text, G_Fmt("{}...", time).data(), sizeof(entries[i].text));
 		entries[i].SelectFunc = nullptr;
 		return;
@@ -617,13 +685,6 @@ static void G_Menu_Vote_Update(gentity_t *ent) {
 	i = 8;
 	Q_strlcpy(entries[i].text, "[ NO ]", sizeof(entries[i].text));
 	entries[i].SelectFunc = G_Menu_Vote_No;
-
-	int timeout = (30_sec - level.time - level.vote_time).seconds<int>();
-
-	if (timeout < 0) {
-		P_Menu_Close(ent);
-		return;
-	}
 
 	i = 16;
 	Q_strlcpy(entries[i].text, G_Fmt("{}", timeout).data(), sizeof(entries[i].text));
@@ -702,8 +763,7 @@ const menu_t teams_join_menu[] = {
 	{ "Match Info", MENU_ALIGN_LEFT, G_Menu_ServerInfo },
 	//{ "Game Rules", MENU_ALIGN_LEFT, G_Menu_GameRules },
 	{ "Player Stats", MENU_ALIGN_LEFT, G_Menu_PMStats },
-	//{ "Call a Vote", MENU_ALIGN_LEFT, G_Menu_CallVote },
-	{ "", MENU_ALIGN_LEFT, nullptr },
+	{ "Call a Vote", MENU_ALIGN_LEFT, G_Menu_CallVote },
 	{ "Admin", MENU_ALIGN_LEFT, nullptr },
 	{ "", MENU_ALIGN_LEFT, nullptr },
 	{ "", MENU_ALIGN_CENTER, nullptr },
@@ -725,8 +785,7 @@ const menu_t free_join_menu[] = {
 	{ "Match Info", MENU_ALIGN_LEFT, G_Menu_ServerInfo },
 	//{ "Game Rules", MENU_ALIGN_LEFT, G_Menu_GameRules },
 	{ "Player Stats", MENU_ALIGN_LEFT, G_Menu_PMStats },
-	//{ "Call a Vote", MENU_ALIGN_LEFT,  G_Menu_CallVote },
-	{ "", MENU_ALIGN_LEFT, nullptr },
+	{ "Call a Vote", MENU_ALIGN_LEFT,  G_Menu_CallVote },
 	{ "Admin", MENU_ALIGN_LEFT, nullptr },
 	{ "", MENU_ALIGN_LEFT, nullptr },
 	{ "", MENU_ALIGN_CENTER, nullptr },

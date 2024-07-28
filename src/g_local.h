@@ -2438,6 +2438,7 @@ bool IsScoringDisabled();
 void BroadcastReadyReminderMessage();
 void TeleportPlayerToRandomSpawnPoint(gentity_t *ent, bool fx);
 bool InCoopStyle();
+gentity_t *ClientEntFromString(const char *in);
 
 //
 // g_spawn.cpp
