@@ -2425,7 +2425,7 @@ void G_PlayerNotifyGoal(gentity_t *player);
 
 const char *Teams_TeamName(team_t team);
 const char *Teams_OtherTeamName(team_t team);
-int Teams_OtherTeamNum(team_t team);
+team_t Teams_OtherTeam(team_t team);
 bool Teams();
 void G_AdjustPlayerScore(gclient_t *cl, int32_t offset, bool adjust_team, int32_t team_offset);
 void Horde_AdjustPlayerScore(gclient_t *cl, int32_t offset);

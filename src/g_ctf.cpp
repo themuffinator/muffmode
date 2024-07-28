@@ -35,8 +35,8 @@ order.
 */
 void CTF_ScoreBonuses(gentity_t *targ, gentity_t *inflictor, gentity_t *attacker) {
 	item_id_t	flag_item, enemy_flag_item;
-	int			otherteam;
-	gentity_t		*flag, *carrier = nullptr;
+	team_t		otherteam;
+	gentity_t	*flag, *carrier = nullptr;
 	const char	*c;
 	vec3_t		v1, v2;
 
@@ -55,7 +55,7 @@ void CTF_ScoreBonuses(gentity_t *targ, gentity_t *inflictor, gentity_t *attacker
 	if (!targ->client || !attacker->client || targ == attacker)
 		return;
 
-	otherteam = Teams_OtherTeamNum(targ->client->sess.team);
+	otherteam = Teams_OtherTeam(targ->client->sess.team);
 	if (otherteam < 0)
 		return; // whoever died isn't on a team
 

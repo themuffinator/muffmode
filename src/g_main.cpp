@@ -2202,9 +2202,8 @@ Adapted from Quake III
 =============
 */
 static bool ScoreIsTied(void) {
-	if (level.num_playing_clients < 2) {
+	if (level.num_playing_clients < 2)
 		return false;
-	}
 
 	if (Teams() && notGT(GT_RR))
 		return level.team_scores[TEAM_RED] == level.team_scores[TEAM_BLUE];
@@ -2846,15 +2845,7 @@ void CheckDMExitRules() {
 			return;
 		}
 	}
-	
-	if (GT(GT_RR)) {
-		if (!level.num_playing_red || level.num_playing_blue) {
-			gclient_t *cl = &game.clients[level.sorted_clients[0]];
-			QueueIntermission(G_Fmt("{} WINS the match!", cl->resp.netname).data(), true, true);
-			return;
-		}
-	}
-	
+
 	if (timelimit->value) {
 		if (!(GTF(GTF_ROUNDS)) || level.round_state == roundst_t::ROUND_ENDED) {
 			if (level.time >= level.match_time + gtime_t::from_min(timelimit->value) + level.overtime) {
@@ -2927,6 +2918,17 @@ void CheckDMExitRules() {
 					}
 				}
 			}
+		}
+	}
+
+	if (GT(GT_RR)) {
+		if (!level.num_playing_red || !level.num_playing_blue) {
+			gclient_t *cl = &game.clients[level.sorted_clients[0]];
+			if (ScoreIsTied())
+				QueueIntermission("MATCH DRAW!", false, false);
+			else
+				QueueIntermission(G_Fmt("{} WINS the match!", cl->resp.netname).data(), false, false);
+			return;
 		}
 	}
 
@@ -3171,6 +3173,9 @@ void ExitLevel() {
 	// for N64 mainly, but if we're directly changing to "victorXXX.pcx" then
 	// end game
 	size_t start_offset = (level.changemap[0] == '*' ? 1 : 0);
+
+	if (GT(GT_RR) && level.num_playing_clients > 1 && (!level.num_playing_red || !level.num_playing_blue))
+		TeamShuffle();
 
 	if (strlen(level.changemap) > (6 + start_offset) &&
 		!Q_strncasecmp(level.changemap + start_offset, "victor", 6) &&

@@ -563,14 +563,14 @@ const char *Teams_OtherTeamName(team_t team) {
 	return "UNKNOWN";
 }
 
-int Teams_OtherTeamNum(team_t team) {
+team_t Teams_OtherTeam(team_t team) {
 	switch (team) {
 	case TEAM_RED:
 		return TEAM_BLUE;
 	case TEAM_BLUE:
 		return TEAM_RED;
 	}
-	return -1; // invalid value
+	return TEAM_SPECTATOR; // invalid value
 }
 
 constexpr const char *TEAM_RED_SKIN = "ctf_r";

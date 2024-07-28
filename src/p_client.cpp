@@ -879,11 +879,6 @@ DIE(player_die) (gentity_t *self, gentity_t *inflictor, gentity_t *attacker, int
 
 	self->maxs[2] = -8;
 
-	if (GT(GT_RR) && level.match_state == matchst_t::MATCH_IN_PROGRESS) {
-		self->client->sess.team = self->client->sess.team == TEAM_RED ? TEAM_BLUE : self->client->sess.team == TEAM_BLUE ? TEAM_RED : TEAM_SPECTATOR;
-		G_AssignPlayerSkin(self, self->client->pers.skin);
-	}
-
 	if (attacker && attacker->client && level.match_state == matchst_t::MATCH_IN_PROGRESS) {
 		if (attacker == self || mod.friendly_fire) {
 			if (!mod.no_point_loss)
@@ -2255,6 +2250,11 @@ void ClientRespawn(gentity_t *ent) {
 		if (ClientIsPlaying(ent->client))
 			CopyToBodyQue(ent);
 		ent->svflags &= ~SVF_NOCLIENT;
+
+		if (GT(GT_RR) && level.match_state == matchst_t::MATCH_IN_PROGRESS) {
+			ent->client->sess.team = Teams_OtherTeam(ent->client->sess.team);
+			G_AssignPlayerSkin(ent, ent->client->pers.skin);
+		}
 
 		ClientSpawn(ent);
 		G_PostRespawn(ent);
