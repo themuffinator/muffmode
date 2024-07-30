@@ -593,7 +593,7 @@ static void ClientObituary(gentity_t *self, gentity_t *inflictor, gentity_t *att
 			if (level.match_state == matchst_t::MATCH_WARMUP_READYUP) {
 				BroadcastReadyReminderMessage();
 			} else {
-				if (GTF(GTF_ARENA) && level.round_state == roundst_t::ROUND_IN_PROGRESS) {
+				if (GTF(GTF_ROUNDS) && GTF(GTF_ELIMINATION) && level.round_state == roundst_t::ROUND_IN_PROGRESS) {
 					gi.LocClient_Print(self, PRINT_CENTER, "You were fragged by {}\nYou will respawn next round.", attacker->client->resp.netname);
 				} else if (GT(GT_FREEZE) && level.round_state == roundst_t::ROUND_IN_PROGRESS) {
 					bool last_standing = true;
@@ -2542,7 +2542,7 @@ void ClientSpawn(gentity_t *ent) {
 	client_session_t		sess;
 	client_match_stats_t	mstats = { 0 };
 
-	if (GTF(GTF_ROUNDS) && level.match_state == matchst_t::MATCH_IN_PROGRESS && notGT(GT_HORDE))
+	if (GTF(GTF_ROUNDS) && GTF(GTF_ELIMINATION) && level.match_state == matchst_t::MATCH_IN_PROGRESS && notGT(GT_HORDE))
 		if (level.round_state == roundst_t::ROUND_IN_PROGRESS || level.round_state == roundst_t::ROUND_ENDED)
 			ClientSetEliminated(ent);
 	bool eliminated = ent->client->eliminated;

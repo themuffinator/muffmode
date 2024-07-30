@@ -112,6 +112,7 @@ cvar_t *g_debug_monster_paths;
 cvar_t *g_dedicated;
 cvar_t *g_disable_player_collision;
 cvar_t *g_dm_allow_exit;
+cvar_t *g_dm_allow_no_humans;
 cvar_t *g_dm_auto_join;
 cvar_t *g_dm_do_readyup;
 cvar_t *g_dm_do_warmup;
@@ -122,7 +123,6 @@ cvar_t *g_dm_force_respawn_time;
 cvar_t *g_dm_instant_items;
 cvar_t *g_dm_intermission_shots;
 cvar_t *g_dm_no_fall_damage;
-cvar_t *g_dm_no_humans_start;
 cvar_t *g_dm_no_quad_drop;
 cvar_t *g_dm_no_quadfire_drop;
 cvar_t *g_dm_no_self_damage;
@@ -258,11 +258,11 @@ int _gt[] = {
 	/* GT_DUEL */ 0,
 	/* GT_TDM */ GTF_TEAMS,
 	/* GT_CTF */ GTF_TEAMS | GTF_CTF,
-	/* GT_CA */ GTF_TEAMS | GTF_ARENA | GTF_ROUNDS,
-	/* GT_FREEZE */ GTF_TEAMS,
-	/* GT_STRIKE */ GTF_TEAMS | GTF_ARENA | GTF_ROUNDS | GTF_CTF,
-	/* GT_RR */ GTF_TEAMS | GTF_ARENA,
-	/* GT_LMS */ 0,
+	/* GT_CA */ GTF_TEAMS | GTF_ARENA | GTF_ROUNDS | GTF_ELIMINATION,
+	/* GT_FREEZE */ GTF_TEAMS | GTF_ELIMINATION,
+	/* GT_STRIKE */ GTF_TEAMS | GTF_ARENA | GTF_ROUNDS | GTF_CTF | GTF_ELIMINATION,
+	/* GT_RR */ GTF_TEAMS | GTF_ROUNDS | GTF_ARENA,
+	/* GT_LMS */ GTF_ELIMINATION,
 	/* GT_HORDE */ GTF_ROUNDS
 };
 
@@ -959,6 +959,7 @@ static void InitGame() {
 	g_damage_scale = gi.cvar("g_damage_scale", "1", CVAR_NOFLAGS);
 	g_disable_player_collision = gi.cvar("g_disable_player_collision", "0", CVAR_NOFLAGS);
 	g_dm_allow_exit = gi.cvar("g_dm_allow_exit", "0", CVAR_NOFLAGS);
+	g_dm_allow_no_humans = gi.cvar("g_dm_allow_no_humans", "1", CVAR_NOFLAGS);
 	g_dm_auto_join = gi.cvar("g_dm_auto_join", "1", CVAR_NOFLAGS);
 	g_dm_do_readyup = gi.cvar("g_dm_do_readyup", "0", CVAR_NOFLAGS);
 	g_dm_do_warmup = gi.cvar("g_dm_do_warmup", "1", CVAR_NOFLAGS);
@@ -969,7 +970,6 @@ static void InitGame() {
 	g_dm_instant_items = gi.cvar("g_dm_instant_items", "1", CVAR_NOFLAGS);
 	g_dm_intermission_shots = gi.cvar("g_dm_intermission_shots", "0", CVAR_NOFLAGS);
 	g_dm_no_fall_damage = gi.cvar("g_dm_no_fall_damage", "0", CVAR_NOFLAGS);
-	g_dm_no_humans_start = gi.cvar("g_dm_no_humans_start", "1", CVAR_NOFLAGS);
 	g_dm_no_quad_drop = gi.cvar("g_dm_no_quad_drop", "0", CVAR_NOFLAGS);
 	g_dm_no_quadfire_drop = gi.cvar("g_dm_no_quadfire_drop", "0", CVAR_NOFLAGS);
 	g_dm_no_self_damage = gi.cvar("g_dm_no_self_damage", "0", CVAR_NOFLAGS);
@@ -1301,7 +1301,66 @@ static void Entities_Reset(bool reset_players, bool reset_ghost, bool reset_scor
 		}
 	}
 }
+#if 0
+static int SortRoundScores(const void *a, const void *b) {
+	gclient_t *ca, *cb;
 
+	ca = &game.clients[*(int *)a];
+	cb = &game.clients[*(int *)b];
+
+	// sort special clients last
+	if (ca->sess.spectator_client < 0)
+		return 1;
+	if (cb->sess.spectator_client < 0)
+		return -1;
+
+	// then connecting clients
+	if (!ca->pers.connected)
+		return 1;
+	if (!cb->pers.connected)
+		return -1;
+
+	// then spectators
+	if (!ClientIsPlaying(ca) && !ClientIsPlaying(cb)) {
+		if (ca->sess.duel_queued && cb->sess.duel_queued) {
+			if (ca->resp.team_join_time > cb->resp.team_join_time)
+				return -1;
+			if (ca->resp.team_join_time < cb->resp.team_join_time)
+				return 1;
+		}
+		if (ca->sess.duel_queued)
+			return -1;
+		if (cb->sess.duel_queued)
+			return 1;
+		if (ca->resp.team_join_time > cb->resp.team_join_time)
+			return -1;
+		if (ca->resp.team_join_time < cb->resp.team_join_time)
+			return 1;
+		return 0;
+	}
+	if (!ClientIsPlaying(ca))
+		return 1;
+	if (!ClientIsPlaying(cb))
+		return -1;
+
+	// then sort by score
+	if (ca->resp.score - ca->resp.old_score > cb->resp.score - cb->resp.old_score)
+		return -1;
+	if (ca->resp.score - ca->resp.old_score < cb->resp.score - cb->resp.old_score)
+		return 1;
+
+	return 0;
+}
+
+gclient_t *Round_SaveOldPlayerScore() {
+	gclient_t *cl = nullptr;
+	int high = 0;
+	for (auto ec : active_clients()) {
+
+		ec->client->resp.old_score = ec->client->resp.score;
+	}
+}
+#endif
 /*
 =============
 Round_StartNew
@@ -1344,7 +1403,10 @@ static bool Round_StartNew() {
 		else
 			round_num = level.round_number + 1;
 
-		gi.LocBroadcast_Print(PRINT_CENTER, "{} {}\nBegins in...", horde ? "Wave" : "Round", round_num);
+		if (GT(GT_RR) && roundlimit->integer) {
+			gi.LocBroadcast_Print(PRINT_CENTER, "{} {} of {}\nBegins in...", horde ? "Wave" : "Round", round_num, roundlimit->integer);
+		} else
+			gi.LocBroadcast_Print(PRINT_CENTER, "{} {}\nBegins in...", horde ? "Wave" : "Round", round_num);
 	}
 
 	return true;
@@ -1600,7 +1662,7 @@ static bool CheckReady() {
 		return false;
 
 	// start if only bots
-	if (!count_humans && count_bots && g_dm_no_humans_start->integer)
+	if (!count_humans && count_bots && g_dm_allow_no_humans->integer)
 		return true;
 
 	// wait if no ready humans
@@ -1630,6 +1692,10 @@ static void CheckDMRoundState(void) {
 	if (level.round_state == roundst_t::ROUND_NONE || level.round_state == roundst_t::ROUND_ENDED) {
 		if (level.round_state_timer > level.time)
 			return;
+
+		if (GT(GT_RR) && level.round_state == roundst_t::ROUND_ENDED) {
+			TeamShuffle();
+		}
 
 		Round_StartNew();
 		return;
@@ -1743,6 +1809,23 @@ static void CheckDMRoundState(void) {
 				return;
 			}
 			break;
+
+		case GT_RR:
+			if (!level.num_playing_red || !level.num_playing_blue) {
+				gclient_t *cl = &game.clients[level.sorted_clients[0]];
+
+				gi.Broadcast_Print(PRINT_CENTER, "Round Ends!\n");
+
+				gi.positioned_sound(world->s.origin, world, CHAN_AUTO | CHAN_RELIABLE, gi.soundindex("ctf/flagcap.wav"), 1, ATTN_NONE, 0);
+
+				if (level.round_number + 1 > roundlimit->integer) {
+					QueueIntermission("MATCH ENDED", false, false);
+				} else
+					Round_End();
+				return;
+			}
+			break;
+
 		}
 
 		// hit the round time limit, check any other winning conditions
@@ -1912,6 +1995,9 @@ static void CheckDMWarmupState(void) {
 	} else if (level.num_playing_clients < min_players) {
 		not_enough = true;
 	}
+
+	if (!g_dm_allow_no_humans->integer && !level.num_playing_human_clients)
+		not_enough = true;
 
 	if (not_enough || teams_imba) {
 		if (level.match_state <= matchst_t::MATCH_COUNTDOWN) {
@@ -2815,9 +2901,32 @@ void CheckDMExitRules() {
 	
 	if (level.time - level.match_time <= FRAME_TIME_MS)
 		return;
+
+	if (GT(GT_HORDE)) {
+		if ((level.total_monsters - level.killed_monsters) >= 100) {
+			gi.Broadcast_Print(PRINT_CENTER, "DEFEATED!");
+			QueueIntermission("OVERRUN BY MONSTERS!", true, false);
+			return;
+		}
+	}
+
+	if (GTF(GTF_ROUNDS) && level.round_state != roundst_t::ROUND_ENDED)
+		return;
+
+	if (GT(GT_HORDE)) {
+		if (roundlimit->integer > 0 && level.round_number >= roundlimit->integer) {
+			QueueIntermission(G_Fmt("{} WINS with a final score of {}.", game.clients[level.sorted_clients[0]].resp.netname, game.clients[level.sorted_clients[0]].resp.score).data(), false, false);
+			return;
+		}
+	}
+
+	if (!g_dm_allow_no_humans->integer && !level.num_playing_human_clients) {
+		QueueIntermission("No human players remaining.", true, false);
+		return;
+	}
 	
 	if (minplayers->integer > 0 && level.num_playing_clients < minplayers->integer) {
-		QueueIntermission("Not enough players remaining.", true, false);	// true);
+		QueueIntermission("Not enough players remaining.", true, false);
 		return;
 	}
 
@@ -2830,18 +2939,6 @@ void CheckDMExitRules() {
 			} else {
 				QueueIntermission("Teams are imbalanced.", true, true);
 			}
-			return;
-		}
-	}
-
-	if (GT(GT_HORDE)) {
-		if ((level.total_monsters - level.killed_monsters) >= 120) {
-			gi.Broadcast_Print(PRINT_CENTER, "DEFEATED!");
-			QueueIntermission("OVERRUN BY MONSTERS!", true, false);
-			return;
-		}
-		if (roundlimit->integer > 0 && level.round_number >= roundlimit->integer) {
-			QueueIntermission(G_Fmt("{} WINS with a final score of {}.", game.clients[level.sorted_clients[0]].resp.netname, game.clients[level.sorted_clients[0]].resp.score).data(), false, false);
 			return;
 		}
 	}
@@ -2918,17 +3015,6 @@ void CheckDMExitRules() {
 					}
 				}
 			}
-		}
-	}
-
-	if (GT(GT_RR)) {
-		if (!level.num_playing_red || !level.num_playing_blue) {
-			gclient_t *cl = &game.clients[level.sorted_clients[0]];
-			if (ScoreIsTied())
-				QueueIntermission("MATCH DRAW!", false, false);
-			else
-				QueueIntermission(G_Fmt("{} WINS the match!", cl->resp.netname).data(), false, false);
-			return;
 		}
 	}
 

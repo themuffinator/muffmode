@@ -78,7 +78,8 @@ enum gtf_t {
 	GTF_TEAMS	= 0x01,
 	GTF_CTF		= 0x02,
 	GTF_ARENA	= 0x04,
-	GTF_ROUNDS	= 0x08
+	GTF_ROUNDS	= 0x08,
+	GTF_ELIMINATION	= 0x10,
 };
 
 extern int _gt[GT_NUM_GAMETYPES];
@@ -2186,6 +2187,7 @@ extern cvar_t *g_debug_monster_paths;
 extern cvar_t *g_dedicated;
 extern cvar_t *g_disable_player_collision;
 extern cvar_t *g_dm_allow_exit;
+extern cvar_t *g_dm_allow_no_humans;
 extern cvar_t *g_dm_auto_join;
 extern cvar_t *g_dm_do_readyup;
 extern cvar_t *g_dm_do_warmup;
@@ -2196,7 +2198,6 @@ extern cvar_t *g_dm_force_respawn_time;
 extern cvar_t *g_dm_instant_items;
 extern cvar_t *g_dm_intermission_shots;
 extern cvar_t *g_dm_no_fall_damage;
-extern cvar_t *g_dm_no_humans_start;
 extern cvar_t *g_dm_no_quad_drop;
 extern cvar_t *g_dm_no_quadfire_drop;
 extern cvar_t *g_dm_no_self_damage;
@@ -3212,6 +3213,7 @@ struct client_respawn_t {
 	client_persistant_t coop_respawn; // what to set client->pers to on a respawn
 	gtime_t				entertime;	  // level.time the client entered the game
 	int32_t				score;		  // frags, etc
+	int32_t				old_score;		// track changes in score
 	vec3_t				cmd_angles;	  // angles sent over in the last command
 
 	bool				spectator; // client is a spectator
