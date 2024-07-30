@@ -1885,8 +1885,6 @@ bool TeamShuffle() {
 		join_red ^= true;
 		setteam = join_red ? TEAM_RED : TEAM_BLUE;
 	}
-	Match_Reset();
-	gi.LocBroadcast_Print(PRINT_HIGH, "Teams have been shuffled.\n");
 
 	return true;
 }
@@ -2369,6 +2367,8 @@ void Vote_Pass_NextMap() {
 
 void Vote_Pass_ShuffleTeams() {
 	TeamShuffle();
+	Match_Reset();
+	gi.LocBroadcast_Print(PRINT_HIGH, "Teams have been shuffled.\n");
 }
 
 static bool Vote_Val_ShuffleTeams(gentity_t *ent) {
@@ -2868,6 +2868,7 @@ Cmd_Shuffle_f
 static void Cmd_Shuffle_f(gentity_t *ent) {
 	gi.Broadcast_Print(PRINT_HIGH, "[ADMIN]: Forced team shuffle.\n");
 	TeamShuffle();
+	Match_Reset();
 }
 
 /*
