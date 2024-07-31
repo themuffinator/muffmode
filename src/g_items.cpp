@@ -2745,8 +2745,7 @@ static THINK(FinishSpawningItem) (gentity_t *ent) -> void {
 		ent->solid = SOLID_NOT;
 
 		ent->nextthink = level.time + gtime_t::from_sec(r);
-		if (!ent->think)
-			ent->think = RespawnItem;
+		ent->think = RespawnItem;
 		return;
 	}
 
