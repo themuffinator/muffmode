@@ -48,6 +48,26 @@ constexpr const char *rs_long_name[RS_NUM_RULESETS] = {
 	"QUAKE style",
 };
 
+constexpr const char *stock_maps[] = {
+	"badlands", "base1", "base2", "base3", "base64", "biggun", "boss1", "boss2", "bunk1", "city1", "city2", "city3", "city64", "command", "cool1",
+	"e3/bunk_e3", "e3/fact_e3", "e3/jail_e3", "e3/jail4_e3", "e3/lab_e3", "e3/mine_e3", "e3/space_e3", "e3/ware1a_e3", "e3/ware2_e3", "e3/waste_e3",
+	"ec/base_ec", "ec/base3_ec", "ec/command_ec", "ec/factx_ec", "ec/jail_ec", "ec/kmdm3_ec", "ec/mine1_ec", "ec/power_ec", "ec/space_ec", "ec/waste_ec",
+	"fact1", "fact2", "fact3", "hangar1", "hangar2", "industry", "jail1", "jail2", "jail3", "jail4", "jail5", "lab", "mgdm1", "mgu1m1", "mgu1m2", "mgu1m3",
+	"mgu1m4", "mgu1m5", "mgu1trial", "mgu2m1", "mgu2m2", "mgu2m3", "mgu3m1", "mgu3m2", "mgu3m3", "mgu3m4", "mgu3secret", "mgu4m1", "mgu4m2", "mgu4m3", "mgu4trial",
+	"mgu5m1", "mgu5m2", "mgu5m3", "mgu5trial", "mgu6m1", "mgu6m2", "mgu6m3", "mgu6trial", "mguboss", "mguhub", "mine1", "mine2", "mine3", "mine4", "mintro", "ndctf0",
+	"old/baseold", "old/city2_4", "old/fact1", "old/fact2", "old/fact3", "old/facthub", "old/hangarold", "old/kmdm3", "old/pjtrain1", "old/ware1", "old/xcommand5",
+	"outbase", "power1", "power2", "q2ctf1", "q2ctf2", "q2ctf3", "q2ctf4", "q2ctf5", "q2dm1", "q2dm2", "q2dm3", "q2dm4", "q2dm5", "q2dm6", "q2dm7", "q2dm8", "q2kctf1",
+	"q2kctf2", "q64/bio", "q64/cargo", "q64/comm", "q64/command", "q64/complex", "q64/conduits", "q64/core", "q64/dm1", "q64/dm10", "q64/dm2", "q64/dm3", "q64/dm4",
+	"q64/dm5", "q64/dm6", "q64/dm7", "q64/dm8", "q64/dm9", "q64/geo-stat", "q64/intel", "q64/jail", "q64/lab", "q64/mines", "q64/orbit", "q64/organic", "q64/outpost",
+	"q64/process", "q64/rtest", "q64/ship", "q64/station", "q64/storage", "rammo1", "rammo2", "rbase1", "rbase2", "rboss", "rdm1", "rdm10", "rdm11", "rdm12", "rdm13",
+	"rdm14", "rdm2", "rdm3", "rdm4", "rdm5", "rdm6", "rdm7", "rdm8", "rdm9", "refinery", "rhangar1", "rhangar2", "rlava1", "rlava2", "rmine1", "rmine2", "rsewer1",
+	"rsewer2", "rware1", "rware2", "security", "sewer64", "space", "strike", "test/base1_flashlight", "test/gekk", "test/mals_barrier_test", "test/mals_box",
+	"test/mals_ladder_test", "test/mals_locked_door_test", "test/paril_health_relay", "test/paril_ladder", "test/paril_poi", "test/paril_scaled_monsters",
+	"test/paril_soundstage", "test/paril_steps", "test/paril_waterlight", "test/skysort", "test/spbox", "test/spbox2", "test/test_jerry", "test/test_kaiser",
+	"test/tom_test_01", "train", "tutorial", "w_treat", "ware1", "ware2", "waste1", "waste2", "waste3", "xcompnd1", "xcompnd2", "xdm1", "xdm2", "xdm3", "xdm4", "xdm5",
+	"xdm6", "xdm7", "xhangar1", "xhangar2", "xintell", "xmoon1", "xmoon2", "xreactor", "xsewer1", "xsewer2", "xship", "xswamp", "xware"
+};
+
 enum team_t {
 	TEAM_NONE,
 	TEAM_SPECTATOR,
@@ -1467,6 +1487,7 @@ struct level_locals_t {
 	warmupreq_t	warmup_requisite;
 	gtime_t		warmup_notice_time;
 	gtime_t		match_time;
+	gtime_t		match_start_time;
 	int			match_state_queued;
 	gtime_t		match_state_timer;			// change match state at this time
 	int			warmup_modification_count;	// for detecting if g_warmup_countdown is changed
@@ -1514,6 +1535,8 @@ struct level_locals_t {
 
 	char		author[MAX_QPATH];
 	char		author2[MAX_QPATH];
+
+	char		intermission_victor_msg[64];
 };
 
 struct shadow_light_temp_t {
@@ -2437,8 +2460,8 @@ const char *G_PlaceString(int rank);
 bool ItemSpawnsEnabled();
 bool loc_CanSee(gentity_t *targ, gentity_t *inflictor);
 bool SetTeam(gentity_t *ent, team_t desired_team, bool inactive, bool force, bool silent);
-const char *G_TimeString(const int msec);
-const char *G_TimeStringMs(const int msec);
+const char *G_TimeString(const int msec, bool state);
+const char *G_TimeStringMs(const int msec, bool state);
 void BroadcastSpectatorMessage(const char *msg);
 void BroadcastTeamMessage(team_t team, print_type_t level, const char *msg);
 team_t StringToTeamNum(const char *in);
