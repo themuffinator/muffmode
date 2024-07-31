@@ -1666,11 +1666,12 @@ AllowTeamSwitch
 =================
 */
 static bool AllowTeamSwitch(gentity_t *ent, team_t desired_team) {
-	if (GT(GT_RR) && level.match_state == matchst_t::MATCH_IN_PROGRESS) {
+	/*
+	if (desired_team != ent->client->sess.team && GT(GT_RR) && level.match_state == matchst_t::MATCH_IN_PROGRESS) {
 		gi.LocClient_Print(ent, PRINT_HIGH, "You cannot change teams during a Red Rover match.\n");
 		return false;
 	}
-
+	*/
 	if (desired_team != TEAM_SPECTATOR && maxplayers->integer && level.num_playing_clients >= maxplayers->integer) {
 		gi.LocClient_Print(ent, PRINT_HIGH, "Maximum player count has been reached.\n");
 		return false; // ignore the request
@@ -2422,7 +2423,7 @@ void Vote_Pass_Timelimit() {
 	if (!argi)
 		gi.LocBroadcast_Print(PRINT_HIGH, "Time limit has been DISABLED.\n");
 	else
-		gi.LocBroadcast_Print(PRINT_HIGH, "Time limit has been set to {}.\n", G_TimeString(argi * 60000));
+		gi.LocBroadcast_Print(PRINT_HIGH, "Time limit has been set to {}.\n", G_TimeString(argi * 60000, false));
 
 	gi.cvar_forceset("timelimit", s);
 }
@@ -2436,7 +2437,7 @@ static bool Vote_Val_Timelimit(gentity_t *ent) {
 	}
 	
 	if (argi == timelimit->integer) {
-		gi.LocClient_Print(ent, PRINT_HIGH, "Time limit is already set to {}.\n", G_TimeString(argi * 60000));
+		gi.LocClient_Print(ent, PRINT_HIGH, "Time limit is already set to {}.\n", G_TimeString(argi * 60000, false));
 		return false;
 	}
 	return true;

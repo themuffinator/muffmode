@@ -763,7 +763,8 @@ const menu_t teams_join_menu[] = {
 	{ "Match Info", MENU_ALIGN_LEFT, G_Menu_ServerInfo },
 	//{ "Game Rules", MENU_ALIGN_LEFT, G_Menu_GameRules },
 	{ "Player Stats", MENU_ALIGN_LEFT, G_Menu_PMStats },
-	{ "Call a Vote", MENU_ALIGN_LEFT, G_Menu_CallVote },
+	//{ "Call a Vote", MENU_ALIGN_LEFT, G_Menu_CallVote },
+	{ "", MENU_ALIGN_LEFT, nullptr },
 	{ "Admin", MENU_ALIGN_LEFT, nullptr },
 	{ "", MENU_ALIGN_LEFT, nullptr },
 	{ "", MENU_ALIGN_CENTER, nullptr },
@@ -785,7 +786,8 @@ const menu_t free_join_menu[] = {
 	{ "Match Info", MENU_ALIGN_LEFT, G_Menu_ServerInfo },
 	//{ "Game Rules", MENU_ALIGN_LEFT, G_Menu_GameRules },
 	{ "Player Stats", MENU_ALIGN_LEFT, G_Menu_PMStats },
-	{ "Call a Vote", MENU_ALIGN_LEFT,  G_Menu_CallVote },
+	//{ "Call a Vote", MENU_ALIGN_LEFT,  G_Menu_CallVote },
+	{ "", MENU_ALIGN_CENTER, nullptr },
 	{ "Admin", MENU_ALIGN_LEFT, nullptr },
 	{ "", MENU_ALIGN_LEFT, nullptr },
 	{ "", MENU_ALIGN_CENTER, nullptr },
@@ -959,7 +961,7 @@ static void G_Menu_ServerInfo_Update(gentity_t *ent) {
 	}
 
 	if (timelimit->value > 0) {
-		Q_strlcpy(entries[i].text, G_Fmt("time limit: {}", G_TimeString(timelimit->value * 60000)).data(), sizeof(entries[i].text));
+		Q_strlcpy(entries[i].text, G_Fmt("time limit: {}", G_TimeString(timelimit->value * 60000, false)).data(), sizeof(entries[i].text));
 		i++;
 		limits = true;
 	}

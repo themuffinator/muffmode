@@ -817,15 +817,17 @@ bool Teams() {
 G_TimeString
 =================
 */
-const char *G_TimeString(const int msec) {
+const char *G_TimeString(const int msec, bool state) {
+	if (state) {
+		if (level.match_state < matchst_t::MATCH_COUNTDOWN)
+			return "WARMUP";
+
+		if (level.intermission_queued || level.intermission_time)
+			return "MATCH END";
+	}
+
 	int ms = abs(msec);
 	int hours, mins, seconds;
-
-	if (level.match_state < matchst_t::MATCH_COUNTDOWN)
-		return "WARMUP";
-
-	if (level.intermission_queued || level.intermission_time)
-		return "MATCH END";
 
 	seconds = ms / 1000;
 	mins = seconds / 60;
@@ -844,14 +846,16 @@ const char *G_TimeString(const int msec) {
 G_TimeStringMs
 =================
 */
-const char *G_TimeStringMs(const int msec) {
+const char *G_TimeStringMs(const int msec, bool state) {
+	if (state) {
+		if (level.match_state < matchst_t::MATCH_COUNTDOWN)
+			return "WARMUP";
+
+		if (level.intermission_queued || level.intermission_time)
+			return "MATCH END";
+	}
+
 	int hours, mins, seconds, ms = msec;
-
-	if (level.match_state < matchst_t::MATCH_COUNTDOWN)
-		return "WARMUP";
-
-	if (level.intermission_queued || level.intermission_time)
-		return "MATCH END";
 
 	seconds = ms / 1000;
 	ms -= seconds * 1000;

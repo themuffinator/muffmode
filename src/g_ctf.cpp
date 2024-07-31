@@ -272,7 +272,7 @@ bool CTF_PickupFlag(gentity_t *ent, gentity_t *other) {
 			if (other->client->pers.inventory[enemy_flag_item]) {
 				if (other->client->pers.team_state.flag_pickup_time) {
 					gi.LocBroadcast_Print(PRINT_HIGH, "{} TEAM CAPTURED the flag! ({} captured in {})\n",
-						Teams_TeamName(team), other->client->resp.netname, G_TimeStringMs((level.time - other->client->pers.team_state.flag_pickup_time).milliseconds()));
+						Teams_TeamName(team), other->client->resp.netname, G_TimeStringMs((level.time - other->client->pers.team_state.flag_pickup_time).milliseconds(), false));
 				} else {
 					gi.LocBroadcast_Print(PRINT_HIGH, "{} TEAM CAPTURED the flag! (captured by {})\n",
 						Teams_TeamName(team), other->client->resp.netname);

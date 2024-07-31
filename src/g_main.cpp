@@ -915,7 +915,7 @@ static void InitGame() {
 	timelimit = gi.cvar("timelimit", "0", CVAR_SERVERINFO);
 	roundlimit = gi.cvar("roundlimit", "8", CVAR_SERVERINFO);
 	roundtimelimit = gi.cvar("roundtimelimit", "2", CVAR_SERVERINFO);
-	capturelimit = gi.cvar("capturelimit", "0", CVAR_SERVERINFO);
+	capturelimit = gi.cvar("capturelimit", "8", CVAR_SERVERINFO);
 	mercylimit = gi.cvar("mercylimit", "0", CVAR_NOFLAGS);
 	noplayerstime = gi.cvar("noplayerstime", "10", CVAR_NOFLAGS);
 
@@ -1446,9 +1446,10 @@ void Match_Start() {
 		return;
 
 	level.match_time = level.time;
+	level.match_start_time = level.time;
 	level.overtime = 0_sec;
 
-	const char *s = G_TimeString(timelimit->value ? timelimit->value * 1000 : 0);
+	const char *s = G_TimeString(timelimit->value ? timelimit->value * 1000 : 0, true);
 	gi.configstring(CONFIG_MATCH_STATE, s);
 
 	level.match_state = matchst_t::MATCH_IN_PROGRESS;
@@ -2834,7 +2835,9 @@ void QueueIntermission(const char *msg, bool boo, bool reset) {
 	if (level.intermission_queued || level.match_state < matchst_t::MATCH_IN_PROGRESS)
 		return;
 
-	gi.LocBroadcast_Print(PRINT_CHAT, "MATCH END: {}\n", msg[0] ? msg : "Unknown Reason");
+	Q_strlcpy(level.intermission_victor_msg, msg, sizeof(level.intermission_victor_msg));
+
+	gi.LocBroadcast_Print(PRINT_CHAT, "MATCH END: {}\n", level.intermission_victor_msg[0] ? level.intermission_victor_msg : "Unknown Reason");
 	gi.positioned_sound(world->s.origin, world, CHAN_AUTO | CHAN_RELIABLE, gi.soundindex(boo ? "insane/insane4.wav" : "world/xian1.wav"), 1, ATTN_NONE, 0);
 
 	if (reset) {
@@ -2953,7 +2956,7 @@ void CheckDMExitRules() {
 					if (GT(GT_DUEL)) {
 						if (g_dm_overtime->integer > 0) {
 							level.overtime += gtime_t::from_sec(g_dm_overtime->integer);
-							gi.LocBroadcast_Print(PRINT_CENTER, "Overtime!\n{} added", G_TimeString(g_dm_overtime->integer * 1000));
+							gi.LocBroadcast_Print(PRINT_CENTER, "Overtime!\n{} added", G_TimeString(g_dm_overtime->integer * 1000, false));
 							play = true;
 							return;
 						}
