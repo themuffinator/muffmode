@@ -1740,7 +1740,7 @@ static void CheckDMRoundState(void) {
 			} else {
 				bool horde = GT(GT_HORDE);
 				gi.LocBroadcast_Print(PRINT_CHAT, "{} {} has begun!\n", horde ? "Wave" : "Round", level.round_number);
-				gi.LocBroadcast_Print(PRINT_CENTER, brandom() ? "INCOMING!" : "LOCK AND LOAD!");
+				gi.LocBroadcast_Print(PRINT_CENTER, horde ? (brandom() ? "INCOMING!" : "LOCK AND LOAD!") : "FIGHT!");
 
 				if (horde) {
 					level.horde_num_monsters_to_spawn = clamp(15 + (level.round_number * 5), 20, 80);
