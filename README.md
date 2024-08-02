@@ -46,7 +46,8 @@ Muff Mode includes the game logic, a server config, bot files and some map entit
 - Duel: Go head-to-head with an opponent. The victor goes on to face their next opponent in the queue.
 - Clan Arena: Rocket Arena's famous round-based team elimination mode - no item spawns, no self-damage and a full arsenal of weapons.
 - CaptureStrike: A Threewave classic, combines Clan Arena, CTF and Counter Strike. Teams take turns attacking or defending and battle until one team is dead, or the attacking team captures the flag.
-	
+- Red Rover: Clan Arena style where teams are changed on death. When a team has been eliminated, the round ends.
+
 ### New Game Modifications
 - Vampiric Damage: Gain health by inflicting damage on your foes! No health pickups and a draining health value means the pressure is on!
 - Nade Fest: Grenade-only mode.
