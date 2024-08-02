@@ -1088,19 +1088,20 @@ static void G_FixTeams() {
 }
 
 static void G_FindTeams() {
-	gentity_t *e1, *e2;
+	gentity_t *e1, *e2, *chain;
 	uint32_t i, j;
 	uint32_t c1, c2;
 
 	c1 = 0;
 	c2 = 0;
-	for (i = MAX_CLIENTS_KEX, e1 = g_entities + i; i < globals.num_entities; i++, e1++) {
+	for (i = 1, e1 = g_entities + i; i < globals.num_entities; i++, e1++) {
 		if (!e1->inuse)
 			continue;
 		if (!e1->team)
 			continue;
 		if (e1->flags & FL_TEAMSLAVE)
 			continue;
+		chain = e1;
 		e1->teammaster = e1;
 		e1->flags |= FL_TEAMMASTER;
 		c1++;
@@ -1114,21 +1115,15 @@ static void G_FindTeams() {
 				continue;
 			if (!strcmp(e1->team, e2->team)) {
 				c2++;
-				e2->teamchain = e1->teamchain;
-				e1->teamchain = e2;
+				chain->teamchain = e2;
 				e2->teammaster = e1;
+				chain = e2;
 				e2->flags |= FL_TEAMSLAVE;
-
-				// make sure that targets only point at the master
-				if (e2->targetname) {
-					e1->targetname = e2->targetname;
-					e2->targetname = NULL;
-				}
 			}
 		}
 	}
 
-	//G_FixTeams();
+	G_FixTeams();
 
 	if (c1)
 		gi.Com_PrintFmt("{}: {} entity team{} found with a total of {} entit{}.\n", __FUNCTION__, c1, c1 != 1 ? "s" : "", c2, c2 != 1 ? "ies" : "y");
