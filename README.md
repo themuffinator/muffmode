@@ -192,6 +192,7 @@ Use **callvote [command] [arg]** for the below listed vote commands:
  - **g_arena_start_armor**: sets starting armor value in arena modes, range from 1-999, value affects armor tier (default 200)
  - **g_arena_start_health**: sets starting health value in arena modes, range from 1-999 (default 200)
  - **g_corpse_sink_time**: sets time in seconds for corpses to sink and disappear (default: 60)
+ - **g_dm_allow_no_humans**: when set to 1, allows matches to start or continue with only bots (default 1)
  - **g_dm_do_readyup**: Enforce players to ready up to progress from match warmup stage (requires g_dm_do_warmup 1). (default 0)
  - **g_dm_do_warmup**: Allow match warmup stage. (default 1)
  - **g_dm_force_join**: replaces g_teamplay_force_join, the menu forces the cvar change so this gets around that, it now applies to regular DM too so the change makes sense.
