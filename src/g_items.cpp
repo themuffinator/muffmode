@@ -1355,7 +1355,7 @@ THINK(RespawnItem) (gentity_t *ent) -> void {
 
 			for (count = 0, ent = master; ent; ent = ent->chain, count++) {
 				// reset spawn timers on all teamed entities
-				//ent->nextthink = 0_sec;
+				ent->nextthink = 0_sec;
 			}
 
 			choice = irandom(count);
@@ -2716,7 +2716,7 @@ static THINK(FinishSpawningItem) (gentity_t *ent) -> void {
 	
 		if (ent == ent->teammaster) {
 			ent->nextthink = level.time + 10_hz;
-			if (!ent->think)
+			//if (!ent->think)
 				ent->think = RespawnItem;
 		} else
 			ent->nextthink = 0_sec;

@@ -102,7 +102,7 @@ bool G_RunThink(gentity_t *ent) {
 	ent->nextthink = 0_ms;
 	if (!ent->think)
 		//gi.Com_Error("nullptr ent->think");
-		return true;
+		return false;	//true;
 	ent->think(ent);
 
 	return false;

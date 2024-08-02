@@ -1279,7 +1279,7 @@ static void Entities_Reset(bool reset_players, bool reset_ghost, bool reset_scor
 						ent->solid = SOLID_NOT;
 
 						ent->nextthink = level.time + gtime_t::from_sec(irandom(30, 60));
-						if (!ent->think)
+						//if (!ent->think)
 							ent->think = RespawnItem;
 					}
 					continue;
@@ -1292,7 +1292,7 @@ static void Entities_Reset(bool reset_players, bool reset_ghost, bool reset_scor
 								t = FRAME_TIME_MS;
 							}
 						}
-						if (ent->item->id == IT_HEALTH_MEGA)
+						//if (ent->item->id == IT_HEALTH_MEGA)
 							ent->think = RespawnItem;
 						ent->nextthink = level.time + t;
 					}
