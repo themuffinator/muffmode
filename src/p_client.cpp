@@ -3028,9 +3028,8 @@ void ClientBegin(gentity_t *ent) {
 		ClientSpawn(ent);
 		spawn_from_begin = false;
 
-		if (!ent->client->pers.ingame) {
+		if (!ent->client->pers.ingame)
 			BroadcastTeamChange(ent, -1, false, false);
-		}
 	}
 
 	// make sure we have a known default
