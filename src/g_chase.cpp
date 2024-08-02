@@ -96,6 +96,8 @@ void UpdateChaseCam(gentity_t *ent) {
 	}
 	// vanilla chasecam code
 	else {
+		targ->svflags &= ~SVF_INSTANCED;
+
 		ownerv[2] += targ->viewheight;
 
 		angles = targ->client->v_angle;
@@ -158,7 +160,7 @@ void UpdateChaseCam(gentity_t *ent) {
 	ent->client->ps.stats[STAT_SHOW_STATUSBAR] = !ClientIsPlaying(e->client) || e->client->eliminated ? 0 : 1;
 
 	ent->viewheight = 0;
-	if (!g_eyecam->integer)
+	if (g_eyecam->integer != 1)
 		ent->client->ps.pmove.pm_flags |= PMF_NO_POSITIONAL_PREDICTION | PMF_NO_ANGULAR_PREDICTION;
 	gi.linkentity(ent);
 }
