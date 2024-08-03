@@ -122,6 +122,7 @@ cvar_t *g_dm_force_respawn;
 cvar_t *g_dm_force_respawn_time;
 cvar_t *g_dm_instant_items;
 cvar_t *g_dm_intermission_shots;
+cvar_t *g_dm_item_respawn_rate;
 cvar_t *g_dm_no_fall_damage;
 cvar_t *g_dm_no_quad_drop;
 cvar_t *g_dm_no_quadfire_drop;
@@ -969,6 +970,7 @@ static void InitGame() {
 	g_dm_force_respawn_time = gi.cvar("g_dm_force_respawn_time", "3", CVAR_NOFLAGS);
 	g_dm_instant_items = gi.cvar("g_dm_instant_items", "1", CVAR_NOFLAGS);
 	g_dm_intermission_shots = gi.cvar("g_dm_intermission_shots", "0", CVAR_NOFLAGS);
+	g_dm_item_respawn_rate = gi.cvar("g_dm_item_respawn_rate", "1.0", CVAR_NOFLAGS);
 	g_dm_no_fall_damage = gi.cvar("g_dm_no_fall_damage", "0", CVAR_NOFLAGS);
 	g_dm_no_quad_drop = gi.cvar("g_dm_no_quad_drop", "0", CVAR_NOFLAGS);
 	g_dm_no_quadfire_drop = gi.cvar("g_dm_no_quadfire_drop", "0", CVAR_NOFLAGS);

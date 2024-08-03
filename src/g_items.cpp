@@ -1336,19 +1336,22 @@ item_id_t DoRandomRespawn(gentity_t *ent) {
 // originally 'DoRespawn'
 THINK(RespawnItem) (gentity_t *ent) -> void {
 	if (ent->team) {
-		gentity_t	*master;
+		gentity_t	*master, *current;
 		int			count, choice;
 		
 		if (!ent->teammaster)
 			gi.Com_ErrorFmt("{}: {}: bad teammaster", __FUNCTION__, *ent);
 
 		master = ent->teammaster;
+		current = ent;
 
 		// in ctf, when we are weapons stay, only the master of a team of weapons
 		// is spawned
 		if (GT(GT_CTF) && g_dm_weapons_stay->integer && master->item && (master->item->flags & IF_WEAPON))
 			ent = master;
 		else {
+			int current_index = 0;
+
 			ent->svflags |= SVF_NOCLIENT;
 			ent->solid = SOLID_NOT;
 			gi.linkentity(ent);
@@ -1356,11 +1359,20 @@ THINK(RespawnItem) (gentity_t *ent) -> void {
 			for (count = 0, ent = master; ent; ent = ent->chain, count++) {
 				// reset spawn timers on all teamed entities
 				ent->nextthink = 0_sec;
+				if (ent == current)
+					current_index = count;
 			}
-
-			choice = irandom(count);
-			for (count = 0, ent = master; count < choice; ent = ent->chain, count++)
-				;
+			
+			if (RS(RS_MM)) {
+				choice = (current_index + 1) % count;
+				gi.Com_PrintFmt("ci={} co={} ch={}\n", current_index, count, choice);
+				for (count = 0, ent = master; count < choice; ent = ent->chain, count++)
+					;
+			} else {
+				choice = irandom(count);
+				for (count = 0, ent = master; count < choice; ent = ent->chain, count++)
+					;
+			}
 		}
 	}
 
@@ -1425,6 +1437,8 @@ void SetRespawn(gentity_t *ent, gtime_t delay, bool hide_self) {
 		if (t < FRAME_TIME_MS)
 			t = FRAME_TIME_MS;
 	}
+
+	delay *= g_dm_item_respawn_rate->value;
 
 	ent->nextthink = level.time + delay + t;
 
@@ -2739,7 +2753,7 @@ static THINK(FinishSpawningItem) (gentity_t *ent) -> void {
 
 	// powerups don't spawn in for a while
 	if ((RS(RS_MM) || RS(RS_Q3A)) && deathmatch->integer && ent->item->flags & IF_POWERUP) {
-		int32_t r = irandom(30, 60);
+		int32_t r = RS(RS_MM) ? 30 : irandom(30, 60);
 
 		ent->svflags |= SVF_NOCLIENT;
 		ent->solid = SOLID_NOT;

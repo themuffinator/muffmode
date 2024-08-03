@@ -2220,6 +2220,7 @@ extern cvar_t *g_dm_force_respawn;
 extern cvar_t *g_dm_force_respawn_time;
 extern cvar_t *g_dm_instant_items;
 extern cvar_t *g_dm_intermission_shots;
+extern cvar_t *g_dm_item_respawn_rate;
 extern cvar_t *g_dm_no_fall_damage;
 extern cvar_t *g_dm_no_quad_drop;
 extern cvar_t *g_dm_no_quadfire_drop;
