@@ -1365,7 +1365,7 @@ THINK(RespawnItem) (gentity_t *ent) -> void {
 			
 			if (RS(RS_MM)) {
 				choice = (current_index + 1) % count;
-				gi.Com_PrintFmt("ci={} co={} ch={}\n", current_index, count, choice);
+				//gi.Com_PrintFmt("ci={} co={} ch={}\n", current_index, count, choice);
 				for (count = 0, ent = master; count < choice; ent = ent->chain, count++)
 					;
 			} else {
