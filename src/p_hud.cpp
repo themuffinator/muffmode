@@ -508,11 +508,6 @@ void TeamsScoreboardMessage(gentity_t *ent, gentity_t *killer) {
 		fmt::format_to(std::back_inserter(string), FMT_STRING("xv 208 yv {} loc_string 1 $g_ctf_and_more {} "),
 			42 + (last[1] + 1) * 8, total[1] - last[1] - 1);
 
-	if (level.intermission_time) {
-		fmt::format_to(std::back_inserter(string), FMT_STRING("ifgef {} yb -48 xv 0 loc_cstring2 0 \"$m_eou_press_button\" endif "), (level.intermission_server_frame + (5_sec).frames()));
-	} else
-		fmt::format_to(std::back_inserter(string), FMT_STRING("xv 0 yb -48 cstring2 \"{}\" "), "Show inventory to toggle menu.");
-
 	gi.WriteByte(svc_layout);
 	gi.WriteString(string.c_str());
 }
