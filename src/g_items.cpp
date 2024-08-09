@@ -986,9 +986,23 @@ static THINK(Tech_SpawnAll) (gentity_t *ent) -> void {
 	if (!AllowTechs())
 		return;
 
+	int num = 0;
+	if (!strcmp(g_allow_techs->string, "auto"))
+		num = 1;
+	else
+		num = g_allow_techs->integer;
+
+	if (!num)
+		return;
+
+	gitem_t *it = nullptr;
 	for (size_t i = 0; i < q_countof(tech_ids); i++) {
-		if ((spot = FindTechSpawn()) != nullptr)
-			Tech_Spawn(GetItemByIndex(tech_ids[i]), spot);
+		it = GetItemByIndex(tech_ids[i]);
+		if (!it)
+			continue;
+		for (size_t j = 0; j < num; j++)
+			if ((spot = FindTechSpawn()) != nullptr)
+				Tech_Spawn(it, spot);
 	}
 	if (ent)
 		G_FreeEntity(ent);
