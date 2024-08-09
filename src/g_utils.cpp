@@ -955,7 +955,9 @@ void BroadcastReadyReminderMessage() {
 			continue;
 		if (ec->client->sess.is_a_bot)
 			continue;
-		gi.LocCenter_Print(ec, "%bind:+wheel2:Use Compass to toggle your ready status.%MATCH IS IN WARMUP\nYou are {}ready.", ec->client->resp.ready ? "" : "NOT ");
+		if (ec->client->resp.ready)
+			continue;
+		gi.LocCenter_Print(ec, "%bind:+wheel2:Use Compass to toggle your ready status.%MATCH IS IN WARMUP\nYou are NOT ready.");
 	}
 }
 
@@ -996,4 +998,19 @@ gentity_t *ClientEntFromString(const char *in) {
 		return &g_entities[&game.clients[num] - game.clients + 1];
 
 	return nullptr;
+}
+
+/*
+=================
+RS_IndexFromString
+=================
+*/
+ruleset_t RS_IndexFromString(const char *in) {
+	for (size_t i = 1; i < (int)RS_NUM_RULESETS; i++) {
+		if (!strcmp(in, rs_short_name[i]))
+			return (ruleset_t)i;
+		if (!strcmp(in, rs_long_name[i]))
+			return (ruleset_t)i;
+	}
+	return ruleset_t::RS_NONE;
 }

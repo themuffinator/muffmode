@@ -910,7 +910,9 @@ static const std::initializer_list<temp_field_t> temp_fields = {
 	FIELD_AUTO(cvar),
 	FIELD_AUTO(cvarvalue),
 	FIELD_AUTO(author),
-	FIELD_AUTO(author2)
+	FIELD_AUTO(author2),
+
+	FIELD_AUTO(ruleset)
 };
 // clang-format on
 
@@ -1125,7 +1127,7 @@ static void G_FindTeams() {
 
 	G_FixTeams();
 
-	if (c1)
+	if (c1 && g_verbose->integer)
 		gi.Com_PrintFmt("{}: {} entity team{} found with a total of {} entit{}.\n", __FUNCTION__, c1, c1 != 1 ? "s" : "", c2, c2 != 1 ? "ies" : "y");
 }
 
@@ -1523,11 +1525,13 @@ static void ParseWorldEntityString(const char *mapname, bool try_q3) {
 			f = fopen(name, "w");
 			if (f) {
 				fwrite(entities, 1, strlen(entities), f);
-				gi.Com_PrintFmt("{}: Entities override file written to: \"{}\"\n", __FUNCTION__, name);
+				if (g_verbose->integer)
+					gi.Com_PrintFmt("{}: Entities override file written to: \"{}\"\n", __FUNCTION__, name);
 				fclose(f);
 			}
 		} else {
-			gi.Com_PrintFmt("{}: Entities override file not saved as file already exists: \"{}\"\n", __FUNCTION__, name);
+			if (g_verbose->integer)
+				gi.Com_PrintFmt("{}: Entities override file not saved as file already exists: \"{}\"\n", __FUNCTION__, name);
 		}
 	}
 	level.entstring = entities;
@@ -1583,7 +1587,7 @@ static void ParseWorldEntities() {
 		ent->s.renderfx |= RF_IR_VISIBLE;
 	}
 
-	if (inhibit)
+	if (inhibit && g_verbose->integer)
 		gi.Com_PrintFmt("{} entities inhibited.\n", inhibit);
 }
 
@@ -1649,7 +1653,8 @@ void SpawnEntities(const char *mapname, const char *entities, const char *spawnp
 
 				if (VerifyEntityString((const char *)buffer)) {
 					entities = (const char *)buffer;
-					gi.Com_PrintFmt("{}: Entities override file verified and loaded: \"{}\"\n", __FUNCTION__, name);
+					if (g_verbose->integer)
+						gi.Com_PrintFmt("{}: Entities override file verified and loaded: \"{}\"\n", __FUNCTION__, name);
 				}
 			}
 		} else {
@@ -1663,7 +1668,8 @@ void SpawnEntities(const char *mapname, const char *entities, const char *spawnp
 			f = fopen(name, "w");
 			if (f) {
 				fwrite(entities, 1, strlen(entities), f);
-				gi.Com_PrintFmt("{}: Entities override file written to: \"{}\"\n", __FUNCTION__, name);
+				if (g_verbose->integer)
+					gi.Com_PrintFmt("{}: Entities override file written to: \"{}\"\n", __FUNCTION__, name);
 				fclose(f);
 			}
 		} else {
@@ -2074,6 +2080,7 @@ Only used for the world.
 "skyaxis"			vector axis for rotating sky
 "skyrotate"			speed of rotation in degrees/second
 "sounds"			music cd track number
+"music"				specific music file to play, overrides "sounds"
 "gravity"			800 is default gravity
 "message"			text to print at user logon
 "author"			sets level author name
@@ -2082,6 +2089,7 @@ Only used for the world.
 "no_grapple"		disables grappling hook
 "no_dm_spawnpads"	disables spawn pads in deathmatch
 "hub_map"			in campaigns, sets as hub map
+"ruleset"			overrides gameplay ruleset (q2re/mm/q3a)
 */
 void SP_worldspawn(gentity_t *ent) {
 	Q_strlcpy(level.gamemod_name, G_Fmt("{} v{}", GAMEMOD_TITLE, GAMEMOD_VERSION).data(), sizeof(level.gamemod_name));
@@ -2129,6 +2137,15 @@ void SP_worldspawn(gentity_t *ent) {
 	if (st.author2 && st.author2[0])
 		Q_strlcpy(level.author2, st.author2, sizeof(level.author2));
 
+	if (st.ruleset && st.ruleset[0]) {
+		game.ruleset = RS_IndexFromString(st.ruleset);
+		gi.Com_PrintFmt("st={} game={}\n", st.ruleset, rs_long_name[(int)game.ruleset]);
+		if (!game.ruleset)
+			game.ruleset = (ruleset_t)clamp(g_ruleset->integer, 1, (int)RS_NUM_RULESETS);
+	} else
+		if ((int)game.ruleset != g_ruleset->integer)
+			game.ruleset = (ruleset_t)clamp(g_ruleset->integer, 1, (int)RS_NUM_RULESETS);
+
 	if (st.sky && st.sky[0])
 		gi.configstring(CS_SKY, st.sky);
 	else
@@ -2151,9 +2168,8 @@ void SP_worldspawn(gentity_t *ent) {
 	else
 		gi.configstring(CS_CD_LOOP_COUNT, "");
 
-	if (st.instantitems > 0 || level.is_n64) {
+	if (st.instantitems > 0 || level.is_n64)
 		level.instantitems = true;
-	}
 
 	// [Paril-KEX]
 	if (!deathmatch->integer)

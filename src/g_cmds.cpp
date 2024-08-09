@@ -1934,6 +1934,21 @@ static void StopFollowing(gentity_t *ent, bool release) {
 	ent->client->ps.rdflags = RDF_NONE;
 }
 
+static int itime() {
+	struct tm *ltime;
+	time_t gmtime;
+	
+	time(&gmtime);
+	ltime = localtime(&gmtime);
+
+	const char *s;
+	s = G_Fmt("{}{:02}{:02}{:02}{:02}{:02}",
+		1900 + ltime->tm_year, ltime->tm_mon + 1, ltime->tm_mday, ltime->tm_hour, ltime->tm_min, ltime->tm_sec
+	).data();
+
+	return strtoul(s, nullptr, 10);
+}
+
 /*
 =================
 SetTeam
@@ -2007,8 +2022,8 @@ bool SetTeam(gentity_t *ent, team_t desired_team, bool inactive, bool force, boo
 	ent->client->sess.team = desired_team;
 	ent->client->resp.ctf_state = 0;
 	ent->client->sess.inactive = inactive;
-	ent->client->sess.inactivity_time = 0_ms;
-	ent->client->resp.team_join_time = level.time;
+	ent->client->sess.inactivity_time = level.time + 1_min;
+	ent->client->resp.team_join_time = level.time;	// gtime_t::from_sec(itime());	// level.time;
 	ent->client->resp.team_delay_time = force || !ent->client->sess.initialised ? level.time : level.time + 5_sec;
 	ent->client->sess.spectator_state = desired_team == TEAM_SPECTATOR ? SPECTATOR_FREE : SPECTATOR_NOT;
 	ent->client->sess.spectator_client = 0;
@@ -2329,15 +2344,6 @@ static bool Vote_Val_Gametype(gentity_t *ent) {
 
 	return true;
 }
-static ruleset_t RS_IndexFromString(const char *in) {
-	for (size_t i = 1; i < (int)RS_NUM_RULESETS; i++) {
-		if (!strcmp(in, rs_short_name[i]))
-			return (ruleset_t)i;
-		if (!strcmp(in, rs_long_name[i]))
-			return (ruleset_t)i;
-	}
-	return ruleset_t::RS_NONE;
-}
 
 static void Vote_Pass_Ruleset() {
 	ruleset_t rs = RS_IndexFromString(level.vote_arg.data());
@@ -2353,7 +2359,7 @@ static bool Vote_Val_Ruleset(gentity_t *ent) {
 		gi.Client_Print(ent, PRINT_HIGH, "Invalid ruleset.\n");
 		return false;
 	}
-	if ((int)desired_rs == g_ruleset->integer) {
+	if ((int)desired_rs == game.ruleset) {
 		gi.Client_Print(ent, PRINT_HIGH, "Ruleset currently active.\n");
 		return false;
 	}

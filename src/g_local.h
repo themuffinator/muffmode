@@ -1608,6 +1608,8 @@ struct spawn_temp_t {
 
 	const char *author;
 	const char *author2;
+
+	const char *ruleset;
 };
 
 enum move_state_t {
@@ -2260,7 +2262,6 @@ extern cvar_t *g_instagib;
 extern cvar_t *g_instagib_splash;
 extern cvar_t *g_instant_weapon_switch;
 extern cvar_t *g_item_bobbing;
-extern cvar_t *g_item_chain_random;
 extern cvar_t *g_knockback_scale;
 extern cvar_t *g_ladder_steps;
 extern cvar_t *g_lag_compensation;
@@ -2308,6 +2309,7 @@ extern cvar_t *g_vampiric_damage;
 extern cvar_t *g_vampiric_exp_min;
 extern cvar_t *g_vampiric_health_max;
 extern cvar_t *g_vampiric_percentile;
+extern cvar_t *g_verbose;
 extern cvar_t *g_vote_flags;
 extern cvar_t *g_vote_limit;
 extern cvar_t *g_warmup_countdown;
@@ -2474,6 +2476,7 @@ void BroadcastReadyReminderMessage();
 void TeleportPlayerToRandomSpawnPoint(gentity_t *ent, bool fx);
 bool InCoopStyle();
 gentity_t *ClientEntFromString(const char *in);
+ruleset_t RS_IndexFromString(const char *in);
 
 //
 // g_spawn.cpp

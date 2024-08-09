@@ -36,12 +36,6 @@ cvar_t *hostname;
 cvar_t *deathmatch;
 cvar_t *ctf;
 cvar_t *teamplay;
-//cvar_t *freeze;
-//cvar_t *clanarena;
-//cvar_t *strike;
-//cvar_t *redrover;
-//cvar_t *lms;
-//cvar_t *horde;
 cvar_t *g_gametype;
 
 cvar_t *coop;
@@ -163,7 +157,6 @@ cvar_t *g_instagib;
 cvar_t *g_instagib_splash;
 cvar_t *g_instant_weapon_switch;
 cvar_t *g_item_bobbing;
-cvar_t *g_item_chain_random;
 cvar_t *g_knockback_scale;
 cvar_t *g_ladder_steps;
 cvar_t *g_lag_compensation;
@@ -211,6 +204,7 @@ cvar_t *g_vampiric_damage;
 cvar_t *g_vampiric_exp_min;
 cvar_t *g_vampiric_health_max;
 cvar_t *g_vampiric_percentile;
+cvar_t *g_verbose;
 cvar_t *g_vote_flags;
 cvar_t *g_vote_limit;
 cvar_t *g_warmup_countdown;
@@ -580,7 +574,8 @@ void G_LoadMOTD() {
 		if (valid) {
 			game.motd = (const char *)buffer;
 			game.motd_modcount++;
-			//gi.Com_PrintFmt("{}: MotD file verified and loaded: \"{}\"\n", __FUNCTION__, name);
+			if (g_verbose->integer)
+				gi.Com_PrintFmt("{}: MotD file verified and loaded: \"{}\"\n", __FUNCTION__, name);
 		} else {
 			gi.Com_PrintFmt("{}: MotD file load error for \"{}\", discarding.\n", __FUNCTION__, name);
 		}
@@ -683,7 +678,6 @@ void GT_Changes() {
 	if (gt_g_gametype != g_gametype->modified_count) {
 		gt = (gametype_t)clamp(g_gametype->integer, (int)GT_FIRST, (int)GT_LAST);
 
-		gi.Com_PrintFmt("GT = {}\n", (int)gt);
 		if (gt != gt_check) {
 			switch (gt) {
 			case gametype_t::GT_TDM:
@@ -749,7 +743,7 @@ void GT_Changes() {
 	if (!changed || gt == gametype_t::GT_NONE)
 		return;
 
-	gi.Com_PrintFmt("GAMETYPE = {}\n", (int)gt);
+	//gi.Com_PrintFmt("GAMETYPE = {}\n", (int)gt);
 	
 	if (gt_teams_on != Teams()) {
 		team_reset = true;
@@ -998,7 +992,6 @@ static void InitGame() {
 	g_infinite_ammo = gi.cvar("g_infinite_ammo", "0", CVAR_LATCH);
 	g_instant_weapon_switch = gi.cvar("g_instant_weapon_switch", "0", CVAR_LATCH);
 	g_item_bobbing = gi.cvar("g_item_bobbing", "1", CVAR_NOFLAGS);
-	g_item_chain_random = gi.cvar("g_item_chain_random", "0", CVAR_NOFLAGS);
 	g_knockback_scale = gi.cvar("g_knockback_scale", "1.0", CVAR_NOFLAGS);
 	g_ladder_steps = gi.cvar("g_ladder_steps", "1", CVAR_NOFLAGS);
 	g_lag_compensation = gi.cvar("g_lag_compensation", "1", CVAR_NOFLAGS);
@@ -1033,6 +1026,7 @@ static void InitGame() {
 	g_teamplay_force_balance = gi.cvar("g_teamplay_force_balance", "0", CVAR_NOFLAGS);
 	g_teamplay_item_drop_notice = gi.cvar("g_teamplay_item_drop_notice", "1", CVAR_NOFLAGS);
 	g_teleporter_freeze = gi.cvar("g_teleporter_freeze", "0", CVAR_NOFLAGS);
+	g_verbose = gi.cvar("g_verbose", "0", CVAR_NOFLAGS);
 	g_vote_flags = gi.cvar("g_vote_flags", "0", CVAR_NOFLAGS);
 	g_vote_limit = gi.cvar("g_vote_limit", "3", CVAR_NOFLAGS);
 	g_warmup_countdown = gi.cvar("g_warmup_countdown", "10", CVAR_NOFLAGS);
@@ -1099,8 +1093,8 @@ static void InitGame() {
 		gi.AddCommandString(G_Fmt("exec {}\n", level.mapname).data());
 
 	if (g_gametype_cfg->integer && deathmatch->integer) {
-		gi.Com_PrintFmt("exec gt-{}.cfg\n", gt_short_name_upper[g_gametype->integer]);
-		//gi.AddCommandString(G_Fmt("exec gt-{}.cfg\n", gt_short_name_upper[g_gametype->integer]).data());
+		//gi.Com_PrintFmt("exec gt-{}.cfg\n", gt_short_name_upper[g_gametype->integer]);
+		gi.AddCommandString(G_Fmt("exec gt-{}.cfg\n", gt_short_name_upper[g_gametype->integer]).data());
 	}
 }
 
@@ -1574,7 +1568,8 @@ static void Duel_RemoveLoser(void) {
 	if (!ent || !ent->client || !ent->client->pers.connected)
 		return;
 
-	gi.Com_PrintFmt( "Duel: Moving the loser, {}, to end of queue.\n", ent->client->resp.netname);
+	if (g_verbose->integer)
+		gi.Com_PrintFmt( "Duel: Moving the loser, {}, to end of queue.\n", ent->client->resp.netname);
 
 	// make them a queued player
 	SetTeam(ent, TEAM_NONE, false, true, false);
