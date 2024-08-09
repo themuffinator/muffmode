@@ -891,10 +891,7 @@ void T_RadiusDamage(gentity_t *inflictor, gentity_t *attacker, float damage, gen
 	vec3_t	 dir;
 	vec3_t   inflictor_center;
 
-	if (inflictor->linked)
-		inflictor_center = (inflictor->absmax + inflictor->absmin) * 0.5f;
-	else
-		inflictor_center = inflictor->s.origin;
+	inflictor_center = inflictor->linked ? ((inflictor->absmax + inflictor->absmin) * 0.5f) : inflictor->s.origin;
 
 	while ((ent = findradius(ent, inflictor_center, radius)) != nullptr) {
 		if (ent == ignore)
@@ -911,20 +908,22 @@ void T_RadiusDamage(gentity_t *inflictor, gentity_t *attacker, float damage, gen
 		v = inflictor_center - v;
 		points = damage - 0.5f * v.length();
 		if (ent == attacker)
-			points = points * 0.5f;
+			points *= 0.5f;
 		if (points > 0) {
 			if (CanDamage(ent, inflictor)) {
 				dir = (ent->s.origin - inflictor_center).normalized();
 				// [Paril-KEX] use closest point on bbox to explosion position
 				// to spawn damage effect
 
-				T_Damage(ent, inflictor, attacker, dir, closest_point_to_box(inflictor_center, ent->absmin, ent->absmax), dir, (int)points, (int)points,
-					dflags | DAMAGE_RADIUS, mod);
+				float kb = points;
+				if (mod.id == MOD_HYPERBLASTER)
+					kb *= 5;
+
+				T_Damage(ent, inflictor, attacker, dir, closest_point_to_box(inflictor_center, ent->absmin, ent->absmax), dir, (int)points, (int)kb, dflags | DAMAGE_RADIUS, mod);
 			}
 		}
 	}
 }
-
 
 /*
 ROGUE
@@ -937,7 +936,6 @@ void cleanupHealTarget(gentity_t *ent) {
 	ent->monsterinfo.aiflags &= ~AI_RESURRECTING;
 	M_SetEffects(ent);
 }
-
 
 /*
 ============

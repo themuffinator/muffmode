@@ -367,7 +367,7 @@ TOUCH(blaster_touch) (gentity_t *ent, gentity_t *other, const trace_t &tr, bool 
 
 	gi.WriteByte(svc_temp_entity);
 	gi.WriteByte((ent->style != MOD_BLUEBLASTER) ? TE_BLASTER : TE_BLUEHYPERBLASTER);
-	gi.WritePosition(ent->s.origin);
+	gi.WritePosition(ent->splash_damage ? origin : ent->s.origin);
 	gi.WriteDir(tr.plane.normal);
 	gi.multicast(ent->s.origin, MULTICAST_PHS, false);
 
@@ -403,8 +403,8 @@ void fire_blaster(gentity_t *self, const vec3_t &start, const vec3_t &dir, int d
 	bolt->dmg = damage;
 	if (RS(RS_Q3A) && mod.id == MOD_HYPERBLASTER) {
 		bolt->s.scale = 100;
-		bolt->splash_radius = 20;
-		bolt->splash_damage = 15;
+		bolt->splash_radius = 30;		//20;
+		bolt->splash_damage = 20;			//15;
 	}
 	bolt->classname = "bolt";
 	gi.linkentity(bolt);
