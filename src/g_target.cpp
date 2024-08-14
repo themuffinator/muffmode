@@ -1598,6 +1598,7 @@ void SP_target_poi(gentity_t *self) {
 
 /*QUAKED target_music (1 0 0) (-8 -8 -8) (8 8 8) x x x x x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
 Change music when used
+"sounds" set music track number to change to
 */
 
 static USE(use_target_music) (gentity_t *ent, gentity_t *other, gentity_t *activator) -> void {

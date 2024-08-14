@@ -3455,6 +3455,8 @@ model="models/items/armor/body/tris.md2"
 	},
 
 /*QUAKED weapon_chainfist (.3 .3 1) (-16 -16 -16) (16 16 16) TRIGGER_SPAWN x x SUSPENDED x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
+-------- MODEL FOR RADIANT ONLY - DO NOT SET THIS AS A KEY --------
+model="models/weapons/g_chainf/tris.md2"
 */
 	{
 		/* id */ IT_WEAPON_CHAINFIST,
@@ -3511,6 +3513,8 @@ model="models/weapons/g_shotg/tris.md2"
 	},
 
 /*QUAKED weapon_supershotgun (.3 .3 1) (-16 -16 -16) (16 16 16) TRIGGER_SPAWN x x SUSPENDED x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
+-------- MODEL FOR RADIANT ONLY - DO NOT SET THIS AS A KEY --------
+model="models/weapons/g_shotg2/tris.md2"
 */
 	{
 		/* id */ IT_WEAPON_SSHOTGUN,
@@ -3540,6 +3544,8 @@ model="models/weapons/g_shotg/tris.md2"
 	},
 
 /*QUAKED weapon_machinegun (.3 .3 1) (-16 -16 -16) (16 16 16) TRIGGER_SPAWN x x SUSPENDED x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
+-------- MODEL FOR RADIANT ONLY - DO NOT SET THIS AS A KEY --------
+model="models/weapons/g_machn/tris.md2"
 */
 	{
 		/* id */ IT_WEAPON_MACHINEGUN,
@@ -3569,6 +3575,8 @@ model="models/weapons/g_shotg/tris.md2"
 	},
 
 /*QUAKED weapon_etf_rifle (.3 .3 1) (-16 -16 -16) (16 16 16) TRIGGER_SPAWN x x SUSPENDED x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
+-------- MODEL FOR RADIANT ONLY - DO NOT SET THIS AS A KEY --------
+model="models/weapons/g_etf_rifle/tris.md2"
 */
 	{
 		/* id */ IT_WEAPON_ETF_RIFLE,
@@ -3598,6 +3606,8 @@ model="models/weapons/g_shotg/tris.md2"
 	},
 
 /*QUAKED weapon_chaingun (.3 .3 1) (-16 -16 -16) (16 16 16) TRIGGER_SPAWN x x SUSPENDED x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
+-------- MODEL FOR RADIANT ONLY - DO NOT SET THIS AS A KEY --------
+model="models/weapons/g_chain/tris.md2"
 */
 	{
 		/* id */ IT_WEAPON_CHAINGUN,
@@ -3656,6 +3666,7 @@ model="models/weapons/g_shotg/tris.md2"
 	},
 
 /*QUAKED ammo_trap (.3 .3 1) (-16 -16 -16) (16 16 16) TRIGGER_SPAWN x x SUSPENDED x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
+model="models/weapons/g_trap/tris.md2"
 */
 	{
 		/* id */ IT_AMMO_TRAP,
@@ -3685,6 +3696,7 @@ model="models/weapons/g_shotg/tris.md2"
 	},
 
 /*QUAKED ammo_tesla (.3 .3 1) (-16 -16 -16) (16 16 16) TRIGGER_SPAWN x x SUSPENDED x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
+model="models/ammo/am_tesl/tris.md2"
 */
 	{
 		/* id */ IT_AMMO_TESLA,
@@ -3743,6 +3755,8 @@ model="models/weapons/g_launch/tris.md2"
 	},
 
 /*QUAKED weapon_proxlauncher (.3 .3 1) (-16 -16 -16) (16 16 16) TRIGGER_SPAWN x x SUSPENDED x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
+-------- MODEL FOR RADIANT ONLY - DO NOT SET THIS AS A KEY --------
+model="models/weapons/g_plaunch/tris.md2"
 */
 	{
 		/* id */ IT_WEAPON_PROXLAUNCHER,
@@ -3770,6 +3784,8 @@ model="models/weapons/g_launch/tris.md2"
 	},
 
 /*QUAKED weapon_rocketlauncher (.3 .3 1) (-16 -16 -16) (16 16 16) TRIGGER_SPAWN x x SUSPENDED x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
+-------- MODEL FOR RADIANT ONLY - DO NOT SET THIS AS A KEY --------
+model="models/weapons/g_rocket/tris.md2"
 */
 	{
 		/* id */ IT_WEAPON_RLAUNCHER,
@@ -3797,6 +3813,8 @@ model="models/weapons/g_launch/tris.md2"
 	},
 
 /*QUAKED weapon_hyperblaster (.3 .3 1) (-16 -16 -16) (16 16 16) TRIGGER_SPAWN x x SUSPENDED x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
+-------- MODEL FOR RADIANT ONLY - DO NOT SET THIS AS A KEY --------
+model="models/weapons/g_hyperb/tris.md2"
 */
 	{
 		/* id */ IT_WEAPON_HYPERBLASTER,
@@ -3826,6 +3844,8 @@ model="models/weapons/g_launch/tris.md2"
 	},
 
 /*QUAKED weapon_boomer (.3 .3 1) (-16 -16 -16) (16 16 16) TRIGGER_SPAWN x x SUSPENDED x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
+-------- MODEL FOR RADIANT ONLY - DO NOT SET THIS AS A KEY --------
+model="models/weapons/g_boom/tris.md2"
 */
 	{
 		/* id */ IT_WEAPON_IONRIPPER,
@@ -3855,6 +3875,8 @@ model="models/weapons/g_launch/tris.md2"
 	},
 
 /*QUAKED weapon_plasmabeam (.3 .3 1) (-16 -16 -16) (16 16 16) TRIGGER_SPAWN x x SUSPENDED x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
+-------- MODEL FOR RADIANT ONLY - DO NOT SET THIS AS A KEY --------
+model="models/weapons/g_beamer/tris.md2"
 */
 	{
 		/* id */ IT_WEAPON_PLASMABEAM,
@@ -3884,6 +3906,8 @@ model="models/weapons/g_launch/tris.md2"
 	},
 
 /*QUAKED weapon_railgun (.3 .3 1) (-16 -16 -16) (16 16 16) TRIGGER_SPAWN x x SUSPENDED x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
+-------- MODEL FOR RADIANT ONLY - DO NOT SET THIS AS A KEY --------
+model="models/weapons/g_rail/tris.md2"
 */
 	{
 		/* id */ IT_WEAPON_RAILGUN,
@@ -3911,6 +3935,8 @@ model="models/weapons/g_launch/tris.md2"
 	},
 
 /*QUAKED weapon_phalanx (.3 .3 1) (-16 -16 -16) (16 16 16) TRIGGER_SPAWN x x SUSPENDED x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
+-------- MODEL FOR RADIANT ONLY - DO NOT SET THIS AS A KEY --------
+model="models/weapons/g_shotx/tris.md2"
 */
 	{
 		/* id */ IT_WEAPON_PHALANX,
@@ -3938,6 +3964,8 @@ model="models/weapons/g_launch/tris.md2"
 	},
 
 /*QUAKED weapon_bfg (.3 .3 1) (-16 -16 -16) (16 16 16) TRIGGER_SPAWN x x SUSPENDED x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
+-------- MODEL FOR RADIANT ONLY - DO NOT SET THIS AS A KEY --------
+model="models/weapons/g_bfg/tris.md2"
 */
 	{
 		/* id */ IT_WEAPON_BFG,
@@ -3967,6 +3995,8 @@ model="models/weapons/g_launch/tris.md2"
 	},
 
 /*QUAKED weapon_disintegrator (.3 .3 1) (-16 -16 -16) (16 16 16) TRIGGER_SPAWN x x SUSPENDED x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
+-------- MODEL FOR RADIANT ONLY - DO NOT SET THIS AS A KEY --------
+model="models/weapons/g_dist/tris.md2"
 */
 	{
 		/* id */ IT_WEAPON_DISRUPTOR,
@@ -4594,7 +4624,7 @@ model="models/items/pack/tris.md2"
 	},
 
 /*QUAKED item_ir_goggles (.3 .3 1) (-16 -16 -16) (16 16 16) TRIGGER_SPAWN x x SUSPENDED x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
-Gives +1 to maximum health.
+Infrared vision.
 model="models/items/goggles/tris.md2"
 */
 	{
@@ -4789,6 +4819,7 @@ model="models/items/dopple/tris.md2"
 	//
 /*QUAKED key_data_cd (0 .5 .8) (-16 -16 -16) (16 16 16) TRIGGER_SPAWN x x SUSPENDED x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
 Key for computer centers.
+-------- MODEL FOR RADIANT ONLY - DO NOT SET THIS AS A KEY --------
 model="models/items/keys/data_cd/tris.md2"
 */
 	{
@@ -4814,6 +4845,7 @@ model="models/items/keys/data_cd/tris.md2"
 
 /*QUAKED key_power_cube (0 .5 .8) (-16 -16 -16) (16 16 16) TRIGGER_SPAWN NO_TOUCH x x x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
 Power Cubes for warehouse.
+-------- MODEL FOR RADIANT ONLY - DO NOT SET THIS AS A KEY --------
 model="models/items/keys/power/tris.md2"
 */
 	{
@@ -4839,6 +4871,7 @@ model="models/items/keys/power/tris.md2"
 
 /*QUAKED key_explosive_charges (0 .5 .8) (-16 -16 -16) (16 16 16) TRIGGER_SPAWN NO_TOUCH x x x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
 Explosive Charges - for N64.
+-------- MODEL FOR RADIANT ONLY - DO NOT SET THIS AS A KEY --------
 model="models/items/n64/charge/tris.md2"
 */
 	{
@@ -4864,6 +4897,7 @@ model="models/items/n64/charge/tris.md2"
 
 /*QUAKED key_yellow_key (0 .5 .8) (-16 -16 -16) (16 16 16) TRIGGER_SPAWN x x SUSPENDED x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
 Normal door key - Yellow - for N64.
+-------- MODEL FOR RADIANT ONLY - DO NOT SET THIS AS A KEY --------
 model="models/items/n64/yellow_key/tris.md2"
 */
 	{
@@ -4889,6 +4923,7 @@ model="models/items/n64/yellow_key/tris.md2"
 
 /*QUAKED key_power_core (0 .5 .8) (-16 -16 -16) (16 16 16) TRIGGER_SPAWN x x SUSPENDED x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
 Power Core key - for N64.
+-------- MODEL FOR RADIANT ONLY - DO NOT SET THIS AS A KEY --------
 model="models/items/n64/power_core/tris.md2"
 */
 	{
@@ -4914,6 +4949,7 @@ model="models/items/n64/power_core/tris.md2"
 
 /*QUAKED key_pyramid (0 .5 .8) (-16 -16 -16) (16 16 16) TRIGGER_SPAWN x x SUSPENDED x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
 Key for the entrance of jail3.
+-------- MODEL FOR RADIANT ONLY - DO NOT SET THIS AS A KEY --------
 model="models/items/keys/pyramid/tris.md2"
 */
 	{
@@ -4939,6 +4975,7 @@ model="models/items/keys/pyramid/tris.md2"
 
 /*QUAKED key_data_spinner (0 .5 .8) (-16 -16 -16) (16 16 16) TRIGGER_SPAWN x x SUSPENDED x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
 Key for the city computer.
+-------- MODEL FOR RADIANT ONLY - DO NOT SET THIS AS A KEY --------
 model="models/items/keys/spinner/tris.md2"
 */
 	{
@@ -4964,6 +5001,7 @@ model="models/items/keys/spinner/tris.md2"
 
 /*QUAKED key_pass (0 .5 .8) (-16 -16 -16) (16 16 16) TRIGGER_SPAWN x x SUSPENDED x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
 Security pass for the security level.
+-------- MODEL FOR RADIANT ONLY - DO NOT SET THIS AS A KEY --------
 model="models/items/keys/pass/tris.md2"
 */
 	{
@@ -4989,6 +5027,7 @@ model="models/items/keys/pass/tris.md2"
 
 /*QUAKED key_blue_key (0 .5 .8) (-16 -16 -16) (16 16 16) TRIGGER_SPAWN x x SUSPENDED x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
 Normal door key - Blue.
+-------- MODEL FOR RADIANT ONLY - DO NOT SET THIS AS A KEY --------
 model="models/items/keys/key/tris.md2"
 */
 	{
@@ -5014,6 +5053,7 @@ model="models/items/keys/key/tris.md2"
 
 /*QUAKED key_red_key (0 .5 .8) (-16 -16 -16) (16 16 16) TRIGGER_SPAWN x x SUSPENDED x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
 Normal door key - Red.
+-------- MODEL FOR RADIANT ONLY - DO NOT SET THIS AS A KEY --------
 model="models/items/keys/red_key/tris.md2"
 */
 	{
@@ -5039,6 +5079,7 @@ model="models/items/keys/red_key/tris.md2"
 
 /*QUAKED key_green_key (0 .5 .8) (-16 -16 -16) (16 16 16) TRIGGER_SPAWN x x SUSPENDED x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
 Normal door key - Green.
+-------- MODEL FOR RADIANT ONLY - DO NOT SET THIS AS A KEY --------
 model="models/items/keys/green_key/tris.md2"
 */
 	{
@@ -5113,6 +5154,7 @@ model="models/items/keys/target/tris.md2"
 	},
 
 /*QUAKED key_nuke_container (.3 .3 1) (-16 -16 -16) (16 16 16) TRIGGER_SPAWN x x SUSPENDED x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
+-------- MODEL FOR RADIANT ONLY - DO NOT SET THIS AS A KEY --------
 model="models/weapons/g_nuke/tris.md2"
 */
 	{
@@ -5137,6 +5179,7 @@ model="models/weapons/g_nuke/tris.md2"
 	},
 
 /*QUAKED key_nuke (.3 .3 1) (-16 -16 -16) (16 16 16) TRIGGER_SPAWN x x SUSPENDED x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
+-------- MODEL FOR RADIANT ONLY - DO NOT SET THIS AS A KEY --------
 model="models/weapons/g_nuke/tris.md2"
 */
 	{
@@ -5162,6 +5205,7 @@ model="models/weapons/g_nuke/tris.md2"
 
 /*QUAKED item_health_small (.3 .3 1) (-16 -16 -16) (16 16 16) TRIGGER_SPAWN x x SUSPENDED x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
 Health - Stimpack.
+-------- MODEL FOR RADIANT ONLY - DO NOT SET THIS AS A KEY --------
 model="models/items/healing/stimpack/tris.md2"
 */
 	// Paril: split the healths up so they are always valid classnames
@@ -5191,6 +5235,7 @@ model="models/items/healing/stimpack/tris.md2"
 
 /*QUAKED item_health (.3 .3 1) (-16 -16 -16) (16 16 16) TRIGGER_SPAWN x x SUSPENDED x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
 Health - First Aid.
+-------- MODEL FOR RADIANT ONLY - DO NOT SET THIS AS A KEY --------
 model="models/items/healing/medium/tris.md2"
 */
 	{
@@ -5216,6 +5261,7 @@ model="models/items/healing/medium/tris.md2"
 
 /*QUAKED item_health_large (.3 .3 1) (-16 -16 -16) (16 16 16) TRIGGER_SPAWN x x SUSPENDED x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
 Health - Medkit.
+-------- MODEL FOR RADIANT ONLY - DO NOT SET THIS AS A KEY --------
 model="models/items/healing/large/tris.md2"
 */
 	{
@@ -5241,6 +5287,7 @@ model="models/items/healing/large/tris.md2"
 
 /*QUAKED item_health_mega (.3 .3 1) (-16 -16 -16) (16 16 16) TRIGGER_SPAWN x x SUSPENDED x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
 Health - Mega Health.
+-------- MODEL FOR RADIANT ONLY - DO NOT SET THIS AS A KEY --------
 model="models/items/mega_h/tris.md2"
 */
 	{
@@ -5269,6 +5316,7 @@ model="models/items/mega_h/tris.md2"
 
 /*QUAKED item_flag_team_red (1 0.2 0) (-16 -16 -24) (16 16 32) TRIGGER_SPAWN x x SUSPENDED x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
 Red Flag for CTF.
+-------- MODEL FOR RADIANT ONLY - DO NOT SET THIS AS A KEY --------
 model="players/male/flag1.md2"
 */
 	{
@@ -5298,6 +5346,7 @@ model="players/male/flag1.md2"
 
 /*QUAKED item_flag_team_blue (1 0.2 0) (-16 -16 -24) (16 16 32) TRIGGER_SPAWN x x SUSPENDED x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
 Blue Flag for CTF.
+-------- MODEL FOR RADIANT ONLY - DO NOT SET THIS AS A KEY --------
 model="players/male/flag2.md2"
 */
 	{

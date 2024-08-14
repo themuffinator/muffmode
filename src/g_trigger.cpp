@@ -933,7 +933,7 @@ trigger_flashlight
 ==============================================================================
 */
 
-/*QUAKED trigger_flashlight (.5 .5 .5) ? x x x x x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
+/*QUAKED trigger_flashlight (.5 .5 .5) ? CLIPPED x x x x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
 Players moving against this trigger will have their flashlight turned on or off.
 "style" default to 0, set to 1 to always turn flashlight on, 2 to always turn off,
 		otherwise "angles" are used to control on/off state

@@ -1263,6 +1263,12 @@ void SP_func_rotating(gentity_t *ent) {
 	gi.linkentity(ent);
 }
 
+/*QUAKED func_spinning (0 .5 .8) ? x x x x x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
+Randomly spinning object, not controllable.
+
+"speed" set speed of rotation (default 100)
+"dmg" set damage inflicted when blocked (default 2)
+*/
 static THINK(func_spinning_think) (gentity_t *ent) -> void {
 	if (ent->timestamp <= level.time) {
 		ent->timestamp = level.time + random_time(1_sec, 6_sec);
@@ -3386,6 +3392,7 @@ void SP_func_eye(gentity_t *ent) {
 
 
 /*QUAKED rotating_light (0 .5 .8) (-8 -8 -8) (8 8 8) START_OFF ALARM x x x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
+Rotating dynamic spot light.
 "health"	if set, the light may be killed.
 */
 
@@ -3474,7 +3481,7 @@ void SP_rotating_light(gentity_t *self) {
 }
 
 /*QUAKED func_object_repair (1 .5 0) (-8 -8 -8) (8 8 8) x x x x x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
-object to be repaired.
+An object to be repaired.
 The default delay is 1 second
 "delay" the delay in seconds for spark to occur
 */
