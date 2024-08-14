@@ -64,7 +64,6 @@ void SP_trigger_teleport(gentity_t *self);
 void SP_trigger_ctf_teleport(gentity_t *self);
 void SP_trigger_disguise(gentity_t *self);
 
-void SP_trigger_teleport(gentity_t *self);	//q3
 void SP_trigger_deathcount(gentity_t *ent);	//mm
 void SP_trigger_no_monsters(gentity_t *ent);	//mm
 void SP_trigger_monsters(gentity_t *ent);	//mm
@@ -337,6 +336,9 @@ static const std::initializer_list<spawn_t> spawns = {
 	{ "target_cvar", SP_target_cvar },
 	{ "target_setskill", SP_target_setskill },
 	{ "target_position", SP_info_notnull },
+
+	{ "target_setskill", SP_target_setskill },
+	{ "target_score", SP_target_score },
 	{ "target_remove_weapons", SP_target_remove_weapons },
 
 	{ "target_shooter_grenade", SP_target_shooter_grenade },
@@ -1143,6 +1145,10 @@ static inline bool G_InhibitEntity(gentity_t *ent) {
 		if (s)
 			return true;
 	}
+	if (ent->notteam && Teams())
+		return true;
+	if (ent->notfree && !Teams())
+		return true;
 
 	// dm-only
 	if (deathmatch->integer)
@@ -1772,8 +1778,8 @@ void SpawnEntities(const char *mapname, const char *entities, const char *spawnp
 		ent->s.renderfx |= RF_IR_VISIBLE;
 	}
 
-	if (inhibit)
-		gi.Com_PrintFmt("{} entities inhibited.\n", __FUNCTION__, inhibit);
+	if (inhibit && g_verbose->integer)
+		gi.Com_PrintFmt("{} entities inhibited.\n", inhibit);
 
 	// precache start_items
 	PrecacheStartItems();
@@ -2082,13 +2088,13 @@ Only used for the world.
 "sounds"			music cd track number
 "music"				specific music file to play, overrides "sounds"
 "gravity"			800 is default gravity
-"message"			text to print at user logon
+"hub_map"			in campaigns, sets as hub map
+"message"			sets long level name
 "author"			sets level author name
 "author2"			sets another level author name
 "start_items"		give players these items on spawn
 "no_grapple"		disables grappling hook
 "no_dm_spawnpads"	disables spawn pads in deathmatch
-"hub_map"			in campaigns, sets as hub map
 "ruleset"			overrides gameplay ruleset (q2re/mm/q3a)
 */
 void SP_worldspawn(gentity_t *ent) {
