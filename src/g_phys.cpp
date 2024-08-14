@@ -1028,6 +1028,27 @@ void G_RunEntity(gentity_t *ent) {
 		}
 	}
 
+	// try to fix buggy lifts this way
+	if (has_previous_origin && ent->movetype == MOVETYPE_STOP) {
+		if (ent->s.origin == previous_origin) {
+			switch (ent->moveinfo.state) {
+			case STATE_UP:
+				ent->s.origin[2] = (int)ceil(ent->s.origin[2]);
+				gi.Com_Print("attempting mover fix\n");
+				break;
+			case STATE_DOWN:
+				ent->s.origin[2] = (int)floor(ent->s.origin[2]);
+				gi.Com_Print("attempting mover fix\n");
+				break;
+			}
+			if (ent->s.origin != previous_origin) {
+				trace = gi.trace(ent->s.origin, ent->mins, ent->maxs, ent->s.origin, ent, G_GetClipMask(ent));
+				if (trace.allsolid || trace.startsolid)
+					ent->s.origin = previous_origin;
+			}
+		}
+	}
+
 	if (ent->postthink)
 		ent->postthink(ent);
 }
