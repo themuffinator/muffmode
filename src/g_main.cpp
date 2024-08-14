@@ -2406,7 +2406,7 @@ void CalculateRanks() {
 
 		// decide if this should be auto-followed
 		level.num_playing_clients++;
-		if (!(ec->svflags & SVF_BOT) && !cl->sess.is_a_bot) {
+		if (!cl->sess.is_a_bot) {
 			level.num_playing_human_clients++;
 			level.num_voting_clients++;
 		}
