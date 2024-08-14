@@ -471,7 +471,7 @@ Default _cone value is 10 (used to set size of light for spotlights)
 constexpr spawnflags_t SPAWNFLAG_LIGHT_START_OFF = 1_spawnflag;
 constexpr spawnflags_t SPAWNFLAG_LIGHT_ALLOW_IN_DM = 2_spawnflag;
 
-USE(light_use) (gentity_t *self, gentity_t *other, gentity_t *activator) -> void {
+static USE(light_use) (gentity_t *self, gentity_t *other, gentity_t *activator) -> void {
 	if (self->spawnflags.has(SPAWNFLAG_LIGHT_START_OFF)) {
 		gi.configstring(CS_LIGHTS + self->style, self->style_on);
 		self->spawnflags &= ~SPAWNFLAG_LIGHT_START_OFF;
@@ -605,7 +605,7 @@ static void setup_dynamic_light(gentity_t *self) {
 	}
 }
 
-USE(dynamic_light_use) (gentity_t *self, gentity_t *other, gentity_t *activator) -> void {
+static USE(dynamic_light_use) (gentity_t *self, gentity_t *other, gentity_t *activator) -> void {
 	self->svflags ^= SVF_NOCLIENT;
 }
 
@@ -669,7 +669,7 @@ constexpr spawnflags_t SPAWNFLAG_WALL_START_ON = 4_spawnflag;
 constexpr spawnflags_t SPAWNFLAG_WALL_ANIMATED = 8_spawnflag;
 constexpr spawnflags_t SPAWNFLAG_WALL_ANIMATED_FAST = 16_spawnflag;
 
-USE(func_wall_use) (gentity_t *self, gentity_t *other, gentity_t *activator) -> void {
+static USE(func_wall_use) (gentity_t *self, gentity_t *other, gentity_t *activator) -> void {
 	if (self->solid == SOLID_NOT) {
 		self->solid = SOLID_BSP;
 		self->svflags &= ~SVF_NOCLIENT;
@@ -1016,7 +1016,7 @@ Large exploding box.  You can override its mass (100),
 health (80), and dmg (150).
 */
 
-TOUCH(barrel_touch) (gentity_t *self, gentity_t *other, const trace_t &tr, bool other_touching_self) -> void {
+static TOUCH(barrel_touch) (gentity_t *self, gentity_t *other, const trace_t &tr, bool other_touching_self) -> void {
 	float  ratio;
 	vec3_t v;
 
@@ -1030,7 +1030,7 @@ TOUCH(barrel_touch) (gentity_t *self, gentity_t *other, const trace_t &tr, bool 
 	M_walkmove(self, vectoyaw(v), 20 * ratio * gi.frame_time_s);
 }
 
-THINK(barrel_explode) (gentity_t *self) -> void {
+static THINK(barrel_explode) (gentity_t *self) -> void {
 	self->takedamage = false;
 
 	T_RadiusDamage(self, self->activator, (float)self->dmg, nullptr, (float)(self->dmg + 40), DAMAGE_NONE, MOD_BARREL);
@@ -1047,7 +1047,7 @@ THINK(barrel_explode) (gentity_t *self) -> void {
 		BecomeExplosion1(self);
 }
 
-THINK(barrel_burn) (gentity_t *self) -> void {
+static THINK(barrel_burn) (gentity_t *self) -> void {
 	if (level.time >= self->timestamp)
 		self->think = barrel_explode;
 
@@ -1056,7 +1056,7 @@ THINK(barrel_burn) (gentity_t *self) -> void {
 	self->nextthink = level.time + FRAME_TIME_S;
 }
 
-DIE(barrel_delay) (gentity_t *self, gentity_t *inflictor, gentity_t *attacker, int damage, const vec3_t &point, const mod_t &mod) -> void {
+static DIE(barrel_delay) (gentity_t *self, gentity_t *inflictor, gentity_t *attacker, int damage, const vec3_t &point, const mod_t &mod) -> void {
 	// allow "dead" barrels waiting to explode to still receive knockback
 	if (self->think == barrel_burn || self->think == barrel_explode)
 		return;
@@ -1108,8 +1108,8 @@ void SP_misc_explobox(gentity_t *self) {
 
 	self->model = "models/objects/barrels/tris.md2";
 	self->s.modelindex = gi.modelindex(self->model);
-	self->mins = { -16, -16, 0 };
-	self->maxs = { 16, 16, 40 };
+	self->mins = { -16 * self->s.scale, -16 * self->s.scale, 0 };
+	self->maxs = { 16 * self->s.scale, 16 * self->s.scale, 40 * self->s.scale };
 
 	if (!self->mass)
 		self->mass = 50;
@@ -1699,7 +1699,7 @@ void SP_target_character(gentity_t *self) {
 /*QUAKED target_string (0 0 1) (-8 -8 -8) (8 8 8) x x x x x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
  */
 
-USE(target_string_use) (gentity_t *self, gentity_t *other, gentity_t *activator) -> void {
+static USE(target_string_use) (gentity_t *self, gentity_t *other, gentity_t *activator) -> void {
 	gentity_t *e;
 	int		 n;
 	size_t	 l;
@@ -2144,7 +2144,7 @@ constexpr spawnflags_t SPAWNFLAG_WORLD_TEXT_TRIGGER_ONCE = 2_spawnflag;
 constexpr spawnflags_t SPAWNFLAG_WORLD_TEXT_REMOVE_ON_TRIGGER = 4_spawnflag;
 constexpr spawnflags_t SPAWNFLAG_WORLD_TEXT_LEADER_BOARD = 8_spawnflag;
 
-USE(info_world_text_use) (gentity_t *self, gentity_t *other, gentity_t *activator) -> void {
+static USE(info_world_text_use) (gentity_t *self, gentity_t *other, gentity_t *activator) -> void {
 	if (self->activator == nullptr) {
 		self->activator = activator;
 		self->think(self);
