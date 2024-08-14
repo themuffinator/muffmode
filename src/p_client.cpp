@@ -2984,7 +2984,7 @@ void ClientBegin(gentity_t *ent) {
 	ent->client = game.clients + (ent - g_entities - 1);
 	ent->client->awaiting_respawn = false;
 	ent->client->respawn_timeout = 0_ms;
-#if 0
+
 	// set inactivity timer
 	gtime_t cv = gtime_t::from_sec(g_inactivity->integer);
 	if (cv) {
@@ -2992,7 +2992,7 @@ void ClientBegin(gentity_t *ent) {
 		ent->client->sess.inactivity_time = level.time + cv;
 		ent->client->sess.inactivity_warning = false;
 	}
-#endif
+
 	// [Paril-KEX] we're always connected by this point...
 	ent->client->pers.connected = true;
 
