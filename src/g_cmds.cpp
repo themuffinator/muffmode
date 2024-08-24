@@ -1510,6 +1510,54 @@ static void Cmd_Say_Team_f(gentity_t *who, const char *msg_in) {
 
 /*
 =================
+Cmd_ListEntities_f
+=================
+*/
+static void Cmd_ListEntities_f(gentity_t *ent) {
+	int count = 0;
+
+	for (size_t i = 1; i < game.maxentities; i++) {
+		gentity_t *e = &g_entities[i];
+
+		if (!e || !e->inuse)
+			continue;
+		
+		if (gi.argc() > 1) {
+			if (!strstr(e->classname, gi.argv(1)))
+				continue;
+		}
+		if (gi.argc() > 2) {
+			float num = atof(gi.argv(3));
+			if (e->s.origin[0] != num)
+				continue;
+		}
+		if (gi.argc() > 3) {
+			float num = atof(gi.argv(4));
+			if (e->s.origin[1] != num)
+				continue;
+		}
+		if (gi.argc() > 4) {
+			float num = atof(gi.argv(5));
+			if (e->s.origin[2] != num)
+				continue;
+		}
+
+		gi.Com_PrintFmt("{}: {}", i, *e);
+//#if 0
+		if (e->target)
+			gi.Com_PrintFmt(", target={}", e->target);
+		if (e->targetname)
+			gi.Com_PrintFmt(", targetname={}", e->targetname);
+//#endif
+		gi.Com_Print("\n");
+
+		count++;
+	}
+	gi.Com_PrintFmt("\ntotal valid entities={}\n", count);
+}
+
+/*
+=================
 Cmd_ListMonsters_f
 =================
 */
@@ -3303,6 +3351,7 @@ cmds_t client_cmds[] = {
 	{"kb",				Cmd_KillBeep_f,			CF_ALLOW_SPEC | CF_ALLOW_DEAD},
 	{"kill",			Cmd_Kill_f,				CF_NONE},
 	{"kill_ai",			Cmd_Kill_AI_f,			CF_CHEAT_PROTECT},
+	{"listentities",	Cmd_ListEntities_f,		CF_ALLOW_DEAD | CF_ALLOW_INT | CF_ALLOW_SPEC | CF_CHEAT_PROTECT},
 	{"listmonsters",	Cmd_ListMonsters_f,		CF_ALLOW_DEAD | CF_ALLOW_INT | CF_ALLOW_SPEC | CF_CHEAT_PROTECT},
 	{"loadmotd",		Cmd_LoadMotd_f,			CF_ADMIN_ONLY | CF_ALLOW_INT | CF_ALLOW_SPEC},
 	{"lockteam",		Cmd_LockTeam_f,			CF_ADMIN_ONLY | CF_ALLOW_INT | CF_ALLOW_SPEC},
