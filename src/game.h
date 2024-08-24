@@ -1286,7 +1286,7 @@ static_assert(CS_REMAP(CS_AIRACCEL_OLD).start == (CS_AIRACCEL * 96), "check CS_R
 //==============================================
 
 // entity_state_t->event values
-// ertity events are for effects that take place reletive
+// entity events are for effects that take place relative
 // to an existing entities origin.  Very network efficient.
 // All muzzle flashes really should be converted to events...
 enum entity_event_t : uint8_t {
