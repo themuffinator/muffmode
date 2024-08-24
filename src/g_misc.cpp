@@ -91,6 +91,7 @@ static THINK(GibSink) (gentity_t *ent) -> void {
 		G_FreeEntity(ent);
 		return;
 	}
+	//ent->s.renderfx = RF_FULLBRIGHT;
 	ent->nextthink = level.time + gtime_t::from_ms(50);
 	ent->s.origin[2] -= 0.5;
 }
@@ -141,8 +142,8 @@ gentity_t *ThrowGib(gentity_t *self, const char *gibname, int damage, gib_type_t
 	gib->svflags &= ~SVF_MONSTER;
 	gib->clipmask = MASK_SOLID;
 	gib->s.effects = EF_NONE;
-	gib->s.renderfx = RF_LOW_PRIORITY;
-	gib->s.renderfx |= RF_NOSHADOW;
+	gib->s.renderfx = RF_LOW_PRIORITY | RF_FULLBRIGHT;
+	//gib->s.renderfx |= RF_NOSHADOW;
 	if (!(type & GIB_DEBRIS)) {
 		if (type & GIB_ACID)
 			gib->s.effects |= EF_GREENGIB;
@@ -244,7 +245,7 @@ void ThrowClientHead(gentity_t *self, int damage) {
 	self->solid = SOLID_TRIGGER; // [Paril-KEX] make 'trigger' so we still move but don't block shots/explode
 	self->svflags |= SVF_DEADMONSTER;
 	self->s.effects = EF_GIB;
-	self->s.renderfx |= RF_IR_VISIBLE;
+	self->s.renderfx = RF_LOW_PRIORITY | RF_FULLBRIGHT | RF_IR_VISIBLE;
 	self->s.sound = 0;
 	self->flags |= FL_NO_KNOCKBACK | FL_NO_DAMAGE_EFFECTS;
 
@@ -1879,7 +1880,7 @@ void TeleportPlayer(gentity_t *player, vec3_t origin, vec3_t angles) {
 	player->s.origin = origin;
 	player->s.old_origin = origin;
 	player->s.origin[2] += 10;
-
+	/*
 	if (g_teleporter_freeze->integer) {
 		// clear the velocity and hold them in place briefly
 		player->velocity = {};
@@ -1891,6 +1892,8 @@ void TeleportPlayer(gentity_t *player, vec3_t origin, vec3_t angles) {
 		AngleVectors(angles, player->velocity, NULL, NULL);
 		player->velocity *= player->velocity.length();
 	}
+	*/
+	TeleporterVelocity(player, angles);
 
 	// set angles
 	player->client->ps.pmove.delta_angles = angles - player->client->resp.cmd_angles;
