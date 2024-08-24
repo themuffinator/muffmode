@@ -324,7 +324,7 @@ void TeamsScoreboardMessage(gentity_t *ent, gentity_t *killer) {
 		//fmt::format_to(std::back_inserter(string), FMT_STRING("xv 0 yv -50 cstring2 \"{} - {}\" "), level.gamemod_name, level.gametype_name);
 		//fmt::format_to(std::back_inserter(string), FMT_STRING("xv 0 yv -40 cstring2 \"[{}] {}\" "), level.mapname, level.level_name);
 		if (level.match_start_time) {
-			int	t = (level.intermission_time - level.match_start_time).milliseconds();
+			int	t = (level.intermission_time - level.match_start_time - 1_sec).milliseconds();
 			fmt::format_to(std::back_inserter(string), FMT_STRING("xv 0 yv -50 cstring2 \"Total Match Time: {}\" "), G_TimeStringMs(t, false));
 		}
 		if (level.intermission_victor_msg[0])
@@ -534,7 +534,7 @@ static void DuelScoreboardMessage(gentity_t *ent, gentity_t *killer) {
 		//fmt::format_to(std::back_inserter(string), FMT_STRING("xv 0 yv -50 cstring2 \"{} - {}\" "), level.gamemod_name, level.gametype_name);
 		//fmt::format_to(std::back_inserter(string), FMT_STRING("xv 0 yv -40 cstring2 \"[{}] {}\" "), level.mapname, level.level_name);
 		if (level.match_start_time) {
-			int	t = (level.intermission_time - level.match_start_time).milliseconds();
+			int	t = (level.intermission_time - level.match_start_time - 1_sec).milliseconds();
 			fmt::format_to(std::back_inserter(string), FMT_STRING("xv 0 yv -50 cstring2 \"Total Match Time: {}\" "), G_TimeStringMs(t, false));
 		}
 		if (level.intermission_victor_msg[0])
@@ -731,7 +731,7 @@ static inline void ScoreboardNotice(gentity_t *ent, std::string string) {
 		//fmt::format_to(std::back_inserter(string), FMT_STRING("xv 0 yv -50 cstring2 \"{} - {}\" "), level.gamemod_name, level.gametype_name);
 		//fmt::format_to(std::back_inserter(string), FMT_STRING("xv 0 yv -40 cstring2 \"[{}] {}\" "), level.mapname, level.level_name);
 		if (level.match_start_time) {
-			int	t = (level.intermission_time - level.match_start_time).milliseconds();
+			int	t = (level.intermission_time - level.match_start_time - 1_sec).milliseconds();
 			fmt::format_to(std::back_inserter(string), FMT_STRING("xv 0 yv -50 cstring2 \"Total Match Time: {}\" "), G_TimeStringMs(t, false));
 		}
 		if (level.intermission_victor_msg[0])
@@ -850,7 +850,7 @@ void DeathmatchScoreboardMessage(gentity_t *ent, gentity_t *killer) {
 		//fmt::format_to(std::back_inserter(string), FMT_STRING("xv 0 yv -50 cstring2 \"{} - {}\" "), level.gamemod_name, level.gametype_name);
 		//fmt::format_to(std::back_inserter(string), FMT_STRING("xv 0 yv -40 cstring2 \"[{}] {}\" "), level.mapname, level.level_name);
 		if (level.match_start_time) {
-			int	t = (level.intermission_time - level.match_start_time).milliseconds();
+			int	t = (level.intermission_time - level.match_start_time - 1_sec).milliseconds();
 			fmt::format_to(std::back_inserter(string), FMT_STRING("xv 0 yv -50 cstring2 \"Total Match Time: {}\" "), G_TimeStringMs(t, false));
 		}
 		if (level.intermission_victor_msg[0])
