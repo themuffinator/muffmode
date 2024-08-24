@@ -15,8 +15,18 @@ static THINK(info_player_start_drop) (gentity_t *self) -> void {
 	gi.linkentity(self);
 }
 
+static inline void deathmatch_spawn_flags(gentity_t *self) {
+	if (st.nobots)
+		self->flags = FL_NO_BOTS;
+	if (st.nohumans)
+		self->flags = FL_NO_HUMANS;
+}
+
 /*QUAKED info_player_start (1 0 0) (-16 -16 -24) (16 16 32) x x x x x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
 The normal starting point for a level.
+
+"nobots" will prevent bots from using this spot.
+"nohumans" will prevent humans from using this spot.
 */
 void SP_info_player_start(gentity_t *self) {
 	// fix stuck spawn points
@@ -29,10 +39,17 @@ void SP_info_player_start(gentity_t *self) {
 		self->think = info_player_start_drop;
 		self->nextthink = level.time + FRAME_TIME_S;
 	}
+
+	deathmatch_spawn_flags(self);
 }
 
-/*QUAKED info_player_deathmatch (1 0 1) (-16 -16 -24) (16 16 32) x x x x x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
+/*QUAKED info_player_deathmatch (1 0 1) (-16 -16 -24) (16 16 32) INITIAL x x x x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
 A potential spawning position for deathmatch games.
+
+The first time a player enters the game, they will be at an 'INITIAL' spot.
+Targets will be fired when someone spawns in on them.
+"nobots" will prevent bots from using this spot.
+"nohumans" will prevent humans from using this spot.
 */
 void SP_info_player_deathmatch(gentity_t *self) {
 	if (!deathmatch->integer) {
@@ -42,6 +59,8 @@ void SP_info_player_deathmatch(gentity_t *self) {
 	if (g_dm_spawnpads->integer > 1 || (g_dm_spawnpads->integer == 1 && ItemSpawnsEnabled() && notGT(GT_HORDE)))
 		if (!level.no_dm_spawnpads)
 			SP_misc_teleporter_dest(self);
+
+	deathmatch_spawn_flags(self);
 }
 
 /*QUAKED info_player_team_red (1 0 0) (-16 -16 -24) (16 16 32) x x x x x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
@@ -626,7 +645,6 @@ static void ClientObituary(gentity_t *self, gentity_t *inflictor, gentity_t *att
 						gi.LocClient_Print(attacker, PRINT_CENTER, "You {} {}\n{} place with {}", GT(GT_FREEZE) ? "froze" : "fragged",
 							self->client->resp.netname, G_PlaceString(attacker->client->resp.rank + 1), attacker->client->resp.score);
 				}
-				self->client->resp.kill_count = 0;
 			}
 			if (attacker->client->sess.pc.killbeep_num > 0 && attacker->client->sess.pc.killbeep_num < 5) {
 				const char *sb[5] = { "", "nav_editor/select_node.wav", "misc/comp_up.wav", "insane/insane7.wav", "nav_editor/finish_node_move.wav" };
@@ -634,6 +652,8 @@ static void ClientObituary(gentity_t *self, gentity_t *inflictor, gentity_t *att
 			}
 		}
 	}
+
+	self->client->resp.kill_count = 0;
 
 	if (base)
 		return;
@@ -1535,6 +1555,14 @@ select_spawn_result_t SelectDeathmatchSpawnPoint(gentity_t *ent, vec3_t avoid_po
 						continue;
 					}
 				}
+
+				if (ent->client->sess.is_a_bot)
+					if (spot->flags & FL_NO_BOTS)
+						continue;
+				if (!ent->client->sess.is_a_bot)
+					if (spot->flags & FL_NO_HUMANS)
+						continue;
+
 				if (SpawnPointClear(spot))
 					return { spot, true };
 			}
@@ -1565,6 +1593,13 @@ select_spawn_result_t SelectDeathmatchSpawnPoint(gentity_t *ent, vec3_t avoid_po
 					}
 				}
 
+				if (ent->client->sess.is_a_bot)
+					if (spot->flags & FL_NO_BOTS)
+						continue;
+				if (!ent->client->sess.is_a_bot)
+					if (spot->flags & FL_NO_HUMANS)
+						continue;
+
 				if (SpawnPointClear(spawn_points[i].point))
 					return { spawn_points[i].point, true };
 			}
@@ -1593,6 +1628,13 @@ select_spawn_result_t SelectDeathmatchSpawnPoint(gentity_t *ent, vec3_t avoid_po
 						continue;
 					}
 				}
+
+				if (ent->client->sess.is_a_bot)
+					if (spot->flags & FL_NO_BOTS)
+						continue;
+				if (!ent->client->sess.is_a_bot)
+					if (spot->flags & FL_NO_HUMANS)
+						continue;
 
 				if (SpawnPointClear(spawn_points[i].point))
 					return { spawn_points[i].point, true };
@@ -2201,7 +2243,7 @@ void G_PostRespawn(gentity_t *self) {
 	// hold in place briefly
 	self->client->ps.pmove.pm_flags = PMF_TIME_TELEPORT;
 	self->client->ps.pmove.pm_time = 112;
-
+	
 	self->client->respawn_min_time = 0_ms;
 	self->client->respawn_time = level.time;
 	
@@ -3551,7 +3593,7 @@ void ClientDisconnect(gentity_t *ent) {
 
 	if (ent->client->pers.connected)
 		if (ent->client->resp.netname && ent->client->sess.initialised)
-			gi.LocBroadcast_Print(PRINT_CENTER, "{} has left.",
+			gi.LocBroadcast_Print(PRINT_CENTER, "{} has left the server.",
 				ent->client->resp.netname);
 }
 

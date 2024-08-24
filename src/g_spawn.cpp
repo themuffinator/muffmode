@@ -506,6 +506,7 @@ void ED_CallSpawn(gentity_t *ent) {
 	ent->gravityVector[2] = -1.0;
 
 	ent->sv.init = false;
+
 #if 0
 	if (GT(GT_HORDE)) {
 		// remove monsters from map, we will spawn them in during wave starts
@@ -577,6 +578,7 @@ void ED_CallSpawn(gentity_t *ent) {
 	for (auto &s : spawns) {
 		if (!strcmp(s.name, ent->classname)) { // found it
 			s.spawn(ent);
+			//gi.Com_PrintFmt("{}: found {}\n", __FUNCTION__, *ent);
 
 			// Paril: swap classname with stored constant if we didn't change it
 			if (strcmp(ent->classname, s.name) == 0)
@@ -914,7 +916,11 @@ static const std::initializer_list<temp_field_t> temp_fields = {
 	FIELD_AUTO(author),
 	FIELD_AUTO(author2),
 
-	FIELD_AUTO(ruleset)
+	FIELD_AUTO(ruleset),
+
+	FIELD_AUTO(nobots),
+	FIELD_AUTO(nohumans),
+
 };
 // clang-format on
 

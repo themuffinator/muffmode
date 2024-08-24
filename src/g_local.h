@@ -933,7 +933,10 @@ enum ent_flags_t : uint64_t {
 	FL_RESPAWN				= bit_v<31>, // used for item respawning
 	FL_TRAP					= bit_v<32>, // entity is a trap of some kind
 	FL_TRAP_LASER_FIELD		= bit_v<33>, // enough of a special case to get it's own flag...
-	FL_IMMORTAL				= bit_v<34>  // never go below 1hp
+	FL_IMMORTAL				= bit_v<34>,  // never go below 1hp
+
+	FL_NO_BOTS				= bit_v<35>,  // not to be used by bots
+	FL_NO_HUMANS			= bit_v<36>,  // not to be used by humans
 };
 MAKE_ENUM_BITFLAGS(ent_flags_t);
 
@@ -1610,6 +1613,9 @@ struct spawn_temp_t {
 	const char *author2;
 
 	const char *ruleset;
+
+	bool nobots;
+	bool nohumans;
 };
 
 enum move_state_t {
@@ -2477,6 +2483,7 @@ void TeleportPlayerToRandomSpawnPoint(gentity_t *ent, bool fx);
 bool InCoopStyle();
 gentity_t *ClientEntFromString(const char *in);
 ruleset_t RS_IndexFromString(const char *in);
+void TeleporterVelocity(gentity_t *ent, gvec3_t angles);
 
 //
 // g_spawn.cpp
