@@ -97,7 +97,7 @@ gentity_t *G_PickTarget(const char *targetname) {
 	}
 
 	if (!num_choices) {
-		gi.Com_PrintFmt("G_PickTarget: target {} not found\n", targetname);
+		gi.Com_PrintFmt("{}: target {} not found\n", __FUNCTION__, targetname);
 		return nullptr;
 	}
 
@@ -372,6 +372,7 @@ THINK(G_FreeEntity) (gentity_t *ed) -> void {
 #endif
 		return;
 	}
+	//gi.Com_PrintFmt("{}: removing {}\n", __FUNCTION__, *ed);
 
 	gi.Bot_UnRegisterEntity(ed);
 
@@ -1013,4 +1014,19 @@ ruleset_t RS_IndexFromString(const char *in) {
 			return (ruleset_t)i;
 	}
 	return ruleset_t::RS_NONE;
+}
+
+void TeleporterVelocity(gentity_t *ent, gvec3_t angles) {
+	if (g_teleporter_freeze->integer) {
+		// clear the velocity and hold them in place briefly
+		ent->velocity = {};
+		ent->client->ps.pmove.pm_time = 160; // hold time
+		ent->client->ps.pmove.pm_flags |= PMF_TIME_TELEPORT;
+	} else {
+		// preserve velocity and 'spit' them out of destination
+		//ent->velocity[2] = 0;
+		AngleVectors(angles, ent->velocity, NULL, NULL);
+		gi.Com_PrintFmt("vel length={}\n", ent->velocity.length());
+		ent->velocity *= ent->velocity.length();
+	}
 }
