@@ -1468,6 +1468,18 @@ void SetRespawn(gentity_t *ent, gtime_t delay, bool hide_self) {
 static void Use_Teleporter(gentity_t *ent, gitem_t *item) {
 	ent->client->pers.inventory[item->id]--;
 
+	gentity_t *fx = G_Spawn();
+	fx->classname = "telefx";
+	fx->s.event = EV_PLAYER_TELEPORT;
+	fx->s.origin = ent->s.origin;
+	fx->s.origin[2] += 1.0f;
+	fx->s.angles = ent->s.angles;
+	fx->nextthink = level.time + 100_ms;
+	fx->solid = SOLID_NOT;
+	fx->think = G_FreeEntity;
+	gi.linkentity(fx);
+
+
 	TeleportPlayerToRandomSpawnPoint(ent, true);
 
 	gi.LocClient_Print(ent, PRINT_CENTER, "Used {}", item->pickup_name);
