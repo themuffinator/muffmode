@@ -2834,7 +2834,8 @@ void QueueIntermission(const char *msg, bool boo, bool reset) {
 
 	Q_strlcpy(level.intermission_victor_msg, msg, sizeof(level.intermission_victor_msg));
 
-	gi.LocBroadcast_Print(PRINT_CHAT, "MATCH END: {}\n", level.intermission_victor_msg[0] ? level.intermission_victor_msg : "Unknown Reason");
+	//gi.LocBroadcast_Print(PRINT_CHAT, "MATCH END: {}\n", level.intermission_victor_msg[0] ? level.intermission_victor_msg : "Unknown Reason");
+	gi.Com_PrintFmt("MATCH END: {}\n", level.intermission_victor_msg[0] ? level.intermission_victor_msg : "Unknown Reason");
 	gi.positioned_sound(world->s.origin, world, CHAN_AUTO | CHAN_RELIABLE, gi.soundindex(boo ? "insane/insane4.wav" : "world/xian1.wav"), 1, ATTN_NONE, 0);
 
 	if (reset) {
@@ -2950,24 +2951,18 @@ void CheckDMExitRules() {
 				if (ScoreIsTied()) {
 					bool play = false;
 
-					if (GT(GT_DUEL)) {
-						if (g_dm_overtime->integer > 0) {
-							level.overtime += gtime_t::from_sec(g_dm_overtime->integer);
-							gi.LocBroadcast_Print(PRINT_CENTER, "Overtime!\n{} added", G_TimeString(g_dm_overtime->integer * 1000, false));
-							play = true;
-							return;
-						}
-					} else {
-						if (!level.suddendeath) {
-							gi.LocBroadcast_Print(PRINT_CENTER, "Sudden Death!");
-							level.suddendeath = true;
-							play = true;
-							return;
-						}
+					if (GT(GT_DUEL) && g_dm_overtime->integer > 0) {
+						level.overtime += gtime_t::from_sec(g_dm_overtime->integer);
+						gi.LocBroadcast_Print(PRINT_CENTER, "Overtime!\n{} added", G_TimeString(g_dm_overtime->integer * 1000, false));
+						play = true;
+					} else if (!level.suddendeath) {
+						gi.LocBroadcast_Print(PRINT_CENTER, "Sudden Death!");
+						level.suddendeath = true;
+						play = true;
 					}
 
 					if (play)
-						gi.positioned_sound(world->s.origin, world, CHAN_AUTO | CHAN_RELIABLE, gi.soundindex("world/klaxon2.wav"), 1, ATTN_NONE, 0);
+						gi.positioned_sound(world->s.origin, world, CHAN_RELIABLE | CHAN_NO_PHS_ADD | CHAN_AUX, gi.soundindex("world/klaxon2.wav"), 1, ATTN_NONE, 0);
 					return;
 				}
 
