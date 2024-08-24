@@ -500,6 +500,9 @@ static void AimAtTarget(gentity_t *self) {
 	float	height, gravity, time, forward;
 	float	dist;
 
+	if (!self->target_ent)
+		return;
+
 	origin = self->absmin + self->absmax;
 	origin *= 0.5;
 
@@ -519,6 +522,8 @@ static void AimAtTarget(gentity_t *self) {
 	forward = dist / time;
 	self->origin2 *= forward;
 	self->origin2[2] = time * gravity;
+
+	gi.Com_PrintFmt("{}: origin2={}\n", __FUNCTION__, self->origin2);
 }
 
 constexpr spawnflags_t SPAWNFLAG_PUSH_ONCE = 0x01_spawnflag;
@@ -530,14 +535,6 @@ constexpr spawnflags_t SPAWNFLAG_PUSH_CLIP = 0x10_spawnflag;
 static cached_soundindex windsound;
 
 static TOUCH(trigger_push_touch) (gentity_t *self, gentity_t *other, const trace_t &tr, bool other_touching_self) -> void {
-	if (self->target_ent) {
-		AimAtTarget(other);
-
-		other->fly_sound_debounce_time = level.time + 1.5_sec;
-		gi.sound(other, CHAN_AUTO, windsound, 1, ATTN_NORM, 0);
-		return;
-	}
-
 	if (self->spawnflags.has(SPAWNFLAG_PUSH_CLIP)) {
 		trace_t clip = gi.clip(self, other->s.origin, other->mins, other->maxs, other->s.origin, G_GetClipMask(other));
 
@@ -545,18 +542,23 @@ static TOUCH(trigger_push_touch) (gentity_t *self, gentity_t *other, const trace
 			return;
 	}
 
+	vec3_t	velocity = vec3_origin;
+
+	if (self->target_ent) {
+		velocity = self->target_ent->origin2 ? self->target_ent->origin2 : self->movedir * (self->speed * 10);
+		gi.Com_PrintFmt("velocity={}\n", velocity);
+	}
+
 	if (strcmp(other->classname, "grenade") == 0) {
-		other->velocity = self->movedir * (self->speed * 10);
+		other->velocity = velocity ? velocity : self->movedir * (self->speed * 10);
 	} else if (other->health > 0 || (other->client && other->client->eliminated)) {
-		other->velocity = self->movedir * (self->speed * 10);
+		other->velocity = velocity ? velocity : self->movedir * (self->speed * 10);
 
 		if (other->client) {
 			// don't take falling damage immediately from this
 			other->client->oldvelocity = other->velocity;
 			other->client->oldgroundentity = other->groundentity;
-			if (
-				!(self->spawnflags & SPAWNFLAG_PUSH_SILENT) &&
-				(other->fly_sound_debounce_time < level.time)) {
+			if (!(self->spawnflags & SPAWNFLAG_PUSH_SILENT) && (other->fly_sound_debounce_time < level.time)) {
 				other->fly_sound_debounce_time = level.time + 1.5_sec;
 				gi.sound(other, CHAN_AUTO, windsound, 1, ATTN_NORM, 0);
 			}
@@ -624,13 +626,25 @@ Pushes the player
 "wait"  defaults to 10, must use PUSH_PLUS
 
 If targeted, it will toggle on and off when used.
-If it has a target, will set an apogee to the target and modify speed and angle accordingly (ala-Q3)
+If it has a target, will set an apogee to the target and modify speed and direction accordingly (ala-Q3)
 
 START_OFF - toggled trigger_push begins in off setting
 SILENT - doesn't make wind noise
 */
 void SP_trigger_push(gentity_t *self) {
 	InitTrigger(self);
+
+	if (self->target) {
+		gentity_t *e = G_PickTarget(self->target);
+		if (e) {
+			self->target_ent = e;
+
+			self->think = AimAtTarget;
+			self->nextthink = level.time + 100_ms;
+		} else
+			gi.Com_PrintFmt("{}: {}: no target\n", *self, self->target);
+	}
+
 	if (!(self->spawnflags & SPAWNFLAG_PUSH_SILENT))
 		windsound.assign("misc/windfly.wav");
 	self->touch = trigger_push_touch;
@@ -647,8 +661,7 @@ void SP_trigger_push(gentity_t *self) {
 	if (!self->speed)
 		self->speed = 1000;
 
-	if (self->targetname) // toggleable
-	{
+	if (self->targetname) { // toggleable
 		self->use = trigger_push_use;
 		if (self->spawnflags.has(SPAWNFLAG_PUSH_START_OFF))
 			self->solid = SOLID_NOT;
@@ -660,16 +673,10 @@ void SP_trigger_push(gentity_t *self) {
 		self->movetype = MOVETYPE_PUSH;
 	}
 
-	gi.linkentity(self);
-
 	if (self->spawnflags.has(SPAWNFLAG_PUSH_CLIP))
 		self->svflags |= SVF_HULL;
 
-	if (self->target) {
-		gentity_t *e = G_PickTarget(self->target);
-		if (e)
-			self->target_ent = e;
-	}
+	gi.linkentity(self);
 }
 
 /*
@@ -1328,7 +1335,7 @@ static TOUCH(trigger_teleport_touch) (gentity_t *self, gentity_t *other, const t
 	other->s.origin = dest->s.origin;
 	other->s.old_origin = dest->s.origin;
 	other->s.origin[2] += 10;
-
+	/*
 	if (g_teleporter_freeze->integer) {
 		// preserve velocity and 'spit' them out of destination
 		other->velocity[2] = 0;
@@ -1340,13 +1347,18 @@ static TOUCH(trigger_teleport_touch) (gentity_t *self, gentity_t *other, const t
 		other->client->ps.pmove.pm_time = 160; // hold time
 		other->client->ps.pmove.pm_flags |= PMF_TIME_TELEPORT;
 	}
+	*/
+	TeleporterVelocity(other, dest->s.angles);
 
 	if (other->client) {
+		/*
 		other->client->ps.pmove.pm_time = 160; // hold time
 		other->client->ps.pmove.pm_flags |= PMF_TIME_TELEPORT;
+		*/
 
 		// draw the teleport splash at source and on the player
 		other->s.event = EV_PLAYER_TELEPORT;
+		self->s.event = EV_PLAYER_TELEPORT;
 
 		// set angles
 		other->client->ps.pmove.delta_angles = dest->s.angles - other->client->resp.cmd_angles;
@@ -1427,8 +1439,8 @@ static TOUCH(old_teleporter_touch) (gentity_t *self, gentity_t *other, const tra
 
 	other->s.origin = dest->s.origin;
 	other->s.old_origin = dest->s.origin;
-	//	other->s.origin[2] += 10;
-
+	other->s.origin[2] += 10;
+	/*
 	if (g_teleporter_freeze->integer) {
 		// preserve velocity and 'spit' them out of destination
 		other->velocity[2] = 0;
@@ -1440,6 +1452,8 @@ static TOUCH(old_teleporter_touch) (gentity_t *self, gentity_t *other, const tra
 		other->client->ps.pmove.pm_time = 160; // hold time
 		other->client->ps.pmove.pm_flags |= PMF_TIME_TELEPORT;
 	}
+	*/
+	TeleporterVelocity(other, dest->s.angles);
 
 	// draw the teleport splash at source and on the player
 	self->enemy->s.event = EV_PLAYER_TELEPORT;
@@ -1549,43 +1563,3 @@ void SP_trigger_disguise(gentity_t *self) {
 	gi.setmodel(self, self->model);
 	gi.linkentity(self);
 }
-
-//==========================================================
-#if 0
-/*QUAKED trigger_teleport (.5 .5 .5) ? SPECTATOR NO_TELEPORT_EFFECT x x x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
-Must have a target, which will be the teleport destination.
-
-If spectator is set, only spectators can use this teleport.
-*/
-static TOUCH(trigger_teleport_touch) (gentity_t *self, gentity_t *other, const trace_t &tr, bool other_touching_self) -> void {
-	if (!other->client)
-		return;
-	if (other->health <= 0)
-		return;
-
-	// Spectators only?
-	if ((self->spawnflags.has(1_spawnflag)) &&
-			other->client->sess.team != TEAM_SPECTATOR) {
-		return;
-	}
-
-	TeleportPlayer(other, self->target_ent->s.origin, self->target_ent->s.angles);
-
-	// draw the teleport splash at source and on the player
-	if (!self->spawnflags.has(2_spawnflag)) {
-		self->owner->s.event = EV_PLAYER_TELEPORT;
-		other->s.event = EV_PLAYER_TELEPORT;
-	} else {
-		self->owner->s.event = EV_OTHER_TELEPORT;
-		other->s.event = EV_OTHER_TELEPORT;
-	}
-}
-
-void SP_trigger_teleport(gentity_t *self) {
-	InitTrigger(self);
-
-	self->touch = trigger_teleport_touch;
-
-	gi.linkentity(self);
-}
-#endif
