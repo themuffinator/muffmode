@@ -495,18 +495,25 @@ AimAtTarget
 Calculate origin2 so the target apogee will be hit
 =================
 */
-static void AimAtTarget(gentity_t *self) {
+static THINK(AimAtTarget) (gentity_t *self) -> void {
+	gentity_t *ent;
 	vec3_t	origin;
 	float	height, gravity, time, forward;
 	float	dist;
 
-	if (!self->target_ent)
+	ent = G_PickTarget(self->target);
+	if (!ent) {
+		G_FreeEntity(self);
 		return;
+	}
+
+	if (!self->target_ent)
+		self->target_ent = ent;
 
 	origin = self->absmin + self->absmax;
 	origin *= 0.5;
 
-	height = self->target_ent->s.origin[2] - origin[2];
+	height = ent->s.origin[2] - origin[2];
 	gravity = g_gravity->value;
 	time = sqrt(height / (0.5 * gravity));
 	if (!time) {
@@ -515,7 +522,7 @@ static void AimAtTarget(gentity_t *self) {
 	}
 
 	// set origin2 to the push velocity
-	self->origin2 = self->target_ent->s.origin - origin;
+	self->origin2 = ent->s.origin - origin;
 	self->origin2[2] = 0;
 	dist = self->origin2.normalize();
 
@@ -523,7 +530,7 @@ static void AimAtTarget(gentity_t *self) {
 	self->origin2 *= forward;
 	self->origin2[2] = time * gravity;
 
-	gi.Com_PrintFmt("{}: origin2={}\n", __FUNCTION__, self->origin2);
+	//gi.Com_PrintFmt("{}: origin2={}\n", __FUNCTION__, self->origin2);
 }
 
 constexpr spawnflags_t SPAWNFLAG_PUSH_ONCE = 0x01_spawnflag;
@@ -544,10 +551,8 @@ static TOUCH(trigger_push_touch) (gentity_t *self, gentity_t *other, const trace
 
 	vec3_t	velocity = vec3_origin;
 
-	if (self->target_ent) {
-		velocity = self->target_ent->origin2 ? self->target_ent->origin2 : self->movedir * (self->speed * 10);
-		gi.Com_PrintFmt("velocity={}\n", velocity);
-	}
+	if (self->target)
+		velocity = self->origin2 ? self->origin2 : self->movedir * (self->speed * 10);
 
 	if (strcmp(other->classname, "grenade") == 0) {
 		other->velocity = velocity ? velocity : self->movedir * (self->speed * 10);
@@ -635,14 +640,8 @@ void SP_trigger_push(gentity_t *self) {
 	InitTrigger(self);
 
 	if (self->target) {
-		gentity_t *e = G_PickTarget(self->target);
-		if (e) {
-			self->target_ent = e;
-
-			self->think = AimAtTarget;
-			self->nextthink = level.time + 100_ms;
-		} else
-			gi.Com_PrintFmt("{}: {}: no target\n", *self, self->target);
+		self->think = AimAtTarget;
+		self->nextthink = level.time + 100_ms;
 	}
 
 	if (!(self->spawnflags & SPAWNFLAG_PUSH_SILENT))
@@ -677,6 +676,34 @@ void SP_trigger_push(gentity_t *self) {
 		self->svflags |= SVF_HULL;
 
 	gi.linkentity(self);
+}
+
+
+static USE(target_push_use) (gentity_t *self, gentity_t *other, gentity_t *activator) -> void {
+	if (!activator->client || !ClientIsPlaying(activator->client))
+		return;
+
+	activator->velocity = self->origin2;
+}
+
+/*QUAKED target_push (.5 .5 .5) (-8 -8 -8) (8 8 8)
+Pushes the activator in the direction of angle, or towards a target apex.
+"speed"		defaults to 1000
+*/
+void SP_target_push(gentity_t *self) {
+	if (!self->speed)
+		self->speed = 1000;
+
+	self->origin2 = self->origin2 * self->speed;
+	windsound.assign("misc/windfly.wav");
+
+	if (self->target) {
+		self->absmin = self->s.origin;
+		self->absmax = self->s.origin;
+		self->think = AimAtTarget;
+		self->nextthink = level.time + 100_ms;
+	}
+	self->use = target_push_use;
 }
 
 /*
@@ -1335,26 +1362,9 @@ static TOUCH(trigger_teleport_touch) (gentity_t *self, gentity_t *other, const t
 	other->s.origin = dest->s.origin;
 	other->s.old_origin = dest->s.origin;
 	other->s.origin[2] += 10;
-	/*
-	if (g_teleporter_freeze->integer) {
-		// preserve velocity and 'spit' them out of destination
-		other->velocity[2] = 0;
-		AngleVectors(dest->s.angles, other->velocity, NULL, NULL);
-		other->velocity *= other->velocity.length();
-	} else {
-		// clear the velocity and hold them in place briefly
-		other->velocity = {};
-		other->client->ps.pmove.pm_time = 160; // hold time
-		other->client->ps.pmove.pm_flags |= PMF_TIME_TELEPORT;
-	}
-	*/
-	TeleporterVelocity(other, dest->s.angles);
 
 	if (other->client) {
-		/*
-		other->client->ps.pmove.pm_time = 160; // hold time
-		other->client->ps.pmove.pm_flags |= PMF_TIME_TELEPORT;
-		*/
+		TeleporterVelocity(other, dest->s.angles);
 
 		// draw the teleport splash at source and on the player
 		other->s.event = EV_PLAYER_TELEPORT;
@@ -1385,13 +1395,13 @@ static TOUCH(trigger_teleport_touch) (gentity_t *self, gentity_t *other, const t
 }
 
 static USE(trigger_teleport_use) (gentity_t *self, gentity_t *other, gentity_t *activator) -> void {
-	if (self->delay)
-		self->delay = 0;
-	else
-		self->delay = 1;
+	self->delay = self->delay ? 0 : 1;
 }
 
 void SP_trigger_teleport(gentity_t *self) {
+
+	InitTrigger(self);
+
 	if (!self->wait)
 		self->wait = 0.2f;
 
@@ -1440,19 +1450,7 @@ static TOUCH(old_teleporter_touch) (gentity_t *self, gentity_t *other, const tra
 	other->s.origin = dest->s.origin;
 	other->s.old_origin = dest->s.origin;
 	other->s.origin[2] += 10;
-	/*
-	if (g_teleporter_freeze->integer) {
-		// preserve velocity and 'spit' them out of destination
-		other->velocity[2] = 0;
-		AngleVectors(dest->s.angles, other->velocity, NULL, NULL);
-		other->velocity *= other->velocity.length();
-	} else {
-		// clear the velocity and hold them in place briefly
-		other->velocity = {};
-		other->client->ps.pmove.pm_time = 160; // hold time
-		other->client->ps.pmove.pm_flags |= PMF_TIME_TELEPORT;
-	}
-	*/
+
 	TeleporterVelocity(other, dest->s.angles);
 
 	// draw the teleport splash at source and on the player
