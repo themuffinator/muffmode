@@ -73,10 +73,12 @@ void InitSave() {
 			// [0] is just to silence warning
 			assert(false || "invalid save pointer; break here to find which pointer it is"[0]);
 
-			if (g_strict_saves->integer)
-				gi.Com_ErrorFmt("link pointer {} already linked as {}; fatal error", link_ptr, existing.second->name);
-			else
-				gi.Com_PrintFmt("link pointer {} already linked as {}; fatal error", link_ptr, existing.second->name);
+			if (!deathmatch->integer) {
+				if (g_strict_saves->integer)
+					gi.Com_ErrorFmt("link pointer {} already linked as {}; fatal error", link_ptr, existing.second->name);
+				else
+					gi.Com_PrintFmt("link pointer {} already linked as {}; fatal error", link_ptr, existing.second->name);
+			}
 		}
 
 		if (list_str_hash.find(link->name) != list_str_hash.end()) {
@@ -85,10 +87,12 @@ void InitSave() {
 			// [0] is just to silence warning
 			assert(false || "invalid save pointer; break here to find which pointer it is"[0]);
 
-			if (g_strict_saves->integer)
-				gi.Com_ErrorFmt("link pointer {} already linked as {}; fatal error", link_ptr, existing.second->name);
-			else
-				gi.Com_PrintFmt("link pointer {} already linked as {}; fatal error", link_ptr, existing.second->name);
+			if (!deathmatch->integer) {
+				if (g_strict_saves->integer)
+					gi.Com_ErrorFmt("link pointer {} already linked as {}; fatal error", link_ptr, existing.second->name);
+				else
+					gi.Com_PrintFmt("link pointer {} already linked as {}; fatal error", link_ptr, existing.second->name);
+			}
 		}
 
 		list_hash.emplace(link_ptr, link);
@@ -121,9 +125,9 @@ const save_data_list_t *save_data_list_t::fetch(const void *ptr, save_data_tag_t
 	assert(false || "invalid save pointer; break here to find which pointer it is"[0]);
 
 	if (g_strict_saves->integer)
-		gi.Com_ErrorFmt("value pointer {} was not linked to save tag {}", ptr, (int32_t)tag);
+		gi.Com_ErrorFmt("value pointer {} was not linked to save tag {}\n", ptr, (int32_t)tag);
 	else
-		gi.Com_PrintFmt("value pointer {} was not linked to save tag {}", ptr, (int32_t)tag);
+		gi.Com_PrintFmt("value pointer {} was not linked to save tag {}\n", ptr, (int32_t)tag);
 
 	return nullptr;
 }
@@ -811,6 +815,7 @@ FIELD_AUTO(pu_time_protection),
 FIELD_AUTO(pu_time_rebreather),
 FIELD_AUTO(pu_time_enviro),
 FIELD_AUTO(pu_time_invisibility),
+FIELD_AUTO(pu_time_regeneration),
 
 FIELD_AUTO(grenade_blew_up),
 FIELD_AUTO(grenade_time),
