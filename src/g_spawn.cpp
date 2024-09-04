@@ -126,6 +126,8 @@ void SP_target_shooter_ionripper(gentity_t *ent);
 void SP_target_shooter_phalanx(gentity_t *ent);
 void SP_target_shooter_flechette(gentity_t *ent);
 
+void SP_target_push(gentity_t *ent);
+
 void SP_worldspawn(gentity_t *ent);
 
 void SP_dynamic_light(gentity_t *self);
@@ -348,6 +350,7 @@ static const std::initializer_list<spawn_t> spawns = {
 	{ "target_shooter_ionripper", SP_target_shooter_ionripper },
 	{ "target_shooter_phalanx", SP_target_shooter_phalanx },
 	{ "target_shooter_flechette", SP_target_shooter_flechette },
+	{ "target_push", SP_target_push },
 
 	{ "worldspawn", SP_worldspawn },
 
@@ -1141,6 +1144,7 @@ static void G_FindTeams() {
 
 // inhibit entities from game based on cvars & spawnflags
 static inline bool G_InhibitEntity(gentity_t *ent) {
+
 	if (ent->gametype) {
 		const char *s = strstr(ent->gametype, gt_spawn_string[g_gametype->integer]);
 		if (!s)
@@ -1275,8 +1279,6 @@ void GT_PrecacheAssets() {
 		ii_teams_blue_default = gi.imageindex("i_ctf2");
 		ii_teams_red_tiny = gi.imageindex("sbfctf1");
 		ii_teams_blue_tiny = gi.imageindex("sbfctf2");
-	} else {
-		level.pic_ping = gi.imageindex("loc_ping");
 	}
 
 	if (GT(GT_DUEL))
@@ -1302,6 +1304,8 @@ static void PrecacheAssets() {
 		gi.imageindex("help");
 		gi.soundindex("misc/pc_up.wav");
 	}
+
+	level.pic_ping = gi.imageindex("loc_ping");
 
 	level.pic_health = gi.imageindex("i_health");
 	gi.imageindex("field_3");
@@ -1801,6 +1805,13 @@ void SpawnEntities(const char *mapname, const char *entities, const char *spawnp
 	if (deathmatch->integer) {
 		if (g_dm_random_items->integer)
 			PrecacheForRandomRespawn();
+
+		game.item_inhibit_pu = 0;
+		game.item_inhibit_pa = 0;
+		game.item_inhibit_ht = 0;
+		game.item_inhibit_ar = 0;
+		game.item_inhibit_am = 0;
+		game.item_inhibit_wp = 0;
 	} else {
 		InitHintPaths(); // if there aren't hintpaths on this map, enable quick aborts
 	}
