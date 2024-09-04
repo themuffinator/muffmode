@@ -39,6 +39,8 @@ void	   Use_Invisibility(gentity_t *ent, gitem_t *item);
 static gtime_t invisibility_drop_timeout_hack;
 void	   Use_Protection(gentity_t *ent, gitem_t *item);
 static gtime_t protection_drop_timeout_hack;
+void	   Use_Regeneration(gentity_t *ent, gitem_t *item);
+static gtime_t regeneration_drop_timeout_hack;
 
 // ***************************
 //  DOPPELGANGER
@@ -1306,28 +1308,61 @@ static inline item_id_t FindSubstituteItem(gentity_t *ent) {
 	for (item_id_t i = static_cast<item_id_t>(IT_NULL + 1); i < IT_TOTAL; i = static_cast<item_id_t>(static_cast<int32_t>(i) + 1)) {
 		const gitem_t *it = GetItemByIndex(i);
 		item_flags_t itflags = it->flags;
+		bool add = false, subtract = false;
 
-		if (!itflags || (itflags & (IF_NOT_GIVEABLE | IF_TECH | IF_NOT_RANDOM)) || !it->pickup || !it->world_model)
+		if (game.item_inhibit_pu && itflags & (IF_POWERUP | IF_SPHERE)) {
+			add = game.item_inhibit_pu > 0 ? true : false;
+			subtract = game.item_inhibit_pu < 0 ? true : false;
+		} else if (game.item_inhibit_pa && itflags & IF_POWER_ARMOR) {
+			add = game.item_inhibit_pa > 0 ? true : false;
+			subtract = game.item_inhibit_pa < 0 ? true : false;
+		} else if (game.item_inhibit_ht && itflags & IF_HEALTH) {
+			add = game.item_inhibit_ht > 0 ? true : false;
+			subtract = game.item_inhibit_ht < 0 ? true : false;
+		} else if (game.item_inhibit_ar && itflags & IF_ARMOR) {
+			add = game.item_inhibit_ar > 0 ? true : false;
+			subtract = game.item_inhibit_ar < 0 ? true : false;
+		} else if (game.item_inhibit_am && itflags & IF_AMMO) {
+			add = game.item_inhibit_am > 0 ? true : false;
+			subtract = game.item_inhibit_am < 0 ? true : false;
+		} else if (game.item_inhibit_wp && itflags & IF_WEAPON) {
+			add = game.item_inhibit_wp > 0 ? true : false;
+			subtract = game.item_inhibit_wp < 0 ? true : false;
+		}
+
+		if (subtract)
 			continue;
 
-		if (g_no_powerups->integer && itflags & (IF_POWERUP | IF_SPHERE))
-			continue;
+		if (!add) {
+			if (!itflags || (itflags & (IF_NOT_GIVEABLE | IF_TECH | IF_NOT_RANDOM)) || !it->pickup || !it->world_model)
+				continue;
 
-		if (g_no_spheres->integer && itflags & IF_SPHERE)
-			continue;
+			if (g_no_powerups->integer && itflags & (IF_POWERUP | IF_SPHERE))
+				continue;
 
-		if (g_no_nukes->integer && i == IT_AMMO_NUKE)
-			continue;
+			if (g_no_spheres->integer && itflags & IF_SPHERE)
+				continue;
 
-		if (g_no_mines->integer &&
-			(i == IT_AMMO_PROX || i == IT_AMMO_TESLA || i == IT_AMMO_TRAP || i == IT_WEAPON_PROXLAUNCHER))
-			continue;
+			if (g_no_nukes->integer && i == IT_AMMO_NUKE)
+				continue;
+
+			if (g_no_mines->integer &&
+				(i == IT_AMMO_PROX || i == IT_AMMO_TESLA || i == IT_AMMO_TRAP || i == IT_WEAPON_PROXLAUNCHER))
+				continue;
+		}
 
 		itflags = GetSubstituteItemFlags(i);
 
 		if ((itflags & IF_TYPE_MASK) == (myflags & IF_TYPE_MASK))
 			possible_items[possible_item_count++] = i;
 	}
+
+	game.item_inhibit_pu = 0;
+	game.item_inhibit_pa = 0;
+	game.item_inhibit_ht = 0;
+	game.item_inhibit_ar = 0;
+	game.item_inhibit_am = 0;
+	game.item_inhibit_wp = 0;
 
 	if (!possible_item_count)
 		return IT_NULL;
@@ -1573,19 +1608,26 @@ static bool Pickup_Powerup(gentity_t *ent, gentity_t *other) {
 			invisibility_drop_timeout_hack = t;
 			use = true;
 			break;
+		case IT_POWERUP_REGEN:
+			regeneration_drop_timeout_hack = t;
+			use = true;
+			break;
 		}
 
 		if (use && ent->item->use)
 			ent->item->use(other, ent->item);
 	}
 
-	int count = ent->item->quantity;
+	int count = 0;
 
 	if (deathmatch->integer && (RS(RS_MM) || RS(RS_Q3A)) && !ent->spawnflags.has(SPAWNFLAG_ITEM_DROPPED | SPAWNFLAG_ITEM_DROPPED_PLAYER))
 		count = 120;
 
 	if (RS(RS_Q2RE) && (ent->item->id == IT_POWERUP_PROTECTION || ent->item->id == IT_POWERUP_INVISIBILITY))
 		count = 300;
+
+	if (ent->item->quantity)
+		count = ent->item->quantity;
 
 	if (!is_dropped_from_death)
 		SetRespawn(ent, gtime_t::from_sec(count));
@@ -1955,14 +1997,17 @@ static bool Pickup_Pack(gentity_t *ent, gentity_t *other) {
 
 //======================================================================
 
-static void Use_Powerup_BroadcastMsg(gentity_t *ent, gitem_t *item, const char *name) {
-	if (deathmatch->integer && RS(RS_MM)) {
-		if (g_quadhog->integer && item->id == IT_POWERUP_QUAD) {
-			gi.LocBroadcast_Print(PRINT_CENTER, "{} is the Quad Hog!\n", ent->client->resp.netname);
-		} else {
-			gi.LocBroadcast_Print(PRINT_HIGH, "{} got the {}!\n", ent->client->resp.netname, item->pickup_name);
-		}
-		gi.sound(ent, CHAN_RELIABLE | CHAN_NO_PHS_ADD | CHAN_AUX, gi.soundindex(name), 1, ATTN_NONE, 0);
+static void Use_Powerup_BroadcastMsg(gentity_t *ent, gitem_t *item, const char *sound_name) {
+	if (deathmatch->integer) {
+		//if (RS(RS_MM)) {
+			if (g_quadhog->integer && item->id == IT_POWERUP_QUAD) {
+				gi.LocBroadcast_Print(PRINT_CENTER, "{} is the Quad Hog!\n", ent->client->resp.netname);
+			//} else {
+			//	gi.LocBroadcast_Print(PRINT_HIGH, "{} got the {}!\n", ent->client->resp.netname, item->pickup_name);
+			}
+		//}
+		if (RS(RS_MM) || RS(RS_Q3A))
+			gi.sound(ent, CHAN_RELIABLE | CHAN_NO_PHS_ADD | CHAN_AUX, gi.soundindex(sound_name), 1, ATTN_NONE, 0);
 	}
 }
 
@@ -2049,6 +2094,69 @@ static void Use_Protection(gentity_t *ent, gitem_t *item) {
 	}
 
 	ent->client->pu_time_protection = max(level.time, ent->client->pu_time_protection) + timeout;
+
+	Use_Powerup_BroadcastMsg(ent, item, "items/protect.wav");
+}
+
+//======================================================================
+
+void Powerup_ApplyRegeneration(gentity_t *ent) {
+	bool		noise = false;
+	gclient_t	*cl;
+	float		volume = 1.0;
+	bool		mod = g_instagib->integer || g_nadefest->integer;
+	bool		no_health = mod || GTF(GTF_ARENA) || g_no_health->integer;
+
+	cl = ent->client;
+	if (!cl)
+		return;
+
+	if (ent->health <= 0 || ent->client->eliminated)
+		return;
+
+	if (cl->pu_time_regeneration <= level.time)
+		return;
+
+	if (g_vampiric_damage->integer)
+		return;
+
+	if (cl->silencer_shots)
+		volume = 0.2f;
+
+	if (!cl->tech_regen_time) {
+		cl->tech_regen_time = level.time;
+		return;
+	}
+
+	if (cl->pu_regen_time_regen < level.time) {
+		gtime_t delay = 1_sec;
+		int		max = mod ? cl->pers.max_health : cl->pers.max_health * 2;
+
+		cl->pu_regen_time_regen = level.time;
+		if (ent->health < max) {
+			ent->health += 5;
+			if (ent->health > max)
+				ent->health = max;
+			cl->pu_regen_time_regen += delay;
+			gi.sound(ent, CHAN_AUX, gi.soundindex("ctf/tech4.wav"), volume, ATTN_NORM, 0);
+			cl->pu_regen_time_blip = level.time + 100_ms;
+		}
+	}
+}
+
+static void Use_Regeneration(gentity_t *ent, gitem_t *item) {
+	gtime_t timeout;
+
+	ent->client->pers.inventory[item->id]--;
+
+	if (regeneration_drop_timeout_hack) {
+		timeout = regeneration_drop_timeout_hack;
+		regeneration_drop_timeout_hack = 0_ms;
+	} else {
+		timeout = 30_sec;
+	}
+
+	ent->client->pu_time_regeneration = max(level.time, ent->client->pu_time_regeneration) + timeout;
 
 	Use_Powerup_BroadcastMsg(ent, item, "items/protect.wav");
 }
@@ -2215,15 +2323,21 @@ static void Drop_Ammo(gentity_t *ent, gitem_t *item) {
 	else
 		dropped->count = ent->client->pers.inventory[index];
 
-	if (ent->client->pers.weapon && ent->client->pers.weapon == item && (item->flags & IF_AMMO) &&
-		ent->client->pers.inventory[index] - dropped->count <= 0) {
-		gi.LocClient_Print(ent, PRINT_HIGH, "$g_cant_drop_weapon");
+	if (ent->client->pers.inventory[index] - dropped->count < 0) {
 		G_FreeEntity(dropped);
 		return;
 	}
 
+	if (item->id == IT_AMMO_SLUGS)
+		if (!(RS(RS_MM)))
+			dropped->count *= 2;
+
 	ent->client->pers.inventory[index] -= dropped->count;
 	G_CheckPowerArmor(ent);
+
+	if (item == ent->client->pers.weapon || item == ent->client->newweapon)
+		if (ent->client->pers.inventory[index] < 1)
+			NoAmmoWeaponChange(ent, true);
 }
 
 //======================================================================
@@ -2573,7 +2687,35 @@ TOUCH(Touch_Item) (gentity_t *ent, gentity_t *other, const trace_t &tr, bool oth
 			case IT_POWER_SHIELD:
 			case IT_ADRENALINE: 
 			case IT_HEALTH_MEGA:
-				BroadcastSpectatorMessage(G_Fmt("{} got the {}.\n", other->client->resp.netname, ent->item->use_name).data());
+			case IT_POWERUP_QUAD:
+			case IT_POWERUP_DOUBLE:
+			case IT_POWERUP_PROTECTION:
+			case IT_POWERUP_DUELFIRE:
+			case IT_POWERUP_INVISIBILITY:
+			case IT_POWERUP_REGEN:
+				uint32_t key = GetUnicastKey();
+
+				for (auto ec : active_clients()) {
+					if (other == ec)
+						continue;
+
+					if (!ClientIsPlaying(ec->client) || (Teams() && ec->client->sess.team == other->client->sess.team)) {
+						gi.WriteByte(svc_poi);
+						gi.WriteShort(POI_PING + (ent->s.number - 1));
+						gi.WriteShort(5000);
+						gi.WritePosition(other->s.origin);
+						//gi.WriteShort(level.pic_ping);
+						gi.WriteShort(gi.imageindex(ent->item->icon));
+						gi.WriteByte(215);
+						gi.WriteByte(POI_FLAG_NONE);
+						gi.unicast(ec, false);
+						gi.local_sound(ec, CHAN_AUTO, gi.soundindex("misc/help_marker.wav"), 1.0f, ATTN_NONE, 0.0f, key);
+
+						gi.LocClient_Print(ec, PRINT_TTS, G_Fmt("{}{} got the {}.\n", ec->client->sess.team != TEAM_SPECTATOR ? "[TEAM]: " : "", other->client->resp.netname, ent->item->use_name).data());
+					}
+				}
+
+				//BroadcastFriendlyMessage(other->client->sess.team, G_Fmt("{} got the {}.\n", other->client->resp.netname, ent->item->use_name).data());
 				break;
 			}
 		}
@@ -2819,7 +2961,7 @@ void PrecacheItem(gitem_t *it) {
 		gi.modelindex(it->view_model);
 	if (it->icon)
 		gi.imageindex(it->icon);
-
+	
 	// parse everything for its ammo
 	if (it->ammo) {
 		ammo = GetItemByIndex(it->ammo);
@@ -2891,38 +3033,64 @@ bool CheckItemEnabled(gitem_t *item) {
 			return false;
 	}
 
-	if (g_no_armor->integer && item->flags & (IF_ARMOR | IF_POWER_ARMOR))
+	bool add = false, subtract = false;
+
+	if (game.item_inhibit_pu && item->flags & (IF_POWERUP | IF_SPHERE)) {
+		add = game.item_inhibit_pu > 0 ? true : false;
+		subtract = game.item_inhibit_pu < 0 ? true : false;
+	} else if (game.item_inhibit_pa && item->flags & IF_POWER_ARMOR) {
+		add = game.item_inhibit_pa > 0 ? true : false;
+		subtract = game.item_inhibit_pa < 0 ? true : false;
+	} else if (game.item_inhibit_ht && item->flags & IF_HEALTH) {
+		add = game.item_inhibit_ht > 0 ? true : false;
+		subtract = game.item_inhibit_ht < 0 ? true : false;
+	} else if (game.item_inhibit_ar && item->flags & IF_ARMOR) {
+		add = game.item_inhibit_ar > 0 ? true : false;
+		subtract = game.item_inhibit_ar < 0 ? true : false;
+	} else if (game.item_inhibit_am && item->flags & IF_AMMO) {
+		add = game.item_inhibit_am > 0 ? true : false;
+		subtract = game.item_inhibit_am < 0 ? true : false;
+	} else if (game.item_inhibit_wp && item->flags & IF_WEAPON) {
+		add = game.item_inhibit_wp > 0 ? true : false;
+		subtract = game.item_inhibit_wp < 0 ? true : false;
+	}
+
+	if (subtract)
+		return false;
+
+	if (!add) {
+		if (g_no_armor->integer && item->flags & (IF_ARMOR | IF_POWER_ARMOR))
 			return false;
 
-	if (g_no_powerups->integer && item->flags & IF_POWERUP || ((InCoopStyle() || !deathmatch->integer) && skill->integer > 3))
+		if (g_no_powerups->integer && item->flags & IF_POWERUP || ((InCoopStyle() || !deathmatch->integer) && skill->integer > 3))
 			return false;
 
-	if (g_no_items->integer) {
-		if (item->flags & (IF_TIMED | IF_POWERUP | IF_SPHERE))
+		if (g_no_items->integer) {
+			if (item->flags & (IF_TIMED | IF_POWERUP | IF_SPHERE))
+				return false;
+			if (item->pickup == Pickup_Doppelganger)
+				return false;
+		}
+		if (g_no_health->integer || g_vampiric_damage->integer) {
+			if (item->flags & IF_HEALTH)
+				return false;
+		}
+		if (g_no_mines->integer) {
+			if (item->id == IT_WEAPON_PROXLAUNCHER || item->id == IT_AMMO_PROX || item->id == IT_AMMO_TESLA || item->id == IT_AMMO_TRAP)
+				return false;
+		}
+		if (g_no_nukes->integer && item->id == IT_AMMO_NUKE)
 			return false;
-		if (item->pickup == Pickup_Doppelganger)
+		if (g_no_spheres->integer && item->flags & IF_SPHERE)
 			return false;
 	}
-	if (g_no_health->integer || g_vampiric_damage->integer) {
-		if (item->flags & IF_HEALTH)
-			return false;
-	}
+
 	if (InfiniteAmmoOn(item)) {
 		if (item->flags & IF_AMMO && item->id != IT_AMMO_GRENADES && item->id != IT_AMMO_TRAP && item->id != IT_AMMO_TESLA)
 			return false;
 		if (item->id == IT_PACK || item->id == IT_BANDOLIER)
 			return false;
 	}
-	if (g_no_mines->integer) {
-		if (item->id == IT_WEAPON_PROXLAUNCHER || item->id == IT_AMMO_PROX || item->id == IT_AMMO_TESLA || item->id == IT_AMMO_TRAP)
-			return false;
-	}
-
-	if (g_no_nukes->integer && item->id == IT_AMMO_NUKE)
-		return false;
-
-	if (g_no_spheres->integer && item->flags & IF_SPHERE)
-		return false;
 
 	return true;
 }
@@ -5755,6 +5923,34 @@ model="models/vault/items/ammo/nuke/tris.md2"
 		/* ammo */ IT_NULL,
 		/* chain */ IT_NULL,
 		/* flags */ IF_TIMED | IF_POWERUP_WHEEL | IF_POWERUP_ONOFF
+	},
+
+/*QUAKED item_regen (.3 .3 1) (-16 -16 -16) (16 16 16) TRIGGER_SPAWN x x SUSPENDED x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
+model="models/items/invulner/tris.md2"
+*/
+	{
+		/* id */ IT_POWERUP_REGEN,
+		/* classname */ "item_regen",
+		/* pickup */ Pickup_Powerup,
+		/* use */ Use_Regeneration,
+		/* drop */ Drop_General,
+		/* weaponthink */ nullptr,
+		/* pickup_sound */ "items/pkup.wav",
+		/* world_model */ "models/items/invulner/tris.md2",
+		/* world_model_flags */ EF_ROTATE | EF_BOB,
+		/* view_model */ nullptr,
+		/* icon */ "i_fixme",
+		/* use_name */  "Regeneration",
+		/* pickup_name */  "Regeneration",
+		/* pickup_name_definite */ "Regeneration",
+		/* quantity */ 60,
+		/* ammo */ IT_NULL,
+		/* chain */ IT_NULL,
+		/* flags */ IF_POWERUP | IF_POWERUP_WHEEL,
+		/* vwep_model */ nullptr,
+		/* armor_info */ nullptr,
+		/* tag */ POWERUP_REGEN,
+		/* precaches */ "items/protect.wav"
 	},
 
 /*QUAKED item_foodcube (.3 .3 1) (-16 -16 -16) (16 16 16) TRIGGER_SPAWN x x SUSPENDED x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP

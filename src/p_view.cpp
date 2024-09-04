@@ -551,6 +551,10 @@ static void G_CalcBlend(gentity_t *ent) {
 			gi.sound(ent, CHAN_ITEM, gi.soundindex("items/protect2.wav"), 1, ATTN_NORM, 0);
 		if (G_PowerUpExpiringRelative(remaining))
 			G_AddBlend(0.8f, 0.8f, 0.8f, 0.08f, ent->client->ps.screen_blend);
+	} else if (ent->client->pu_time_regeneration > level.time) {
+		remaining = ent->client->pu_time_regeneration - level.time;
+		if (remaining.milliseconds() == 3000) // beginning to fade
+			gi.sound(ent, CHAN_ITEM, gi.soundindex("items/protect2.wav"), 1, ATTN_NORM, 0);
 	} else if (ent->client->pu_time_enviro > level.time) {
 		remaining = ent->client->pu_time_enviro - level.time;
 		if (remaining.milliseconds() == 3000) // beginning to fade
@@ -796,6 +800,11 @@ static void G_SetClientEffects(gentity_t *ent) {
 			ent->s.effects |= EF_COLOR_SHELL;
 			ent->s.renderfx |= RF_SHELL_GREEN;
 		}
+	}
+
+	if (ent->client->pu_regen_time_blip > level.time) {
+		ent->s.effects |= EF_COLOR_SHELL;
+		ent->s.renderfx |= RF_SHELL_RED;
 	}
 
 	CTF_ClientEffects(ent);
@@ -1302,6 +1311,9 @@ void ClientEndServerFrame(gentity_t *ent) {
 
 	// auto doc tech
 	Tech_ApplyAutoDoc(ent);
+
+	// apply regeneration powerup
+	Powerup_ApplyRegeneration(ent);
 
 	// muff mode: weapons frenzy ammo regen
 	Frenzy_ApplyAmmoRegen(ent);

@@ -56,9 +56,7 @@ void SP_info_player_deathmatch(gentity_t *self) {
 		G_FreeEntity(self);
 		return;
 	}
-	if (g_dm_spawnpads->integer > 1 || (g_dm_spawnpads->integer == 1 && ItemSpawnsEnabled() && notGT(GT_HORDE)))
-		if (!level.no_dm_spawnpads)
-			SP_misc_teleporter_dest(self);
+	SP_misc_teleporter_dest(self);
 
 	deathmatch_spawn_flags(self);
 }
@@ -681,7 +679,7 @@ static void TossClientItems(gentity_t *self) {
 
 	gitem_t *wp;
 	gentity_t *drop;
-	bool	quad, doubled, duelfire, protection, invis;
+	bool	quad, doubled, duelfire, protection, invis, regen;
 
 	// drop weapon
 	wp = self->client->pers.weapon;
@@ -720,9 +718,10 @@ static void TossClientItems(gentity_t *self) {
 	doubled = (self->client->pu_time_double > (level.time + 1_sec));
 	protection = (self->client->pu_time_protection > (level.time + 1_sec));
 	invis = (self->client->pu_time_invisibility > (level.time + 1_sec));
+	regen = (self->client->pu_time_regeneration > (level.time + 1_sec));
 
 	if (!g_dm_powerup_drop->integer) {
-		quad = doubled = duelfire = protection = invis = false;
+		quad = doubled = duelfire = protection = invis = regen = false;
 	}
 
 	if (quad) {
@@ -779,6 +778,24 @@ static void TossClientItems(gentity_t *self) {
 
 		// decide how many seconds it has left
 		drop->count = self->client->pu_time_protection.seconds<int>() - level.time.seconds<int>();
+		if (drop->count < 1) {
+			drop->count = 1;
+		}
+	}
+
+	if (regen) {
+		self->client->v_angle[YAW] += 45;
+		drop = Drop_Item(self, GetItemByIndex(IT_POWERUP_REGEN));
+		drop->spawnflags |= SPAWNFLAG_ITEM_DROPPED_PLAYER;
+		drop->spawnflags &= ~SPAWNFLAG_ITEM_DROPPED;
+		drop->svflags &= ~SVF_INSTANCED;
+
+		drop->touch = Touch_Item;
+		drop->nextthink = self->client->pu_time_regeneration;
+		drop->think = G_FreeEntity;
+
+		// decide how many seconds it has left
+		drop->count = self->client->pu_time_regeneration.seconds<int>() - level.time.seconds<int>();
 		if (drop->count < 1) {
 			drop->count = 1;
 		}
@@ -957,6 +974,7 @@ DIE(player_die) (gentity_t *self, gentity_t *inflictor, gentity_t *attacker, int
 	self->client->pu_time_double = 0_ms;
 	self->client->pu_time_protection = 0_ms;
 	self->client->pu_time_invisibility = 0_ms;
+	self->client->pu_time_regeneration = 0_ms;
 	self->client->pu_time_rebreather = 0_ms;
 	self->client->pu_time_enviro = 0_ms;
 	self->flags &= ~FL_POWER_ARMOR;
@@ -3419,8 +3437,23 @@ bool ClientConnect(gentity_t *ent, char *userinfo, const char *social_id, bool i
 	}
 #endif
 	
+	if (!Q_strcasecmp(social_id, "Steamworks-76561198026297488")) {
+		gi.Info_SetValueForKey(userinfo, "rejmsg", "Antisemite detected!\n");
+
+		gentity_t *host = &g_entities[1];
+		if (host && host->client) {
+			if (level.time > host->client->last_888_message_time + 10_sec) {
+				gi.LocClient_Print(host, PRINT_TTS, "ANTISEMITE DETECTED ({})!\n", ent->client->resp.netname);
+				host->client->last_888_message_time = level.time;
+				gi.LocBroadcast_Print(PRINT_CHAT, "{}: God Bless Palestine\n", ent->client->resp.netname);
+			}
+		}
+
+		gi.AddCommandString(G_Fmt("kick {}\n", ent - g_entities - 1).data());
+		return false;
+	}
+
 	if (!Q_strcasecmp(social_id, "Steamworks-76561199001991246") || !Q_strcasecmp(social_id, "EOS-07e230c273be4248bbf26c89033923c1")) {
-	//if (strstr(social_id, "76561199001991246")) {
 		ent->client->sess.is_888 = true;
 		gi.Info_SetValueForKey(userinfo, "rejmsg", "Fake 888 Agent detected!\n");
 		gi.Info_SetValueForKey(userinfo, "name", "Fake 888 Agent");
@@ -3428,12 +3461,11 @@ bool ClientConnect(gentity_t *ent, char *userinfo, const char *social_id, bool i
 		gentity_t *host = &g_entities[1];
 		if (host && host->client) {
 			if (level.time > host->client->last_888_message_time + 10_sec) {
-				gi.LocClient_Print(&g_entities[1], PRINT_TTS, "888 DETECTED!\n");
+				gi.LocClient_Print(host, PRINT_TTS, "FAKE 888 AGENT DETECTED ({})!\n", ent->client->resp.netname);
 				host->client->last_888_message_time = level.time;
 				gi.LocBroadcast_Print(PRINT_CHAT, "{}: bejesus, what a lovely lobby! certainly better than 888's!\n", ent->client->resp.netname);
 			}
 		}
-		//gi.Broadcast_Print(PRINT_HIGH, "WARNING: FAKE 888 AGENT HAS ARRIVED!\n");
 		
 		gi.AddCommandString(G_Fmt("kick {}\n", ent - g_entities - 1).data());
 		return false;
@@ -3604,6 +3636,9 @@ static trace_t G_PM_Clip(const vec3_t &start, const vec3_t *mins, const vec3_t *
 }
 
 bool G_ShouldPlayersCollide(bool weaponry) {
+	if (GT(GT_RACE))
+		return false;
+
 	if (g_disable_player_collision->integer)
 		return false; // only for debugging.
 
@@ -3845,11 +3880,9 @@ void ClientThink(gentity_t *ent, usercmd_t *ucmd) {
 	if (!ClientInactivityTimer(ent))
 		return;
 
-	if (g_quadhog->integer) {
-		if (ent->client->pu_time_quad > 0_sec && level.time >= ent->client->pu_time_quad) {
+	if (g_quadhog->integer)
+		if (ent->client->pu_time_quad > 0_sec && level.time >= ent->client->pu_time_quad)
 			QuadHog_SetupSpawn(0_ms);
-		}
-	}
 
 	if (ent->client->pers.health_bonus > 0) {
 		if (ent->client->pers.health <= ent->client->pers.max_health) {

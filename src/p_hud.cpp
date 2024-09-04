@@ -49,6 +49,7 @@ void MoveClientToIntermission(gentity_t *ent) {
 	ent->client->pu_time_rebreather = 0_ms;
 	ent->client->pu_time_enviro = 0_ms;
 	ent->client->pu_time_invisibility = 0_ms;
+	ent->client->pu_time_regeneration = 0_ms;
 	ent->client->pu_time_duelfire = 0_ms;
 	ent->client->pu_time_double = 0_ms;
 
@@ -1099,6 +1100,7 @@ struct powerup_info_t {
 	{ IT_POWERUP_DOUBLE, &gclient_t::pu_time_double },
 	{ IT_POWERUP_PROTECTION, &gclient_t::pu_time_protection },
 	{ IT_POWERUP_INVISIBILITY, &gclient_t::pu_time_invisibility },
+	{ IT_POWERUP_REGEN, &gclient_t::pu_time_regeneration },
 	{ IT_POWERUP_ENVIROSUIT, &gclient_t::pu_time_enviro },
 	{ IT_POWERUP_REBREATHER, &gclient_t::pu_time_rebreather },
 	{ IT_IR_GOGGLES, &gclient_t::ir_time },

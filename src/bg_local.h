@@ -118,6 +118,8 @@ enum powerup_t : uint8_t {
 	POWERUP_TECH_TIME_ACCEL,
 	POWERUP_TECH_AUTODOC,
 
+	POWERUP_REGEN,
+
 	POWERUP_MAX
 };
 
