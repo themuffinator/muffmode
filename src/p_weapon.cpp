@@ -258,7 +258,7 @@ bool Pickup_Weapon(gentity_t *ent, gentity_t *other) {
 	gitem_t	*ammo;
 	bool	is_new = !other->client->pers.inventory[index];
 
-	if (!(ent->spawnflags & SPAWNFLAG_ITEM_DROPPED)) {
+	if (!(ent->spawnflags & SPAWNFLAG_ITEM_DROPPED) || ent->count) {
 		// give them some ammo with it if appropriate
 		if (ent->item->ammo) {
 			ammo = GetItemByIndex(ent->item->ammo);
@@ -642,15 +642,38 @@ void Drop_Weapon(gentity_t *ent, gitem_t *item) {
 		return;
 
 	item_id_t index = item->id;
-	// see if we're already using it
-	if (((item == ent->client->pers.weapon) || (item == ent->client->newweapon)) && (ent->client->pers.inventory[index] == 1)) {
-		NoAmmoWeaponChange(ent, false);
-	}
+
+	if (ent->client->pers.inventory[index] < 1)
+		return;
 
 	gentity_t *drop = Drop_Item(ent, item);
 	drop->spawnflags |= SPAWNFLAG_ITEM_DROPPED_PLAYER;
 	drop->svflags &= ~SVF_INSTANCED;
+	drop->count = 5;
+
+	gitem_t *ammo = GetItemByIndex(drop->item->ammo);
+	if (!ammo)
+		return;
+	
+	drop->count = ammo->quantity;
+
+	if (item->id == IT_WEAPON_RAILGUN)
+		if (!(RS(RS_MM)))
+			drop->count += 5;
+
+	if (ent->client->pers.inventory[ammo->id] - drop->count < 0) {
+		G_FreeEntity(drop);
+		return;
+	}
+
+	ent->client->pers.inventory[ammo->id] -= drop->count;
 	ent->client->pers.inventory[index]--;
+
+	// see if we were already using it
+	if ((item == ent->client->pers.weapon) || (item == ent->client->newweapon)) {
+		if (ent->client->pers.inventory[index] < 1 || ent->client->pers.inventory[ammo->id] < 1)
+			NoAmmoWeaponChange(ent, true);
+	}
 }
 
 /*
