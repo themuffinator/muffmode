@@ -2207,6 +2207,7 @@ static USE(target_remove_powerups_use) (gentity_t *ent, gentity_t *other, gentit
 	activator->client->pu_time_double = 0_sec;
 	activator->client->pu_time_protection = 0_sec;
 	activator->client->pu_time_invisibility = 0_sec;
+	activator->client->pu_time_regeneration = 0_sec;
 	activator->client->pu_time_rebreather = 0_sec;
 	activator->client->pu_time_enviro = 0_sec;
 
