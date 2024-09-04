@@ -2001,14 +2001,18 @@ void SP_misc_teleporter_dest(gentity_t *ent) {
 	if (level.is_n64)
 		return;
 
-	gi.setmodel(ent, "models/objects/dmspot/tris.md2");
-	ent->s.skinnum = 0;
-	ent->solid = SOLID_BBOX;
-	ent->clipmask |= MASK_SOLID;
+	if (g_dm_spawnpads->integer > 1 || (g_dm_spawnpads->integer == 1 && ItemSpawnsEnabled() && notGT(GT_HORDE))) {
+		if (!level.no_dm_spawnpads) {
+			gi.setmodel(ent, "models/objects/dmspot/tris.md2");
+			ent->s.skinnum = 0;
+			ent->solid = SOLID_BBOX;
+			ent->clipmask |= MASK_SOLID;
 
-	ent->mins = { -32, -32, -24 };
-	ent->maxs = { 32, 32, -16 };
-	gi.linkentity(ent);
+			ent->mins = { -32, -32, -24 };
+			ent->maxs = { 32, 32, -16 };
+			gi.linkentity(ent);
+		}
+	}
 }
 
 /*QUAKED misc_flare (1.0 1.0 0.0) (-32 -32 -32) (32 32 32) RED GREEN BLUE LOCK_ANGLE x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
