@@ -258,7 +258,8 @@ int _gt[] = {
 	/* GT_STRIKE */ GTF_TEAMS | GTF_ARENA | GTF_ROUNDS | GTF_CTF | GTF_ELIMINATION,
 	/* GT_RR */ GTF_TEAMS | GTF_ROUNDS | GTF_ARENA,
 	/* GT_LMS */ GTF_ELIMINATION,
-	/* GT_HORDE */ GTF_ROUNDS
+	/* GT_HORDE */ GTF_ROUNDS,
+	/* GT_RACE */ GTF_ARENA,
 };
 
 // =================================================
@@ -1816,7 +1817,7 @@ static void CheckDMRoundState(void) {
 
 				gi.positioned_sound(world->s.origin, world, CHAN_AUTO | CHAN_RELIABLE, gi.soundindex("ctf/flagcap.wav"), 1, ATTN_NONE, 0);
 
-				if (level.round_number + 1 > roundlimit->integer) {
+				if (level.round_number + 1 >= roundlimit->integer) {
 					QueueIntermission("MATCH ENDED", false, false);
 				} else
 					Round_End();
