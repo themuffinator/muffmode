@@ -10,7 +10,7 @@
 constexpr const char *GAMEVERSION = "baseq2";
 
 constexpr const char *GAMEMOD_TITLE = "Muff Mode BETA";
-constexpr const char *GAMEMOD_VERSION = "0.18.5";
+constexpr const char *GAMEMOD_VERSION = "0.18.61";
 
 //==================================================================
 
@@ -89,6 +89,7 @@ enum gametype_t {
 	GT_RR,
 	GT_LMS,
 	GT_HORDE,
+	GT_RACE,
 	GT_NUM_GAMETYPES
 };
 constexpr gametype_t GT_FIRST = GT_FFA;
@@ -119,7 +120,8 @@ constexpr const char *gt_short_name[GT_NUM_GAMETYPES] = {
 	"strike",
 	"rr",
 	"lms",
-	"horde"
+	"horde",
+	"race"
 };
 constexpr const char *gt_short_name_upper[GT_NUM_GAMETYPES] = {
 	"CMP",
@@ -132,7 +134,8 @@ constexpr const char *gt_short_name_upper[GT_NUM_GAMETYPES] = {
 	"STRIKE",
 	"REDROVER",
 	"LMS",
-	"HORDE"
+	"HORDE",
+	"RACE"
 };
 constexpr const char *gt_long_name[GT_NUM_GAMETYPES] = {
 	"Campaign",
@@ -145,7 +148,8 @@ constexpr const char *gt_long_name[GT_NUM_GAMETYPES] = {
 	"CaptureStrike",
 	"Red Rover",
 	"Last Man Standing",
-	"Horde Mode"
+	"Horde Mode",
+	"Race"
 };
 
 enum monflags_t {
@@ -1089,6 +1093,7 @@ enum item_id_t : int32_t {
 	IT_AMMO_SLUGS_SMALL,
 
 	IT_TELEPORTER,
+	IT_POWERUP_REGEN,
 
 	IT_FOODCUBE,
 
@@ -1292,6 +1297,13 @@ struct game_locals_t {
 	int motd_modcount = 0;
 
 	ruleset_t	ruleset;
+
+	int8_t item_inhibit_pu;
+	int8_t item_inhibit_pa;
+	int8_t item_inhibit_ht;
+	int8_t item_inhibit_ar;
+	int8_t item_inhibit_am;
+	int8_t item_inhibit_wp;
 };
 
 constexpr size_t MAX_HEALTH_BARS = 2;
@@ -2374,6 +2386,7 @@ bool TeamShuffle();
 //
 // g_items.cpp
 //
+void		Powerup_ApplyRegeneration(gentity_t *ent);
 void		QuadHog_DoSpawn(gentity_t *ent);
 void		QuadHog_DoReset(gentity_t *ent);
 void		QuadHog_SetupSpawn(gtime_t delay);
@@ -2471,7 +2484,7 @@ bool loc_CanSee(gentity_t *targ, gentity_t *inflictor);
 bool SetTeam(gentity_t *ent, team_t desired_team, bool inactive, bool force, bool silent);
 const char *G_TimeString(const int msec, bool state);
 const char *G_TimeStringMs(const int msec, bool state);
-void BroadcastSpectatorMessage(const char *msg);
+void BroadcastFriendlyMessage(team_t team, const char *msg);
 void BroadcastTeamMessage(team_t team, print_type_t level, const char *msg);
 team_t StringToTeamNum(const char *in);
 bool IsCombatDisabled();
@@ -3391,8 +3404,12 @@ struct gclient_t {
 	gtime_t pu_time_double;
 	gtime_t pu_time_protection;
 	gtime_t pu_time_invisibility;
+	gtime_t pu_time_regeneration;
 	gtime_t pu_time_rebreather;
 	gtime_t pu_time_enviro;
+
+	gtime_t	pu_regen_time_regen;
+	gtime_t	pu_regen_time_blip;
 
 	bool	grenade_blew_up;
 	gtime_t grenade_time, grenade_finished_time;
@@ -3424,7 +3441,7 @@ struct gclient_t {
 	gtime_t		menutime; // time to update menu
 	bool		menudirty;
 
-	gentity_t		*grapple_ent;			// entity of grapple
+	gentity_t	*grapple_ent;			// entity of grapple
 	int32_t		grapple_state;			// true if pulling
 	gtime_t		grapple_release_time;	// time of grapple release
 
