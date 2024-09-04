@@ -129,12 +129,11 @@ void G_PrintActivationMessage(gentity_t *ent, gentity_t *activator, bool coop_gl
 	}
 }
 
-void BroadcastSpectatorMessage(const char *msg) {
+void BroadcastFriendlyMessage(team_t team, const char *msg) {
 	for (auto ce : active_clients()) {
-		if (ClientIsPlaying(ce->client))
-			continue;
-
-		gi.LocClient_Print(ce, PRINT_HIGH, msg);
+		if (!ClientIsPlaying(ce->client) || (Teams() && ce->client->sess.team == team)) {
+			gi.LocClient_Print(ce, PRINT_HIGH, G_Fmt("{}{}", ce->client->sess.team != TEAM_SPECTATOR ? "[TEAM]: " : "", msg).data());
+		}
 	}
 }
 
@@ -144,6 +143,7 @@ void BroadcastTeamMessage(team_t team, print_type_t level, const char *msg) {
 			continue;
 
 		gi.LocClient_Print(ce, level, msg);
+
 	}
 }
 
@@ -1024,9 +1024,10 @@ void TeleporterVelocity(gentity_t *ent, gvec3_t angles) {
 		ent->client->ps.pmove.pm_flags |= PMF_TIME_TELEPORT;
 	} else {
 		// preserve velocity and 'spit' them out of destination
-		//ent->velocity[2] = 0;
+		float len = ent->velocity.length();
+
+		ent->velocity[2] = 0;
 		AngleVectors(angles, ent->velocity, NULL, NULL);
-		gi.Com_PrintFmt("vel length={}\n", ent->velocity.length());
-		ent->velocity *= ent->velocity.length();
+		ent->velocity *= len;
 	}
 }
