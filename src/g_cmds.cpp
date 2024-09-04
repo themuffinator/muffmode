@@ -567,14 +567,24 @@ Use an inventory item
 */
 static void Cmd_Use_f(gentity_t *ent) {
 	item_id_t	index;
-	gitem_t		*it;
+	gitem_t		*it = nullptr;
 	const char	*s = gi.args();
 	const char	*cmd = gi.argv(0);
 
 	if (!Q_strcasecmp(cmd, "use_index") || !Q_strcasecmp(cmd, "use_index_only")) {
 		it = GetItemByIndex((item_id_t)atoi(s));
 	} else {
-		it = FindItem(s);
+		if (!strcmp(s, "holdable")) {
+			if (ent->client->pers.inventory[IT_TELEPORTER])
+				it = GetItemByIndex(IT_TELEPORTER);
+			else if (ent->client->pers.inventory[IT_ADRENALINE])
+				it = GetItemByIndex(IT_ADRENALINE);
+			else if (ent->client->pers.inventory[IT_COMPASS])
+				it = GetItemByIndex(IT_COMPASS);
+		}
+
+		if (!it)
+			it = FindItem(s);
 	}
 
 	if (!it) {
@@ -757,11 +767,33 @@ static void Cmd_Drop_f(gentity_t *ent) {
 	}
 
 	it->drop(ent, it);
+
 	if (Teams() && g_teamplay_item_drop_notice->integer) {
 		// add drop notice to all team mates
-		BroadcastTeamMessage(ent->client->sess.team, PRINT_CHAT, G_Fmt("[TEAM]: {} drops {}\n", ent->client->resp.netname, it->use_name).data());
+		//BroadcastTeamMessage(ent->client->sess.team, PRINT_CHAT, G_Fmt("[TEAM]: {} drops {}\n", ent->client->resp.netname, it->use_name).data());
 
-		//TODO: add POI
+		uint32_t key = GetUnicastKey();
+
+		for (auto ec : active_clients()) {
+			if (!OnSameTeam(ent, ec))
+				continue;
+
+			if (ent == ec)
+				continue;
+
+			gi.WriteByte(svc_poi);
+			gi.WriteShort(POI_PING + (ent->s.number - 1));
+			gi.WriteShort(5000);
+			gi.WritePosition(ent->s.origin);
+			//gi.WriteShort(level.pic_ping);
+			gi.WriteShort(gi.imageindex(it->icon));
+			gi.WriteByte(215);
+			gi.WriteByte(POI_FLAG_NONE);
+			gi.unicast(ec, false);
+			gi.local_sound(ec, CHAN_AUTO, gi.soundindex("misc/help_marker.wav"), 1.0f, ATTN_NONE, 0.0f, key);
+			
+			gi.LocClient_Print(ec, PRINT_TTS, G_Fmt("[TEAM]: {} drops {}\n", ent->client->resp.netname, it->use_name).data(), ent->client->resp.netname);
+		}
 	}
 
 	ValidateSelectedItem(ent);
@@ -3256,6 +3288,10 @@ static void Cmd_MapInfo_f(gentity_t *ent) {
 		gi.LocClient_Print(ent, PRINT_HIGH, "author{}: {}{}{}\n", level.author2[0] ? "s" : "", level.author, level.author2[0] ? ", " : "", level.author2[0] ? level.author2 : "");
 }
 
+static const char *MyMap_FlagString() {
+
+}
+
 static void Cmd_MyMap_f(gentity_t *ent) {
 	if (!g_allow_mymap->integer) {
 		gi.LocClient_Print(ent, PRINT_HIGH, "MyMap is disabled.\n");
@@ -3292,6 +3328,48 @@ static void Cmd_MyMap_f(gentity_t *ent) {
 			text += game.mapqueue[i];
 			
 			text += " ";
+		}
+	}
+
+	game.item_inhibit_pu = 0;
+	game.item_inhibit_pa = 0;
+	game.item_inhibit_ht = 0;
+	game.item_inhibit_ar = 0;
+	game.item_inhibit_am = 0;
+	game.item_inhibit_wp = 0;
+
+	//flags
+	// "pu", "pa", "ht", "ar", "am", "wp", "fd"
+	if (gi.argc() > 2) {
+		const char *s = nullptr;
+		bool add = false, subtract = false;
+
+		for (size_t i = 0; i < gi.argc(); i++) {
+			s = gi.argv(2 + i);
+			if (s[0] == '+') {
+				s++;
+				add = true;
+			} else if (s[0] == '-') {
+				s++;
+				subtract = true;
+			}
+
+			if (add || subtract) {
+				int num = add ? 1 : -1;
+				if (strcmp(s, "pu")) {
+					game.item_inhibit_pu = num;
+				} else if (strcmp(s, "pa")) {
+					game.item_inhibit_pa = num;
+				} else if (strcmp(s, "ht")) {
+					game.item_inhibit_ht = num;
+				} else if (strcmp(s, "ar")) {
+					game.item_inhibit_ar = num;
+				} else if (strcmp(s, "am")) {
+					game.item_inhibit_am = num;
+				} else if (strcmp(s, "wp")) {
+					game.item_inhibit_wp = num;
+				}
+			}
 		}
 	}
 	
