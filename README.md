@@ -34,12 +34,18 @@ Muff Mode includes the game logic, a server config, bot files and some map entit
 - A game menu for joining a match, changing for or voting on settings and viewing mod and server info.
 - A whole host of controls for admins, voting and more.
 - Refined match handling with conditional progression, including: warmups, readying, countdowns, post-match delays, sudden death, overtime and more.
-- Enhanced teamplay with team auto-balancing, forced balancing rules, improved team handling, communicating joined team to players and friendly fire warnings.
+- Enhanced teamplay with team auto-balancing, forced balancing rules, improved team handling, communicating joined team to players, major item pickup and weapon drop POI's, and friendly fire warnings.
 - Extensive controls over specific map item spawns and entity string overrides.
 - EyeCam spectating, smooth and with aim prediction (mostly!)
 - MyMap map queing system inspired by tastyspleen.net.
 - A number of bug fixes, minor refinements, balance tweaks and many new server settings added.
+- Muff Maps: official maps under development included utilizing Muff Mode's enhanced capabilities
 - Many more features, see release changelogs for more info!
+
+### Muff Maps
+- Arena of Death [Alpha v3] (mm-arena-a3)
+- The Proving Grounds [Alpha v4] (mm-proving-a4)
+- Vertical Vengeance [Alpha v2] (mm-vengeance-a2)
 
 ### New Gametypes
 - Horde: Battle waves of monsters, stay on top of the scoreboard while defeating up to 16 waves to be victorious! Note: currently does not handle limited lives.
@@ -103,7 +109,7 @@ Inspired by Quake III Arena, this ruleset aims to replicate some of the differen
  - Ammo stats altered, ammo max is 200 for each type.
  - Weapon pickup rule: +1 ammo if weapon is already held.
  - Armor system: no tiers, +5 shard value, armor always provides 66% protection
- - Health and armor counts down over max health
+ - Health and armor counts down to max health
  - Spawning health bonus of 25.
  - Removed Mega timer rule, Mega Health respawns after 60 seconds
  - **Invulnerability** powerup has been replaced by Protection - player receives no splash damage, full protection from slime damage, third protection from lava, half direct damage after armor protection.
@@ -223,6 +229,7 @@ Use **callvote [command] [arg]** for the below listed vote commands:
 	8. Red Rover
 	9. Last Man Standing
 	10. Horde
+	11. Race (WIP)
  - **g_inactivity**: Values above 0 enables an inactivity timer for players, specifying number of seconds since last input to point of flagging the player as inactive. A warning is sent to the player 10 seconds before triggering and once triggered, the player is moved to spectators. Inactive clients are noted as such using the 'players' command. (default: 120)
  - **g_instagib_splash**: enables a non-damaging explosion from railgun shots in instagib, allows for rail jumping or knocking foes about (default 0)
  - **g_knockback_scale**: scales all knockback resulting from damage received (default 1.0)
@@ -265,6 +272,7 @@ Use **callvote [command] [arg]** for the below listed vote commands:
 - Personal Teleporter (item_teleporter): holdable item for deathmatch, teleports the players to a spawn point upon activation.
 - Small ammo items for shells, bullets, rockets, cells and slugs (ie: ammo_bullets_small)
 - Large ammo items for shells, bullets and cells (ie: ammo_bullets_large)
+- Regeneration (item_regen): 30 second powerup regenerates your health up to 2x max health
 
 ### Map Tweaks
 Some entity overrides are included which add some subtle ambient sounds, mover sounds, intermission cams and gametype-specific item tweaks.
@@ -294,7 +302,7 @@ Some entity overrides are included which add some subtle ambient sounds, mover s
  * new item spawnflag & 8: item spawns in suspended state (does not drop to floor)
  * Hacky Map Fixes:
 	* bunk1: button for lift to ware2 now has a wait of -1 (never returns), stops co-op players from pushing the button again and toggling the lift!
-	
+ * "nobots" and "nohumans": keys for info_player_deathmatch to avoid using for bots or humans respectively
 	
 ### Entity Keys
 * SPAWNFLAGS:
