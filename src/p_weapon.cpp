@@ -649,17 +649,21 @@ void Drop_Weapon(gentity_t *ent, gitem_t *item) {
 	gentity_t *drop = Drop_Item(ent, item);
 	drop->spawnflags |= SPAWNFLAG_ITEM_DROPPED_PLAYER;
 	drop->svflags &= ~SVF_INSTANCED;
-	drop->count = 5;
 
 	gitem_t *ammo = GetItemByIndex(drop->item->ammo);
 	if (!ammo)
 		return;
+	if (ent->client->pers.inventory[ammo->id] <= 0)
+		return;
 	
 	drop->count = ammo->quantity;
 
-	if (item->id == IT_WEAPON_RAILGUN)
+	if (item->id == IT_WEAPON_RAILGUN) {
 		if (!(RS(RS_MM)))
 			drop->count += 5;
+	}
+
+	drop->count = clamp(drop->count, drop->count, ent->client->pers.inventory[ammo->id]);
 
 	if (ent->client->pers.inventory[ammo->id] - drop->count < 0) {
 		G_FreeEntity(drop);

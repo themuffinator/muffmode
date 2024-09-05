@@ -784,7 +784,7 @@ static void QuadHod_ClearAll() {
 void QuadHog_Spawn(gitem_t *item, gentity_t *spot, bool reset) {
 	gentity_t *ent;
 	vec3_t	 forward, right;
-	vec3_t	 angles;
+	vec3_t	 angles = vec3_origin;
 
 	QuadHod_ClearAll();
 
@@ -793,15 +793,17 @@ void QuadHog_Spawn(gitem_t *item, gentity_t *spot, bool reset) {
 	ent->classname = item->classname;
 	ent->item = item;
 	ent->spawnflags = SPAWNFLAG_ITEM_DROPPED;
-	ent->s.effects = item->world_model_flags;
-	ent->s.renderfx = RF_GLOW | RF_NO_LOD;
+	ent->s.effects = item->world_model_flags | EF_COLOR_SHELL;
+	ent->s.renderfx = RF_GLOW | RF_NO_LOD | RF_SHELL_BLUE;
 	ent->mins = { -15, -15, -15 };
 	ent->maxs = { 15, 15, 15 };
-	gi.setmodel(ent, ent->item->world_model);
+	gi.setmodel(ent, item->world_model);
 	ent->solid = SOLID_TRIGGER;
 	ent->movetype = MOVETYPE_TOSS;
 	ent->touch = Touch_Item;
 	ent->owner = ent;
+	ent->nextthink = level.time + 30_sec;
+	ent->think = QuadHog_DoSpawn;
 
 	angles[PITCH] = 0;
 	angles[YAW] = (float)irandom(360);
@@ -813,12 +815,6 @@ void QuadHog_Spawn(gitem_t *item, gentity_t *spot, bool reset) {
 	ent->velocity = forward * 100;
 	ent->velocity[2] = 300;
 
-	ent->s.renderfx |= RF_SHELL_BLUE;
-	ent->s.effects |= EF_COLOR_SHELL;
-
-	ent->nextthink = level.time + 30_sec;
-	ent->think = QuadHog_DoSpawn;
-
 	gi.LocBroadcast_Print(PRINT_CENTER, "The Quad {}!\n", reset ? "respawned" : "has spawned");
 	gi.sound(ent, CHAN_RELIABLE | CHAN_NO_PHS_ADD | CHAN_AUX, gi.soundindex("misc/alarm.wav"), 1, ATTN_NONE, 0);
 
@@ -827,9 +823,13 @@ void QuadHog_Spawn(gitem_t *item, gentity_t *spot, bool reset) {
 
 THINK(QuadHog_DoSpawn) (gentity_t *ent) -> void {
 	gentity_t *spot;
+	gitem_t *it = GetItemByIndex(IT_POWERUP_QUAD);
+
+	if (!it)
+		return;
 
 	if ((spot = QuadHog_FindSpawn()) != nullptr)
-		QuadHog_Spawn(GetItemByIndex(IT_POWERUP_QUAD), spot, false);
+		QuadHog_Spawn(it, spot, false);
 
 	if (ent)
 		G_FreeEntity(ent);
@@ -837,9 +837,13 @@ THINK(QuadHog_DoSpawn) (gentity_t *ent) -> void {
 
 THINK(QuadHog_DoReset) (gentity_t *ent) -> void {
 	gentity_t *spot;
+	gitem_t *it = GetItemByIndex(IT_POWERUP_QUAD);
+
+	if (!it)
+		return;
 
 	if ((spot = QuadHog_FindSpawn()) != nullptr)
-		QuadHog_Spawn(GetItemByIndex(IT_POWERUP_QUAD), spot, true);
+		QuadHog_Spawn(it, spot, true);
 
 	if (ent)
 		G_FreeEntity(ent);
@@ -1576,12 +1580,12 @@ static bool Pickup_Powerup(gentity_t *ent, gentity_t *other) {
 		return false;
 
 	other->client->pers.inventory[ent->item->id]++;
-
+	
 	if (g_quadhog->integer && ent->item->id == IT_POWERUP_QUAD) {
 		G_FreeEntity(ent);
 		return true;
 	}
-
+	
 	bool is_dropped_from_death = ent->spawnflags.has(SPAWNFLAG_ITEM_DROPPED_PLAYER) && !ent->spawnflags.has(SPAWNFLAG_ITEM_DROPPED);
 
 	if (IsInstantItemsEnabled() || is_dropped_from_death) {
@@ -1617,7 +1621,12 @@ static bool Pickup_Powerup(gentity_t *ent, gentity_t *other) {
 		if (use && ent->item->use)
 			ent->item->use(other, ent->item);
 	}
-
+	/*
+	if (g_quadhog->integer && ent->item->id == IT_POWERUP_QUAD) {
+		G_FreeEntity(ent);
+		return true;
+	}
+	*/
 	int count = 0;
 
 	if (deathmatch->integer && (RS(RS_MM) || RS(RS_Q3A)) && !ent->spawnflags.has(SPAWNFLAG_ITEM_DROPPED | SPAWNFLAG_ITEM_DROPPED_PLAYER))
@@ -1873,6 +1882,7 @@ static void Use_Adrenaline(gentity_t *ent, gitem_t *item) {
 	gi.sound(ent, CHAN_ITEM, gi.soundindex("items/n_health.wav"), 1, ATTN_NORM, 0);
 
 	ent->client->pers.inventory[item->id]--;
+	gi.LocClient_Print(ent, PRINT_CENTER, "Used {}", item->pickup_name);
 }
 
 static bool Pickup_LegacyHead(gentity_t *ent, gentity_t *other) {
@@ -2314,25 +2324,29 @@ static void Drop_Ammo(gentity_t *ent, gitem_t *item) {
 		return;
 
 	item_id_t index = item->id;
-	gentity_t *dropped = Drop_Item(ent, item);
-	dropped->spawnflags |= SPAWNFLAG_ITEM_DROPPED_PLAYER;
-	dropped->svflags &= ~SVF_INSTANCED;
 
-	if (ent->client->pers.inventory[index] >= item->quantity)
-		dropped->count = item->quantity;
-	else
-		dropped->count = ent->client->pers.inventory[index];
+	if (ent->client->pers.inventory[index] <= 0)
+		return;
 
-	if (ent->client->pers.inventory[index] - dropped->count < 0) {
-		G_FreeEntity(dropped);
+	gentity_t *drop = Drop_Item(ent, item);
+	drop->spawnflags |= SPAWNFLAG_ITEM_DROPPED_PLAYER;
+	drop->svflags &= ~SVF_INSTANCED;
+
+	drop->count = item->quantity;
+
+	if (item->id == IT_AMMO_SLUGS) {
+		if (!(RS(RS_MM)))
+			drop->count += 5;
+	}
+
+	drop->count = clamp(drop->count, drop->count, ent->client->pers.inventory[index]);
+
+	if (ent->client->pers.inventory[index] - drop->count < 0) {
+		G_FreeEntity(drop);
 		return;
 	}
 
-	if (item->id == IT_AMMO_SLUGS)
-		if (!(RS(RS_MM)))
-			dropped->count *= 2;
-
-	ent->client->pers.inventory[index] -= dropped->count;
+	ent->client->pers.inventory[index] -= drop->count;
 	G_CheckPowerArmor(ent);
 
 	if (item == ent->client->pers.weapon || item == ent->client->newweapon)
@@ -2629,8 +2643,12 @@ TOUCH(Touch_Item) (gentity_t *ent, gentity_t *other, const trace_t &tr, bool oth
 		return;
 	if (other->health < 1)
 		return; // dead people can't pickup
+	if (!ent->item)
+		return;
 	if (!ent->item->pickup)
 		return; // not a grabbable item?
+
+	gitem_t *it = ent->item;
 
 	// already got this instanced item
 	if (coop->integer && P_UseCoopInstancedItems()) {
@@ -2642,7 +2660,7 @@ TOUCH(Touch_Item) (gentity_t *ent, gentity_t *other, const trace_t &tr, bool oth
 	if (IsPickupsDisabled())
 		return;
 
-	taken = ent->item->pickup(ent, other);
+	taken = it->pickup(ent, other);
 
 	ValidateSelectedItem(other);
 
@@ -2651,20 +2669,20 @@ TOUCH(Touch_Item) (gentity_t *ent, gentity_t *other, const trace_t &tr, bool oth
 		other->client->bonus_alpha = 0.25;
 
 		// show icon and name on status bar
-		other->client->ps.stats[STAT_PICKUP_ICON] = gi.imageindex(ent->item->icon);
-		other->client->ps.stats[STAT_PICKUP_STRING] = CS_ITEMS + ent->item->id;
+		other->client->ps.stats[STAT_PICKUP_ICON] = gi.imageindex(it->icon);
+		other->client->ps.stats[STAT_PICKUP_STRING] = CS_ITEMS + it->id;
 		other->client->pickup_msg_time = level.time + 3_sec;
 
 		// change selected item if we still have it
-		if (ent->item->use && other->client->pers.inventory[ent->item->id]) {
-			other->client->ps.stats[STAT_SELECTED_ITEM] = other->client->pers.selected_item = ent->item->id;
+		if (it->use && other->client->pers.inventory[it->id]) {
+			other->client->ps.stats[STAT_SELECTED_ITEM] = other->client->pers.selected_item = it->id;
 			other->client->ps.stats[STAT_SELECTED_ITEM_NAME] = 0; // don't set name on pickup item since it's already there
 		}
 
 		if (ent->noise_index)
 			gi.sound(other, CHAN_ITEM, ent->noise_index, 1, ATTN_NORM, 0);
-		else if (ent->item->pickup_sound) {
-			gi.sound(other, CHAN_ITEM, gi.soundindex(ent->item->pickup_sound), 1, ATTN_NORM, 0);
+		else if (it->pickup_sound) {
+			gi.sound(other, CHAN_ITEM, gi.soundindex(it->pickup_sound), 1, ATTN_NORM, 0);
 		}
 		int32_t player_number = other->s.number - 1;
 
@@ -2681,7 +2699,7 @@ TOUCH(Touch_Item) (gentity_t *ent, gentity_t *other, const trace_t &tr, bool oth
 				G_PrintActivationMessage(ent, other, false);
 		}
 		if (deathmatch->integer) {
-			switch (ent->item->id) {
+			switch (it->id) {
 			case IT_ARMOR_BODY:
 			case IT_POWER_SCREEN:
 			case IT_POWER_SHIELD:
@@ -2705,17 +2723,17 @@ TOUCH(Touch_Item) (gentity_t *ent, gentity_t *other, const trace_t &tr, bool oth
 						gi.WriteShort(5000);
 						gi.WritePosition(other->s.origin);
 						//gi.WriteShort(level.pic_ping);
-						gi.WriteShort(gi.imageindex(ent->item->icon));
+						gi.WriteShort(gi.imageindex(it->icon));
 						gi.WriteByte(215);
 						gi.WriteByte(POI_FLAG_NONE);
 						gi.unicast(ec, false);
 						gi.local_sound(ec, CHAN_AUTO, gi.soundindex("misc/help_marker.wav"), 1.0f, ATTN_NONE, 0.0f, key);
 
-						gi.LocClient_Print(ec, PRINT_TTS, G_Fmt("{}{} got the {}.\n", ec->client->sess.team != TEAM_SPECTATOR ? "[TEAM]: " : "", other->client->resp.netname, ent->item->use_name).data());
+						gi.LocClient_Print(ec, PRINT_TTS, G_Fmt("{}{} got the {}.\n", ec->client->sess.team != TEAM_SPECTATOR ? "[TEAM]: " : "", other->client->resp.netname, it->use_name).data());
 					}
 				}
 
-				//BroadcastFriendlyMessage(other->client->sess.team, G_Fmt("{} got the {}.\n", other->client->resp.netname, ent->item->use_name).data());
+				//BroadcastFriendlyMessage(other->client->sess.team, G_Fmt("{} got the {}.\n", other->client->resp.netname, it->use_name).data());
 				break;
 			}
 		}
@@ -2749,7 +2767,7 @@ TOUCH(Touch_Item) (gentity_t *ent, gentity_t *other, const trace_t &tr, bool oth
 			// in coop without instanced items, IF_STAY_COOP items remain
 			// if not dropped
 			else
-				should_remove = ent->spawnflags.has(SPAWNFLAG_ITEM_DROPPED | SPAWNFLAG_ITEM_DROPPED_PLAYER) || !(ent->item->flags & IF_STAY_COOP);
+				should_remove = ent->spawnflags.has(SPAWNFLAG_ITEM_DROPPED | SPAWNFLAG_ITEM_DROPPED_PLAYER) || !(it->flags & IF_STAY_COOP);
 		} else
 			should_remove = !deathmatch->integer || ent->spawnflags.has(SPAWNFLAG_ITEM_DROPPED | SPAWNFLAG_ITEM_DROPPED_PLAYER);
 

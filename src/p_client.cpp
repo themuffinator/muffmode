@@ -1574,12 +1574,14 @@ select_spawn_result_t SelectDeathmatchSpawnPoint(gentity_t *ent, vec3_t avoid_po
 					}
 				}
 
-				if (ent->client->sess.is_a_bot)
-					if (spot->flags & FL_NO_BOTS)
-						continue;
-				if (!ent->client->sess.is_a_bot)
-					if (spot->flags & FL_NO_HUMANS)
-						continue;
+				if (ent && ent->client) {
+					if (ent->client->sess.is_a_bot)
+						if (spot->flags & FL_NO_BOTS)
+							continue;
+					if (!ent->client->sess.is_a_bot)
+						if (spot->flags & FL_NO_HUMANS)
+							continue;
+				}
 
 				if (SpawnPointClear(spot))
 					return { spot, true };
