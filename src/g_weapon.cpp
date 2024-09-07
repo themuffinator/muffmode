@@ -641,6 +641,16 @@ static TOUCH(Grenade_Touch) (gentity_t *ent, gentity_t *other, const trace_t &tr
 		return;
 	}
 
+	if (GT(GT_BALL)) {
+		if ((tr.contents & CONTENTS_LAVA) || (tr.contents & CONTENTS_SLIME)) {
+			G_FreeEntity(ent);
+			return;
+		}
+		if (other->client) {
+			other->client->pers.inventory[IT_BALL] = 1;
+		}
+	}
+
 	ent->enemy = other;
 	Grenade_Explode(ent);
 }
@@ -744,10 +754,18 @@ void fire_handgrenade(gentity_t *self, const vec3_t &start, const vec3_t &aimdir
 	grenade->solid = SOLID_BBOX;
 	grenade->svflags |= SVF_PROJECTILE;
 	grenade->flags |= (FL_DODGE | FL_TRAP);
-	grenade->s.effects |= EF_GRENADE;
-	grenade->s.scale = 1.25f;
 
-	grenade->s.modelindex = gi.modelindex("models/objects/grenade3/tris.md2");
+	if (GT(GT_BALL)) {
+		grenade->s.effects |= EF_GRENADE | EF_COLOR_SHELL;
+		grenade->s.renderfx |= RF_SHELL_RED | RF_SHELL_GREEN;
+		grenade->s.modelindex = gi.modelindex("models/items/ammo/grenades/medium/tris.md2");
+		grenade->s.scale = 4.0f;
+	} else {
+		grenade->s.effects |= EF_GRENADE;
+		grenade->s.modelindex = gi.modelindex("models/objects/grenade3/tris.md2");
+		grenade->s.scale = 1.25f;
+	}
+
 	grenade->owner = self;
 	grenade->touch = Grenade_Touch;
 	grenade->nextthink = level.time + timer;

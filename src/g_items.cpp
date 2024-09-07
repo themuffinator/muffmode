@@ -981,7 +981,7 @@ static void Tech_Spawn(gitem_t *item, gentity_t *spot) {
 
 static bool AllowTechs() {
 	if (!strcmp(g_allow_techs->string, "auto"))
-		return !!(GT(GT_CTF) && !g_instagib->integer && !g_nadefest->integer);
+		return !!(GT(GT_CTF) && !g_instagib->integer && !g_nadefest->integer && notGT(GT_BALL));
 	else
 		return !!(g_allow_techs->integer && ItemSpawnsEnabled());
 }
@@ -1831,6 +1831,12 @@ static bool Pickup_General(gentity_t *ent, gentity_t *other) {
 	return true;
 }
 
+static bool Pickup_Ball(gentity_t *ent, gentity_t *other) {
+	other->client->pers.inventory[ent->item->id] = 1;
+
+	return true;
+}
+
 static void Drop_General(gentity_t *ent, gitem_t *item) {
 	if (g_quadhog->integer && item->id == IT_POWERUP_QUAD)
 		return;
@@ -1940,13 +1946,20 @@ static item_id_t AmmoConvertId(item_id_t original_id) {
 
 static inline bool G_AddAmmoAndCap(gentity_t *other, item_id_t id, int32_t max, int32_t quantity) {
 	item_id_t new_id = AmmoConvertId(id);
+	
+	if (other->client->pers.inventory[new_id] == AMMO_INFINITE)
+		return false;
 
 	if (other->client->pers.inventory[new_id] >= max)
 		return false;
 
-	other->client->pers.inventory[new_id] += quantity;
-	if (other->client->pers.inventory[new_id] > max)
-		other->client->pers.inventory[new_id] = max;
+	if (quantity == AMMO_INFINITE) {
+		other->client->pers.inventory[new_id] = AMMO_INFINITE;
+	} else {
+		other->client->pers.inventory[new_id] += quantity;
+		if (other->client->pers.inventory[new_id] > max)
+			other->client->pers.inventory[new_id] = max;
+	}
 
 	G_CheckPowerArmor(other);
 	return true;
@@ -1979,6 +1992,7 @@ static bool Pickup_Bandolier(gentity_t *ent, gentity_t *other) {
 	return true;
 }
 
+void G_CheckAutoSwitch(gentity_t *ent, gitem_t *item, bool is_new);
 static bool Pickup_Pack(gentity_t *ent, gentity_t *other) {
 	G_AdjustAmmoCap(other, AMMO_BULLETS, 300);
 	G_AdjustAmmoCap(other, AMMO_SHELLS, 200);
@@ -1999,6 +2013,10 @@ static bool Pickup_Pack(gentity_t *ent, gentity_t *other) {
 	G_AddAmmoAndCapQuantity(other, AMMO_MAGSLUG);
 	G_AddAmmoAndCapQuantity(other, AMMO_FLECHETTES);
 	G_AddAmmoAndCapQuantity(other, AMMO_DISRUPTOR);
+	
+	gitem_t *it = GetItemByIndex(IT_AMMO_GRENADES);
+	if (it)
+		G_CheckAutoSwitch(other, it, !other->client->pers.inventory[IT_AMMO_GRENADES]);
 
 	SetRespawn(ent, gtime_t::from_sec(ent->item->quantity));
 
@@ -3076,6 +3094,9 @@ bool CheckItemEnabled(gitem_t *item) {
 	if (subtract)
 		return false;
 
+	if (GT(GT_BALL) && item->id != IT_BALL)
+		return false;
+
 	if (!add) {
 		if (g_no_armor->integer && item->flags & (IF_ARMOR | IF_POWER_ARMOR))
 			return false;
@@ -3427,6 +3448,14 @@ static void Use_Compass(gentity_t *ent, gitem_t *inv) {
 		P_SendLevelPOI(ent);
 		gi.local_sound(ent, CHAN_AUTO, gi.soundindex("misc/help_marker.wav"), 1.f, ATTN_NORM, 0, GetUnicastKey());
 	}
+}
+
+static void Use_Ball(gentity_t *ent, gitem_t *item) {
+
+}
+
+static void Drop_Ball(gentity_t *ent, gitem_t *item) {
+
 }
 
 //======================================================================
@@ -5997,6 +6026,36 @@ model="models/objects/trapfx/tris.md2"
 		/* vwep_model */ nullptr,
 		/* armor_info */ nullptr,
 		/* tag */ HEALTH_IGNORE_MAX
+	},
+
+/*QUAKED item_ball (.3 .3 1) (-16 -16 -16) (16 16 16) TRIGGER_SPAWN x x SUSPENDED x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
+Big ol' ball
+models/items/ammo/grenades/medium/tris.md2"
+*/
+	{
+		/* id */ IT_BALL,
+		/* classname */ "item_ball",
+		/* pickup */ Pickup_Ball,
+		/* use */ Use_Ball,
+		/* drop */ Drop_Ball,
+		/* weaponthink */ nullptr,
+		/* pickup_sound */ "items/pkup.wav",
+		/* world_model */ "models/items/ammo/grenades/medium/tris.md2",
+		/* world_model_flags */ EF_ROTATE | EF_BOB,
+		/* view_model */ nullptr,
+		/* icon */ "i_help",
+		/* use_name */  "Ball",
+		/* pickup_name */  "Ball",
+		/* pickup_name_definite */ "Ball",
+		/* quantity */ 0,
+		/* ammo */ IT_NULL,
+		/* chain */ IT_NULL,
+		/* flags */ IF_STAY_COOP | IF_POWERUP| IF_POWERUP_WHEEL | IF_NOT_RANDOM,
+		/* vwep_model */ nullptr,
+		/* armor_info */ nullptr,
+		/* tag */ POWERUP_BALL,
+		/* precaches */ "",
+		/* sort_id */ -1
 	},
 	
 /* Flashlight */

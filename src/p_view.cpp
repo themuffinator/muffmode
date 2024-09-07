@@ -809,6 +809,11 @@ static void G_SetClientEffects(gentity_t *ent) {
 
 	CTF_ClientEffects(ent);
 
+	if (GT(GT_BALL) && ent->client->pers.inventory[IT_BALL] > 0) {
+		ent->s.effects |= EF_COLOR_SHELL;
+		ent->s.renderfx |= RF_SHELL_RED | RF_SHELL_GREEN;
+	}
+
 	if (ent->client->pu_time_quad > level.time)
 		if (G_PowerUpExpiring(ent->client->pu_time_quad))
 			ent->s.effects |= EF_QUAD;

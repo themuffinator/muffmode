@@ -1233,7 +1233,9 @@ void InitClientPersistant(gentity_t *ent, gclient_t *client) {
 			}
 		}
 
-		if (!taken_loadout) {
+		if (GT(GT_BALL)) {
+			client->pers.inventory[IT_WEAPON_CHAINFIST] = 1;
+		} else if (!taken_loadout) {
 			if (g_instagib->integer) {
 				client->pers.inventory[IT_WEAPON_RAILGUN] = 1;
 				client->pers.inventory[IT_AMMO_SLUGS] = AMMO_INFINITE;

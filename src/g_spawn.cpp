@@ -590,6 +590,16 @@ void ED_CallSpawn(gentity_t *ent) {
 		}
 	}
 
+	if (!strcmp(ent->classname, "item_ball")) {
+		if (GT(GT_BALL)) {
+			ent->s.effects |= EF_COLOR_SHELL;
+			ent->s.renderfx |= RF_SHELL_RED | RF_SHELL_GREEN;
+		} else {
+			G_FreeEntity(ent);
+		}
+		return;
+	}
+
 	gi.Com_PrintFmt("{}: {} doesn't have a spawn function.\n", __FUNCTION__, *ent);
 	G_FreeEntity(ent);
 }
@@ -845,7 +855,14 @@ static const std::initializer_list<field_t> entity_fields = {
 	FIELD_AUTO(not_gametype),
 	FIELD_AUTO(notteam),
 	FIELD_AUTO(notfree),
+	FIELD_AUTO(notq2),
+	FIELD_AUTO(notq3a),
+	FIELD_AUTO(ruleset),
+	FIELD_AUTO(not_ruleset),
+	FIELD_AUTO(powerups_on),
+	FIELD_AUTO(powerups_off),
 //-muff
+
 	FIELD_AUTO_NAMED("monster_slots", monsterinfo.monster_slots)
 };
 
@@ -938,7 +955,9 @@ static constexpr const char *gt_spawn_string[GT_NUM_GAMETYPES] = {
 	"strike",
 	"rr",
 	"lms",
-	"horde"
+	"horde",
+	"race",
+	"ball"
 };
 
 /*
@@ -1144,7 +1163,6 @@ static void G_FindTeams() {
 
 // inhibit entities from game based on cvars & spawnflags
 static inline bool G_InhibitEntity(gentity_t *ent) {
-
 	if (ent->gametype) {
 		const char *s = strstr(ent->gametype, gt_spawn_string[g_gametype->integer]);
 		if (!s)
@@ -1155,10 +1173,32 @@ static inline bool G_InhibitEntity(gentity_t *ent) {
 		if (s)
 			return true;
 	}
+
 	if (ent->notteam && Teams())
 		return true;
 	if (ent->notfree && !Teams())
 		return true;
+
+	if (ent->notq2 && RS(RS_Q3A))
+		return true;
+	if (ent->notq3a && (RS(RS_Q2RE) || RS(RS_MM)))
+		return true;
+
+	if (ent->powerups_on && g_no_powerups->integer)
+		return true;
+	if (ent->powerups_off && !g_no_powerups->integer)
+		return true;
+
+	if (ent->ruleset) {
+		const char *s = strstr(ent->ruleset, rs_short_name[game.ruleset]);
+		if (!s)
+			return true;
+	}
+	if (ent->not_ruleset) {
+		const char *s = strstr(ent->not_ruleset, rs_short_name[game.ruleset]);
+		if (s)
+			return true;
+	}
 
 	// dm-only
 	if (deathmatch->integer)
@@ -2068,6 +2108,34 @@ void GT_SetLongName(void) {
 			} else {
 				s = gt_long_name[GT_HORDE];
 			}
+		} else if (GT(GT_RACE)) {
+			if (g_instagib->integer) {
+				s = "Insta-Race";
+			} else if (g_vampiric_damage->integer) {
+				s = "Vampiric Race";
+			} else if (g_frenzy->integer) {
+				s = "Frenzy Race";
+			} else if (g_nadefest->integer) {
+				s = "NadeFest Race";
+			} else if (g_quadhog->integer) {
+				s = "Quad Hog Race";
+			} else {
+				s = gt_long_name[GT_RACE];
+			}
+		} else if (GT(GT_BALL)) {
+			if (g_instagib->integer) {
+				s = "Insta-ProBall";
+			} else if (g_vampiric_damage->integer) {
+				s = "Vampiric ProBall";
+			} else if (g_frenzy->integer) {
+				s = "Frenzy ProBall";
+			} else if (g_nadefest->integer) {
+				s = "NadeFest ProBall";
+			} else if (g_quadhog->integer) {
+				s = "Quad Hog ProBall";
+			} else {
+				s = gt_long_name[GT_BALL];
+			}
 		} else if (deathmatch->integer) {
 			if (g_instagib->integer) {
 				s = "InstaGib";
@@ -2249,8 +2317,11 @@ void SP_worldspawn(gentity_t *ent) {
 	if (!deathmatch->integer)
 		PrecacheItem(GetItemByIndex(IT_COMPASS));
 
-	if (!g_instagib->integer && !g_nadefest->integer)
+	if (!g_instagib->integer && !g_nadefest->integer && notGT(GT_BALL))
 		PrecacheItem(GetItemByIndex(IT_WEAPON_BLASTER));
+
+	if (GT(GT_BALL))
+		PrecacheItem(GetItemByIndex(IT_BALL));
 
 	if ((!strcmp(g_allow_grapple->string, "auto")) ?
 		(GTF(GTF_CTF) ? !level.no_grapple : 0) :

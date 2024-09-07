@@ -604,7 +604,7 @@ void T_Damage(gentity_t *targ, gentity_t *inflictor, gentity_t *attacker, const 
 	save = 0;
 
 	if (!(dflags & DAMAGE_NO_PROTECTION)) {
-		if (IsCombatDisabled()) {
+		if (IsCombatDisabled() || GT(GT_BALL)) {
 			take = 0;
 			save = damage;
 		}

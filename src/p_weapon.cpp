@@ -265,21 +265,37 @@ bool Pickup_Weapon(gentity_t *ent, gentity_t *other) {
 			if (InfiniteAmmoOn(ammo))
 				Add_Ammo(other, ammo, AMMO_INFINITE);
 			else {
-				int count = ammo->quantity;
+				int quantity = 0;
 
 				if (RS(RS_Q3A)) {
-					if (other->client->pers.inventory[index])
-						count = 1;
-					else if (ammo->id == IT_AMMO_GRENADES ||
+					if (ent->count)
+						quantity = ent->count;
+					else {
+						if (ammo->id == IT_AMMO_GRENADES ||
 							ammo->id == IT_AMMO_ROCKETS ||
 							ammo->id == IT_AMMO_SLUGS)
-						count *= 2;
-				} else if (RS(RS_Q2RE)) {
-					if (ammo->id == IT_AMMO_SLUGS)
-						count *= 2;
-				}
+							quantity = 10;
+						else
+							quantity = ammo->quantity;
+					}
 
-				Add_Ammo(other, ammo, count);
+					if (other->client->pers.inventory[ammo->id] < quantity)
+						quantity = quantity - other->client->pers.inventory[ammo->id];
+					else
+						quantity = 1;
+
+				} else {
+					if (ent->count)
+						quantity = ent->count;
+					else {
+						if (RS(RS_Q2RE) && ammo->id == IT_AMMO_SLUGS)
+							quantity = 10;
+						else
+							quantity = ammo->quantity;
+					}
+				}
+				
+				Add_Ammo(other, ammo, quantity);
 			}
 		}
 
@@ -2283,6 +2299,23 @@ static void Weapon_ChainFist_Fire(gentity_t *ent) {
 	vec3_t start, dir;
 
 	P_ProjectSource(ent, ent->client->v_angle, { 0, 0, -4 }, start, dir);
+
+	if (GT(GT_BALL) && ent->client->pers.inventory[IT_BALL] > 0) {
+		//fire_grenade(ent, start, dir, damage, 800, 25_sec, 0, (crandom_open() * 10.0f), (200 + crandom_open() * 10.0f), false);
+
+		constexpr int pause_frames[] = { 1, 1, 1, 1, 0 };
+		Throw_Generic(ent, 1, 1, 1, "weapons/hgrena1b.wav", 1, 1, pause_frames, true, "weapons/hgrenc1b.wav", Weapon_HandGrenade_Fire, true);
+
+		gi.WriteByte(svc_muzzleflash);
+		gi.WriteEntity(ent);
+		gi.WriteByte(MZ_GRENADE | is_silenced);
+		gi.multicast(ent->s.origin, MULTICAST_PVS, false);
+
+		PlayerNoise(ent, start, PNOISE_WEAPON);
+
+		ent->client->pers.inventory[IT_BALL] = 0;
+		return;
+	}
 
 	if (fire_player_melee(ent, start, dir, CHAINFIST_REACH, damage, 100, MOD_CHAINFIST)) {
 		if (ent->client->empty_click_sound < level.time) {
