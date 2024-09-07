@@ -1122,6 +1122,9 @@ static void SetCrosshairIDView(gentity_t *ent) {
 	ent->client->ps.stats[STAT_CROSSHAIR_ID_VIEW] = 0;
 	ent->client->ps.stats[STAT_CROSSHAIR_ID_VIEW_COLOR] = 0;
 
+	if (!g_dm_crosshair_id->integer)
+		return;
+
 	AngleVectors(ent->client->v_angle, forward, nullptr, nullptr);
 	forward *= 1024;
 	forward = ent->s.origin + forward;

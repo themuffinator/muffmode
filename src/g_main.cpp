@@ -108,6 +108,7 @@ cvar_t *g_disable_player_collision;
 cvar_t *g_dm_allow_exit;
 cvar_t *g_dm_allow_no_humans;
 cvar_t *g_dm_auto_join;
+cvar_t *g_dm_crosshair_id;
 cvar_t *g_dm_do_readyup;
 cvar_t *g_dm_do_warmup;
 cvar_t *g_dm_exec_level_cfg;
@@ -957,6 +958,7 @@ static void InitGame() {
 	g_dm_allow_exit = gi.cvar("g_dm_allow_exit", "0", CVAR_NOFLAGS);
 	g_dm_allow_no_humans = gi.cvar("g_dm_allow_no_humans", "1", CVAR_NOFLAGS);
 	g_dm_auto_join = gi.cvar("g_dm_auto_join", "1", CVAR_NOFLAGS);
+	g_dm_crosshair_id = gi.cvar("g_dm_crosshair_id", "1", CVAR_NOFLAGS);
 	g_dm_do_readyup = gi.cvar("g_dm_do_readyup", "0", CVAR_NOFLAGS);
 	g_dm_do_warmup = gi.cvar("g_dm_do_warmup", "1", CVAR_NOFLAGS);
 	g_dm_exec_level_cfg = gi.cvar("g_dm_exec_level_cfg", "0", CVAR_NOFLAGS);

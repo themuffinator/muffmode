@@ -10,7 +10,7 @@
 constexpr const char *GAMEVERSION = "baseq2";
 
 constexpr const char *GAMEMOD_TITLE = "Muff Mode BETA";
-constexpr const char *GAMEMOD_VERSION = "0.18.62";
+constexpr const char *GAMEMOD_VERSION = "0.18.63";
 
 //==================================================================
 
@@ -90,6 +90,7 @@ enum gametype_t {
 	GT_LMS,
 	GT_HORDE,
 	GT_RACE,
+	GT_BALL,
 	GT_NUM_GAMETYPES
 };
 constexpr gametype_t GT_FIRST = GT_FFA;
@@ -121,7 +122,8 @@ constexpr const char *gt_short_name[GT_NUM_GAMETYPES] = {
 	"rr",
 	"lms",
 	"horde",
-	"race"
+	"race",
+	"ball"
 };
 constexpr const char *gt_short_name_upper[GT_NUM_GAMETYPES] = {
 	"CMP",
@@ -135,7 +137,8 @@ constexpr const char *gt_short_name_upper[GT_NUM_GAMETYPES] = {
 	"REDROVER",
 	"LMS",
 	"HORDE",
-	"RACE"
+	"RACE",
+	"BALL",
 };
 constexpr const char *gt_long_name[GT_NUM_GAMETYPES] = {
 	"Campaign",
@@ -149,7 +152,8 @@ constexpr const char *gt_long_name[GT_NUM_GAMETYPES] = {
 	"Red Rover",
 	"Last Man Standing",
 	"Horde Mode",
-	"Race"
+	"Race",
+	"ProBall"
 };
 
 enum monflags_t {
@@ -1096,6 +1100,8 @@ enum item_id_t : int32_t {
 	IT_POWERUP_REGEN,
 
 	IT_FOODCUBE,
+
+	IT_BALL,
 
 	IT_FLASHLIGHT,
 	IT_COMPASS,
@@ -2232,6 +2238,7 @@ extern cvar_t *g_disable_player_collision;
 extern cvar_t *g_dm_allow_exit;
 extern cvar_t *g_dm_allow_no_humans;
 extern cvar_t *g_dm_auto_join;
+extern cvar_t *g_dm_crosshair_id;
 extern cvar_t *g_dm_do_readyup;
 extern cvar_t *g_dm_do_warmup;
 extern cvar_t *g_dm_exec_level_cfg;
@@ -3762,6 +3769,12 @@ struct gentity_t {
 	const char *not_gametype;
 	const char *notteam;
 	const char *notfree;
+	const char *notq2;
+	const char *notq3a;
+	const char *ruleset;
+	const char *not_ruleset;
+	const char *powerups_on;
+	const char *powerups_off;
 
 	gvec3_t		origin2;
 
