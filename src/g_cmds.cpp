@@ -2631,8 +2631,8 @@ static bool ValidVoteCommand(gentity_t *ent) {
 		gi.LocClient_Print(ent, PRINT_HIGH, "Invalid vote command: {}\n", gi.argv(1));
 		return false;
 	}
-
-	if (cc->args && gi.argc() < (2 + cc->args ? 1 : 0)) {
+	
+	if (cc->args && gi.argc() < (1 + cc->min_args)) {
 		gi.LocClient_Print(ent, PRINT_HIGH, "{}: {}\nUsage: {} {}\n", cc->name, cc->help, cc->name, cc->args);
 		return false;
 	}
