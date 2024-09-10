@@ -2183,6 +2183,7 @@ static THINK(BodySink) (gentity_t *ent) -> void {
 		ent->svflags = SVF_NOCLIENT;
 		ent->takedamage = false;
 		ent->solid = SOLID_NOT;
+		ent->movetype = MOVETYPE_NOCLIP;
 
 		// the body ques are never actually freed, they are just unlinked
 		gi.unlinkentity(ent);
@@ -2190,6 +2191,7 @@ static THINK(BodySink) (gentity_t *ent) -> void {
 	}
 	ent->nextthink = level.time + 50_ms;
 	ent->s.origin[2] -= 0.5;
+	gi.linkentity(ent);
 }
 
 void CopyToBodyQue(gentity_t *ent) {
