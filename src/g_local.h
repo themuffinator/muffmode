@@ -94,7 +94,7 @@ enum gametype_t {
 	GT_NUM_GAMETYPES
 };
 constexpr gametype_t GT_FIRST = GT_FFA;
-constexpr gametype_t GT_LAST = GT_HORDE;
+constexpr gametype_t GT_LAST = GT_BALL;
 
 enum gtf_t {
 	GTF_TEAMS	= 0x01,

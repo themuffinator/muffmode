@@ -261,6 +261,7 @@ int _gt[] = {
 	/* GT_LMS */ GTF_ELIMINATION,
 	/* GT_HORDE */ GTF_ROUNDS,
 	/* GT_RACE */ GTF_ARENA,
+	/* GT_BALL */ 0
 };
 
 // =================================================
@@ -601,9 +602,11 @@ static void CheckRuleset() {
 
 static void InitGametype() {
 	constexpr const char *COOP = "coop";
-
 	bool force_dm = false;
 
+	if (g_gametype->integer < 0 || g_gametype->integer >= GT_NUM_GAMETYPES)
+		gi.cvar_forceset("g_gametype", G_Fmt("{}", clamp(g_gametype->integer, (int)GT_FIRST, (int)GT_LAST)).data());
+	
 	if (ctf->integer) {
 		force_dm = true;
 		// force coop off
