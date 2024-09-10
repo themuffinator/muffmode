@@ -751,16 +751,28 @@ void fire_handgrenade(gentity_t *self, const vec3_t &start, const vec3_t &aimdir
 	// [Paril-KEX]
 	if (self->client && !G_ShouldPlayersCollide(true))
 		grenade->clipmask &= ~CONTENTS_PLAYER;
-	grenade->solid = SOLID_BBOX;
-	grenade->svflags |= SVF_PROJECTILE;
+
 	grenade->flags |= (FL_DODGE | FL_TRAP);
 
 	if (GT(GT_BALL)) {
+		gitem_t *it = GetItemByIndex(IT_BALL);
+		if (it)
+			Drop_Item(self, it);
+		//return;
+		/*
 		grenade->s.effects |= EF_GRENADE | EF_COLOR_SHELL;
-		grenade->s.renderfx |= RF_SHELL_RED | RF_SHELL_GREEN;
+		grenade->s.renderfx |= RF_GLOW | RF_NO_LOD | RF_IR_VISIBLE | RF_SHELL_RED | RF_SHELL_GREEN;
 		grenade->s.modelindex = gi.modelindex("models/items/ammo/grenades/medium/tris.md2");
 		grenade->s.scale = 4.0f;
+		grenade->mins = { -15, -15, -15 };
+		grenade->maxs = { 15, 15, 15 };
+		grenade->movetype = MOVETYPE_TOSS;
+		grenade->solid = SOLID_TRIGGER;
+		*/
 	} else {
+		grenade->solid = SOLID_BBOX;
+		grenade->svflags |= SVF_PROJECTILE;
+
 		grenade->s.effects |= EF_GRENADE;
 		grenade->s.modelindex = gi.modelindex("models/objects/grenade3/tris.md2");
 		grenade->s.scale = 1.25f;

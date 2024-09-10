@@ -2298,13 +2298,11 @@ static void Weapon_ChainFist_Fire(gentity_t *ent) {
 	// set start point
 	vec3_t start, dir;
 
-	P_ProjectSource(ent, ent->client->v_angle, { 0, 0, -4 }, start, dir);
-
 	if (GT(GT_BALL) && ent->client->pers.inventory[IT_BALL] > 0) {
 		//fire_grenade(ent, start, dir, damage, 800, 25_sec, 0, (crandom_open() * 10.0f), (200 + crandom_open() * 10.0f), false);
 
-		constexpr int pause_frames[] = { 1, 1, 1, 1, 0 };
-		Throw_Generic(ent, 1, 1, 1, "weapons/hgrena1b.wav", 1, 1, pause_frames, true, "weapons/hgrenc1b.wav", Weapon_HandGrenade_Fire, true);
+		constexpr int pause_frames[] = { 29, 34, 39, 48, 0 };
+		Throw_Generic(ent, 15, 48, 5, "weapons/hgrena1b.wav", 11, 12, pause_frames, true, "weapons/hgrenc1b.wav", Weapon_HandGrenade_Fire, true);
 
 		gi.WriteByte(svc_muzzleflash);
 		gi.WriteEntity(ent);
@@ -2316,6 +2314,8 @@ static void Weapon_ChainFist_Fire(gentity_t *ent) {
 		ent->client->pers.inventory[IT_BALL] = 0;
 		return;
 	}
+
+	P_ProjectSource(ent, ent->client->v_angle, { 0, 0, -4 }, start, dir);
 
 	if (fire_player_melee(ent, start, dir, CHAINFIST_REACH, damage, 100, MOD_CHAINFIST)) {
 		if (ent->client->empty_click_sound < level.time) {
