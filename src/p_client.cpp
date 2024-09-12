@@ -2179,6 +2179,9 @@ After sitting around for x seconds, fall into the ground and disappear
 =============
 */
 static THINK(BodySink) (gentity_t *ent) -> void {
+	if (!ent->linked)
+		return;
+
 	if (level.time > ent->timestamp) {
 		ent->svflags = SVF_NOCLIENT;
 		ent->takedamage = false;
