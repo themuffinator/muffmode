@@ -46,7 +46,8 @@ constexpr rgba_t rgba_orange{ 116, 61, 50, 255 };
 
 constexpr size_t MAX_NETNAME = 32;
 
-constexpr float STEPSIZE = 18.0f;
+constexpr float STEPSIZE = 18.0f;	// 18.0f;
+constexpr float STEPSIZE_BELOW = 20.0f;
 
 // ugly hack to support bitflags on enums
 // and use enable_if to prevent confusing cascading

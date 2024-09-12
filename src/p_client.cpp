@@ -4030,7 +4030,7 @@ void ClientThink(gentity_t *ent, usercmd_t *ucmd) {
 		if (pm.groundentity && ent->groundentity) {
 			float stepsize = fabs(ent->s.origin[2] - pm.s.origin[2]);
 
-			if (stepsize > 4.f && stepsize < STEPSIZE) {
+			if (stepsize > 4.f && stepsize < (ent->s.origin[2] < 0 ? STEPSIZE_BELOW : STEPSIZE)) {
 				ent->s.renderfx |= RF_STAIR_STEP;
 				ent->client->step_frame = gi.ServerFrame() + 1;
 			}
@@ -4275,11 +4275,11 @@ static inline bool G_FindRespawnSpot(gentity_t *player, vec3_t &spot) {
 		float z_diff = fabsf(player->s.origin[2] - tr.endpos[2]);
 
 		// 5 steps is way too many steps
-		if (z_diff > STEPSIZE * 4.f)
+		if (z_diff > (player->s.origin[2] < 0 ? STEPSIZE_BELOW : STEPSIZE) * 4.f)
 			continue;
 
 		// if we went up or down 1 step, make sure we can still see their origin and their head
-		if (z_diff > STEPSIZE) {
+		if (z_diff > (player->s.origin[2] < 0 ? STEPSIZE_BELOW : STEPSIZE)) {
 			tr = gi.traceline(player->s.origin, tr.endpos, player, mask);
 
 			if (tr.fraction != 1.0f)
