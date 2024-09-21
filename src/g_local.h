@@ -22,6 +22,18 @@ constexpr const int32_t AMMO_INFINITE = 1000;
 
 constexpr size_t MAX_CLIENTS_KEX = 32; // absolute limit
 
+enum mstats_t : uint32_t {
+	MSTAT_NONE,
+	MSTAT_KILLS,
+	MSTAT_DEATHS,
+	MSTAT_SHOTS,
+	MSTAT_HITS,
+	MSTAT_DMG_DEALT,
+	MSTAT_DMG_RECEIVED,
+
+	MSTAT_TOTAL
+};
+
 // gameplay rulesets
 enum ruleset_t : uint8_t {
 	RS_NONE,
@@ -2504,6 +2516,7 @@ bool InCoopStyle();
 gentity_t *ClientEntFromString(const char *in);
 ruleset_t RS_IndexFromString(const char *in);
 void TeleporterVelocity(gentity_t *ent, gvec3_t angles);
+void MS_Adjust(gclient_t *cl, mstats_t index, int count);
 
 //
 // g_spawn.cpp
@@ -2729,7 +2742,6 @@ bool M_CheckAttack_Base(gentity_t *self, float stand_ground_chance, float melee_
 //
 // g_weapon.cpp
 //
-void Weapon_Stats_Hit(gclient_t *cl, mod_t mod);
 bool fire_hit(gentity_t *self, vec3_t aim, int damage, int kick);
 void fire_bullet(gentity_t *self, const vec3_t &start, const vec3_t &aimdir, int damage, int kick, int hspread,
 	int vspread, mod_t mod);
@@ -3300,6 +3312,8 @@ struct client_respawn_t {
 
 	gtime_t				team_join_time;
 	gtime_t				team_delay_time;
+
+	int					mstats[MSTAT_TOTAL];
 };
 
 // [Paril-KEX] seconds until we are fully invisible after
@@ -3537,7 +3551,7 @@ struct gclient_t {
 
 	gtime_t		pu_last_message_time;
 
-	gtime_t		last_888_message_time;
+	gtime_t		last_banned_message_time;
 
 	gtime_t		time_residual;
 };
@@ -3771,6 +3785,7 @@ struct gentity_t {
 	const char *notfree;
 	const char *notq2;
 	const char *notq3a;
+	const char *notarena;
 	const char *ruleset;
 	const char *not_ruleset;
 	const char *powerups_on;
