@@ -2138,6 +2138,8 @@ void FindIntermissionPoint(void) {
 	if (level.intermission_spot) // search only once
 		return;
 
+	gi.Com_Print("FindIntermissionPoint\n");
+
 	// find the intermission spot
 	ent = level.spawn_spots[SPAWN_SPOT_INTERMISSION];
 
@@ -2161,10 +2163,13 @@ void FindIntermissionPoint(void) {
 
 		// if it has a target, look towards it
 		if (ent->target) {
+			gi.Com_Print("FindIntermissionPoint target\n");
 			target = G_PickTarget(ent->target);
 			if (target) {
+				gi.Com_Print("FindIntermissionPoint target 2\n");
 				dir = (target->s.origin - level.intermission_origin).normalized();
 				AngleVectors(dir);
+				level.intermission_angle = dir;
 			}
 		}
 	}
@@ -2182,6 +2187,7 @@ void SetIntermissionPoint(void) {
 		return;
 
 	//FindIntermissionPoint();
+	//gi.Com_Print("SetIntermissionPoint\n");
 
 	gentity_t *ent;
 	// find an intermission spot
@@ -2199,8 +2205,10 @@ void SetIntermissionPoint(void) {
 		}
 	}
 
-	level.intermission_origin = ent->s.origin;
-	level.spawn_spots[SPAWN_SPOT_INTERMISSION] = ent;
+	if (ent) {
+		level.intermission_origin = ent->s.origin;
+		level.spawn_spots[SPAWN_SPOT_INTERMISSION] = ent;
+	}
 	
 	// ugly hax!
 	if (!Q_strncasecmp(level.mapname, "campgrounds", 11)) {
@@ -2212,8 +2220,22 @@ void SetIntermissionPoint(void) {
 		if (ent->s.origin == v)
 			level.intermission_angle = { 15, 135, 0 };
 	} else {
-		level.intermission_angle = ent->s.angles;
+		// if it has a target, look towards it
+		if (ent && ent->target) {
+			gentity_t *target = G_PickTarget(ent->target);
+
+			if (target) {
+				//gi.Com_Print("HAS TARGET\n");
+				vec3_t	dir = (target->s.origin - level.intermission_origin).normalized();
+				AngleVectors(dir);
+				level.intermission_angle = dir;
+			}
+		}
+		if (ent && !level.intermission_angle)
+			level.intermission_angle = ent->s.angles;
 	}
+	
+	gi.Com_PrintFmt("{}: origin={} angles={}\n", __FUNCTION__, level.intermission_origin, level.intermission_angle);
 }
 
 /*
@@ -3167,7 +3189,7 @@ void BeginIntermission(gentity_t *targ) {
 
 	level.intermission_exit = false;
 
-	SetIntermissionPoint();
+	//SetIntermissionPoint();
 
 	// move all clients to the intermission point
 	for (auto ec : active_clients())
