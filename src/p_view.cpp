@@ -894,12 +894,18 @@ static void G_SetClientSound(gentity_t *ent) {
 	if (ent->client->weapon_sound)
 		ent->s.sound = ent->client->weapon_sound;
 	else if (ent->client->pers.weapon) {
-		if (ent->client->pers.weapon->id == IT_WEAPON_RAILGUN)
+		switch (ent->client->pers.weapon->id) {
+		case IT_WEAPON_RAILGUN:
 			ent->s.sound = gi.soundindex("weapons/rg_hum.wav");
-		else if (ent->client->pers.weapon->id == IT_WEAPON_BFG)
+			break;
+		case IT_WEAPON_BFG:
+		case IT_WEAPON_PLASMABEAM:
 			ent->s.sound = gi.soundindex("weapons/bfg_hum.wav");
-		else if (ent->client->pers.weapon->id == IT_WEAPON_PHALANX)
+			break;
+		case IT_WEAPON_PHALANX:
 			ent->s.sound = gi.soundindex("weapons/phaloop.wav");
+			break;
+		}
 	}
 
 	// [Paril-KEX] if no other sound is playing, play appropriate grapple sounds
@@ -1234,7 +1240,7 @@ void ClientEndServerFrame(gentity_t *ent) {
 		return;
 
 	float bobtime, bobtime_run;
-	gentity_t *e = g_eyecam->integer && ent->client->follow_target ? ent->client->follow_target : ent;
+	gentity_t *e = ent;	// g_eyecam->integer &&ent->client->follow_target ? ent->client->follow_target : ent;
 
 	current_player = e;
 	current_client = e->client;
