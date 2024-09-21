@@ -424,7 +424,7 @@ static void PM_StepSlideMove() {
 	down_v = pml.velocity;
 	
 	up = start_o;
-	up[2] += pml.origin[2] < 0 ? STEPSIZE_BELOW : STEPSIZE;
+	up[2] += (pml.origin[2] < 0) ? STEPSIZE_BELOW : STEPSIZE;
 
 	trace = PM_Trace(start_o, pm->mins, pm->maxs, up);
 	if (trace.allsolid)
@@ -483,7 +483,7 @@ static void PM_StepSlideMove() {
 	if ((pm->s.pm_flags & PMF_ON_GROUND) && !(pm->s.pm_flags & PMF_ON_LADDER) &&
 		(pm->waterlevel < WATER_WAIST || (!(pm->cmd.buttons & BUTTON_JUMP) && pml.velocity.z <= 0))) {
 		down = pml.origin;
-		down[2] -= pml.origin[2] < 0 ? STEPSIZE_BELOW : STEPSIZE;
+		down[2] -= (pml.origin[2] < 0) ? STEPSIZE_BELOW : STEPSIZE;
 		trace = PM_Trace(pml.origin, pm->mins, pm->maxs, down);
 		if (trace.fraction < 1.f) {
 			pml.origin = trace.endpos;
@@ -1082,7 +1082,7 @@ static void PM_CheckSpecialMovement() {
 
 	// we're currently standing on ground, and the snapped position
 	// is a step
-	if (pm->groundentity && fabsf(pml.origin.z - trace.endpos.z) <= pml.origin[2] < 0 ? STEPSIZE_BELOW : STEPSIZE)
+	if (pm->groundentity && fabsf(pml.origin.z - trace.endpos.z) <= ((pml.origin[2] < 0) ? STEPSIZE_BELOW : STEPSIZE))
 		return;
 
 	water_level_t level;
