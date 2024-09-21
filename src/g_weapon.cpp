@@ -2,12 +2,6 @@
 // Licensed under the GNU General Public License 2.0.
 #include "g_local.h"
 
-void Weapon_Stats_Hit(gclient_t *cl, mod_t mod) {
-	if (!cl) return;
-
-	//cl->mstats.total_hits++;
-}
-
 /*
 =================
 fire_hit
@@ -72,7 +66,7 @@ bool fire_hit(gentity_t *self, vec3_t aim, int damage, int kick) {
 	if (!(tr.ent->svflags & SVF_MONSTER) && (!tr.ent->client))
 		return false;
 
-	Weapon_Stats_Hit(self->owner->client, MOD_HIT);
+	MS_Adjust(self->owner->client, MSTAT_HITS, 1);
 
 	// do our special form of knockback here
 	v = (self->enemy->absmin + self->enemy->absmax) * 0.5f;
@@ -196,7 +190,8 @@ struct fire_lead_pierce_t : pierce_args_t {
 		if (tr.ent->takedamage) {
 			T_Damage(tr.ent, self, self, aimdir, tr.endpos, tr.plane.normal, damage, kick, mod.id == MOD_TESLA ? DAMAGE_ENERGY : DAMAGE_BULLET, mod);
 
-			Weapon_Stats_Hit(self->owner->client, mod);
+			if (self->owner)
+				MS_Adjust(self->owner->client, MSTAT_HITS, 1);
 
 			// only deadmonster is pierceable, or actual dead monsters
 			// that haven't been made non-solid yet
@@ -250,8 +245,7 @@ static void fire_lead(gentity_t *self, const vec3_t &start, const vec3_t &aimdir
 	};
 
 	if (self->client)
-		if (g_matchstats->integer)
-			self->client->mstats.total_shots++;
+		MS_Adjust(self->client, MSTAT_SHOTS, 1);
 
 	// [Paril-KEX]
 	if (self->client && !G_ShouldPlayersCollide(true))
@@ -358,7 +352,7 @@ TOUCH(blaster_touch) (gentity_t *ent, gentity_t *other, const trace_t &tr, bool 
 	if (other->takedamage) {
 		T_Damage(other, ent, ent->owner, ent->velocity, ent->s.origin, tr.plane.normal, ent->dmg, 1, DAMAGE_ENERGY | DAMAGE_STAT_ONCE, static_cast<mod_id_t>(ent->style));
 
-		Weapon_Stats_Hit(ent->owner->client, (mod_id_t)ent->style);
+		MS_Adjust(ent->owner->client, MSTAT_HITS, 1);
 	} else {
 	}
 
@@ -454,7 +448,7 @@ static TOUCH(blaster2_touch) (gentity_t *self, gentity_t *other, const trace_t &
 			T_Damage(other, self, self->owner, self->velocity, self->s.origin, tr.plane.normal, self->dmg, 1, DAMAGE_ENERGY | DAMAGE_STAT_ONCE, mod);
 			self->owner->takedamage = damagestat;
 
-			Weapon_Stats_Hit(self->owner->client, mod);
+			MS_Adjust(self->owner->client, MSTAT_HITS, 1);
 		} else {
 			if (self->dmg >= 5)
 				T_RadiusDamage(self, self->owner, (float)(self->dmg * 2), other, self->splash_radius, DAMAGE_ENERGY, MOD_UNKNOWN);
@@ -590,7 +584,7 @@ static THINK(Grenade_Explode) (gentity_t *ent) -> void {
 			mod = MOD_GRENADE;
 		T_Damage(ent->enemy, ent, ent->owner, dir, ent->s.origin, vec3_origin, (int)points, (int)points, DAMAGE_RADIUS | DAMAGE_STAT_ONCE, mod);
 
-		Weapon_Stats_Hit(ent->owner->client, mod);
+		MS_Adjust(ent->owner->client, MSTAT_HITS, 1);
 	}
 
 	if (ent->spawnflags.has(SPAWNFLAG_GRENADE_HELD))
@@ -822,7 +816,7 @@ TOUCH(rocket_touch) (gentity_t *ent, gentity_t *other, const trace_t &tr, bool o
 	if (other->takedamage) {
 		T_Damage(other, ent, ent->owner, ent->velocity, ent->s.origin, tr.plane.normal, ent->dmg, RS(RS_MM) ? 50 : 0, DAMAGE_NONE | DAMAGE_STAT_ONCE, MOD_ROCKET);
 
-		Weapon_Stats_Hit(ent->owner->client, MOD_ROCKET);
+		MS_Adjust(ent->owner->client, MSTAT_HITS, 1);
 	} else {
 		// don't throw any debris in net games
 		if (!deathmatch->integer && !coop->integer) {
