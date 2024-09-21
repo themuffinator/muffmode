@@ -857,6 +857,7 @@ static const std::initializer_list<field_t> entity_fields = {
 	FIELD_AUTO(notfree),
 	FIELD_AUTO(notq2),
 	FIELD_AUTO(notq3a),
+	FIELD_AUTO(notarena),
 	FIELD_AUTO(ruleset),
 	FIELD_AUTO(not_ruleset),
 	FIELD_AUTO(powerups_on),
@@ -1179,9 +1180,11 @@ static inline bool G_InhibitEntity(gentity_t *ent) {
 	if (ent->notfree && !Teams())
 		return true;
 
-	if (ent->notq2 && RS(RS_Q3A))
+	if (ent->notq2 && (RS(RS_Q2RE) || RS(RS_MM)))
 		return true;
-	if (ent->notq3a && (RS(RS_Q2RE) || RS(RS_MM)))
+	if (ent->notq3a && RS(RS_Q3A))
+		return true;
+	if (ent->notarena && (GTF(GTF_ARENA)))
 		return true;
 
 	if (ent->powerups_on && g_no_powerups->integer)
@@ -1497,6 +1500,19 @@ static void G_LocateSpawnSpots(void) {
 				if (level.spawn_spots[SPAWN_SPOT_INTERMISSION] == NULL) {
 					level.spawn_spots[SPAWN_SPOT_INTERMISSION] = ent; // put in the last slot
 					ent->fteam = TEAM_FREE;
+
+					// if it has a target, look towards it
+					if (ent->target) {
+						gentity_t *target = G_PickTarget(ent->target);
+
+						if (target) {
+							vec3_t	dir = (target->s.origin - level.intermission_origin).normalized();
+							AngleVectors(dir);
+							level.intermission_angle = dir;
+							return;
+						}
+					}
+					level.intermission_angle = ent->s.angles;
 				}
 				continue;
 			}
@@ -1857,6 +1873,8 @@ void SpawnEntities(const char *mapname, const char *entities, const char *spawnp
 	}
 
 	G_LocateSpawnSpots();
+
+	SetIntermissionPoint();
 
 	setup_shadow_lights();
 
