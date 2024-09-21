@@ -591,12 +591,10 @@ void T_Damage(gentity_t *targ, gentity_t *inflictor, gentity_t *attacker, const 
 		}
 	}
 
-	if (g_matchstats->integer && level.match_state == matchst_t::MATCH_IN_PROGRESS) {
-		if (targ != attacker && attacker->client && !OnSameTeam(targ, attacker)) {
-			if ((!inflictor->skip && (dflags & DAMAGE_STAT_ONCE)) || !(dflags & DAMAGE_STAT_ONCE)) {
-				attacker->client->mstats.total_hits++;
-				inflictor->skip = true;
-			}
+	if (targ != attacker && attacker->client && !OnSameTeam(targ, attacker)) {
+		if ((!inflictor->skip && (dflags & DAMAGE_STAT_ONCE)) || !(dflags & DAMAGE_STAT_ONCE)) {
+			MS_Adjust(attacker->client, MSTAT_HITS, 1);
+			inflictor->skip = true;
 		}
 	}
 
@@ -752,12 +750,10 @@ void T_Damage(gentity_t *targ, gentity_t *inflictor, gentity_t *attacker, const 
 		if (!((targ->svflags & SVF_DEADMONSTER) || (targ->flags & FL_NO_DAMAGE_EFFECTS)) && mod.id != MOD_TARGET_LASER) {
 			attacker->client->ps.stats[STAT_HIT_MARKER] += take + psave + asave;
 		}
-		if (g_matchstats->integer && level.match_state == matchst_t::MATCH_IN_PROGRESS) {
-			attacker->client->mstats.total_dmg_dealt += stat_take + psave + asave;
+		MS_Adjust(attacker->client, MSTAT_DMG_DEALT, stat_take + psave + asave);
 
-			if (targ->client)
-				targ->client->mstats.total_dmg_received += stat_take + psave + asave;
-		}
+		if (targ->client)
+			MS_Adjust(targ->client, MSTAT_DMG_RECEIVED, stat_take + psave + asave);
 	}
 
 	// do the damage
