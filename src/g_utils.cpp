@@ -1031,3 +1031,15 @@ void TeleporterVelocity(gentity_t *ent, gvec3_t angles) {
 		ent->velocity *= len;
 	}
 }
+
+void MS_Adjust(gclient_t *cl, mstats_t index, int count) {
+	if (index <= MSTAT_NONE || index >= MSTAT_TOTAL) {
+		gi.Com_PrintFmt("invalid match stat index: {}\n", index);
+		return;
+	}
+
+	if (!g_matchstats->integer || level.match_state != matchst_t::MATCH_IN_PROGRESS)
+		return;
+
+	cl->resp.mstats[index] += count;
+}
