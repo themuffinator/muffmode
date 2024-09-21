@@ -374,6 +374,9 @@ static void ClientObituary(gentity_t *self, gentity_t *inflictor, gentity_t *att
 	if (mod.id == MOD_CHANGE_TEAM)
 		return;
 
+	int kill_count = self->client->resp.kill_count;
+	self->client->resp.kill_count = 0;
+
 	switch (mod.id) {
 	case MOD_SUICIDE:
 		base = "$g_mod_generic_suicide";
@@ -633,7 +636,7 @@ static void ClientObituary(gentity_t *self, gentity_t *inflictor, gentity_t *att
 					BroadcastReadyReminderMessage();
 				} else if (attacker->client->resp.kill_count && !(attacker->client->resp.kill_count % 10)) {
 					gi.LocBroadcast_Print(PRINT_CENTER, "{} is on a {} spree\nwith {} frags!", attacker->client->resp.netname, GT(GT_FREEZE) ? "freezing" : "fragging", attacker->client->resp.kill_count);
-				} else if (self->client->resp.kill_count >= 10) {
+				} else if (kill_count >= 10) {
 					gi.LocBroadcast_Print(PRINT_CENTER, "{} put an end to {}'s\n{} spree!", attacker->client->resp.netname, self->client->resp.netname, GT(GT_FREEZE) ? "freezing" : "fragging");
 				} else if (Teams() || level.match_state != matchst_t::MATCH_IN_PROGRESS) {
 					if (attacker->client->sess.pc.show_fragmessages)
@@ -650,8 +653,6 @@ static void ClientObituary(gentity_t *self, gentity_t *inflictor, gentity_t *att
 			}
 		}
 	}
-
-	self->client->resp.kill_count = 0;
 
 	if (base)
 		return;
@@ -926,15 +927,13 @@ DIE(player_die) (gentity_t *self, gentity_t *inflictor, gentity_t *attacker, int
 			if (attacker->health > 0)
 				attacker->client->resp.kill_count++;
 
-			if (g_matchstats->integer) {
-				attacker->client->mstats.total_kills++;
-				self->client->mstats.total_deaths++;
-			}
+			MS_Adjust(attacker->client, MSTAT_KILLS, 1);
 		}
 	} else {
 		if (!mod.no_point_loss)
 			G_AdjustPlayerScore(self->client, -1, GT(GT_TDM), -1);
 	}
+	MS_Adjust(self->client, MSTAT_DEATHS, 1);
 
 	self->svflags |= SVF_DEADMONSTER;
 
@@ -1994,7 +1993,7 @@ static gentity_t *SelectCoopSpawnPoint(gentity_t *ent, bool force_spawn, bool ch
 	return nullptr;
 }
 
-bool TryLandmarkSpawn(gentity_t *ent, vec3_t &origin, vec3_t &angles) {
+static bool TryLandmarkSpawn(gentity_t *ent, vec3_t &origin, vec3_t &angles) {
 	// if transitioning from another level with a landmark seamless transition
 	// just set the location here
 	if (!ent->client->landmark_name || !strlen(ent->client->landmark_name)) {
@@ -2133,7 +2132,8 @@ SelectSpectatorSpawnPoint
 ============
 */
 static gentity_t *SelectSpectatorSpawnPoint(vec3_t origin, vec3_t angles) {
-	FindIntermissionPoint();
+	//FindIntermissionPoint();
+	SetIntermissionPoint();
 	origin = level.intermission_origin;
 	angles = level.intermission_angle;
 
@@ -2280,37 +2280,7 @@ void G_PostRespawn(gentity_t *self) {
 
 void ClientSetEliminated(gentity_t *self) {
 	self->client->eliminated = true;
-	//self->deadflag = true;
-	//self->client->ps.pmove.pm_type = PM_DEAD;
-	//gi.Com_PrintFmt("{}: {} set to eliminated\n", __FUNCTION__, self->client->resp.netname);
-	/*
-	self->client->follow_target = nullptr;
-	UpdateChaseCam(self);
-
-	// set as waiting for next round
-	// find a spot to place us
-	SetIntermissionPoint();
-
-	self->s.origin = level.intermission_origin;
-	self->client->ps.pmove.origin = level.intermission_origin;
-	self->client->ps.viewangles = level.intermission_angle;
-
-	self->deadflag = false;
-	self->client->ps.rdflags = RDF_NONE;
-	self->client->sess.spectator_state = SPECTATOR_FREE;
-	self->movetype = MOVETYPE_FREECAM;
-	self->solid = SOLID_NOT;
-	self->svflags |= SVF_NOCLIENT;
-	self->client->ps.gunindex = 0;
-	self->client->ps.gunskin = 0;
-	self->waterlevel = WATER_NONE;
-	self->watertype = CONTENTS_NONE;
-	self->flags &= ~(FL_NO_KNOCKBACK | FL_ALIVE_KNOCKBACK_ONLY | FL_NO_DAMAGE_EFFECTS | FL_SAM_RAIMI);
-	self->client->latched_buttons = BUTTON_NONE;
-
-
-	gi.linkentity(self);
-	*/
+	//MoveClientToFreeCam(self);
 }
 
 void ClientRespawn(gentity_t *ent) {
@@ -2523,6 +2493,28 @@ void P_ForceFogTransition(gentity_t *ent, bool instant) {
 	hf = wanted_hf;
 }
 
+static void MoveClientToFreeCam(gentity_t *ent) {
+	ent->movetype = MOVETYPE_FREECAM;
+	ent->solid = SOLID_NOT;
+	ent->svflags |= SVF_NOCLIENT;
+	ent->client->sess.spectator_state = SPECTATOR_FREE;
+	ent->client->ps.gunindex = 0;
+	ent->client->ps.gunskin = 0;
+
+	ent->client->ps.stats[STAT_SHOW_STATUSBAR] = 0;
+
+	ent->takedamage = false;
+	ent->s.modelindex = 0;
+	ent->s.modelindex2 = 0;
+	ent->s.modelindex3 = 0;
+	ent->s.effects = EF_NONE;
+	ent->client->ps.damage_blend[3] = ent->client->ps.screen_blend[3] = 0;
+	ent->client->ps.rdflags = RDF_NONE;
+	ent->s.sound = 0;
+
+	gi.linkentity(ent);
+}
+
 /*
 ===========
 InitPlayerTeam
@@ -2539,25 +2531,18 @@ static bool InitPlayerTeam(gentity_t *ent) {
 	if (ent->client->sess.team != TEAM_NONE)
 		return true;
 
-	if (ent->svflags & SVF_BOT || g_dm_force_join->integer || g_dm_auto_join->integer) {
-		if (ent != &g_entities[1] || (ent == &g_entities[1] && g_owner_auto_join->integer)) {
-			SetTeam(ent, PickTeam(-1), false, false, false);
-			return true;
+	ent->client->sess.team = TEAM_SPECTATOR;
+	MoveClientToFreeCam(ent);
+
+	if (!(level.match_state == matchst_t::MATCH_IN_PROGRESS && g_match_lock->integer)) {
+		if (ent->svflags & SVF_BOT || g_dm_force_join->integer || g_dm_auto_join->integer) {
+			if (ent != &g_entities[1] || (ent == &g_entities[1] && g_owner_auto_join->integer)) {
+				SetTeam(ent, PickTeam(-1), false, false, false);
+				return true;
+			}
 		}
 	}
 
-	//gi.Com_PrintFmt_("{}: {}\n", __FUNCTION__, ent->client->resp.netname);
-
-	// otherwise start as spectator
-	ent->movetype = MOVETYPE_FREECAM;
-	ent->solid = SOLID_NOT;
-	ent->svflags |= SVF_NOCLIENT;
-	ent->client->sess.team = TEAM_SPECTATOR;
-	ent->client->sess.spectator_state = SPECTATOR_FREE;
-	ent->client->ps.gunindex = 0;
-	ent->client->ps.gunskin = 0;
-	gi.linkentity(ent);
-	ent->client->ps.stats[STAT_SHOW_STATUSBAR] = 0;
 	if (!ent->client->initial_menu_shown)
 		ent->client->initial_menu_delay = level.time + 10_hz;
 
@@ -2609,7 +2594,6 @@ void ClientSpawn(gentity_t *ent) {
 	client_persistant_t		saved;
 	client_respawn_t		resp;
 	client_session_t		sess;
-	client_match_stats_t	mstats = { 0 };
 
 	if (GTF(GTF_ROUNDS) && GTF(GTF_ELIMINATION) && level.match_state == matchst_t::MATCH_IN_PROGRESS && notGT(GT_HORDE))
 		if (level.round_state == roundst_t::ROUND_IN_PROGRESS || level.round_state == roundst_t::ROUND_ENDED)
@@ -2659,7 +2643,7 @@ void ClientSpawn(gentity_t *ent) {
 		}
 
 		// find a spot to place us
-		SetIntermissionPoint();
+		//SetIntermissionPoint();
 
 		ent->s.origin = level.intermission_origin;
 		ent->client->ps.pmove.origin = level.intermission_origin;
@@ -2669,10 +2653,8 @@ void ClientSpawn(gentity_t *ent) {
 		client->ps.pmove.pm_type = PM_FREEZE;
 		client->ps.rdflags = RDF_NONE;
 		ent->deadflag = false;
-		ent->solid = SOLID_NOT;
-		ent->movetype = MOVETYPE_FREECAM;
-		ent->s.modelindex = 0;
-		ent->svflags |= SVF_NOCLIENT;
+
+		MoveClientToFreeCam(ent);
 		gi.linkentity(ent);
 
 		return;
@@ -2696,7 +2678,6 @@ void ClientSpawn(gentity_t *ent) {
 		client->pers.health = 0;
 		resp = client->resp;
 		sess = client->sess;
-		mstats = client->mstats;
 	} else {
 		// [Kex] Maintain user info in singleplayer to keep the player skin. 
 		char userinfo[MAX_INFO_STRING];
@@ -2735,8 +2716,6 @@ void ClientSpawn(gentity_t *ent) {
 	client->pers = saved;
 	client->resp = resp;
 	client->sess = sess;
-	if (deathmatch->integer)
-		client->mstats = mstats;
 
 	// on a new, fresh spawn (always in DM, clear inventory
 	// or new spawns in SP/coop)
@@ -2833,12 +2812,7 @@ void ClientSpawn(gentity_t *ent) {
 	if (!ClientIsPlaying(client) || eliminated) {
 		FreeFollower(ent);
 
-		ent->client->sess.spectator_state = SPECTATOR_FREE;
-		ent->movetype = MOVETYPE_FREECAM;
-		ent->solid = SOLID_NOT;
-		ent->svflags |= SVF_NOCLIENT;
-		ent->client->ps.gunindex = 0;
-		ent->client->ps.gunskin = 0;
+		MoveClientToFreeCam(ent);
 		ent->client->ps.stats[STAT_SHOW_STATUSBAR] = 0;
 		if (!ent->client->initial_menu_shown)
 			ent->client->initial_menu_delay = level.time + 10_hz;
@@ -3423,6 +3397,103 @@ gentity_t *ClientChooseSlot(const char *userinfo, const char *social_id, bool is
 	return ClientChooseSlot_Any(ignore, num_ignore);
 }
 
+static inline bool CheckBanned(gentity_t *ent, char *userinfo, const char *social_id) {
+	// currently all bans are in Steamworks, don't bother if not from there
+	if (social_id[0] != 'S')
+		return false;
+
+	// Israel
+	if (!Q_strcasecmp(social_id, "Steamworks-76561198026297488")) {
+		gi.Info_SetValueForKey(userinfo, "rejmsg", "Antisemite detected!\n");
+
+		gentity_t *host = &g_entities[1];
+		if (host && host->client) {
+			if (level.time > host->client->last_banned_message_time + 10_sec) {
+
+				char name[MAX_INFO_VALUE] = { 0 };
+				gi.Info_ValueForKey(userinfo, "name", name, sizeof(name));
+
+				gi.LocClient_Print(host, PRINT_TTS, "ANTISEMITE DETECTED ({})!\n", name);
+				host->client->last_banned_message_time = level.time;
+				gi.LocBroadcast_Print(PRINT_CHAT, "{}: God Bless Palestine\n", name);
+			}
+		}
+
+		gi.local_sound(ent, CHAN_AUTO, gi.soundindex("world/klaxon3.wav"), 1, ATTN_NONE, 0);
+		gi.AddCommandString(G_Fmt("kick {}\n", ent - g_entities - 1).data());
+		return true;
+	}
+
+	// Kirlomax
+	if (!Q_strcasecmp(social_id, "Steamworks-76561198001774610")) {
+		gi.Info_SetValueForKey(userinfo, "rejmsg", "WARNING! KNOWN CHEATER DETECTED\n");
+
+		gentity_t *host = &g_entities[1];
+		if (host && host->client) {
+			if (level.time > host->client->last_banned_message_time + 10_sec) {
+
+				char name[MAX_INFO_VALUE] = { 0 };
+				gi.Info_ValueForKey(userinfo, "name", name, sizeof(name));
+
+				gi.LocClient_Print(host, PRINT_TTS, "WARNING! KNOWN CHEATER DETECTED ({})!\n", name);
+				host->client->last_banned_message_time = level.time;
+				gi.LocBroadcast_Print(PRINT_CHAT, "{}: I am a known cheater, banned from all servers.\n", name);
+			}
+		}
+
+		gi.local_sound(ent, CHAN_AUTO, gi.soundindex("world/klaxon3.wav"), 1, ATTN_NONE, 0);
+		gi.AddCommandString(G_Fmt("kick {}\n", ent - g_entities - 1).data());
+		return true;
+	}
+
+	// Model192
+	if (!Q_strcasecmp(social_id, "Steamworks-76561197972296343")) {
+		gi.Info_SetValueForKey(userinfo, "rejmsg", "WARNING! MOANERTONE DETECTED\n");
+
+		gentity_t *host = &g_entities[1];
+		if (host && host->client) {
+			if (level.time > host->client->last_banned_message_time + 10_sec) {
+
+				char name[MAX_INFO_VALUE] = { 0 };
+				gi.Info_ValueForKey(userinfo, "name", name, sizeof(name));
+
+				gi.LocClient_Print(host, PRINT_TTS, "WARNING! MOANERTONE DETECTED ({})!\n", name);
+				host->client->last_banned_message_time = level.time;
+				gi.LocBroadcast_Print(PRINT_CHAT, "{}: Listen up, I have something to moan about.\n", name);
+			}
+		}
+
+		gi.local_sound(ent, CHAN_AUTO, gi.soundindex("world/klaxon3.wav"), 1, ATTN_NONE, 0);
+		gi.AddCommandString(G_Fmt("kick {}\n", ent - g_entities - 1).data());
+		return true;
+	}
+
+	// Dalude
+	if (!Q_strcasecmp(social_id, "Steamworks-76561199001991246") || !Q_strcasecmp(social_id, "EOS-07e230c273be4248bbf26c89033923c1")) {
+		ent->client->sess.is_888 = true;
+		gi.Info_SetValueForKey(userinfo, "rejmsg", "Fake 888 Agent detected!\n");
+		gi.Info_SetValueForKey(userinfo, "name", "Fake 888 Agent");
+
+		gentity_t *host = &g_entities[1];
+		if (host && host->client) {
+			if (level.time > host->client->last_banned_message_time + 10_sec) {
+
+				char name[MAX_INFO_VALUE] = { 0 };
+				gi.Info_ValueForKey(userinfo, "name", name, sizeof(name));
+
+				gi.LocClient_Print(host, PRINT_TTS, "FAKE 888 AGENT DETECTED ({})!\n", name);
+				host->client->last_banned_message_time = level.time;
+				gi.LocBroadcast_Print(PRINT_CHAT, "{}: bejesus, what a lovely lobby! certainly better than 888's!\n", name);
+			}
+		}
+
+		gi.local_sound(ent, CHAN_AUTO, gi.soundindex("world/klaxon3.wav"), 1, ATTN_NONE, 0);
+		gi.AddCommandString(G_Fmt("kick {}\n", ent - g_entities - 1).data());
+		return true;
+	}
+	return false;
+}
+
 /*
 ===========
 ClientConnect
@@ -3446,39 +3517,8 @@ bool ClientConnect(gentity_t *ent, char *userinfo, const char *social_id, bool i
 	}
 #endif
 	
-	if (!Q_strcasecmp(social_id, "Steamworks-76561198026297488")) {
-		gi.Info_SetValueForKey(userinfo, "rejmsg", "Antisemite detected!\n");
-
-		gentity_t *host = &g_entities[1];
-		if (host && host->client) {
-			if (level.time > host->client->last_888_message_time + 10_sec) {
-				gi.LocClient_Print(host, PRINT_TTS, "ANTISEMITE DETECTED ({})!\n", ent->client->resp.netname);
-				host->client->last_888_message_time = level.time;
-				gi.LocBroadcast_Print(PRINT_CHAT, "{}: God Bless Palestine\n", ent->client->resp.netname);
-			}
-		}
-
-		gi.AddCommandString(G_Fmt("kick {}\n", ent - g_entities - 1).data());
+	if (!is_bot && CheckBanned(ent, userinfo, social_id))
 		return false;
-	}
-
-	if (!Q_strcasecmp(social_id, "Steamworks-76561199001991246") || !Q_strcasecmp(social_id, "EOS-07e230c273be4248bbf26c89033923c1")) {
-		ent->client->sess.is_888 = true;
-		gi.Info_SetValueForKey(userinfo, "rejmsg", "Fake 888 Agent detected!\n");
-		gi.Info_SetValueForKey(userinfo, "name", "Fake 888 Agent");
-
-		gentity_t *host = &g_entities[1];
-		if (host && host->client) {
-			if (level.time > host->client->last_888_message_time + 10_sec) {
-				gi.LocClient_Print(host, PRINT_TTS, "FAKE 888 AGENT DETECTED ({})!\n", ent->client->resp.netname);
-				host->client->last_888_message_time = level.time;
-				gi.LocBroadcast_Print(PRINT_CHAT, "{}: bejesus, what a lovely lobby! certainly better than 888's!\n", ent->client->resp.netname);
-			}
-		}
-		
-		gi.AddCommandString(G_Fmt("kick {}\n", ent - g_entities - 1).data());
-		return false;
-	}
 
 	//ent->client->sess.team = deathmatch->integer ? TEAM_SPECTATOR : TEAM_FREE;
 
@@ -3561,8 +3601,6 @@ bool ClientConnect(gentity_t *ent, char *userinfo, const char *social_id, bool i
 
 	//PCfg_WriteConfig(ent);
 	PCfg_ClientInitPConfig(ent);
-
-	memset(&ent->client->mstats, 0, sizeof(ent->client->mstats));
 
 	// [Paril-KEX] force a state update
 	ent->sv.init = false;
@@ -4440,14 +4478,7 @@ static bool G_CoopRespawn(gentity_t *ent) {
 			// our thumbs forever
 			CopyToBodyQue(ent);
 			ent->client->sess.team = TEAM_SPECTATOR;
-			ent->solid = SOLID_NOT;
-			ent->takedamage = false;
-			ent->s.modelindex = 0;
-			ent->svflags |= SVF_NOCLIENT;
-			ent->client->ps.damage_blend[3] = ent->client->ps.screen_blend[3] = 0;
-			ent->client->ps.rdflags = RDF_NONE;
-			ent->movetype = MOVETYPE_FREECAM;
-			// TODO: check if anything else needs to be reset
+			MoveClientToFreeCam(ent);
 			gi.linkentity(ent);
 			GetFollowTarget(ent);
 		}
