@@ -4127,7 +4127,7 @@ model="models/weapons/g_beamer/tris.md2"
 		/* vwep_model */ "#w_plasma.md2",
 		/* armor_info */ nullptr,
 		/* tag */ AMMO_CELLS,
-		/* precaches */ "weapons/bfg__l1a.wav",
+		/* precaches */ "weapons/bfg__l1a.wav weapons/bfg_hum.wav",
 		/* sort_id */ 0,
 		/* quantity_warn */ 50
 	},
