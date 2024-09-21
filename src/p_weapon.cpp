@@ -28,8 +28,7 @@ Stats_AddShot
 ================
 */
 static void Stats_AddShot(gentity_t *ent) {
-	if (g_matchstats->integer && level.match_state == matchst_t::MATCH_IN_PROGRESS)
-		ent->client->mstats.total_shots++;
+	MS_Adjust(ent->client, MSTAT_SHOTS, 1);
 }
 
 /*
@@ -681,6 +680,9 @@ void Drop_Weapon(gentity_t *ent, gitem_t *item) {
 
 	drop->count = clamp(drop->count, drop->count, ent->client->pers.inventory[ammo->id]);
 
+	if (drop->count <= 0)
+		return;
+
 	if (ent->client->pers.inventory[ammo->id] - drop->count < 0) {
 		G_FreeEntity(drop);
 		return;
@@ -1064,8 +1066,7 @@ void Throw_Generic(gentity_t *ent, int FRAME_FIRE_LAST, int FRAME_IDLE_LAST, int
 	// when we die, just toss what we had in our hands.
 	if (ent->health <= 0) {
 		fire(ent, true);
-		if (g_matchstats->integer && level.match_state == matchst_t::MATCH_IN_PROGRESS)
-			ent->client->mstats.total_shots++;
+		MS_Adjust(ent->client, MSTAT_SHOTS, 1);
 		return;
 	}
 
@@ -1164,8 +1165,7 @@ void Throw_Generic(gentity_t *ent, int FRAME_FIRE_LAST, int FRAME_IDLE_LAST, int
 					Weapon_PowerupSound(ent);
 					ent->client->weapon_sound = 0;
 					fire(ent, true);
-					if (g_matchstats->integer && level.match_state == matchst_t::MATCH_IN_PROGRESS)
-						ent->client->mstats.total_shots++;
+					MS_Adjust(ent->client, MSTAT_SHOTS, 1);
 
 					ent->client->grenade_blew_up = true;
 
@@ -1191,8 +1191,7 @@ void Throw_Generic(gentity_t *ent, int FRAME_FIRE_LAST, int FRAME_IDLE_LAST, int
 					Weapon_PowerupSound(ent);
 					ent->client->weapon_sound = 0;
 					fire(ent, false);
-					if (g_matchstats->integer && level.match_state == matchst_t::MATCH_IN_PROGRESS)
-						ent->client->mstats.total_shots++;
+					MS_Adjust(ent->client, MSTAT_SHOTS, 1);
 
 					if (!EXPLODE || !ent->client->grenade_blew_up)
 						ent->client->grenade_finished_time = level.time + grenade_wait_time;
