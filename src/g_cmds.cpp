@@ -1121,9 +1121,9 @@ static void Cmd_Where_f(gentity_t *ent) {
 		return;
 
 	const vec3_t &origin = ent->s.origin;
-
+	
 	std::string location;
-	fmt::format_to(std::back_inserter(location), FMT_STRING("{:.1f} {:.1f} {:.1f} {:.1f} {:.1f} {:.1f}\n"), origin[0], origin[1], origin[2], ent->client->ps.viewangles[0], ent->client->ps.viewangles[1], ent->client->ps.viewangles[2]);
+	fmt::format_to(std::back_inserter(location), FMT_STRING("{:.1f} {:.1f} {:.1f} {:.1f} {:.1f} {:.1f}\n"), origin[0], origin[1], origin[2], ent->client->ps.viewangles[PITCH], ent->client->ps.viewangles[YAW], ent->client->ps.viewangles[ROLL]);
 	gi.LocClient_Print(ent, PRINT_HIGH, "Location: {}\n", location.c_str());
 	gi.SendToClipBoard(location.c_str());
 }
@@ -1752,7 +1752,7 @@ static bool AllowTeamSwitch(gentity_t *ent, team_t desired_team) {
 		return false;
 	}
 	*/
-	if (desired_team != TEAM_SPECTATOR && maxplayers->integer && level.num_playing_clients >= maxplayers->integer) {
+	if (desired_team != TEAM_SPECTATOR && maxplayers->integer && level.num_playing_human_clients >= maxplayers->integer) {
 		gi.LocClient_Print(ent, PRINT_HIGH, "Maximum player count has been reached.\n");
 		return false; // ignore the request
 	}
@@ -2039,18 +2039,18 @@ bool SetTeam(gentity_t *ent, team_t desired_team, bool inactive, bool force, boo
 	bool queue = false;
 	
 	if (!force) {
-		if (level.match_state == matchst_t::MATCH_IN_PROGRESS && !ClientIsPlaying(ent->client) && desired_team != TEAM_SPECTATOR) {
+		if (!ClientIsPlaying(ent->client) && desired_team != TEAM_SPECTATOR) {
 			bool revoke = false;
-			if (g_match_lock->integer) {
+			if (level.match_state == matchst_t::MATCH_IN_PROGRESS && g_match_lock->integer) {
 				gi.LocClient_Print(ent, PRINT_HIGH, "Match is locked whilst in progress, no joining permitted now.\n");
 				revoke = true;
-			} else if (level.num_playing_clients >= maxplayers->integer) {
+			} else if (level.num_playing_human_clients >= maxplayers->integer) {
 				gi.LocClient_Print(ent, PRINT_HIGH, "Maximum player load reached.\n");
 				revoke = true;
 			}
 			if (revoke) {
 				P_Menu_Close(ent);
-				desired_team = TEAM_SPECTATOR;
+				return false;
 			}
 		}
 
