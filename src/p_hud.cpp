@@ -599,7 +599,7 @@ static void DuelScoreboardMessage(gentity_t *ent, gentity_t *killer) {
 
 			fmt::format_to(std::back_inserter(entry),
 				FMT_STRING("client {} {} {} {} {} {} "),
-				x, y, level.sorted_clients[i], cl->resp.score, cl->ping, (level.time - cl->resp.team_join_time).minutes<int>());
+				x, y, level.sorted_clients[i], cl->resp.score, cl->ping, (level.time - cl->sess.team_join_time).minutes<int>());
 
 			if (string.length() + entry.length() > MAX_STRING_CHARS)
 				break;

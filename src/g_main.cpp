@@ -1325,18 +1325,18 @@ static int SortRoundScores(const void *a, const void *b) {
 	// then spectators
 	if (!ClientIsPlaying(ca) && !ClientIsPlaying(cb)) {
 		if (ca->sess.duel_queued && cb->sess.duel_queued) {
-			if (ca->resp.team_join_time > cb->resp.team_join_time)
+			if (ca->sess.team_join_time > cb->sess.team_join_time)
 				return -1;
-			if (ca->resp.team_join_time < cb->resp.team_join_time)
+			if (ca->sess.team_join_time < cb->sess.team_join_time)
 				return 1;
 		}
 		if (ca->sess.duel_queued)
 			return -1;
 		if (cb->sess.duel_queued)
 			return 1;
-		if (ca->resp.team_join_time > cb->resp.team_join_time)
+		if (ca->sess.team_join_time > cb->sess.team_join_time)
 			return -1;
-		if (ca->resp.team_join_time < cb->resp.team_join_time)
+		if (ca->sess.team_join_time < cb->sess.team_join_time)
 			return 1;
 		return 0;
 	}
@@ -1533,13 +1533,13 @@ static bool Duel_AddPlayer(void) {
 		if (ClientIsPlaying(ec->client))
 			continue;
 
-		//gi.Com_PrintFmt("Duel: {}, join time={}\n", ec->client->resp.netname, ec->client->resp.team_join_time.milliseconds());
+		//gi.Com_PrintFmt("Duel: {}, join time={}\n", ec->client->resp.netname, ec->client->sess.team_join_time.milliseconds());
 
 		if (!ec->client->sess.duel_queued)
 			continue;
 
-		if (!next_in_line || ec->client->resp.team_join_time < next_in_line->resp.team_join_time) {
-			//gi.Com_PrintFmt("Duel: A next-in-line considered: {}, join time={}\n", ec->client->resp.netname, ec->client->resp.team_join_time.milliseconds());
+		if (!next_in_line || ec->client->sess.team_join_time < next_in_line->sess.team_join_time) {
+			//gi.Com_PrintFmt("Duel: A next-in-line considered: {}, join time={}\n", ec->client->resp.netname, ec->client->sess.team_join_time.milliseconds());
 			next_in_line = ec->client;
 		}
 	}
@@ -2351,18 +2351,18 @@ static int SortRanks(const void *a, const void *b) {
 	// then spectators
 	if (!ClientIsPlaying(ca) && !ClientIsPlaying(cb)) {
 		if (ca->sess.duel_queued && cb->sess.duel_queued) {
-			if (ca->resp.team_join_time > cb->resp.team_join_time)
+			if (ca->sess.team_join_time > cb->sess.team_join_time)
 				return -1;
-			if (ca->resp.team_join_time < cb->resp.team_join_time)
+			if (ca->sess.team_join_time < cb->sess.team_join_time)
 				return 1;
 		}
 		if (ca->sess.duel_queued)
 			return -1;
 		if (cb->sess.duel_queued)
 			return 1;
-		if (ca->resp.team_join_time > cb->resp.team_join_time)
+		if (ca->sess.team_join_time > cb->sess.team_join_time)
 			return -1;
-		if (ca->resp.team_join_time < cb->resp.team_join_time)
+		if (ca->sess.team_join_time < cb->sess.team_join_time)
 			return 1;
 		return 0;
 	}
@@ -2378,9 +2378,9 @@ static int SortRanks(const void *a, const void *b) {
 		return 1;
 
 	// then sort by time
-	if (ca->resp.team_join_time < cb->resp.team_join_time)
+	if (ca->sess.team_join_time < cb->sess.team_join_time)
 		return -1;
-	if (ca->resp.team_join_time > cb->resp.team_join_time)
+	if (ca->sess.team_join_time > cb->sess.team_join_time)
 		return 1;
 
 	return 0;

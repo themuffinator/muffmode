@@ -3272,6 +3272,9 @@ struct client_session_t {
 	// duel stats
 	bool			duel_queued;
 	int				wins, losses;
+
+	// real time of team joining
+	gtime_t			team_join_time;
 };
 
 // client data that stays across deathmatch respawns
@@ -3309,8 +3312,6 @@ struct client_respawn_t {
 	int					rank;
 
 	char				netname[MAX_NETNAME];
-
-	gtime_t				team_join_time;
 	gtime_t				team_delay_time;
 
 	int					mstats[MSTAT_TOTAL];

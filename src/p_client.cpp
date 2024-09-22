@@ -1381,8 +1381,6 @@ void InitClientPersistant(gentity_t *ent, gclient_t *client) {
 static void InitClientResp(gclient_t *client) {
 	bool showed_help = client->resp.showed_help;
 	team_t team = client->sess.team;
-	//gtime_t	team_delay_time = client->resp.team_delay_time;
-	//gtime_t	team_join_time = client->resp.team_join_time;
 
 	char netname[MAX_NETNAME];
 	Q_strlcpy(netname, client->resp.netname, sizeof(netname));
@@ -1395,8 +1393,6 @@ static void InitClientResp(gclient_t *client) {
 
 	client->resp.entertime = level.time;
 	client->resp.coop_respawn = client->pers;
-	//client->resp.team_delay_time = team_delay_time;
-	//client->resp.team_join_time = team_join_time;
 
 	client->resp.kill_count = 0;
 
@@ -3943,10 +3939,10 @@ void ClientThink(gentity_t *ent, usercmd_t *ucmd) {
 		}
 	}
 	
-	if (ent->client->resp.team_join_time) {
+	if (ent->client->sess.team_join_time) {
 		gtime_t delay = 5_sec;
 		if (ent->client->resp.motd_mod_count != game.motd_modcount) {
-			if (level.time >= ent->client->resp.team_join_time + delay) {
+			if (level.time >= ent->client->sess.team_join_time + delay) {
 				if (g_showmotd->integer && game.motd.size()) {
 					gi.LocCenter_Print(ent, "{}", game.motd.c_str());
 					delay += 5_sec;
@@ -3955,7 +3951,7 @@ void ClientThink(gentity_t *ent, usercmd_t *ucmd) {
 			}
 		}
 		if (!ent->client->resp.showed_help && g_showhelp->integer) {
-			if (level.time >= ent->client->resp.team_join_time + delay) {
+			if (level.time >= ent->client->sess.team_join_time + delay) {
 				if (g_quadhog->integer) {
 					gi.LocClient_Print(ent, PRINT_CENTER, "QUAD HOG\nFind the Quad Damage to become the Quad Hog!\nScore by fragging the Quad Hog or fragging while Quad Hog.");
 				} else if (g_vampiric_damage->integer) {
@@ -3969,7 +3965,7 @@ void ClientThink(gentity_t *ent, usercmd_t *ucmd) {
 				}
 
 				ent->client->resp.showed_help = true;
-				ent->client->resp.team_join_time = 0_sec;
+				//ent->client->sess.team_join_time = 0_sec;
 			}
 		}
 	}

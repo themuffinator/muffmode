@@ -1264,6 +1264,81 @@ static void Cmd_PlayersRanked_f(gentity_t *ent) {
 	PlayersList(ent, true);
 }
 
+/*
+=================
+PlayerSortByJoinTime
+=================
+*/
+static int PlayerSortByJoinTime(const void *a, const void *b) {
+	int anum, bnum;
+
+	anum = *(const int *)a;
+	bnum = *(const int *)b;
+
+	anum = game.clients[anum].sess.team_join_time.milliseconds();
+	bnum = game.clients[bnum].sess.team_join_time.milliseconds();
+
+	if (anum > bnum)
+		return -1;
+	if (anum < bnum)
+		return 1;
+	return 0;
+}
+
+/*
+=================
+Cmd_PlayersJoinTime_f
+=================
+*/
+static void Cmd_PlayersJoinTime_f(gentity_t *ent) {
+	size_t	i, count;
+	static std::string	small, large;
+	int		index[MAX_CLIENTS_KEX] = { 0 };
+
+	small.clear();
+	large.clear();
+
+	count = 0;
+	for (auto ec : active_clients()) {
+		index[count] = ec - g_entities - 1;
+		count++;
+	}
+
+	// sort by score
+	qsort(index, count, sizeof(index[0]), PlayerSortByJoinTime);
+
+	// print information
+	large[0] = 0;
+
+	if (count) {
+		for (i = 0; i < count; i++) {
+			gclient_t *cl = &game.clients[index[i]];
+
+			char value[MAX_INFO_VALUE] = { 0 };
+			gi.Info_ValueForKey(cl->pers.userinfo, "name", value, sizeof(value));
+
+			fmt::format_to(std::back_inserter(small), FMT_STRING("{:32} {:32}\n"), cl->sess.team_join_time.milliseconds(), value);
+
+			if (small.length() + large.length() > MAX_IDEAL_PACKET_SIZE - 50) { // can't print all of them in one packet
+				large += "...\n";
+				break;
+			}
+
+			large += small;
+			small.clear();
+		}
+
+		// remove the last newline
+		large.pop_back();
+	}
+
+	gi.LocClient_Print(ent, PRINT_HIGH | PRINT_NO_NOTIFY, "\nclientnum id                               name                             time  ping score team\n");
+	gi.LocClient_Print(ent, PRINT_HIGH | PRINT_NO_NOTIFY, "--------------------------------------------------------------------------------------------------------------\n");
+	gi.LocClient_Print(ent, PRINT_HIGH | PRINT_NO_NOTIFY, large.c_str());
+	gi.LocClient_Print(ent, PRINT_HIGH | PRINT_NO_NOTIFY, "\n--------------------------------------------------------------------------------------------------------------\n");
+	gi.LocClient_Print(ent, PRINT_HIGH | PRINT_NO_NOTIFY, "total players: {}\n", count);
+	gi.LocClient_Print(ent, PRINT_HIGH | PRINT_NO_NOTIFY, "\n");
+}
 
 bool CheckFlood(gentity_t *ent) {
 	int		   i;
@@ -1803,27 +1878,6 @@ bool AllowClientTeamSwitch(gentity_t *ent) {
 }
 
 /*
-=================
-PlayerSortByJoinTime
-=================
-*/
-static int PlayerSortByJoinTime(const void *a, const void *b) {
-	int anum, bnum;
-
-	anum = *(const int *)a;
-	bnum = *(const int *)b;
-
-	anum = game.clients[anum].resp.team_join_time.milliseconds();
-	bnum = game.clients[bnum].resp.team_join_time.milliseconds();
-
-	if (anum > bnum)
-		return -1;
-	if (anum < bnum)
-		return 1;
-	return 0;
-}
-
-/*
 ================
 TeamBalance
 
@@ -2103,7 +2157,7 @@ bool SetTeam(gentity_t *ent, team_t desired_team, bool inactive, bool force, boo
 	ent->client->resp.ctf_state = 0;
 	ent->client->sess.inactive = inactive;
 	ent->client->sess.inactivity_time = level.time + 1_min;
-	ent->client->resp.team_join_time = level.time;	// gtime_t::from_sec(itime());	// level.time;
+	ent->client->sess.team_join_time = level.time;
 	ent->client->resp.team_delay_time = force || !ent->client->sess.initialised ? level.time : level.time + 5_sec;
 	ent->client->sess.spectator_state = desired_team == TEAM_SPECTATOR ? SPECTATOR_FREE : SPECTATOR_NOT;
 	ent->client->sess.spectator_client = 0;
@@ -3444,6 +3498,7 @@ cmds_t client_cmds[] = {
 	{"notready",		Cmd_NotReady_f,			CF_ALLOW_DEAD},
 	{"novisible",		Cmd_NoVisible_f,		CF_ALLOW_SPEC | CF_CHEAT_PROTECT},
 	{"players",			Cmd_Players_f,			CF_ALLOW_DEAD | CF_ALLOW_INT | CF_ALLOW_SPEC},
+	{"playtime",		Cmd_PlayersJoinTime_f,	CF_ALLOW_DEAD | CF_ALLOW_INT | CF_ALLOW_SPEC},
 	{"playrank",		Cmd_PlayersRanked_f,	CF_ALLOW_DEAD | CF_ALLOW_INT | CF_ALLOW_SPEC},
 	{"putaway",			Cmd_PutAway_f,			CF_ALLOW_SPEC},	//spec for menu close
 	{"ready",			Cmd_Ready_f,			CF_ALLOW_DEAD},
