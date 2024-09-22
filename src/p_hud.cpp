@@ -519,7 +519,7 @@ DuelScoreboardMessage
 ==================
 */
 static void DuelScoreboardMessage(gentity_t *ent, gentity_t *killer) {
-	uint8_t		i, i2 = 0;
+	uint8_t	i, i2 = 0;
 	uint32_t	j, k, n;
 
 	static std::string entry, string;
@@ -527,13 +527,10 @@ static void DuelScoreboardMessage(gentity_t *ent, gentity_t *killer) {
 
 	string.clear();
 
-
 	fmt::format_to(std::back_inserter(string), FMT_STRING("xv 0 yv -40 cstring2 \"{} on {}\" "), level.gametype_name, level.level_name);
 	fmt::format_to(std::back_inserter(string), FMT_STRING("xv 0 yv -30 cstring2 \"Score Limit: {}\" "), GT_ScoreLimit());
 
 	if (level.intermission_time) {
-		//fmt::format_to(std::back_inserter(string), FMT_STRING("xv 0 yv -50 cstring2 \"{} - {}\" "), level.gamemod_name, level.gametype_name);
-		//fmt::format_to(std::back_inserter(string), FMT_STRING("xv 0 yv -40 cstring2 \"[{}] {}\" "), level.mapname, level.level_name);
 		if (level.match_start_time) {
 			int	t = (level.intermission_time - level.match_start_time - 1_sec).milliseconds();
 			fmt::format_to(std::back_inserter(string), FMT_STRING("xv 0 yv -50 cstring2 \"Total Match Time: {}\" "), G_TimeStringMs(t, false));
@@ -547,171 +544,177 @@ static void DuelScoreboardMessage(gentity_t *ent, gentity_t *killer) {
 			fmt::format_to(std::back_inserter(string), FMT_STRING("xv 0 yv -10 cstring2 \"{} place with a score of {}\" "),
 				G_PlaceString(ent->client->resp.rank + 1), ent->client->resp.score);
 		}
-		//if (fraglimit->integer && !(GTF(GTF_ROUNDS)))
-		//	fmt::format_to(std::back_inserter(string), FMT_STRING("xv -20 yv -10 loc_string2 1 $g_score_frags \"{}\" "), fraglimit->integer);
-		/*
-		else if (GT(GT_HORDE) && level.round_number > 0)
-			fmt::format_to(std::back_inserter(string), FMT_STRING("xv -20 yv -10 loc_string2 1 Wave: \"{}\" "), level.round_number);
-			*/
-		if (timelimit->value && !level.intermission_time) {
-			//fmt::format_to(std::back_inserter(string), FMT_STRING("xv 340 yv -10 time_limit {} "), gi.ServerFrame() + ((gtime_t::from_min(timelimit->value) - level.time)).milliseconds() / gi.frame_time_ms);
-#if 0
-		//fmt::format_to(std::back_inserter(string), FMT_STRING("xv 340 yv -10 loc_string2 1 {} "), gi.ServerFrame() + level.time.milliseconds() / gi.frame_time_ms);
-			int32_t val = gi.ServerFrame() + ((gtime_t::from_min(timelimit->value) - level.time)).milliseconds() / gi.frame_time_ms;
-			const char *s;
-			int32_t remaining_ms = gtime_t::from_ms(level.time);	// (val - gi.ServerFrame()) *gi.frame_time_ms;
-
-			s = G_Fmt("{:02}:{:02}", (remaining_ms / 1000) / 60, (remaining_ms / 1000) % 60).data();
-
-			fmt::format_to(std::back_inserter(string), FMT_STRING("xv 340 yv -10 loc_string2 1 \"{}\" "), s);
-#endif
-		}
-
-		fmt::format_to(std::back_inserter(string), FMT_STRING("xv 0 yb -48 cstring2 \"{}\" "), "Use inventory bind to toggle menu.");
+		//fmt::format_to(std::back_inserter(string), FMT_STRING("xv 0 yb -48 cstring2 \"{}\" "), "Use inventory bind to toggle menu.");
 	}
 
-	if (!level.num_playing_clients)
-		return;
-
-	gclient_t *cl;
+	gclient_t *cl = nullptr;
 	gentity_t *cl_ent;
-	
-	for (i = 0, i2 = 0; i < level.num_playing_clients, i2 < 2; i++) {
-		cl = &game.clients[level.sorted_clients[i]];
-		cl_ent = &g_entities[cl - game.clients];
+	const char *s;
+	int32_t		img_index;
 
-		if (!cl_ent)
-			continue;
-
-		if (!cl_ent->inuse)
-			continue;
-
-		if (!cl)
-			continue;
-
-		if (!ClientIsPlaying(cl))
-			continue;
-
-		x = i ? 130 : -72;
-		y = 0;
-
-		fmt::format_to(std::back_inserter(entry), FMT_STRING("xv {} yv {} picn {} "), x, y, "/tags/default");
-
-		const char *s = G_Fmt("/players/{}_i", cl->pers.skin).data();
-		int32_t		img_index = cl->pers.skin_icon_index;
-
-		if (img_index)
-			fmt::format_to(std::back_inserter(entry), FMT_STRING("xv {} yv {} picn {} "), x, y, s);
-
-		// player ready marker
-		if (level.match_state == matchst_t::MATCH_WARMUP_READYUP && (cl->sess.is_a_bot || cl->resp.ready))
-			fmt::format_to(std::back_inserter(entry), FMT_STRING("xv {} yv {} picn {} "), x + 16, y + 16, "wheel/p_compass_selected");
-
-		if (string.length() + entry.length() > MAX_STRING_CHARS)
-			break;
-
-		string += entry;
-
-		entry.clear();
-
-		fmt::format_to(std::back_inserter(entry),
-			FMT_STRING("client {} {} {} {} {} {} "),
-			x, y, level.sorted_clients[i], cl->resp.score, cl->ping, (level.time - cl->resp.team_join_time).minutes<int>());
-
-		if (string.length() + entry.length() > MAX_STRING_CHARS)
-			break;
-
-		string += entry;
-		i2++;
-
-		entry.clear();
-	}
-
-	j = 58;
-
-	k = n = 0;
-	if (string.size() < MAX_STRING_CHARS - 50) {
-		for (i = 0; i < game.maxclients; i++) {
-			cl = &game.clients[level.sorted_clients[i]];
-			cl_ent = &g_entities[cl - game.clients + 1];
-
-			if (!cl_ent)
+	if (level.num_playing_clients) {
+		i2 = 0;
+		for (i = 0; i < level.num_playing_clients; i++) {
+			if (level.sorted_clients[i] < 0)
 				continue;
 
+			cl = &game.clients[level.sorted_clients[i]];
+			if (!cl)
+				continue;
+			if (!cl->pers.connected)
+				continue;
+
+			if (!ClientIsPlaying(cl))
+				continue;
+
+			cl_ent = g_entities + 1 + level.sorted_clients[i];
+			if (!cl_ent)
+				continue;
 			if (!cl_ent->inuse)
 				continue;
 
-			if (!cl)
-				continue;
+			//gi.Com_PrintFmt("i={} i2={} num_playing_clients={} sorted_clients={}\n", i, i2, level.num_playing_clients, level.sorted_clients[i]);
 
-			if (ClientIsPlaying(cl))
-				continue;
+			x = i2 ? 130 : -72;
+			y = 0;
 
-			if (!cl->sess.duel_queued)
-				continue;
+			fmt::format_to(std::back_inserter(entry), FMT_STRING("xv {} yv {} picn {} "), x, y, "/tags/default");
 
-			if (!k) {
-				k = 1;
-				fmt::format_to(std::back_inserter(string), FMT_STRING("xv 0 yv {} loc_string2 0 \"Queued Contenders:\" "), j);
-				j += 8;
-				fmt::format_to(std::back_inserter(string), FMT_STRING("xv -40 yv {} loc_string2 0 \"w  l  name\" "), j);
-				j += 8;
-			}
+			s = G_Fmt("/players/{}_i", cl->pers.skin).data();
+			img_index = cl->pers.skin_icon_index;
 
-			std::string_view entry = G_Fmt("ctf {} {} {} {} {} \"\" ",
-				-40,						// x
-				j,							// y
-				level.sorted_clients[i],	// playernum
-				cl->sess.wins,
-				cl->sess.losses
-			);
+			if (img_index)
+				fmt::format_to(std::back_inserter(entry), FMT_STRING("xv {} yv {} picn {} "), x, y, s);
 
-			if (string.size() + entry.size() < MAX_STRING_CHARS)
-				string += entry;
+			// player ready marker
+			if (level.match_state == matchst_t::MATCH_WARMUP_READYUP && (cl->sess.is_a_bot || cl->resp.ready))
+				fmt::format_to(std::back_inserter(entry), FMT_STRING("xv {} yv {} picn {} "), x + 16, y + 16, "wheel/p_compass_selected");
 
-			j += 8;
+			if (string.length() + entry.length() > MAX_STRING_CHARS)
+				break;
+
+			string += entry;
+
+			entry.clear();
+
+			fmt::format_to(std::back_inserter(entry),
+				FMT_STRING("client {} {} {} {} {} {} "),
+				x, y, level.sorted_clients[i], cl->resp.score, cl->ping, (level.time - cl->resp.team_join_time).minutes<int>());
+
+			if (string.length() + entry.length() > MAX_STRING_CHARS)
+				break;
+
+			string += entry;
+
+			entry.clear();
+
+			i2++;
+			if (i2 == 2)
+				break;
 		}
 	}
 
-	j += 8;
+	if ((level.num_connected_clients - level.num_playing_clients) > 0) {
+		j = 58;
 
-	k = n = 0;
-	if (string.size() < MAX_STRING_CHARS - 50) {
-		for (i = 0; i < game.maxclients; i++) {
-			cl = &game.clients[level.sorted_clients[i]];
-			cl_ent = &g_entities[cl - game.clients + 1];
+		i2 = 0;
+		k = n = 0;
+		if (string.size() < MAX_STRING_CHARS - 50) {
+			for (i = 0; i < MAX_CLIENTS_KEX; i++) {
+				cl = &game.clients[level.sorted_clients[i]];
+				cl_ent = g_entities + 1 + level.sorted_clients[i];
 
-			if (!cl_ent)
-				continue;
+				if (!cl_ent)
+					continue;
 
-			if (!cl_ent->inuse)
-				continue;
+				if (!cl_ent->inuse)
+					continue;
 
-			if (!cl)
-				continue;
+				if (!cl)
+					continue;
 
-			if (ClientIsPlaying(cl))
-				continue;
+				if (!cl->pers.connected)
+					continue;
 
-			if (cl->sess.duel_queued)
-				continue;
+				if (ClientIsPlaying(cl))
+					continue;
 
-			if (!k) {
-				k = 1;
-				fmt::format_to(std::back_inserter(string), FMT_STRING("xv 0 yv {} loc_string2 0 \"Spectators:\" "), j);
+				if (!cl->sess.duel_queued)
+					continue;
+
+				if (!k) {
+					k = 1;
+					fmt::format_to(std::back_inserter(string), FMT_STRING("xv 0 yv {} loc_string2 0 \"Queued Contenders:\" "), j);
+					j += 8;
+					fmt::format_to(std::back_inserter(string), FMT_STRING("xv -40 yv {} loc_string2 0 \"w  l  name\" "), j);
+					j += 8;
+				}
+
+				std::string_view entry = G_Fmt("ctf {} {} {} {} {} \"\" ",
+					-40,						// x
+					j,							// y
+					level.sorted_clients[i],	// playernum
+					cl->sess.wins,
+					cl->sess.losses
+				);
+
+				if (string.size() + entry.size() < MAX_STRING_CHARS)
+					string += entry;
+
 				j += 8;
+				i2++;
+				if (i2 == 8)
+					break;
 			}
+		}
 
-			std::string_view entry = G_Fmt("ctf {} {} {} 0 0 \"\" ",
-				-40,						// x
-				j,							// y
-				level.sorted_clients[i]		// playernum
-			);
+		j += 8;
 
-			if (string.size() + entry.size() < MAX_STRING_CHARS)
-				string += entry;
+		i2 = 0;
+		k = n = 0;
+		if (string.size() < MAX_STRING_CHARS - 50) {
+			for (i = 0; i < MAX_CLIENTS_KEX; i++) {
+				cl = &game.clients[level.sorted_clients[i]];
+				cl_ent = g_entities + 1 + level.sorted_clients[i];
 
-			j += 8;
+				if (!cl_ent)
+					continue;
+
+				if (!cl_ent->inuse)
+					continue;
+
+				if (!cl)
+					continue;
+
+				if (!cl->pers.connected)
+					continue;
+
+				if (ClientIsPlaying(cl))
+					continue;
+
+				if (cl->sess.duel_queued)
+					continue;
+
+				if (!k) {
+					k = 1;
+					fmt::format_to(std::back_inserter(string), FMT_STRING("xv 0 yv {} loc_string2 0 \"Spectators:\" "), j);
+					j += 8;
+				}
+
+				std::string_view entry = G_Fmt("ctf {} {} {} 0 0 \"\" ",
+					-40,						// x
+					j,							// y
+					level.sorted_clients[i]		// playernum
+				);
+
+				if (string.size() + entry.size() < MAX_STRING_CHARS)
+					string += entry;
+
+				j += 8;
+				i2++;
+				if (i2 == 8)
+					break;
+			}
 		}
 	}
 
@@ -1307,7 +1310,7 @@ static void SetMiniScoreStats(gentity_t *ent) {
 			if (level.sorted_clients[i] < 0)
 				continue;
 
-			if (level.sorted_clients[i] >= MAX_CLIENTS)
+			if (level.sorted_clients[i] >= game.maxclients)
 				continue;
 
 			if (level.sorted_clients[i] == own_num)
