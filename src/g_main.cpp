@@ -2416,10 +2416,12 @@ void CalculateRanks() {
 	level.num_playing_blue = 0;
 	level.num_voting_clients = 0;
 
+	//memset(level.sorted_clients, -1, sizeof(level.sorted_clients));
+	for (size_t i = 0; i < MAX_CLIENTS; i++)
+		level.sorted_clients[i] = -1;
+
 	for (auto ec : active_clients()) {
 		cl = ec->client;
-		if (!cl->pers.connected)
-			continue;
 
 		level.sorted_clients[level.num_connected_clients] = ec->client - game.clients;
 		level.num_connected_clients++;
