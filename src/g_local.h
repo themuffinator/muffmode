@@ -3247,6 +3247,9 @@ struct client_config_t {
 	bool			show_timer;
 	bool			show_fragmessages;
 	int				killbeep_num;
+
+	bool			follow_killer;
+	bool			follow_powerup;
 };
 
 // client data that stays across deathmatch level changes, handled differently to client_persistent_t

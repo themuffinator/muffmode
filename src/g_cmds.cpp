@@ -2902,6 +2902,26 @@ static void Cmd_Follow_f(gentity_t *ent) {
 	UpdateChaseCam(ent);
 }
 
+/*
+=================
+Cmd_FollowKiller_f
+=================
+*/
+static void Cmd_FollowKiller_f(gentity_t *ent) {
+	ent->client->sess.pc.follow_killer ^= true;
+	gi.LocClient_Print(ent, PRINT_HIGH, "Auto-follow killer: {}\n", ent->client->sess.pc.follow_killer ? "ON" : "OFF");
+}
+
+/*
+=================
+Cmd_FollowPowerup_f
+=================
+*/
+static void Cmd_FollowPowerup_f(gentity_t *ent) {
+	ent->client->sess.pc.follow_powerup ^= true;
+	gi.LocClient_Print(ent, PRINT_HIGH, "Auto-follow powerup pick-ups: {}\n", ent->client->sess.pc.follow_powerup ? "ON" : "OFF");
+}
+
 /*----------------------------------------------------------------*/
 
 /*
@@ -3461,6 +3481,8 @@ cmds_t client_cmds[] = {
 	{"endmatch",		Cmd_EndMatch_f,			CF_ADMIN_ONLY | CF_ALLOW_INT | CF_ALLOW_SPEC},
 	{"fm",				Cmd_FragMessages_f,		CF_ALLOW_SPEC | CF_ALLOW_DEAD},
 	{"follow",			Cmd_Follow_f,			CF_ALLOW_SPEC | CF_ALLOW_DEAD},
+	{"followkiller",	Cmd_FollowKiller_f,		CF_ALLOW_SPEC | CF_ALLOW_DEAD},
+	{"followpowerup",	Cmd_FollowPowerup_f,	CF_ALLOW_SPEC | CF_ALLOW_DEAD},
 	{"forcevote",		Cmd_ForceVote_f,		CF_ADMIN_ONLY | CF_ALLOW_INT | CF_ALLOW_SPEC},
 	{"forfeit",			Cmd_Forfeit_f,			CF_ALLOW_DEAD},
 	{"gametype",		Cmd_Gametype_f,			CF_ADMIN_ONLY | CF_ALLOW_INT | CF_ALLOW_SPEC},

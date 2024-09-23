@@ -1621,6 +1621,14 @@ static bool Pickup_Powerup(gentity_t *ent, gentity_t *other) {
 		if (use && ent->item->use)
 			ent->item->use(other, ent->item);
 	}
+
+	for (auto ec : active_clients()) {
+		if (!ClientIsPlaying(ec->client) && ec->client->sess.pc.follow_powerup) {
+			ec->client->follow_target = other;
+			ec->client->follow_update = true;
+			UpdateChaseCam(ec);
+		}
+	}
 	/*
 	if (g_quadhog->integer && ent->item->id == IT_POWERUP_QUAD) {
 		G_FreeEntity(ent);

@@ -928,6 +928,14 @@ DIE(player_die) (gentity_t *self, gentity_t *inflictor, gentity_t *attacker, int
 				attacker->client->resp.kill_count++;
 
 			MS_Adjust(attacker->client, MSTAT_KILLS, 1);
+
+			for (auto ec : active_clients()) {
+				if (!ClientIsPlaying(ec->client) && ec->client->sess.pc.follow_killer) {
+					ec->client->follow_target = attacker;
+					ec->client->follow_update = true;
+					UpdateChaseCam(ec);
+				}
+			}
 		}
 	} else {
 		if (!mod.no_point_loss)
@@ -3537,6 +3545,8 @@ bool ClientConnect(gentity_t *ent, char *userinfo, const char *social_id, bool i
 			ent->client->sess.pc.show_timer = true;
 			ent->client->sess.pc.show_fragmessages = true;
 			ent->client->sess.pc.killbeep_num = 1;
+			ent->client->sess.pc.follow_killer = false;
+			ent->client->sess.pc.follow_powerup = false;
 
 			InitClientResp(ent->client);
 		}
