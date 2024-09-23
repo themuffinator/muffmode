@@ -2737,6 +2737,8 @@ TOUCH(Touch_Item) (gentity_t *ent, gentity_t *other, const trace_t &tr, bool oth
 			case IT_POWERUP_DUELFIRE:
 			case IT_POWERUP_INVISIBILITY:
 			case IT_POWERUP_REGEN:
+			case IT_FLAG_RED:
+			case IT_FLAG_BLUE:
 				uint32_t key = GetUnicastKey();
 
 				for (auto ec : active_clients()) {
