@@ -43,8 +43,11 @@ Muff Mode includes the game logic, a server config, bot files and some map entit
 - Many more features, see release changelogs for more info!
 
 ### Muff Maps
+- Almost Lost [ALpha v1] (mm-almostlost-a1)
 - Arena of Death [Alpha v3] (mm-arena-a3)
-- The Proving Grounds [Alpha v4] (mm-proving-a4)
+- Hidden Fortress [Alpha v4] (mm-fortress-a4)
+- Longest Yard [Beta v2] (mm-longestyard-b2)
+- Proving Grounds [Alpha v4] (mm-proving-a4)
 - Vertical Vengeance [Alpha v2] (mm-vengeance-a2)
 
 ### New Gametypes
@@ -160,6 +163,8 @@ Use **[command] [arg]** for the below listed client commands:
 	- **free/f**: join free team (non-team games)
 	- **spectator/s**: spectate
  - **follow [clientname/clientnum]**: follow a specific player.
+ - **followkiller** : auto-follow killers when spectating (disabled by default)
+ - **followpowerup** : auto-follows player picking up powerups when spectating (disabled by default)
 
 ### Vote Commands
 Use **callvote [command] [arg]** for the below listed vote commands:
