@@ -2235,7 +2235,7 @@ void SetIntermissionPoint(void) {
 			level.intermission_angle = ent->s.angles;
 	}
 	
-	gi.Com_PrintFmt("{}: origin={} angles={}\n", __FUNCTION__, level.intermission_origin, level.intermission_angle);
+	//gi.Com_PrintFmt("{}: origin={} angles={}\n", __FUNCTION__, level.intermission_origin, level.intermission_angle);
 }
 
 /*
