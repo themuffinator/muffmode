@@ -391,7 +391,10 @@ static void defender_shoot(gentity_t *self, gentity_t *enemy) {
 	vec3_t dir;
 	vec3_t start;
 
-	if (!(enemy->inuse) || enemy->health <= 0 || enemy->client->eliminated)
+	if (!(enemy->inuse) || enemy->health <= 0)
+		return;
+
+	if (enemy->client && enemy->client->eliminated)
 		return;
 
 	if (enemy == self->owner)
