@@ -943,8 +943,8 @@ static void CG_ExecuteLayoutString(const char *s, vrect_t hud_vrect, vrect_t hud
 				if (!skip_depth) {
 					int     color;
 
-					width = 3;
 					value = ps->stats[STAT_HEALTH];
+					width = value > 999 ? 4 : 3;
 					if (value > 25)
 						color = 0;  // green
 					else if (value > 0)
@@ -952,8 +952,12 @@ static void CG_ExecuteLayoutString(const char *s, vrect_t hud_vrect, vrect_t hud
 					else
 						color = 1;
 					if (ps->stats[STAT_FLASHES] & 1) {
-						cgi.Draw_GetPicSize(&w, &h, "field_3");
-						cgi.SCR_DrawPic(x, y, w * scale, h * scale, "field_3");
+						int delta = (width - 3) * 16;
+						//cgi.Draw_GetPicSize(&w, &h, "field_3");
+						w = 48;
+						h = 24;
+						w += delta;
+						cgi.SCR_DrawPic(x - delta, y, w * scale, h * scale, "field_3");
 					}
 
 					CG_DrawField(x, y, color, width, value, scale);

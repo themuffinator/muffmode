@@ -657,7 +657,7 @@ void T_Damage(gentity_t *targ, gentity_t *inflictor, gentity_t *attacker, const 
 
 	if (g_vampiric_damage->integer && targ->health > 0 && attacker != targ && !OnSameTeam(targ, attacker) && take > 0) {
 		int vtake = take;
-		int hmax = clamp(g_vampiric_health_max->integer, 100, 1000);
+		int hmax = clamp(g_vampiric_health_max->integer, 100, 9999);
 
 		if (vtake > targ->health)
 			vtake = targ->health;

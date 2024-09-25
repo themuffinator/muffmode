@@ -381,6 +381,9 @@ static void ClientObituary(gentity_t *self, gentity_t *inflictor, gentity_t *att
 	case MOD_SUICIDE:
 		base = "$g_mod_generic_suicide";
 		break;
+	case MOD_EXPIRE:
+		base = "{0} ran out of blood.\n";
+		break;
 	case MOD_FALLING:
 		base = "$g_mod_generic_falling";
 		break;
@@ -420,9 +423,6 @@ static void ClientObituary(gentity_t *self, gentity_t *inflictor, gentity_t *att
 		base = "$g_mod_generic_gekk";
 		break;
 		*/
-	case MOD_EXPIRE:
-		base = "$g_mod_generic_suicide";
-		break;
 	default:
 		base = nullptr;
 		break;
@@ -1194,10 +1194,10 @@ void InitClientPersistant(gentity_t *ent, gclient_t *client) {
 		gitem_armor_t armor_type = jacketarmor_info;
 
 		if (GTF(GTF_ARENA)) {
-			health = clamp(g_arena_start_health->integer, 1, 999);
+			health = clamp(g_arena_start_health->integer, 1, 9999);
 			armor = clamp(g_arena_start_armor->integer, 0, 999);
 		} else {
-			health = clamp(g_starting_health->integer, 1, 999);
+			health = clamp(g_starting_health->integer, 1, 9999);
 			armor = clamp(g_starting_armor->integer, 0, 999);
 		}
 
@@ -3540,7 +3540,8 @@ bool ClientConnect(gentity_t *ent, char *userinfo, const char *social_id, bool i
 		if (!ent->client->sess.initialised && !ent->client->sess.team) {
 			//gi.Com_PrintFmt_("ClientConnect: {} q={}\n", ent->client->resp.netname, ent->client->sess.duel_queued);
 			// force team join
-			ent->client->sess.team = deathmatch->integer ? TEAM_NONE : TEAM_FREE;
+			//ent->client->sess.team = deathmatch->integer ? TEAM_NONE : TEAM_FREE;
+			InitPlayerTeam(ent);
 			ent->client->sess.pc.show_id = true;
 			ent->client->sess.pc.show_timer = true;
 			ent->client->sess.pc.show_fragmessages = true;
@@ -3912,6 +3913,15 @@ void ClientThink(gentity_t *ent, usercmd_t *ucmd) {
 	level.current_entity = ent;
 	client = ent->client;
 
+	//no movement during map or match intermission
+	if (level.timeout_in_place > 0_ms) {
+		client->resp.cmd_angles[0] = ucmd->angles[0];
+		client->resp.cmd_angles[1] = ucmd->angles[1];
+		client->resp.cmd_angles[2] = ucmd->angles[2];
+		client->ps.pmove.pm_type = PM_FREEZE;
+		return;
+	}
+
 	// [Paril-KEX] pass buttons through even if we are in intermission or
 	// chasing.
 	client->oldbuttons = client->buttons;
@@ -3921,7 +3931,10 @@ void ClientThink(gentity_t *ent, usercmd_t *ucmd) {
 
 	if (!client->initial_menu_shown && client->initial_menu_delay && level.time > client->initial_menu_delay) {
 		if (!ClientIsPlaying(client) && (!client->sess.initialised || client->sess.inactive)) {
-			G_Menu_Join_Open(ent);
+			if (ent->client->sess.admin && g_owner_push_scores->integer)
+				Cmd_Score_f(ent);
+			else
+				G_Menu_Join_Open(ent);
 			//if (!client->initial_menu_shown)
 			//	gi.LocClient_Print(ent, PRINT_CHAT, "Welcome to {} v{}.\n", GAMEMOD_TITLE, GAMEMOD_VERSION);
 			client->initial_menu_delay = 0_sec;
