@@ -1465,7 +1465,7 @@ struct level_locals_t {
 	vec3_t		current_poi;
 	int32_t		current_poi_image;
 	int32_t		current_poi_stage;
-	gentity_t		*current_dynamic_poi;
+	gentity_t	*current_dynamic_poi;
 	vec3_t		*poi_points[MAX_SPLIT_PLAYERS]; // temporary storage for POIs in coop
 
 	// start items
@@ -1570,6 +1570,9 @@ struct level_locals_t {
 	char		author2[MAX_QPATH];
 
 	char		intermission_victor_msg[64];
+
+	gtime_t		timeout_in_place;
+	gentity_t	*timeout_ent;
 };
 
 struct shadow_light_temp_t {
@@ -2276,6 +2279,7 @@ extern cvar_t *g_dm_same_level;
 extern cvar_t *g_dm_spawn_farthest;
 extern cvar_t *g_dm_spawnpads;
 extern cvar_t *g_dm_strong_mines;
+extern cvar_t *g_dm_timeout_length;
 extern cvar_t *g_dm_weapons_stay;
 extern cvar_t *g_drop_cmds;
 extern cvar_t *g_entity_override_dir;
@@ -2320,6 +2324,7 @@ extern cvar_t *g_no_nukes;
 extern cvar_t *g_no_powerups;
 extern cvar_t *g_no_spheres;
 extern cvar_t *g_owner_auto_join;
+extern cvar_t *g_owner_push_scores;
 extern cvar_t *g_gametype_cfg;
 extern cvar_t *g_quadhog;
 extern cvar_t *g_quick_weapon_switch;
@@ -2401,6 +2406,7 @@ void Vote_Pass_Random();
 void Vote_Pass_Timelimit();
 void Vote_Pass_Scorelimit();
 bool TeamShuffle();
+void TimeoutEnd();
 
 //
 // g_items.cpp
@@ -3239,6 +3245,8 @@ struct client_persistant_t {
 
 	int32_t			health_bonus;
 	gtime_t			health_bonus_timer;
+
+	bool			timeout_used;
 };
 
 // player config vars:

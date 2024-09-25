@@ -134,6 +134,7 @@ cvar_t *g_dm_same_level;
 cvar_t *g_dm_spawn_farthest;
 cvar_t *g_dm_spawnpads;
 cvar_t *g_dm_strong_mines;
+cvar_t *g_dm_timeout_length;
 cvar_t *g_dm_weapons_stay;
 cvar_t *g_drop_cmds;
 cvar_t *g_entity_override_dir;
@@ -179,6 +180,7 @@ cvar_t *g_no_nukes;
 cvar_t *g_no_powerups;
 cvar_t *g_no_spheres;
 cvar_t *g_owner_auto_join;
+cvar_t *g_owner_push_scores;
 cvar_t *g_gametype_cfg;
 cvar_t *g_quadhog;
 cvar_t *g_quick_weapon_switch;
@@ -861,13 +863,14 @@ static void InitGame() {
 	g_instagib = gi.cvar("g_instagib", "0", CVAR_SERVERINFO | CVAR_LATCH);
 	g_instagib_splash = gi.cvar("g_instagib_splash", "0", CVAR_NOFLAGS);
 	g_owner_auto_join = gi.cvar("g_owner_auto_join", "1", CVAR_NOFLAGS);
+	g_owner_push_scores = gi.cvar("g_owner_push_scores", "0", CVAR_NOFLAGS);
 	g_gametype_cfg = gi.cvar("g_gametype_cfg", "1", CVAR_NOFLAGS);
 	g_quadhog = gi.cvar("g_quadhog", "0", CVAR_SERVERINFO | CVAR_LATCH);
 	g_nadefest = gi.cvar("g_nadefest", "0", CVAR_SERVERINFO | CVAR_LATCH);
 	g_frenzy = gi.cvar("g_frenzy", "0", CVAR_SERVERINFO | CVAR_LATCH);
 	g_vampiric_damage = gi.cvar("g_vampiric_damage", "0", CVAR_NOFLAGS);
 	g_vampiric_exp_min = gi.cvar("g_vampiric_exp_min", "0", CVAR_NOFLAGS);
-	g_vampiric_health_max = gi.cvar("g_vampiric_health_max", "999", CVAR_NOFLAGS);
+	g_vampiric_health_max = gi.cvar("g_vampiric_health_max", "9999", CVAR_NOFLAGS);
 	g_vampiric_percentile = gi.cvar("g_vampiric_percentile", "0.67f", CVAR_NOFLAGS);
 
 	// freeze tag
@@ -985,6 +988,7 @@ static void InitGame() {
 	g_dm_same_level = gi.cvar("g_dm_same_level", "0", CVAR_NOFLAGS);
 	g_dm_spawn_farthest = gi.cvar("g_dm_spawn_farthest", "1", CVAR_NOFLAGS);
 	g_dm_spawnpads = gi.cvar("g_dm_spawnpads", "1", CVAR_NOFLAGS);
+	g_dm_timeout_length = gi.cvar("g_dm_timeout_length", "120", CVAR_NOFLAGS);
 	g_dm_weapons_stay = gi.cvar("g_dm_weapons_stay", "0", CVAR_NOFLAGS);
 	g_drop_cmds = gi.cvar("g_drop_cmds", "7", CVAR_NOFLAGS);
 	g_entity_override_dir = gi.cvar("g_entity_override_dir", "maps", CVAR_NOFLAGS);
@@ -3427,45 +3431,62 @@ Advances the world by 0.1 seconds
 static inline void G_RunFrame_(bool main_loop) {
 	level.in_frame = true;
 
-	// track gametype changes and update accordingly
-	GT_Changes();
+	if (level.timeout_in_place > 0_ms && level.timeout_ent) {
+		int t = (level.timeout_in_place).seconds<int>() + 1;
 
-	// cancel vote if timed out
-	CheckVote();
-
-	// for tracking changes
-	CheckCvars();
-
-	CheckPowerups();
-
-	CheckRuleset();
-
-	Bot_UpdateDebug();
-
-	level.time += FRAME_TIME_MS;
-
-	if (level.intermission_fading) {
-		if (level.intermission_fade_time > level.time) {
-			float alpha = clamp(1.0f - (level.intermission_fade_time - level.time - 300_ms).seconds(), 0.f, 1.f);
-
-			for (auto player : active_clients())
-				player->client->ps.screen_blend = { 0, 0, 0, alpha };
-		} else {
-			level.intermission_fade = level.intermission_fading = false;
-			ExitLevel();
+		if (!level.countdown_check || level.countdown_check.seconds<int>() > t) {
+			if (!(t % 10) || t < 10)
+				gi.positioned_sound(world->s.origin, world, CHAN_AUTO | CHAN_RELIABLE, gi.soundindex(G_Fmt("world/{}{}.wav", t, t >= 20 ? "sec" : "").data()), 1, ATTN_NONE, 0);
+			level.countdown_check = gtime_t::from_sec(t);
 		}
 
-		level.in_frame = false;
+		level.timeout_in_place -= FRAME_TIME_MS;
+		if (level.timeout_in_place <= 0_ms)
+			TimeoutEnd();
 
+		ClientEndServerFrames();
 		return;
-	}
+	} else {
+		// track gametype changes and update accordingly
+		GT_Changes();
 
-	// exit intermissions
+		// cancel vote if timed out
+		CheckVote();
 
-	if (level.intermission_exit) {
-		ExitLevel();
-		level.in_frame = false;
-		return;
+		// for tracking changes
+		CheckCvars();
+
+		CheckPowerups();
+
+		CheckRuleset();
+
+		Bot_UpdateDebug();
+
+		level.time += FRAME_TIME_MS;
+
+		if (level.intermission_fading) {
+			if (level.intermission_fade_time > level.time) {
+				float alpha = clamp(1.0f - (level.intermission_fade_time - level.time - 300_ms).seconds(), 0.f, 1.f);
+
+				for (auto player : active_clients())
+					player->client->ps.screen_blend = { 0, 0, 0, alpha };
+			} else {
+				level.intermission_fade = level.intermission_fading = false;
+				ExitLevel();
+			}
+
+			level.in_frame = false;
+
+			return;
+		}
+
+		// exit intermissions
+
+		if (level.intermission_exit) {
+			ExitLevel();
+			level.in_frame = false;
+			return;
+		}
 	}
 
 	// reload the map start save if restart time is set (all players are dead)

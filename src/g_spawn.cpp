@@ -1982,7 +1982,7 @@ static void G_InitStatusbar() {
 		}
 
 		// countdown
-		sb.ifstat(STAT_COUNTDOWN).xv(144).yb(-256).num(2, STAT_COUNTDOWN).endifstat();
+		sb.ifstat(STAT_COUNTDOWN).xv(136).yb(-256).num(3, STAT_COUNTDOWN).endifstat();
 
 		// match state/timer
 		sb.ifstat(STAT_MATCH_STATE).xv(0).yb(-78).stat_string(STAT_MATCH_STATE).endifstat();

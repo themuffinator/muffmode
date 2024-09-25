@@ -501,6 +501,71 @@ static void Cmd_Teleport_f(gentity_t *ent) {
 
 /*
 ==================
+TimeoutEnd
+==================
+*/
+void TimeoutEnd() {
+	level.timeout_in_place = 0_ms;
+	level.timeout_ent = nullptr;
+	gi.Broadcast_Print(PRINT_CENTER, "Timeout has ended.\n");
+	gi.positioned_sound(world->s.origin, world, CHAN_RELIABLE | CHAN_NO_PHS_ADD | CHAN_AUX, gi.soundindex("misc/tele_up.wav"), 1, ATTN_NONE, 0);
+}
+
+/*
+==================
+Cmd_TimeIn_f
+
+Ends a timeout session.
+==================
+*/
+static void Cmd_TimeIn_f(gentity_t *ent) {
+	if (!level.timeout_in_place) {
+		gi.Client_Print(ent, PRINT_HIGH, "A timeout is not currently in effect.\n");
+		return;
+	}
+	if (!ent->client->sess.admin && level.timeout_ent != ent) {
+		gi.Client_Print(ent, PRINT_HIGH, "The timeout can only be ended by the timeout caller or an admin.\n");
+		return;
+	}
+
+	gi.Broadcast_Print(PRINT_HIGH, "Admin is resuming the match.\n");
+	level.timeout_in_place = 3_sec;
+}
+
+/*
+==================
+Cmd_TimeOut_f
+
+Calls a timeout session.
+==================
+*/
+static void Cmd_TimeOut_f(gentity_t *ent) {
+	if (g_dm_timeout_length->integer <= 0) {
+		gi.Client_Print(ent, PRINT_HIGH, "Server has disabled timeouts.\n");
+		return;
+	}
+	if (level.match_state != MATCH_IN_PROGRESS) {
+		gi.Client_Print(ent, PRINT_HIGH, "Timeouts can only be issued during a match.\n");
+		return;
+	}
+	if (ent->client->pers.timeout_used && !ent->client->sess.admin) {
+		gi.Client_Print(ent, PRINT_HIGH, "You have already used your timeout.\n");
+		return;
+	}
+	if (level.timeout_in_place > 0_ms) {
+		gi.Client_Print(ent, PRINT_HIGH, "A timeout is already in progress.\n");
+		return;
+	}
+
+	level.timeout_ent = ent;
+	level.timeout_in_place = gtime_t::from_sec(g_dm_timeout_length->integer);
+	gi.LocBroadcast_Print(PRINT_CENTER, "{} called a timeout!\n{} has been granted.", ent->client->resp.netname, G_TimeString(g_dm_timeout_length->integer * 1000, false));
+	gi.positioned_sound(world->s.origin, world, CHAN_RELIABLE | CHAN_NO_PHS_ADD | CHAN_AUX, gi.soundindex("world/klaxon2.wav"), 1, ATTN_NONE, 0);
+	ent->client->pers.timeout_used = true;
+}
+
+/*
+==================
 Cmd_NoTarget_f
 
 Sets client to notarget
@@ -3539,6 +3604,8 @@ cmds_t client_cmds[] = {
 	{"target",			Cmd_Target_f,			CF_ALLOW_DEAD | CF_ALLOW_SPEC | CF_CHEAT_PROTECT},
 	{"team",			Cmd_Team_f,				CF_ALLOW_DEAD | CF_ALLOW_SPEC},
 	{"teleport",		Cmd_Teleport_f,			CF_ALLOW_SPEC | CF_CHEAT_PROTECT},
+	{"time-out",		Cmd_TimeOut_f,			CF_ALLOW_DEAD | CF_ALLOW_SPEC},
+	{"time-in",			Cmd_TimeIn_f,			CF_ADMIN_ONLY | CF_ALLOW_DEAD | CF_ALLOW_SPEC},
 	{"timer",			Cmd_Timer_f,			CF_ALLOW_SPEC | CF_ALLOW_DEAD},
 	{"unhook",			Cmd_UnHook_f,			CF_NONE},
 	{"unlockteam",		Cmd_UnlockTeam_f,		CF_ADMIN_ONLY | CF_ALLOW_INT | CF_ALLOW_SPEC},

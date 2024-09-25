@@ -621,6 +621,9 @@ static void P_WorldEffects() {
 	bool		  breather, envirosuit, protection;
 	water_level_t waterlevel, old_waterlevel;
 
+	if (level.timeout_in_place)
+		return;
+
 	if (current_player->movetype == MOVETYPE_FREECAM) {
 		current_player->air_finished = level.time + 12_sec; // don't need air
 		return;
@@ -846,6 +849,9 @@ G_SetClientEvent
 ===============
 */
 static void G_SetClientEvent(gentity_t *ent) {
+	if (level.timeout_in_place)
+		return;
+
 	if (ent->s.event)
 		return;
 
@@ -870,6 +876,9 @@ G_SetClientSound
 ===============
 */
 static void G_SetClientSound(gentity_t *ent) {
+	if (level.timeout_in_place)
+		return;
+
 	// help beep (no more than three times)
 	if (ent->client->pers.helpchanged && ent->client->pers.helpchanged <= 3 && ent->client->pers.help_time < level.time) {
 		if (ent->client->pers.helpchanged == 1) // [KEX] haleyjd: once only
@@ -1264,7 +1273,7 @@ void ClientEndServerFrame(gentity_t *ent) {
 
 	// vampiric damage expiration
 	// don't expire if only 1 player in the match
-	if (g_vampiric_damage->integer && ClientIsPlaying(ent->client) && !ent->client->ps.stats[STAT_CHASE] && !level.intermission_time && ent->health > g_vampiric_exp_min->integer) {
+	if (g_vampiric_damage->integer && ClientIsPlaying(ent->client) && !ent->client->ps.stats[STAT_CHASE] && !level.intermission_time && g_vampiric_exp_min->integer && ent->health > g_vampiric_exp_min->integer) {
 		if (level.num_playing_clients > 1 && level.time > ent->client->vampire_expiretime) {
 			int quantity = floor((ent->health - 1) / ent->max_health) + 1;
 			ent->health -= quantity;

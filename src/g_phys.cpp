@@ -977,6 +977,9 @@ void G_RunEntity(gentity_t *ent) {
 	vec3_t	previous_origin;
 	bool	has_previous_origin = false;
 
+	if (level.timeout_in_place)
+		return;
+
 	if (ent->movetype == MOVETYPE_STEP) {
 		previous_origin = ent->s.origin;
 		has_previous_origin = true;

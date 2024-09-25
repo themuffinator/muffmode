@@ -1310,7 +1310,7 @@ static void SetMiniScoreStats(gentity_t *ent) {
 			if (level.sorted_clients[i] < 0)
 				continue;
 
-			if (level.sorted_clients[i] >= game.maxclients)
+			if (level.sorted_clients[i] >= (int)game.maxclients)
 				continue;
 
 			if (level.sorted_clients[i] == own_num)
@@ -1851,7 +1851,10 @@ void G_SetStats(gentity_t *ent) {
 				s1 = "COUNTDOWN";
 				break;
 			default: {
-				if (t < 0 && t >= -4) {
+				if (level.timeout_in_place > 0_ms) {
+					int t2 = (level.timeout_in_place).milliseconds();
+					s1 = G_Fmt("TIMEOUT! ({})", G_TimeString(t, false)).data();
+				} else if (t < 0 && t >= -4) {
 					s1 = "OVERTIME!";
 				} else if (GTF(GTF_ROUNDS)) {
 					if (level.round_state == roundst_t::ROUND_COUNTDOWN) {
