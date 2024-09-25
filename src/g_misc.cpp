@@ -1109,8 +1109,12 @@ void SP_misc_explobox(gentity_t *self) {
 
 	self->model = "models/objects/barrels/tris.md2";
 	self->s.modelindex = gi.modelindex(self->model);
-	self->mins = { -16 * self->s.scale, -16 * self->s.scale, 0 };
-	self->maxs = { 16 * self->s.scale, 16 * self->s.scale, 40 * self->s.scale };
+
+	float scale = self->s.scale;
+	if (!scale)
+		scale = 1.0f;
+	self->mins = { -16 * scale, -16 * scale, 0 };
+	self->maxs = { 16 * scale, 16 * scale, 40 * scale };
 
 	if (!self->mass)
 		self->mass = 50;
