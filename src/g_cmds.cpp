@@ -640,12 +640,15 @@ static void Cmd_Use_f(gentity_t *ent) {
 		it = GetItemByIndex((item_id_t)atoi(s));
 	} else {
 		if (!strcmp(s, "holdable")) {
-			if (ent->client->pers.inventory[IT_TELEPORTER])
+			if (ent->client->pers.inventory[IT_DOPPELGANGER])
+				it = GetItemByIndex(IT_DOPPELGANGER);
+			else if (ent->client->pers.inventory[IT_TELEPORTER])
 				it = GetItemByIndex(IT_TELEPORTER);
 			else if (ent->client->pers.inventory[IT_ADRENALINE])
 				it = GetItemByIndex(IT_ADRENALINE);
 			else if (ent->client->pers.inventory[IT_COMPASS])
 				it = GetItemByIndex(IT_COMPASS);
+			else return;
 		}
 
 		if (!it)

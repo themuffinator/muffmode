@@ -42,6 +42,16 @@ static gtime_t protection_drop_timeout_hack;
 void	   Use_Regeneration(gentity_t *ent, gitem_t *item);
 static gtime_t regeneration_drop_timeout_hack;
 
+static void UsedMessage(gentity_t *ent, gitem_t *item) {
+	if (!ent || !item)
+		return;
+
+	if (item->id == IT_ADRENALINE && !g_dm_holdable_adrenaline->integer)
+		return;
+
+	gi.LocClient_Print(ent, PRINT_CENTER, "Used {}", item->pickup_name);
+}
+
 // ***************************
 //  DOPPELGANGER
 // ***************************
@@ -1508,8 +1518,6 @@ void SetRespawn(gentity_t *ent, gtime_t delay, bool hide_self) {
 //======================================================================
 
 static void Use_Teleporter(gentity_t *ent, gitem_t *item) {
-	ent->client->pers.inventory[item->id]--;
-
 	gentity_t *fx = G_Spawn();
 	fx->classname = "telefx";
 	fx->s.event = EV_PLAYER_TELEPORT;
@@ -1520,11 +1528,10 @@ static void Use_Teleporter(gentity_t *ent, gitem_t *item) {
 	fx->solid = SOLID_NOT;
 	fx->think = G_FreeEntity;
 	gi.linkentity(fx);
-
-
 	TeleportPlayerToRandomSpawnPoint(ent, true);
 
-	gi.LocClient_Print(ent, PRINT_CENTER, "Used {}", item->pickup_name);
+	ent->client->pers.inventory[item->id]--;
+	UsedMessage(ent, item);
 }
 
 static bool Pickup_Teleporter(gentity_t *ent, gentity_t *other) {
@@ -1676,8 +1683,20 @@ static bool Pickup_TimedItem(gentity_t *ent, gentity_t *other) {
 
 	bool is_dropped_from_death = ent->spawnflags.has(SPAWNFLAG_ITEM_DROPPED_PLAYER) && !ent->spawnflags.has(SPAWNFLAG_ITEM_DROPPED);
 
-	if (IsInstantItemsEnabled() || is_dropped_from_death)
+	if ((IsInstantItemsEnabled() && !(ent->item->id == IT_ADRENALINE && g_dm_holdable_adrenaline->integer)) || is_dropped_from_death)
 		ent->item->use(other, ent->item);
+	else {
+		bool msg = false;
+		if (ent->item->id == IT_ADRENALINE && !other->client->pers.holdable_item_msg_adren) {
+			other->client->pers.holdable_item_msg_adren = msg = true;
+		} else if (ent->item->id == IT_TELEPORTER && !other->client->pers.holdable_item_msg_tele) {
+			other->client->pers.holdable_item_msg_tele = msg = true;
+		} else if (ent->item->id == IT_DOPPELGANGER && !other->client->pers.holdable_item_msg_doppel) {
+			other->client->pers.holdable_item_msg_doppel = msg = true;
+		}
+		if (msg)
+			gi.LocClient_Print(other, PRINT_CENTER, "$map_this_item_must_be_activated_to_use_it");
+	}
 
 	if (!is_dropped_from_death)
 		SetRespawn(ent, gtime_t::from_sec(ent->item->quantity));
@@ -1807,6 +1826,7 @@ static void Use_Doppelganger(gentity_t *ent, gitem_t *item) {
 		return;
 
 	ent->client->pers.inventory[item->id]--;
+	UsedMessage(ent, item);
 
 	SpawnGrow_Spawn(spawnPt, 24.f, 48.f);
 	fire_doppelganger(ent, spawnPt, forward);
@@ -1896,10 +1916,12 @@ static void Use_Adrenaline(gentity_t *ent, gitem_t *item) {
 	if (ent->health < ent->max_health)
 		ent->health = ent->max_health;
 
-	gi.sound(ent, CHAN_ITEM, gi.soundindex("items/n_health.wav"), 1, ATTN_NORM, 0);
+	gi.sound(ent, CHAN_ITEM, gi.soundindex("items/m_health.wav"), 1, ATTN_NORM, 0);
+
+	ent->client->pu_regen_time_blip = level.time + 100_ms;
 
 	ent->client->pers.inventory[item->id]--;
-	gi.LocClient_Print(ent, PRINT_CENTER, "Used {}", item->pickup_name);
+	UsedMessage(ent, item);
 }
 
 static bool Pickup_LegacyHead(gentity_t *ent, gentity_t *other) {

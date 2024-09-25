@@ -115,6 +115,7 @@ cvar_t *g_dm_exec_level_cfg;
 cvar_t *g_dm_force_join;
 cvar_t *g_dm_force_respawn;
 cvar_t *g_dm_force_respawn_time;
+cvar_t *g_dm_holdable_adrenaline;
 cvar_t *g_dm_instant_items;
 cvar_t *g_dm_intermission_shots;
 cvar_t *g_dm_item_respawn_rate;
@@ -971,6 +972,7 @@ static void InitGame() {
 	g_dm_force_join = gi.cvar("g_dm_force_join", "0", CVAR_NOFLAGS);
 	g_dm_force_respawn = gi.cvar("g_dm_force_respawn", "1", CVAR_NOFLAGS);
 	g_dm_force_respawn_time = gi.cvar("g_dm_force_respawn_time", "3", CVAR_NOFLAGS);
+	g_dm_holdable_adrenaline = gi.cvar("g_dm_holdable_adrenaline", "1", CVAR_NOFLAGS);
 	g_dm_instant_items = gi.cvar("g_dm_instant_items", "1", CVAR_NOFLAGS);
 	g_dm_intermission_shots = gi.cvar("g_dm_intermission_shots", "0", CVAR_NOFLAGS);
 	g_dm_item_respawn_rate = gi.cvar("g_dm_item_respawn_rate", "1.0", CVAR_NOFLAGS);

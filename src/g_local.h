@@ -2260,6 +2260,7 @@ extern cvar_t *g_dm_exec_level_cfg;
 extern cvar_t *g_dm_force_join;
 extern cvar_t *g_dm_force_respawn;
 extern cvar_t *g_dm_force_respawn_time;
+extern cvar_t *g_dm_holdable_adrenaline;
 extern cvar_t *g_dm_instant_items;
 extern cvar_t *g_dm_intermission_shots;
 extern cvar_t *g_dm_item_respawn_rate;
@@ -3247,6 +3248,10 @@ struct client_persistant_t {
 	gtime_t			health_bonus_timer;
 
 	bool			timeout_used;
+
+	bool			holdable_item_msg_adren;
+	bool			holdable_item_msg_tele;
+	bool			holdable_item_msg_doppel;
 };
 
 // player config vars:
