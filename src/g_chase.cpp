@@ -59,7 +59,7 @@ void UpdateChaseCam(gentity_t *ent) {
 		// mark the chased player as instanced so we can disable their model's visibility
 		targ->svflags |= SVF_INSTANCED;
 
-		// copy everything from ps but pmove, pov, stats, and team_id
+		// copy everything from ps but pmove, pov, stats, and team
 		ent->client->ps.viewangles = targ->client->ps.viewangles;
 		ent->client->ps.viewoffset = targ->client->ps.viewoffset;
 		ent->client->ps.kick_angles = targ->client->ps.kick_angles;
@@ -136,6 +136,12 @@ void UpdateChaseCam(gentity_t *ent) {
 			goal = trace.endpos;
 			goal[2] += 6;
 		}
+
+		ent->client->ps.gunindex = 0;
+		ent->client->ps.gunskin = 0;
+		ent->s.modelindex = 0;
+		ent->s.modelindex2 = 0;
+		ent->s.modelindex3 = 0;
 	}
 
 	if (targ->deadflag)

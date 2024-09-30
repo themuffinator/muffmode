@@ -366,18 +366,52 @@ static USE(use_target_changelevel) (gentity_t *self, gentity_t *other, gentity_t
 			return;
 
 	// if noexit, do a ton of damage to other
-	if (deathmatch->integer && !g_dm_allow_exit->integer && other != world) {
+	if (deathmatch->integer && g_gametype->integer != GT_RACE && !g_dm_allow_exit->integer && other != world) {
 		T_Damage(other, self, self, vec3_origin, other->s.origin, vec3_origin, 10 * other->max_health, 1000, DAMAGE_NONE, MOD_EXIT);
 		return;
 	}
 
 	// if multiplayer, let everyone know who hit the exit
 	if (deathmatch->integer) {
-		if (level.time < 10_sec)
-			return;
+		if (g_gametype->integer == GT_RACE) {
+			if (!IsCombatDisabled()) {
+				if (level.match_state == MATCH_IN_PROGRESS) {
+					int old_score = activator->client->resp.score;
+					int new_score = (level.time - activator->client->respawn_time).milliseconds();
+					bool pb = !old_score || new_score < old_score;
+					if (pb) {
+						G_SetPlayerScore(activator->client, (level.time - activator->client->respawn_time).milliseconds());
+						gi.sound(activator, CHAN_RELIABLE | CHAN_NO_PHS_ADD | CHAN_AUX, gi.soundindex("ctf/flagcap.wav"), 1, ATTN_NONE, 0);
+					}
+					gi.LocClient_Print(activator, PRINT_CENTER, "{}{}", G_TimeStringMs(new_score, false), pb ? " (PB)" : "");
+				} else {
+					gi.LocClient_Print(activator, PRINT_CENTER, "{}", G_TimeStringMs((level.time - activator->client->respawn_time).milliseconds(), false));
+				}
+				ClientSpawn(activator);
+				G_PostRespawn(activator);
 
-		if (activator && activator->client)
-			gi.LocBroadcast_Print(PRINT_HIGH, "$g_exited_level", activator->client->pers.netname);
+				activator->client->pers.last_spawn_time = level.time;
+
+				gtime_t clock = timelimit->value ? (level.match_time + gtime_t::from_min(timelimit->value) + level.overtime - level.time) : level.time - level.match_time;
+				int	t = clock.milliseconds();
+				const char *s, *s1, *s2 = "";
+
+				int t2 = (level.time - activator->client->pers.last_spawn_time).milliseconds();
+				s1 = G_Fmt("{} ({})", G_TimeString(t, false), G_TimeStringMs(t2, false)).data();
+
+				s = G_Fmt("{}{}", s1, s2).data();
+
+				activator->client->ps.stats[STAT_MATCH_STATE] = CONFIG_MATCH_STATE;
+				gi.configstring(CONFIG_MATCH_STATE, s);
+			}
+			return;
+		} else {
+			if (level.time < 10_sec)
+				return;
+
+			if (activator && activator->client)
+				gi.LocBroadcast_Print(PRINT_HIGH, "$g_exited_level", activator->client->pers.netname);
+		}
 	}
 
 	// if going to a new unit, clear cross triggers
@@ -2203,7 +2237,7 @@ static USE(target_remove_powerups_use) (gentity_t *ent, gentity_t *other, gentit
 		return;
 
 	activator->client->pu_time_quad = 0_sec;
-	activator->client->pu_time_duelfire = 0_sec;
+	activator->client->pu_time_haste = 0_sec;
 	activator->client->pu_time_double = 0_sec;
 	activator->client->pu_time_protection = 0_sec;
 	activator->client->pu_time_invisibility = 0_sec;

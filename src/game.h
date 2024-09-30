@@ -387,14 +387,18 @@ MAKE_ENUM_BITFLAGS(pmflags_t);
 struct pmove_state_t {
 	pmtype_t pm_type;
 
-	vec3_t                 origin;
-	vec3_t                 velocity;
-	pmflags_t			   pm_flags; // ducked, jump_held, etc
-	uint16_t			   pm_time;
-	int16_t				   gravity;
-	gvec3_t                delta_angles; // add to command angles to get view direction
+	vec3_t					origin;
+	vec3_t					velocity;
+	pmflags_t				pm_flags; // ducked, jump_held, etc
+	uint16_t				pm_time;
+	int16_t					gravity;
+	gvec3_t					delta_angles; // add to command angles to get view direction
 	// changed by spawns, rotating objects, and teleporters
-	int8_t                 viewheight; // view height, added to origin[2] + viewoffset[2], for crouching
+	int8_t					viewheight; // view height, added to origin[2] + viewoffset[2], for crouching
+
+//muffmode
+	bool					haste;
+//-muffmode
 };
 
 //

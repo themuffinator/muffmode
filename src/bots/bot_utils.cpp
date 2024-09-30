@@ -34,7 +34,7 @@ static void Player_UpdateState(gentity_t *player) {
 
 	if (player->client->pu_time_quad > level.time) {
 		player->sv.ent_flags |= SVFL_HAS_DMG_BOOST;
-	} else if (player->client->pu_time_duelfire > level.time) {
+	} else if (player->client->pu_time_haste > level.time) {
 		player->sv.ent_flags |= SVFL_HAS_DMG_BOOST;
 	} else if (player->client->pu_time_double > level.time) {
 		player->sv.ent_flags |= SVFL_HAS_DMG_BOOST;

@@ -6,7 +6,7 @@
 #include "monsters/m_player.h"
 
 bool is_quad;
-bool is_quadfire;
+bool is_haste;
 player_muzzle_t is_silenced;
 byte damage_multiplier;
 
@@ -19,7 +19,7 @@ bool InfiniteAmmoOn(gitem_t *item) {
 	if (item && item->flags & IF_NO_INFINITE_AMMO)
 		return false;
 
-	return g_infinite_ammo->integer || (deathmatch->integer && (g_instagib->integer || g_nadefest->integer));
+	return g_infinite_ammo->integer || (deathmatch->integer && (g_instagib->integer || g_nadefest->integer || g_gametype->integer == GT_RACE));
 }
 
 /*
@@ -329,7 +329,7 @@ static void Weapon_RunThink(gentity_t *ent) {
 
 	P_DamageModifier(ent);
 
-	is_quadfire = (ent->client->pu_time_duelfire > level.time);
+	is_haste = (ent->client->pu_time_haste > level.time);
 
 	if (ent->client->silencer_shots)
 		is_silenced = MZ_SILENCED;
@@ -493,8 +493,8 @@ static inline gtime_t Weapon_AnimationTime(gentity_t *ent) {
 		ent->client->ps.gunrate = 10;
 
 	if (ent->client->ps.gunframe != 0 && (!(ent->client->pers.weapon->flags & IF_NO_HASTE) || ent->client->weaponstate != WEAPON_FIRING)) {
-		if (is_quadfire)
-			ent->client->ps.gunrate *= 2;
+		if (is_haste)
+			ent->client->ps.gunrate *= 1.5;
 		if (Tech_ApplyTimeAccel(ent))
 			ent->client->ps.gunrate *= 2;
 		if (g_frenzy->integer)
@@ -711,8 +711,8 @@ void Weapon_PowerupSound(gentity_t *ent) {
 			gi.sound(ent, CHAN_ITEM, gi.soundindex("items/damage3.wav"), 1, ATTN_NORM, 0);
 		else if (ent->client->pu_time_double > level.time)
 			gi.sound(ent, CHAN_ITEM, gi.soundindex("misc/ddamage3.wav"), 1, ATTN_NORM, 0);
-		else if (ent->client->pu_time_duelfire > level.time
-			&& ent->client->tech_sound_time < level.time) {
+		else if (ent->client->pu_time_haste > level.time
+				&& ent->client->tech_sound_time < level.time) {
 			ent->client->tech_sound_time = level.time + 1_sec;
 			gi.sound(ent, CHAN_ITEM, gi.soundindex("ctf/tech3.wav"), 1, ATTN_NORM, 0);
 		}
@@ -1148,7 +1148,7 @@ void Throw_Generic(gentity_t *ent, int FRAME_FIRE_LAST, int FRAME_IDLE_LAST, int
 
 			if (Tech_ApplyTimeAccel(ent))
 				grenade_wait_time *= 0.5f;
-			if (is_quadfire)
+			if (is_haste)
 				grenade_wait_time *= 0.5f;
 			if (g_frenzy->integer)
 				grenade_wait_time *= 0.5f;

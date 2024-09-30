@@ -526,6 +526,8 @@ void ED_CallSpawn(gentity_t *ent) {
 		ent->classname = GetItemByIndex(IT_AMMO_FLECHETTES)->classname;
 	else if (!strcmp(ent->classname, "weapon_heatbeam"))
 		ent->classname = GetItemByIndex(IT_WEAPON_PLASMABEAM)->classname;
+	else if (!strcmp(ent->classname, "item_haste"))
+		ent->classname = GetItemByIndex(IT_POWERUP_HASTE)->classname;
 	else if (RS(RS_Q3A) && !strcmp(ent->classname, "weapon_supershotgun"))
 		ent->classname = GetItemByIndex(IT_WEAPON_SHOTGUN)->classname;
 	else if (!strcmp(ent->classname, "info_player_team1"))
@@ -2332,8 +2334,7 @@ void SP_worldspawn(gentity_t *ent) {
 
 	snd_fry.assign("player/fry.wav"); // standing in lava / slime
 
-	if (!deathmatch->integer)
-		PrecacheItem(GetItemByIndex(IT_COMPASS));
+	PrecacheItem(GetItemByIndex(IT_COMPASS));
 
 	if (!g_instagib->integer && !g_nadefest->integer && notGT(GT_BALL))
 		PrecacheItem(GetItemByIndex(IT_WEAPON_BLASTER));

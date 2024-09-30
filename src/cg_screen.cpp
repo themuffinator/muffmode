@@ -694,6 +694,28 @@ static void CG_DrawTable(int x, int y, uint32_t width, uint32_t height, int32_t 
 }
 
 /*
+=================
+CG_TimeStringMs
+=================
+*/
+static const char *CG_TimeStringMs(const int msec) {
+	int hours, mins, seconds, ms = msec;
+
+	seconds = ms / 1000;
+	ms -= seconds * 1000;
+	mins = seconds / 60;
+	seconds -= mins * 60;
+	hours = mins / 60;
+	mins -= hours * 60;
+
+	if (hours > 0) {
+		return G_Fmt("{}:{:02}:{:02}.{}", hours, mins, seconds, ms).data();
+	} else {
+		return G_Fmt("{:02}:{:02}.{}", mins, seconds, ms).data();
+	}
+}
+
+/*
 ================
 CG_ExecuteLayoutString
 
@@ -816,7 +838,7 @@ static void CG_ExecuteLayoutString(const char *s, vrect_t hud_vrect, vrect_t hud
 					cgi.Com_Error("client >= MAX_CLIENTS");
 			}
 
-			int score, ping;
+			int score, ping, time;
 
 			token = COM_Parse(&s);
 			if (!skip_depth)
@@ -826,6 +848,11 @@ static void CG_ExecuteLayoutString(const char *s, vrect_t hud_vrect, vrect_t hud
 			if (!skip_depth) {
 				ping = atoi(token);
 
+				token = COM_Parse(&s);
+				time = atoi(token);
+
+				const char *scr = time > 0 ? CG_TimeStringMs(time) : G_Fmt("{}", score).data();
+
 				cgi.SCR_SetAltTypeface(ui_acc_alttypeface->integer && true);
 				if (!scr_usekfont->integer)
 					CG_DrawString(x + 32 * scale, y, scale, cgi.CL_GetClientName(value));
@@ -833,16 +860,16 @@ static void CG_ExecuteLayoutString(const char *s, vrect_t hud_vrect, vrect_t hud
 					cgi.SCR_DrawFontString(cgi.CL_GetClientName(value), x + 32 * scale, y - (font_y_offset * scale), scale, rgba_white, true, text_align_t::LEFT);
 
 				if (!scr_usekfont->integer)
-					CG_DrawString(x + 32 * scale, y + 10 * scale, scale, G_Fmt("{}", score).data(), true);
+					CG_DrawString(x + 32 * scale, y + 10 * scale, scale, scr, true);
 				else
-					cgi.SCR_DrawFontString(G_Fmt("{}", score).data(), x + 32 * scale, y + (10 - font_y_offset) * scale, scale, rgba_white, true, text_align_t::LEFT);
+					cgi.SCR_DrawFontString(scr, x + 32 * scale, y + (10 - font_y_offset) * scale, scale, rgba_white, true, text_align_t::LEFT);
 
-				cgi.SCR_DrawPic(x + 96 * scale, y + 10 * scale, 9 * scale, 9 * scale, "ping");
-
+				cgi.SCR_DrawPic(x + 32 + 96 * scale, y + 10 * scale, 9 * scale, 9 * scale, "ping");
 				if (!scr_usekfont->integer)
-					CG_DrawString(x + 73 * scale + 32 * scale, y + 10 * scale, scale, G_Fmt("{}", ping).data());
+					CG_DrawString(x + 32 + 73 * scale + 32 * scale, y + 10 * scale, scale, G_Fmt("{}", ping).data());
 				else
-					cgi.SCR_DrawFontString(G_Fmt("{}", ping).data(), x + 107 * scale, y + (10 - font_y_offset) * scale, scale, rgba_white, true, text_align_t::LEFT);
+					cgi.SCR_DrawFontString(G_Fmt("{}", ping).data(), x + 32 + 107 * scale, y + (10 - font_y_offset) * scale, scale, rgba_white, true, text_align_t::LEFT);
+
 				cgi.SCR_SetAltTypeface(false);
 			}
 			continue;

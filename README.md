@@ -83,6 +83,7 @@ Muff Mode includes the game logic, a server config, bot files and some map entit
  - Current weapon is now droppable
  - Smart weapon auto-switch: now switches to SSG from SG, CG from MG, never auto-switches to chainfist.
  - Instant gametype changing (eg: from FFA to TDM)
+ - DuelFire Damage has been changed to Haste: 50% faster movement, 50% faster weapon rate of fire.
  - Many more!
 
 ## Rulesets
@@ -140,14 +141,20 @@ Use **[command] [arg]** for the below listed admin commands:
  - **readyall**: force all players to ready status (during readying warmup status)
  - **unreadyall**: force all players to NOT ready status (during readying warmup status)
 
-### Client Commands
+### Client Commands - Player Configuration
 Use **[command] [arg]** for the below listed client commands:
+ - **announcer**: toggles support of QL match announcer events (uses vo_evil set, needs converting to 22KHz PCM WAV)
+ - **fm**: toggle frag messages
  - **help**: toggle help text drawing
  - **id**: toggle crosshair ID drawing
- - **fm**: toggle frag messages
  - **kb**: toggle kill beeps
  - **timer**: toggle match timer drawing
+ 
+### Client Commands - Gameplay
  - **hook/unhook**: hook/unhook off-hand grapple
+ - **followkiller** : auto-follow killers when spectating (disabled by default)
+ - **followleader** : when spectating, auto-follows leading player
+ - **followpowerup** : auto-follows player picking up powerups when spectating (disabled by default)
  - **forfeit**: forfeits a match (currently only in duels, requires g_allow_forfeit 1).
  - **ready/notready**: sets ready status.
  - **readyup**: toggles ready status.
@@ -162,9 +169,9 @@ Use **[command] [arg]** for the below listed client commands:
 	- **auto/a**: auto-select team
 	- **free/f**: join free team (non-team games)
 	- **spectator/s**: spectate
+ - **time-in** : cuts a time out short
+ - **time-out** : call a time out, only 1 allowed per player and lasts for value set by g_dm_timeout_length (in seconds). **g_dm_timeout_length 0** disables time outs
  - **follow [clientname/clientnum]**: follow a specific player.
- - **followkiller** : auto-follow killers when spectating (disabled by default)
- - **followpowerup** : auto-follows player picking up powerups when spectating (disabled by default)
 
 ### Vote Commands
 Use **callvote [command] [arg]** for the below listed vote commands:
@@ -208,6 +215,7 @@ Use **callvote [command] [arg]** for the below listed vote commands:
  - **g_dm_do_readyup**: Enforce players to ready up to progress from match warmup stage (requires g_dm_do_warmup 1). (default 0)
  - **g_dm_do_warmup**: Allow match warmup stage. (default 1)
  - **g_dm_force_join**: replaces g_teamplay_force_join, the menu forces the cvar change so this gets around that, it now applies to regular DM too so the change makes sense.
+ - **g_dm_holdable_adrenaline** : when set to 1, allows holdable Adrenaline during deathmatch (default 1)
  - **g_dm_no_self_damage**: when set to 1, disables any self damage after calculating knockback (default: 0)
  - **g_dm_overtime**: Set stoppage time for each overtime session in seconds. Currently only applies to Duels. (default 120)
  - **g_dm_powerup_drop**: when set to 1, drops carried powerups upon death (default: 1)
@@ -242,7 +250,7 @@ Use **callvote [command] [arg]** for the below listed vote commands:
  - **g_match_lock**: when set to 1, prohibits joining the match while in progress (default 0)
  - **g_motd_filename**: points to filename of message of the day file, reverts to default when blank (default motd.txt)
  - **g_mover_speed_scale**: sets speed scaling factor for all movers in maps (doors, rotators, lifts etc.) (default: 1.0f)
- - **g_no_powerups**: disable powerup pickups (Quad, Protection, Double, DuelFire, Invisibility, etc.)
+ - **g_no_powerups**: disable powerup pickups (Quad, Protection, Double, Haste, Invisibility, etc.)
  - **g_owner_auto_join**: when set to 0, avoids auto-joining a match as lobby owner (default 1)
  - **g_round_countdown**: sets round countdown time (in seconds) in round-based gametypes (default 10)
  - **g_ruleset**: gameplay rules (default 2):
@@ -434,9 +442,6 @@ Some entity overrides are included which add some subtle ambient sounds, mover s
 - Server-side player configs, stats, Elo, ranked matches, Elo team balancing (WIP)
 - Gladiator bots
 - Menu overhaul, adding voting, full admin controls, mymap, player config
-
-## FIXME:
-- the occasional bugged lifts persist with no fix in sight :(
 
 ## Credits:
 - The Stingy Hat Games YouTube channel for their excellent modding tutorial, without it I would never be able to compile the damned source!

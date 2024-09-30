@@ -820,7 +820,7 @@ FIELD_AUTO(pu_time_regeneration),
 FIELD_AUTO(grenade_blew_up),
 FIELD_AUTO(grenade_time),
 FIELD_AUTO(grenade_finished_time),
-FIELD_AUTO(pu_time_duelfire),
+FIELD_AUTO(pu_time_haste),
 FIELD_AUTO(silencer_shots),
 FIELD_AUTO(weapon_sound),
 

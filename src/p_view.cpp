@@ -527,8 +527,8 @@ static void G_CalcBlend(gentity_t *ent) {
 			gi.sound(ent, CHAN_ITEM, gi.soundindex("items/damage2.wav"), 1, ATTN_NORM, 0);
 		if (G_PowerUpExpiringRelative(remaining))
 			G_AddBlend(0, 0, 1, 0.08f, ent->client->ps.screen_blend);
-	} else if (ent->client->pu_time_duelfire > level.time) {
-		remaining = ent->client->pu_time_duelfire - level.time;
+	} else if (ent->client->pu_time_haste > level.time) {
+		remaining = ent->client->pu_time_haste - level.time;
 		if (remaining.milliseconds() == 3000) // beginning to fade
 			gi.sound(ent, CHAN_ITEM, gi.soundindex("items/quadfire2.wav"), 1, ATTN_NORM, 0);
 		if (G_PowerUpExpiringRelative(remaining))
@@ -823,8 +823,8 @@ static void G_SetClientEffects(gentity_t *ent) {
 	if (ent->client->pu_time_protection > level.time)
 		if (G_PowerUpExpiring(ent->client->pu_time_protection))
 			ent->s.effects |= EF_PENT;
-	if (ent->client->pu_time_duelfire > level.time)
-		if (G_PowerUpExpiring(ent->client->pu_time_duelfire))
+	if (ent->client->pu_time_haste > level.time)
+		if (G_PowerUpExpiring(ent->client->pu_time_haste))
 			ent->s.effects |= EF_DUALFIRE;
 	if (ent->client->pu_time_double > level.time)
 		if (G_PowerUpExpiring(ent->client->pu_time_double))
@@ -1147,7 +1147,7 @@ void Frenzy_ApplyAmmoRegen(gentity_t *ent) {
 	if (!g_frenzy->integer)
 		return;
 
-	if (g_infinite_ammo->integer || g_instagib->integer || g_nadefest->integer)
+	if (InfiniteAmmoOn(nullptr))
 		return;
 
 	client = ent->client;
@@ -1273,7 +1273,7 @@ void ClientEndServerFrame(gentity_t *ent) {
 
 	// vampiric damage expiration
 	// don't expire if only 1 player in the match
-	if (g_vampiric_damage->integer && ClientIsPlaying(ent->client) && !ent->client->ps.stats[STAT_CHASE] && !level.intermission_time && g_vampiric_exp_min->integer && ent->health > g_vampiric_exp_min->integer) {
+	if (g_vampiric_damage->integer && ClientIsPlaying(ent->client) && !IsCombatDisabled() && (ent->health > g_vampiric_exp_min->integer)) {
 		if (level.num_playing_clients > 1 && level.time > ent->client->vampire_expiretime) {
 			int quantity = floor((ent->health - 1) / ent->max_health) + 1;
 			ent->health -= quantity;
@@ -1400,9 +1400,17 @@ void ClientEndServerFrame(gentity_t *ent) {
 	G_CalcBlend(e);
 
 	// chase cam stuff
-	if (!ClientIsPlaying(ent->client) || ent->client->eliminated)
+	if (!ClientIsPlaying(ent->client) || ent->client->eliminated) {
 		G_SetSpectatorStats(ent);
-	else
+
+		if (ent->client->follow_target) {
+			ent->client->ps.screen_blend = ent->client->follow_target->client->ps.screen_blend;
+			ent->client->ps.damage_blend = ent->client->follow_target->client->ps.damage_blend;
+
+			ent->s.effects = ent->client->follow_target->s.effects;
+			ent->s.renderfx = ent->client->follow_target->s.renderfx;
+		}
+	} else
 		G_SetStats(ent);
 
 	G_CheckChaseStats(ent);

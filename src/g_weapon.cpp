@@ -66,7 +66,7 @@ bool fire_hit(gentity_t *self, vec3_t aim, int damage, int kick) {
 	if (!(tr.ent->svflags & SVF_MONSTER) && (!tr.ent->client))
 		return false;
 
-	MS_Adjust(self->owner->client, MSTAT_HITS, 1);
+	//MS_Adjust(self->owner->client, MSTAT_HITS, 1);
 
 	// do our special form of knockback here
 	v = (self->enemy->absmin + self->enemy->absmax) * 0.5f;
@@ -353,6 +353,7 @@ TOUCH(blaster_touch) (gentity_t *ent, gentity_t *other, const trace_t &tr, bool 
 		T_Damage(other, ent, ent->owner, ent->velocity, ent->s.origin, tr.plane.normal, ent->dmg, 1, DAMAGE_ENERGY | DAMAGE_STAT_ONCE, static_cast<mod_id_t>(ent->style));
 
 		MS_Adjust(ent->owner->client, MSTAT_HITS, 1);
+		//MS_Adjust(ent->owner->client, MSTAT_WP_BL_HITS, 1);
 	} else {
 	}
 
@@ -449,6 +450,7 @@ static TOUCH(blaster2_touch) (gentity_t *self, gentity_t *other, const trace_t &
 			self->owner->takedamage = damagestat;
 
 			MS_Adjust(self->owner->client, MSTAT_HITS, 1);
+			//MS_Adjust(self->owner->client, MSTAT_WP_BL_HITS, 1);
 		} else {
 			if (self->dmg >= 5)
 				T_RadiusDamage(self, self->owner, (float)(self->dmg * 2), other, self->splash_radius, DAMAGE_ENERGY, MOD_UNKNOWN);
@@ -585,6 +587,7 @@ static THINK(Grenade_Explode) (gentity_t *ent) -> void {
 		T_Damage(ent->enemy, ent, ent->owner, dir, ent->s.origin, vec3_origin, (int)points, (int)points, DAMAGE_RADIUS | DAMAGE_STAT_ONCE, mod);
 
 		MS_Adjust(ent->owner->client, MSTAT_HITS, 1);
+		//MS_Adjust(ent->owner->client, (mod.id == MOD_HANDGRENADE) ? MSTAT_WP_HG_HITS : MSTAT_WP_GL_HITS, 1);
 	}
 
 	if (ent->spawnflags.has(SPAWNFLAG_GRENADE_HELD))
@@ -817,6 +820,7 @@ TOUCH(rocket_touch) (gentity_t *ent, gentity_t *other, const trace_t &tr, bool o
 		T_Damage(other, ent, ent->owner, ent->velocity, ent->s.origin, tr.plane.normal, ent->dmg, RS(RS_MM) ? 50 : 0, DAMAGE_NONE | DAMAGE_STAT_ONCE, MOD_ROCKET);
 
 		MS_Adjust(ent->owner->client, MSTAT_HITS, 1);
+		//MS_Adjust(ent->owner->client, MSTAT_WP_RL_HITS, 1);
 	} else {
 		// don't throw any debris in net games
 		if (!deathmatch->integer && !coop->integer) {
@@ -3055,11 +3059,11 @@ static THINK(Trap_Think) (gentity_t *ent) -> void {
 			SP_item_foodcube(best);
 			best->s.origin = ent->s.origin;
 			best->s.origin[2] += 24 * best->s.scale;
+			best->s.old_origin = best->s.origin;
 			best->s.angles[YAW] = frandom() * 360;
 			best->velocity[2] = 400;
 			best->think(best);
 			best->nextthink = 0_ms;
-			best->s.old_origin = best->s.origin;
 			gi.linkentity(best);
 
 			gi.sound(best, CHAN_AUTO, gi.soundindex("misc/fhit3.wav"), 1.f, ATTN_NORM, 0.f);
@@ -3111,8 +3115,6 @@ static THINK(Trap_Think) (gentity_t *ent) -> void {
 		if (!deathmatch->integer && target->client)
 			continue;
 		if (target->health <= 0)
-			continue;
-		if (target->client && target->client->eliminated)
 			continue;
 		if (!visible(ent, target))
 			continue;

@@ -10,7 +10,7 @@
 constexpr const char *GAMEVERSION = "baseq2";
 
 constexpr const char *GAMEMOD_TITLE = "Muff Mode BETA";
-constexpr const char *GAMEMOD_VERSION = "0.19.3";
+constexpr const char *GAMEMOD_VERSION = "0.19.50";
 
 //==================================================================
 
@@ -24,13 +24,135 @@ constexpr size_t MAX_CLIENTS_KEX = 32; // absolute limit
 
 enum mstats_t : uint32_t {
 	MSTAT_NONE,
-	MSTAT_KILLS,
-	MSTAT_DEATHS,
+	MSTAT_KILLS_TOTAL,
+	MSTAT_KILLS_SPAWN,
+	MSTAT_DEATHS_TOTAL,
+	MSTAT_DEATHS_SUICIDES,
+	MSTAT_DEATHS_ENVIRO,
+	MSTAT_DEATHS_SPAWN,
 	MSTAT_SHOTS,
 	MSTAT_HITS,
 	MSTAT_DMG_DEALT,
 	MSTAT_DMG_RECEIVED,
 
+	MSTAT_PING_PEAK,
+	MSTAT_PING_TRACKER,
+	MSTAT_PING_TICKS,
+
+	MSTAT_HEALTH_PEAK,
+	MSTAT_HEALTH_TRACKER,
+	MSTAT_HEALTH_TICKS,
+#if 0
+	MSTAT_PKUP_MEGA_COUNT,
+	MSTAT_PKUP_MEGA_TIMER,
+	MSTAT_PKUP_YA_COUNT,
+	MSTAT_PKUP_YA_TIMER,
+	MSTAT_PKUP_RA_COUNT,
+	MSTAT_PKUP_RA_TIMER,
+	MSTAT_PKUP_QUAD_COUNT,
+	MSTAT_PKUP_QUAD_TIMER,
+	MSTAT_PKUP_DOUBLER_COUNT,
+	MSTAT_PKUP_DOUBLER_TIMER,
+	MSTAT_PKUP_PROTECTION_COUNT,
+	MSTAT_PKUP_PROTECTION_TIMER,
+	MSTAT_PKUP_INVIS_COUNT,
+	MSTAT_PKUP_INVIS_TIMER,
+	MSTAT_PKUP_DUELFIRE_COUNT,
+	MSTAT_PKUP_DUELFIRE_TIMER,
+	MSTAT_PKUP_ADRENALINE_COUNT,
+	MSTAT_PKUP_ADRENALINE_TIMER,
+
+	MSTAT_WP_BL_SHOTS,
+	MSTAT_WP_BL_HITS,
+	MSTAT_WP_BL_KILLS,
+	MSTAT_WP_BL_DEATHS,
+	MSTAT_WP_BL_DMGD,
+	MSTAT_WP_BL_DMGR,
+	MSTAT_WP_SG_SHOTS,
+	MSTAT_WP_SG_HITS,
+	MSTAT_WP_SG_KILLS,
+	MSTAT_WP_SG_DEATHS,
+	MSTAT_WP_SG_DMGD,
+	MSTAT_WP_SG_DMGR,
+	MSTAT_WP_SSG_SHOTS,
+	MSTAT_WP_SSG_HITS,
+	MSTAT_WP_SSG_KILLS,
+	MSTAT_WP_SSG_DEATHS,
+	MSTAT_WP_SSG_DMGD,
+	MSTAT_WP_SSG_DMGR,
+	MSTAT_WP_MG_SHOTS,
+	MSTAT_WP_MG_HITS,
+	MSTAT_WP_MG_KILLS,
+	MSTAT_WP_MG_DEATHS,
+	MSTAT_WP_MG_DMGD,
+	MSTAT_WP_MG_DMGR,
+	MSTAT_WP_CG_SHOTS,
+	MSTAT_WP_CG_HITS,
+	MSTAT_WP_CG_KILLS,
+	MSTAT_WP_CG_DEATHS,
+	MSTAT_WP_CG_DMGD,
+	MSTAT_WP_CG_DMGR,
+	MSTAT_WP_HG_SHOTS,
+	MSTAT_WP_HG_HITS,
+	MSTAT_WP_HG_KILLS,
+	MSTAT_WP_HG_DEATHS,
+	MSTAT_WP_HG_DMGD,
+	MSTAT_WP_HG_DMGR,
+	MSTAT_WP_GL_SHOTS,
+	MSTAT_WP_GL_HITS,
+	MSTAT_WP_GL_KILLS,
+	MSTAT_WP_GL_DEATHS,
+	MSTAT_WP_GL_DMGD,
+	MSTAT_WP_GL_DMGR,
+	MSTAT_WP_RL_SHOTS,
+	MSTAT_WP_RL_HITS,
+	MSTAT_WP_RL_KILLS,
+	MSTAT_WP_RL_DEATHS,
+	MSTAT_WP_RL_DMGD,
+	MSTAT_WP_RL_DMGR,
+	MSTAT_WP_HB_SHOTS,
+	MSTAT_WP_HB_HITS,
+	MSTAT_WP_HB_KILLS,
+	MSTAT_WP_HB_DEATHS,
+	MSTAT_WP_HB_DMGD,
+	MSTAT_WP_HB_DMGR,
+	MSTAT_WP_RG_SHOTS,
+	MSTAT_WP_RG_HITS,
+	MSTAT_WP_RG_KILLS,
+	MSTAT_WP_RG_DEATHS,
+	MSTAT_WP_RG_DMGD,
+	MSTAT_WP_RG_DMGR,
+	MSTAT_WP_PB_SHOTS,
+	MSTAT_WP_PB_HITS,
+	MSTAT_WP_PB_KILLS,
+	MSTAT_WP_PB_DEATHS,
+	MSTAT_WP_PB_DMGD,
+	MSTAT_WP_PB_DMGR,
+	MSTAT_WP_TM_SHOTS,
+	MSTAT_WP_TM_HITS,
+	MSTAT_WP_TM_KILLS,
+	MSTAT_WP_TM_DEATHS,
+	MSTAT_WP_TM_DMGD,
+	MSTAT_WP_TM_DMGR,
+	MSTAT_WP_PL_SHOTS,
+	MSTAT_WP_PL_HITS,
+	MSTAT_WP_PL_KILLS,
+	MSTAT_WP_PL_DEATHS,
+	MSTAT_WP_PL_DMGD,
+	MSTAT_WP_PL_DMGR,
+	MSTAT_WP_IR_SHOTS,
+	MSTAT_WP_IR_HITS,
+	MSTAT_WP_IR_KILLS,
+	MSTAT_WP_IR_DEATHS,
+	MSTAT_WP_IR_DMGD,
+	MSTAT_WP_IR_DMGR,
+	MSTAT_WP_BFG_SHOTS,
+	MSTAT_WP_BFG_HITS,
+	MSTAT_WP_BFG_KILLS,
+	MSTAT_WP_BFG_DEATHS,
+	MSTAT_WP_BFG_DMGD,
+	MSTAT_WP_BFG_DMGR,
+#endif
 	MSTAT_TOTAL
 };
 
@@ -114,6 +236,7 @@ enum gtf_t {
 	GTF_ARENA	= 0x04,
 	GTF_ROUNDS	= 0x08,
 	GTF_ELIMINATION	= 0x10,
+	GTF_FRAGS	= 0x20
 };
 
 extern int _gt[GT_NUM_GAMETYPES];
@@ -206,6 +329,19 @@ enum playerspawn_t {
 	SPAWN_FAR_HALF,
 	SPAWN_FARTHEST,
 	SPAWN_NEAREST
+};
+
+enum medal_t : uint8_t {
+	MEDAL_NONE,
+	MEDAL_EXCELLENT,
+	MEDAL_HUMILIATION,
+	MEDAL_IMPRESSIVE,
+	MEDAL_RAMPAGE,
+	MEDAL_DEFENCE,
+	MEDAL_ASSIST,
+	MEDAL_CAPTURE,
+
+	MEDAL_TOTAL
 };
 
 #define	RANK_TIED_FLAG		0x4000
@@ -1050,7 +1186,7 @@ enum item_id_t : int32_t {
 	IT_AMMO_ROUNDS,
 
 	IT_POWERUP_QUAD,
-	IT_POWERUP_DUELFIRE,
+	IT_POWERUP_HASTE,
 	IT_POWERUP_PROTECTION,
 	IT_POWERUP_INVISIBILITY,
 	IT_POWERUP_SILENCER,
@@ -1312,7 +1448,7 @@ struct game_locals_t {
 
 	gametype_t	gametype;
 	std::string motd;
-	int motd_modcount = 0;
+	int motd_mod_count = 0;
 
 	ruleset_t	ruleset;
 
@@ -1515,6 +1651,7 @@ struct level_locals_t {
 	int			num_playing_blue;
 
 	int			team_scores[TEAM_NUM_TEAMS];
+	int			team_old_scores[TEAM_NUM_TEAMS];
 
 	matchst_t	match_state;
 	warmupreq_t	warmup_requisite;
@@ -1573,6 +1710,12 @@ struct level_locals_t {
 
 	gtime_t		timeout_in_place;
 	gentity_t	*timeout_ent;
+
+	std::string match_id;
+
+	bool		frag_warning[3];
+
+	bool		prepare_to_fight;
 };
 
 struct shadow_light_temp_t {
@@ -2266,7 +2409,6 @@ extern cvar_t *g_dm_intermission_shots;
 extern cvar_t *g_dm_item_respawn_rate;
 extern cvar_t *g_dm_no_fall_damage;
 extern cvar_t *g_dm_no_quad_drop;
-extern cvar_t *g_dm_no_quadfire_drop;
 extern cvar_t *g_dm_no_self_damage;
 extern cvar_t *g_dm_no_stack_double;
 extern cvar_t *g_dm_overtime;
@@ -2523,7 +2665,14 @@ bool InCoopStyle();
 gentity_t *ClientEntFromString(const char *in);
 ruleset_t RS_IndexFromString(const char *in);
 void TeleporterVelocity(gentity_t *ent, gvec3_t angles);
+int MS_Value(gclient_t *cl, mstats_t index);
 void MS_Adjust(gclient_t *cl, mstats_t index, int count);
+void MS_AdjustDuo(gclient_t *cl, mstats_t index1, mstats_t index2, int count);
+void MS_Set(gclient_t *cl, mstats_t index, int value);
+const char *stime();
+void AnnouncerSound(gentity_t *ent, const char *announcer_sound, const char *backup_sound, bool use_backup);
+void QLSound(gentity_t *ent, const char *ql_sound, const char *backup_sound, bool use_backup);
+void G_StuffCmd(gentity_t *e, const char *fmt, ...);
 
 //
 // g_spawn.cpp
@@ -2947,8 +3096,6 @@ constexpr gtime_t GRENADE_TIMER = 3_sec;
 constexpr float GRENADE_MINSPEED = 400.f;
 constexpr float GRENADE_MAXSPEED = 800.f;
 
-extern bool is_quad;
-extern bool is_quadfire;
 extern player_muzzle_t is_silenced;
 extern byte damage_multiplier;
 
@@ -3252,6 +3399,15 @@ struct client_persistant_t {
 	bool			holdable_item_msg_adren;
 	bool			holdable_item_msg_tele;
 	bool			holdable_item_msg_doppel;
+
+	gtime_t			medal_time;
+	medal_t			medal_type;
+	uint32_t		medal_count[MEDAL_TOTAL];
+
+	bool			rail_hit;
+	gtime_t			kill_time;
+
+	gtime_t			last_spawn_time;
 };
 
 // player config vars:
@@ -3262,7 +3418,10 @@ struct client_config_t {
 	int				killbeep_num;
 
 	bool			follow_killer;
+	bool			follow_leader;
 	bool			follow_powerup;
+
+	bool			use_expanded;
 };
 
 // client data that stays across deathmatch level changes, handled differently to client_persistent_t
@@ -3325,7 +3484,7 @@ struct client_respawn_t {
 	int					motd_mod_count;
 	bool				showed_help;
 
-	int					rank;
+	int					rank, old_rank;
 
 	char				netname[MAX_NETNAME];
 	gtime_t				team_delay_time;
@@ -3438,7 +3597,7 @@ struct gclient_t {
 
 	// powerup timers
 	gtime_t pu_time_quad;
-	gtime_t pu_time_duelfire;
+	gtime_t pu_time_haste;
 	gtime_t pu_time_double;
 	gtime_t pu_time_protection;
 	gtime_t pu_time_invisibility;
@@ -3463,6 +3622,8 @@ struct gclient_t {
 	gtime_t respawn_min_time; // can't respawn before time > this
 	gtime_t respawn_time; // can respawn when time > this
 
+	gentity_t *follow_queued_target;
+	gtime_t	follow_queued_time;
 	gentity_t *follow_target; // player we are following
 	bool	 follow_update; // need to update follow info?
 

@@ -1057,7 +1057,7 @@ static THINK(barrel_burn) (gentity_t *self) -> void {
 	self->nextthink = level.time + FRAME_TIME_S;
 }
 
-static DIE(barrel_delay) (gentity_t *self, gentity_t *inflictor, gentity_t *attacker, int damage, const vec3_t &point, const mod_t &mod) -> void {
+DIE(barrel_delay) (gentity_t *self, gentity_t *inflictor, gentity_t *attacker, int damage, const vec3_t &point, const mod_t &mod) -> void {
 	// allow "dead" barrels waiting to explode to still receive knockback
 	if (self->think == barrel_burn || self->think == barrel_explode)
 		return;
@@ -1085,7 +1085,7 @@ static THINK(barrel_think) (gentity_t *self) -> void {
 	M_WorldEffects(self);
 }
 
-static THINK(barrel_start) (gentity_t *self) -> void {
+THINK(barrel_start) (gentity_t *self) -> void {
 	M_droptofloor(self);
 	self->think = barrel_think;
 	self->nextthink = level.time + FRAME_TIME_S;

@@ -96,7 +96,7 @@ enum powerup_t : uint8_t {
 	POWERUP_AM_BOMB,
 
 	POWERUP_QUAD,
-	POWERUP_DUELFIRE,
+	POWERUP_HASTE,
 	POWERUP_PROTECTION,
 	POWERUP_INVISIBILITY,
 	POWERUP_SILENCER,
@@ -257,6 +257,8 @@ enum player_stat_t {
 
 	STAT_MONSTER_COUNT,
 	STAT_ROUND_NUMBER,
+
+	STAT_MEDAL,
 
 	// don't use; just for verification
 	STAT_LAST

@@ -1182,14 +1182,14 @@ static void G_Menu_Join_Update(gentity_t *ent) {
 			entries[jmenu_teams_join_red].SelectFunc = G_Menu_Join_Team_Red;
 			entries[jmenu_teams_join_blue].SelectFunc = nullptr;
 		} else {
-			if (level.locked[TEAM_RED] || level.match_state == matchst_t::MATCH_IN_PROGRESS && g_match_lock->integer) {
+			if (level.locked[TEAM_RED] || level.match_state >= matchst_t::MATCH_COUNTDOWN && g_match_lock->integer) {
 				Q_strlcpy(entries[jmenu_teams_join_red].text, G_Fmt("{} is LOCKED during play", Teams_TeamName(TEAM_RED)).data(), sizeof(entries[jmenu_teams_join_red].text));
 				entries[jmenu_teams_join_red].SelectFunc = nullptr;
 			} else {
 				Q_strlcpy(entries[jmenu_teams_join_red].text, G_Fmt("Join {} ({}/{})", Teams_TeamName(TEAM_RED), num_red, floor(pmax / 2)).data(), sizeof(entries[jmenu_teams_join_red].text));
 				entries[jmenu_teams_join_red].SelectFunc = G_Menu_Join_Team_Red;
 			}
-			if (level.locked[TEAM_BLUE] || level.match_state == matchst_t::MATCH_IN_PROGRESS && g_match_lock->integer) {
+			if (level.locked[TEAM_BLUE] || level.match_state >= matchst_t::MATCH_COUNTDOWN && g_match_lock->integer) {
 				Q_strlcpy(entries[jmenu_teams_join_blue].text, G_Fmt("{} is LOCKED during play", Teams_TeamName(TEAM_BLUE)).data(), sizeof(entries[jmenu_teams_join_blue].text));
 				entries[jmenu_teams_join_blue].SelectFunc = nullptr;
 			} else {
@@ -1199,7 +1199,7 @@ static void G_Menu_Join_Update(gentity_t *ent) {
 
 		}
 	} else {
-		if (level.locked[TEAM_FREE] || level.match_state == matchst_t::MATCH_IN_PROGRESS && g_match_lock->integer) {
+		if (level.locked[TEAM_FREE] || level.match_state >= matchst_t::MATCH_COUNTDOWN && g_match_lock->integer) {
 			Q_strlcpy(entries[jmenu_free_join].text, "Match LOCKED during play", sizeof(entries[jmenu_free_join].text));
 			entries[jmenu_free_join].SelectFunc = nullptr;
 		} else if (GT(GT_DUEL) && level.num_playing_clients == 2) {

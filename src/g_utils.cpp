@@ -979,7 +979,7 @@ void TeleportPlayerToRandomSpawnPoint(gentity_t *ent, bool fx) {
 }
 
 bool InCoopStyle() {
-	return coop->integer || GT(GT_HORDE);
+	return coop->integer || GT(GT_HORDE) || GT(GT_RACE);
 }
 
 /*
@@ -1032,14 +1032,124 @@ void TeleporterVelocity(gentity_t *ent, gvec3_t angles) {
 	}
 }
 
-void MS_Adjust(gclient_t *cl, mstats_t index, int count) {
+static bool MS_Validation(gclient_t *cl, mstats_t index) {
+	if (!cl)
+		return false;
+
 	if (index <= MSTAT_NONE || index >= MSTAT_TOTAL) {
 		gi.Com_PrintFmt("invalid match stat index: {}\n", index);
-		return;
+		return false;
 	}
 
 	if (!g_matchstats->integer || level.match_state != matchst_t::MATCH_IN_PROGRESS)
+		return false;
+
+	if (cl->sess.is_a_bot)
+		return false;
+
+	return true;
+}
+
+int MS_Value(gclient_t *cl, mstats_t index) {
+	if (!MS_Validation(cl, index))
+		return 0;
+
+	return cl->resp.mstats[index];
+}
+
+void MS_Adjust(gclient_t *cl, mstats_t index, int count) {
+	if (!MS_Validation(cl, index))
 		return;
 
 	cl->resp.mstats[index] += count;
+}
+
+void MS_AdjustDuo(gclient_t *cl, mstats_t index1, mstats_t index2, int count) {
+	if (!MS_Validation(cl, index1))
+		return;
+
+	cl->resp.mstats[index1] += count;
+	cl->resp.mstats[index2] += count;
+}
+
+void MS_Set(gclient_t *cl, mstats_t index, int value) {
+	if (!MS_Validation(cl, index))
+		return;
+
+	cl->resp.mstats[index] = value;
+}
+
+const char *stime() {
+	struct tm *ltime;
+	time_t gmtime;
+
+	time(&gmtime);
+	ltime = localtime(&gmtime);
+
+	const char *s;
+	s = G_Fmt("{}{:02}{:02}{:02}{:02}{:02}",
+		1900 + ltime->tm_year, ltime->tm_mon + 1, ltime->tm_mday, ltime->tm_hour, ltime->tm_min, ltime->tm_sec
+	).data();
+
+	return s;
+}
+
+void AnnouncerSound(gentity_t *ent, const char *announcer_sound, const char *backup_sound, bool use_backup) {
+	for (auto ec : active_clients()) {
+		if (ent == world || ent == ec || (!ClientIsPlaying(ec->client) && ec->client->follow_target == ent)) {
+			if (ec->client->sess.is_a_bot)
+				continue;
+			if (!ec->client->sess.pc.use_expanded || (announcer_sound == nullptr && use_backup)) {
+				if (backup_sound)
+					gi.local_sound(ec, CHAN_RELIABLE | CHAN_NO_PHS_ADD | CHAN_AUX, gi.soundindex(backup_sound), 1, ATTN_NONE, 0);
+				continue;
+			}
+			//gi.local_sound(ec, CHAN_AUTO | CHAN_RELIABLE, gi.soundindex(announcer_sound), 1, ATTN_NONE, 0);
+			
+			if (ec->client->sess.pc.use_expanded && announcer_sound)
+				gi.local_sound(ec, CHAN_RELIABLE | CHAN_NO_PHS_ADD | CHAN_AUX, gi.soundindex(G_Fmt("vo_evil/{}.wav", announcer_sound).data()), 1, ATTN_NONE, 0);
+		}
+	}
+	//if (announcer_sound && ent == world)
+	//	gi.positioned_sound(world->s.origin, world, CHAN_RELIABLE | CHAN_NO_PHS_ADD | CHAN_AUX, gi.soundindex(G_Fmt("vo_evil/{}.wav", announcer_sound).data()), 1, ATTN_NONE, 0);
+}
+
+
+void QLSound(gentity_t *ent, const char *ql_sound, const char *backup_sound, bool use_backup) {
+	for (auto ec : active_clients()) {
+		if (ent == world || ent == ec || (!ClientIsPlaying(ec->client) && ec->client->follow_target == ent)) {
+			if (ec->client->sess.is_a_bot)
+				continue;
+			if (!ec->client->sess.pc.use_expanded || (ql_sound == nullptr && use_backup)) {
+				if (backup_sound)
+					gi.local_sound(ec, CHAN_RELIABLE | CHAN_NO_PHS_ADD | CHAN_AUX, gi.soundindex(backup_sound), 1, ATTN_NONE, 0);
+				continue;
+			}
+			//gi.local_sound(ec, CHAN_AUTO | CHAN_RELIABLE, gi.soundindex(ql_sound), 1, ATTN_NONE, 0);
+			
+			if (ec->client->sess.pc.use_expanded && ql_sound)
+				gi.local_sound(ec, CHAN_RELIABLE | CHAN_NO_PHS_ADD | CHAN_AUX, gi.soundindex(G_Fmt("{}.wav", ql_sound).data()), 1, ATTN_NONE, 0);
+		}
+	}
+}
+
+void G_StuffCmd(gentity_t *e, const char *fmt, ...) {
+	va_list		argptr;
+	char		text[512];
+
+	if (e && !e->client->pers.connected)
+		gi.Com_ErrorFmt("{}: Bad client %d for '%s'", __FUNCTION__, (int)(e - g_entities - 1), fmt);
+
+	va_start(argptr, fmt);
+	vsnprintf(text, sizeof(text), fmt, argptr);
+	va_end(argptr);
+	text[sizeof(text) - 1] = 0;
+
+	gi.WriteByte(svc_stufftext);
+	gi.WriteString(text);
+
+	if (e)
+		gi.unicast(e, true);
+	else
+		gi.multicast(vec3_origin, MULTICAST_ALL, true);
 }

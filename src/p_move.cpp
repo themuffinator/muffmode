@@ -184,6 +184,10 @@ float pm_laddermod = 0.5f;
 
 */
 
+static float MaxSpeed(pmove_state_t *ps) {
+	return ps->haste ? pm_maxspeed * 1.3 : pm_maxspeed;
+}
+
 /*
 ==================
 PM_ClipVelocity
@@ -595,7 +599,7 @@ static void PM_AddCurrents(vec3_t &wishvel) {
 	if (pm->s.pm_flags & PMF_ON_LADDER) {
 		if (pm->cmd.buttons & (BUTTON_JUMP | BUTTON_CROUCH)) {
 			// [Paril-KEX]: if we're underwater, use full speed on ladders
-			float ladder_speed = pm->waterlevel >= WATER_WAIST ? pm_maxspeed : 200;
+			float ladder_speed = pm->waterlevel >= WATER_WAIST ? MaxSpeed(&pm->s) : 200;
 
 			if (pm->cmd.buttons & BUTTON_JUMP)
 				wishvel[2] = ladder_speed;
@@ -727,6 +731,7 @@ static void PM_WaterMove() {
 	vec3_t wishvel;
 	float  wishspeed;
 	vec3_t wishdir;
+	float maxspeed = MaxSpeed(&pm->s);
 
 	//
 	// user intentions
@@ -750,9 +755,9 @@ static void PM_WaterMove() {
 	wishdir = wishvel;
 	wishspeed = wishdir.normalize();
 
-	if (wishspeed > pm_maxspeed) {
-		wishvel *= pm_maxspeed / wishspeed;
-		wishspeed = pm_maxspeed;
+	if (wishspeed > maxspeed) {
+		wishvel *= maxspeed / wishspeed;
+		wishspeed = maxspeed;
 	}
 	wishspeed *= 0.5f;
 
@@ -795,7 +800,7 @@ static void PM_AirMove() {
 	//
 	// clamp to server defined max speed
 	//
-	maxspeed = (pm->s.pm_flags & PMF_DUCKED) ? pm_duckspeed : pm_maxspeed;
+	maxspeed = (pm->s.pm_flags & PMF_DUCKED) ? pm_duckspeed : MaxSpeed(&pm->s);
 
 	if (wishspeed > maxspeed) {
 		wishvel *= maxspeed / wishspeed;
@@ -1117,6 +1122,7 @@ static void PM_FlyMove(bool doclip) {
 	float	fmove, smove;
 	vec3_t	wishdir;
 	float	wishspeed;
+	float maxspeed = MaxSpeed(&pm->s);
 
 	pm->s.viewheight = doclip ? 0 : 22;
 
@@ -1162,9 +1168,9 @@ static void PM_FlyMove(bool doclip) {
 	//
 	// clamp to server defined max speed
 	//
-	if (wishspeed > pm_maxspeed) {
-		wishvel *= pm_maxspeed / wishspeed;
-		wishspeed = pm_maxspeed;
+	if (wishspeed > maxspeed) {
+		wishvel *= maxspeed / wishspeed;
+		wishspeed = maxspeed;
 	}
 
 	// Paril: newer clients do this

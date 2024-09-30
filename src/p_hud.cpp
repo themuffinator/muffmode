@@ -50,7 +50,7 @@ void MoveClientToIntermission(gentity_t *ent) {
 	ent->client->pu_time_enviro = 0_ms;
 	ent->client->pu_time_invisibility = 0_ms;
 	ent->client->pu_time_regeneration = 0_ms;
-	ent->client->pu_time_duelfire = 0_ms;
+	ent->client->pu_time_haste = 0_ms;
 	ent->client->pu_time_double = 0_ms;
 
 	ent->client->grenade_blew_up = false;
@@ -599,7 +599,7 @@ static void DuelScoreboardMessage(gentity_t *ent, gentity_t *killer) {
 
 			fmt::format_to(std::back_inserter(entry),
 				FMT_STRING("client {} {} {} {} {} {} "),
-				x, y, level.sorted_clients[i], cl->resp.score, cl->ping, (level.time - cl->sess.team_join_time).minutes<int>());
+				x, y, level.sorted_clients[i], cl->resp.score, cl->ping, GT(GT_RACE) ? cl->resp.score : 0);	// (level.time - cl->sess.team_join_time).minutes<int>());
 
 			if (string.length() + entry.length() > MAX_STRING_CHARS)
 				break;
@@ -862,9 +862,10 @@ void DeathmatchScoreboardMessage(gentity_t *ent, gentity_t *killer) {
 
 		fmt::format_to(std::back_inserter(string), FMT_STRING("ifgef {} yb -48 xv 0 loc_cstring2 0 \"$m_eou_press_button\" endif "), (level.intermission_server_frame + (5_sec).frames()));
 	} else if (level.match_state == MATCH_IN_PROGRESS) {
+		const char *score = (g_gametype->integer == GT_RACE) ? G_TimeStringMs(ent->client->resp.score, false) : G_Fmt("{}", ent->client->resp.score).data();
 		if (ent->client && ClientIsPlaying(ent->client) && ent->client->resp.score && level.num_playing_clients > 1) {
 			fmt::format_to(std::back_inserter(string), FMT_STRING("xv 0 yv -10 cstring2 \"{} place with a score of {}\" "),
-				G_PlaceString(ent->client->resp.rank + 1), ent->client->resp.score);
+				G_PlaceString(ent->client->resp.rank + 1), score);
 		}
 		//if (fraglimit->integer && !(GTF(GTF_ROUNDS)))
 		//	fmt::format_to(std::back_inserter(string), FMT_STRING("xv -20 yv -10 loc_string2 1 $g_score_frags \"{}\" "), fraglimit->integer);
@@ -1099,7 +1100,7 @@ struct powerup_info_t {
 	int32_t gclient_t:: *count_ptr = nullptr;
 } powerup_table[] = {
 	{ IT_POWERUP_QUAD, &gclient_t::pu_time_quad },
-	{ IT_POWERUP_DUELFIRE, &gclient_t::pu_time_duelfire },
+	{ IT_POWERUP_HASTE, &gclient_t::pu_time_haste },
 	{ IT_POWERUP_DOUBLE, &gclient_t::pu_time_double },
 	{ IT_POWERUP_PROTECTION, &gclient_t::pu_time_protection },
 	{ IT_POWERUP_INVISIBILITY, &gclient_t::pu_time_invisibility },
@@ -1845,7 +1846,11 @@ void G_SetStats(gentity_t *ent) {
 				break;
 			case matchst_t::MATCH_WARMUP_DEFAULT:
 			case matchst_t::MATCH_WARMUP_READYUP:
-				s1 = "WARMUP";
+				if (GT(GT_RACE)) {
+					gtime_t t2 = (level.time - ent->client->pers.last_spawn_time);
+					s1 = G_Fmt("WARMUP ({})", G_TimeStringMs(t2.milliseconds(), false)).data();
+				} else
+					s1 = "WARMUP";
 				break;
 			case matchst_t::MATCH_COUNTDOWN:
 				s1 = "COUNTDOWN";
@@ -1853,7 +1858,7 @@ void G_SetStats(gentity_t *ent) {
 			default: {
 				if (level.timeout_in_place > 0_ms) {
 					int t2 = (level.timeout_in_place).milliseconds();
-					s1 = G_Fmt("TIMEOUT! ({})", G_TimeString(t, false)).data();
+					s1 = G_Fmt("TIMEOUT! ({})", G_TimeString(t2, false)).data();
 				} else if (t < 0 && t >= -4) {
 					s1 = "OVERTIME!";
 				} else if (GTF(GTF_ROUNDS)) {
@@ -1866,7 +1871,11 @@ void G_SetStats(gentity_t *ent) {
 						s1 = "";
 					}
 				} else {
-					s1 = G_TimeString(t, false);
+					if (GT(GT_RACE)) {
+						gtime_t t2 = (level.time - ent->client->pers.last_spawn_time);
+						s1 = G_Fmt("{} ({})", G_TimeString(t, false), G_TimeStringMs(t2.milliseconds(), false)).data();
+					} else
+						s1 = G_TimeString(t, false);
 				}
 				break;
 			}
@@ -1894,6 +1903,12 @@ void G_SetStats(gentity_t *ent) {
 		}
 	} else {
 		ent->client->ps.stats[STAT_MATCH_STATE] = 0;
+	}
+	
+	if (ent->client->pers.medal_time + 3_sec > level.time) {
+		ent->client->ps.stats[STAT_CHASE] = 0;	// CONFIG_TEAMINFO;
+	} else {
+		ent->client->ps.stats[STAT_CHASE] = 0;
 	}
 
 }

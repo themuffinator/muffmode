@@ -528,7 +528,7 @@ static void Cmd_TimeIn_f(gentity_t *ent) {
 		return;
 	}
 
-	gi.Broadcast_Print(PRINT_HIGH, "Admin is resuming the match.\n");
+	gi.LocBroadcast_Print(PRINT_HIGH, "{} is resuming the match.\n", ent->client->pers.netname);
 	level.timeout_in_place = 3_sec;
 }
 
@@ -640,7 +640,9 @@ static void Cmd_Use_f(gentity_t *ent) {
 		it = GetItemByIndex((item_id_t)atoi(s));
 	} else {
 		if (!strcmp(s, "holdable")) {
-			if (ent->client->pers.inventory[IT_DOPPELGANGER])
+			if (ent->client->pers.inventory[IT_AMMO_NUKE])
+				it = GetItemByIndex(IT_AMMO_NUKE);
+			else if (ent->client->pers.inventory[IT_DOPPELGANGER])
 				it = GetItemByIndex(IT_DOPPELGANGER);
 			else if (ent->client->pers.inventory[IT_TELEPORTER])
 				it = GetItemByIndex(IT_TELEPORTER);
@@ -665,6 +667,9 @@ static void Cmd_Use_f(gentity_t *ent) {
 	}
 	index = it->id;
 
+	if (IsCombatDisabled() && !(it->flags & IF_WEAPON))
+		return;
+
 	// Paril: Use_Weapon handles weapon availability
 	if (!(it->flags & IF_WEAPON) && !ent->client->pers.inventory[index]) {
 		gi.LocClient_Print(ent, PRINT_HIGH, "$g_out_of_item", it->pickup_name);
@@ -678,78 +683,7 @@ static void Cmd_Use_f(gentity_t *ent) {
 
 	ValidateSelectedItem(ent);
 }
-#if 0
-void DropPOI(gentity_t *ent) {
-	vec3_t start, dir;
-	P_ProjectSource(ent, ent->client->v_angle, { 0, 0, 0 }, start, dir);
 
-	// see who we're aiming at
-	gentity_t *aiming_at = nullptr;
-	float best_dist = -9999;
-
-	for (auto player : active_clients()) {
-		if (player == ent)
-			continue;
-
-		vec3_t cdir = player->s.origin - start;
-		float dist = cdir.normalize();
-
-		float dot = ent->client->v_forward.dot(cdir);
-
-		if (dot < 0.97)
-			continue;
-		else if (dist < best_dist)
-			continue;
-
-		best_dist = dist;
-		aiming_at = player;
-	}
-
-
-	bool has_a_target = false;
-
-	if (i == GESTURE_POINT) {
-		for (auto player : active_clients()) {
-			if (player == ent)
-				continue;
-			else if (!OnSameTeam(ent, player))
-				continue;
-
-			has_a_target = true;
-			break;
-		}
-	}
-
-	if (i == GESTURE_POINT && has_a_target) {
-		// don't do this stuff if we're flooding
-		if (CheckFlood(ent))
-			return;
-
-		trace_t tr = gi.traceline(start, start + (ent->client->v_forward * 2048), ent, MASK_SHOT & ~CONTENTS_WINDOW);
-
-		uint32_t key = GetUnicastKey();
-
-		if (tr.fraction != 1.0f) {
-			// send to all teammates
-			for (auto player : active_clients()) {
-				if (player != ent && !OnSameTeam(ent, player))
-					continue;
-
-				gi.WriteByte(svc_poi);
-				gi.WriteShort(POI_PING + (ent->s.number - 1));
-				gi.WriteShort(5000);
-				gi.WritePosition(tr.endpos);
-				gi.WriteShort(level.pic_ping);
-				gi.WriteByte(208);
-				gi.WriteByte(POI_FLAG_NONE);
-				gi.unicast(player, false);
-
-				gi.local_sound(player, CHAN_AUTO, gi.soundindex("misc/help_marker.wav"), 1.0f, ATTN_NONE, 0.0f, key);
-			}
-		}
-	}
-}
-#endif
 /*
 ==================
 Cmd_Drop_f
@@ -843,17 +777,21 @@ static void Cmd_Drop_f(gentity_t *ent) {
 		uint32_t key = GetUnicastKey();
 
 		for (auto ec : active_clients()) {
-			if (!OnSameTeam(ent, ec))
-				continue;
-
 			if (ent == ec)
 				continue;
-
+			if (ClientIsPlaying(ec->client) && !OnSameTeam(ent, ec))
+				continue;
+			if (!ClientIsPlaying(ec->client) && !ec->client->follow_target)
+				continue;
+			if (!ClientIsPlaying(ec->client) && ec->client->follow_target && !OnSameTeam(ent, ec->client->follow_target))
+				continue;
+			if (!ClientIsPlaying(ec->client) && ec->client->follow_target && ent == ec->client->follow_target)
+				continue;
+			
 			gi.WriteByte(svc_poi);
 			gi.WriteShort(POI_PING + (ent->s.number - 1));
 			gi.WriteShort(5000);
 			gi.WritePosition(ent->s.origin);
-			//gi.WriteShort(level.pic_ping);
 			gi.WriteShort(gi.imageindex(it->icon));
 			gi.WriteByte(215);
 			gi.WriteByte(POI_FLAG_NONE);
@@ -1131,6 +1069,12 @@ static void Cmd_Kill_f(gentity_t *ent) {
 
 	if (IsCombatDisabled())
 		return;
+
+	if (GT(GT_RACE)) {
+		ClientSpawn(ent);
+		G_PostRespawn(ent);
+		return;
+	}
 
 	ent->flags &= ~FL_GODMODE;
 	ent->health = 0;
@@ -2136,21 +2080,6 @@ static void StopFollowing(gentity_t *ent, bool release) {
 	ent->client->ps.rdflags = RDF_NONE;
 }
 
-static int itime() {
-	struct tm *ltime;
-	time_t gmtime;
-	
-	time(&gmtime);
-	ltime = localtime(&gmtime);
-
-	const char *s;
-	s = G_Fmt("{}{:02}{:02}{:02}{:02}{:02}",
-		1900 + ltime->tm_year, ltime->tm_mon + 1, ltime->tm_mday, ltime->tm_hour, ltime->tm_min, ltime->tm_sec
-	).data();
-
-	return strtoul(s, nullptr, 10);
-}
-
 /*
 =================
 SetTeam
@@ -2163,7 +2092,7 @@ bool SetTeam(gentity_t *ent, team_t desired_team, bool inactive, bool force, boo
 	if (!force) {
 		if (!ClientIsPlaying(ent->client) && desired_team != TEAM_SPECTATOR) {
 			bool revoke = false;
-			if (level.match_state == matchst_t::MATCH_IN_PROGRESS && g_match_lock->integer) {
+			if (level.match_state >= matchst_t::MATCH_COUNTDOWN && g_match_lock->integer) {
 				gi.LocClient_Print(ent, PRINT_HIGH, "Match is locked whilst in progress, no joining permitted now.\n");
 				revoke = true;
 			} else if (level.num_playing_human_clients >= maxplayers->integer) {
@@ -2225,7 +2154,7 @@ bool SetTeam(gentity_t *ent, team_t desired_team, bool inactive, bool force, boo
 	ent->client->resp.ctf_state = 0;
 	ent->client->sess.inactive = inactive;
 	ent->client->sess.inactivity_time = level.time + 1_min;
-	ent->client->sess.team_join_time = level.time;
+	ent->client->sess.team_join_time = desired_team == TEAM_SPECTATOR ? 0_sec : level.time;
 	ent->client->resp.team_delay_time = force || !ent->client->sess.initialised ? level.time : level.time + 5_sec;
 	ent->client->sess.spectator_state = desired_team == TEAM_SPECTATOR ? SPECTATOR_FREE : SPECTATOR_NOT;
 	ent->client->sess.spectator_client = 0;
@@ -2323,6 +2252,16 @@ Cmd_FragMessages_f
 static void Cmd_FragMessages_f(gentity_t *ent) {
 	ent->client->sess.pc.show_fragmessages ^= true;
 	gi.LocClient_Print(ent, PRINT_HIGH, "{} frag messages.\n", ent->client->sess.pc.show_fragmessages ? "Activating" : "Disabling");
+}
+
+/*
+=================
+Cmd_Announcer_f
+=================
+*/
+static void Cmd_Announcer_f(gentity_t *ent) {
+	ent->client->sess.pc.use_expanded ^= true;
+	gi.LocClient_Print(ent, PRINT_HIGH, "Match announcer: {}\n", ent->client->sess.pc.use_expanded ? "ON" : "OFF");
 }
 
 /*
@@ -2786,12 +2725,13 @@ void VoteCommandStore(gentity_t *ent) {
 		ec->client->pers.voted = ec == ent ? 1 : 0;
 
 	ent->client->pers.vote_count++;
+	AnnouncerSound(world, "vote_now", "misc/pc_up.wav", true);
 
 	for (auto ec : active_players()) {
 		if (ec->svflags & SVF_BOT)
 			continue;
 
-		gi.local_sound(ec, CHAN_AUTO, gi.soundindex("misc/pc_up.wav"), 1, ATTN_NONE, 0);
+		//gi.local_sound(ec, CHAN_AUTO, gi.soundindex("misc/pc_up.wav"), 1, ATTN_NONE, 0);
 
 		if (ec->client == level.vote_client)
 			continue;
@@ -2978,6 +2918,23 @@ Cmd_FollowKiller_f
 static void Cmd_FollowKiller_f(gentity_t *ent) {
 	ent->client->sess.pc.follow_killer ^= true;
 	gi.LocClient_Print(ent, PRINT_HIGH, "Auto-follow killer: {}\n", ent->client->sess.pc.follow_killer ? "ON" : "OFF");
+}
+
+/*
+=================
+Cmd_FollowLeader_f
+=================
+*/
+static void Cmd_FollowLeader_f(gentity_t *ent) {
+	gentity_t *leader = &g_entities[level.sorted_clients[0] + 1];
+	ent->client->sess.pc.follow_leader ^= true;
+	gi.LocClient_Print(ent, PRINT_HIGH, "Auto-follow leader: {}\n", ent->client->sess.pc.follow_leader ? "ON" : "OFF");
+
+	if (!ClientIsPlaying(ent->client) && ent->client->sess.pc.follow_leader && ent->client->follow_target != leader) {
+		ent->client->follow_target = leader;
+		ent->client->follow_update = true;
+		UpdateChaseCam(ent);
+	}
 }
 
 /*
@@ -3538,6 +3495,7 @@ static void Cmd_Motd_f(gentity_t *ent) {
 cmds_t client_cmds[] = {
 	{"admin",			Cmd_Admin_f,			CF_ALLOW_INT | CF_ALLOW_SPEC},
 	{"alertall",		Cmd_AlertAll_f,			CF_ALLOW_SPEC | CF_CHEAT_PROTECT},
+	{"announcer",		Cmd_Announcer_f,		CF_ALLOW_SPEC | CF_ALLOW_DEAD},
 	{"balance",			Cmd_BalanceTeams_f,		CF_ADMIN_ONLY | CF_ALLOW_INT | CF_ALLOW_SPEC},
 	{"boot",			Cmd_Boot_f,				CF_ADMIN_ONLY | CF_ALLOW_INT | CF_ALLOW_SPEC},
 	{"callvote",		Cmd_CallVote_f,			CF_ALLOW_DEAD | CF_ALLOW_SPEC},
@@ -3550,6 +3508,7 @@ cmds_t client_cmds[] = {
 	{"fm",				Cmd_FragMessages_f,		CF_ALLOW_SPEC | CF_ALLOW_DEAD},
 	{"follow",			Cmd_Follow_f,			CF_ALLOW_SPEC | CF_ALLOW_DEAD},
 	{"followkiller",	Cmd_FollowKiller_f,		CF_ALLOW_SPEC | CF_ALLOW_DEAD},
+	{"followleader",	Cmd_FollowLeader_f,		CF_ALLOW_SPEC | CF_ALLOW_DEAD},
 	{"followpowerup",	Cmd_FollowPowerup_f,	CF_ALLOW_SPEC | CF_ALLOW_DEAD},
 	{"forcevote",		Cmd_ForceVote_f,		CF_ADMIN_ONLY | CF_ALLOW_INT | CF_ALLOW_SPEC},
 	{"forfeit",			Cmd_Forfeit_f,			CF_ALLOW_DEAD},
@@ -3608,7 +3567,7 @@ cmds_t client_cmds[] = {
 	{"team",			Cmd_Team_f,				CF_ALLOW_DEAD | CF_ALLOW_SPEC},
 	{"teleport",		Cmd_Teleport_f,			CF_ALLOW_SPEC | CF_CHEAT_PROTECT},
 	{"time-out",		Cmd_TimeOut_f,			CF_ALLOW_DEAD | CF_ALLOW_SPEC},
-	{"time-in",			Cmd_TimeIn_f,			CF_ADMIN_ONLY | CF_ALLOW_DEAD | CF_ALLOW_SPEC},
+	{"time-in",			Cmd_TimeIn_f,			CF_ALLOW_DEAD | CF_ALLOW_SPEC},
 	{"timer",			Cmd_Timer_f,			CF_ALLOW_SPEC | CF_ALLOW_DEAD},
 	{"unhook",			Cmd_UnHook_f,			CF_NONE},
 	{"unlockteam",		Cmd_UnlockTeam_f,		CF_ADMIN_ONLY | CF_ALLOW_INT | CF_ALLOW_SPEC},

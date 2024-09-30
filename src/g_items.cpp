@@ -31,8 +31,8 @@ void Weapon_ProxLauncher(gentity_t *ent);
 
 void	   Use_Quad(gentity_t *ent, gitem_t *item);
 static gtime_t quad_drop_timeout_hack;
-void	   Use_DuelFire(gentity_t *ent, gitem_t *item);
-static gtime_t duelfire_drop_timeout_hack;
+void	   Use_Haste(gentity_t *ent, gitem_t *item);
+static gtime_t haste_drop_timeout_hack;
 void	   Use_Double(gentity_t *ent, gitem_t *item);
 static gtime_t double_drop_timeout_hack;
 void	   Use_Invisibility(gentity_t *ent, gitem_t *item);
@@ -1467,10 +1467,11 @@ THINK(RespawnItem) (gentity_t *ent) -> void {
 
 	if ((RS(RS_MM) || RS(RS_Q3A)) && deathmatch->integer) {
 		if (ent->item->flags & IF_POWERUP) {
-			if (RS(RS_MM))
-				gi.LocBroadcast_Print(PRINT_HIGH, "{} has spawned!\n", ent->item->pickup_name);
+			//if (RS(RS_MM))
+			//	gi.LocBroadcast_Print(PRINT_HIGH, "{} has spawned!\n", ent->item->pickup_name);
 
-			gi.sound(ent, CHAN_RELIABLE | CHAN_NO_PHS_ADD | CHAN_AUX, gi.soundindex("misc/alarm.wav"), 1, ATTN_NONE, 0);
+			//gi.sound(ent, CHAN_RELIABLE | CHAN_NO_PHS_ADD | CHAN_AUX, gi.soundindex("misc/alarm.wav"), 1, ATTN_NONE, 0);	//poweruprespawn
+			QLSound(ent, "items/poweruprespawn", "misc/alarm.wav", true);
 		}
 	}
 }
@@ -1592,6 +1593,8 @@ static bool Pickup_Powerup(gentity_t *ent, gentity_t *other) {
 	other->client->pers.inventory[ent->item->id]++;
 	
 	if (g_quadhog->integer && ent->item->id == IT_POWERUP_QUAD) {
+		if (ent->item->use)
+			ent->item->use(other, ent->item);
 		G_FreeEntity(ent);
 		return true;
 	}
@@ -1606,8 +1609,8 @@ static bool Pickup_Powerup(gentity_t *ent, gentity_t *other) {
 			quad_drop_timeout_hack = t;
 			use = true;
 			break;
-		case IT_POWERUP_DUELFIRE:
-			duelfire_drop_timeout_hack = t;
+		case IT_POWERUP_HASTE:
+			haste_drop_timeout_hack = t;
 			use = true;
 			break;
 		case IT_POWERUP_PROTECTION:
@@ -1882,8 +1885,8 @@ static void Drop_General(gentity_t *ent, gitem_t *item) {
 		case IT_POWERUP_QUAD:
 			ent->client->pu_time_quad = 0_ms;
 			break;
-		case IT_POWERUP_DUELFIRE:
-			ent->client->pu_time_duelfire = 0_ms;
+		case IT_POWERUP_HASTE:
+			ent->client->pu_time_haste = 0_ms;
 			break;
 		case IT_POWERUP_PROTECTION:
 			ent->client->pu_time_protection = 0_ms;
@@ -2058,17 +2061,17 @@ static bool Pickup_Pack(gentity_t *ent, gentity_t *other) {
 
 //======================================================================
 
-static void Use_Powerup_BroadcastMsg(gentity_t *ent, gitem_t *item, const char *sound_name) {
+static void Use_Powerup_BroadcastMsg(gentity_t *ent, gitem_t *item, const char *sound_name, const char *announcer_name) {
 	if (deathmatch->integer) {
-		//if (RS(RS_MM)) {
-			if (g_quadhog->integer && item->id == IT_POWERUP_QUAD) {
-				gi.LocBroadcast_Print(PRINT_CENTER, "{} is the Quad Hog!\n", ent->client->resp.netname);
-			//} else {
-			//	gi.LocBroadcast_Print(PRINT_HIGH, "{} got the {}!\n", ent->client->resp.netname, item->pickup_name);
-			}
-		//}
-		if (RS(RS_MM) || RS(RS_Q3A))
+		if (g_quadhog->integer && item->id == IT_POWERUP_QUAD) {
+			gi.LocBroadcast_Print(PRINT_CENTER, "{} is the Quad Hog!\n", ent->client->resp.netname);
+		//} else {
+		//	gi.LocBroadcast_Print(PRINT_HIGH, "{} got the {}!\n", ent->client->resp.netname, item->pickup_name);
+		}
+		if (RS(RS_MM) || RS(RS_Q3A)) {
 			gi.sound(ent, CHAN_RELIABLE | CHAN_NO_PHS_ADD | CHAN_AUX, gi.soundindex(sound_name), 1, ATTN_NONE, 0);
+			AnnouncerSound(world, announcer_name, nullptr, false);
+		}
 	}
 }
 
@@ -2086,25 +2089,25 @@ void Use_Quad(gentity_t *ent, gitem_t *item) {
 
 	ent->client->pu_time_quad = max(level.time, ent->client->pu_time_quad) + timeout;
 
-	Use_Powerup_BroadcastMsg(ent, item, "items/damage.wav");
+	Use_Powerup_BroadcastMsg(ent, item, "items/damage.wav", "quad_damage");
 }
 // =====================================================================
 
-void Use_DuelFire(gentity_t *ent, gitem_t *item) {
+void Use_Haste(gentity_t *ent, gitem_t *item) {
 	gtime_t timeout;
 
 	ent->client->pers.inventory[item->id]--;
 
-	if (duelfire_drop_timeout_hack) {
-		timeout = duelfire_drop_timeout_hack;
-		duelfire_drop_timeout_hack = 0_ms;
+	if (haste_drop_timeout_hack) {
+		timeout = haste_drop_timeout_hack;
+		haste_drop_timeout_hack = 0_ms;
 	} else {
 		timeout = 30_sec;
 	}
 
-	ent->client->pu_time_duelfire = max(level.time, ent->client->pu_time_duelfire) + timeout;
+	ent->client->pu_time_haste = max(level.time, ent->client->pu_time_haste) + timeout;
 
-	Use_Powerup_BroadcastMsg(ent, item, "items/quadfire1.wav");
+	Use_Powerup_BroadcastMsg(ent, item, "items/quadfire1.wav", "haste");
 }
 
 //======================================================================
@@ -2123,7 +2126,7 @@ static void Use_Double(gentity_t *ent, gitem_t *item) {
 
 	ent->client->pu_time_double = max(level.time, ent->client->pu_time_double) + timeout;
 
-	Use_Powerup_BroadcastMsg(ent, item, "misc/ddamage1.wav");
+	Use_Powerup_BroadcastMsg(ent, item, "misc/ddamage1.wav", nullptr);
 }
 
 //======================================================================
@@ -2156,7 +2159,7 @@ static void Use_Protection(gentity_t *ent, gitem_t *item) {
 
 	ent->client->pu_time_protection = max(level.time, ent->client->pu_time_protection) + timeout;
 
-	Use_Powerup_BroadcastMsg(ent, item, "items/protect.wav");
+	Use_Powerup_BroadcastMsg(ent, item, "items/protect.wav", "battlesuit");
 }
 
 //======================================================================
@@ -2219,7 +2222,7 @@ static void Use_Regeneration(gentity_t *ent, gitem_t *item) {
 
 	ent->client->pu_time_regeneration = max(level.time, ent->client->pu_time_regeneration) + timeout;
 
-	Use_Powerup_BroadcastMsg(ent, item, "items/protect.wav");
+	Use_Powerup_BroadcastMsg(ent, item, "items/protect.wav", "regeneration");
 }
 
 static void Use_Invisibility(gentity_t *ent, gitem_t *item) {
@@ -2236,7 +2239,7 @@ static void Use_Invisibility(gentity_t *ent, gitem_t *item) {
 
 	ent->client->pu_time_invisibility = max(level.time, ent->client->pu_time_invisibility) + timeout;
 
-	Use_Powerup_BroadcastMsg(ent, item, "items/protect.wav");
+	Use_Powerup_BroadcastMsg(ent, item, "items/protect.wav", "invisibility");
 }
 
 //======================================================================
@@ -2759,7 +2762,7 @@ TOUCH(Touch_Item) (gentity_t *ent, gentity_t *other, const trace_t &tr, bool oth
 			case IT_POWERUP_QUAD:
 			case IT_POWERUP_DOUBLE:
 			case IT_POWERUP_PROTECTION:
-			case IT_POWERUP_DUELFIRE:
+			case IT_POWERUP_HASTE:
 			case IT_POWERUP_INVISIBILITY:
 			case IT_POWERUP_REGEN:
 			case IT_FLAG_RED:
@@ -2769,21 +2772,24 @@ TOUCH(Touch_Item) (gentity_t *ent, gentity_t *other, const trace_t &tr, bool oth
 				for (auto ec : active_clients()) {
 					if (other == ec)
 						continue;
+					if (ent == ec)
+						continue;
+					if (ClientIsPlaying(ec->client) && !OnSameTeam(ent, ec))
+						continue;
+					if (!ClientIsPlaying(ec->client) && ec->client->follow_target && !OnSameTeam(ent, ec->client->follow_target))
+						continue;
 
-					if (!ClientIsPlaying(ec->client) || (Teams() && ec->client->sess.team == other->client->sess.team)) {
-						gi.WriteByte(svc_poi);
-						gi.WriteShort(POI_PING + (ent->s.number - 1));
-						gi.WriteShort(5000);
-						gi.WritePosition(other->s.origin);
-						//gi.WriteShort(level.pic_ping);
-						gi.WriteShort(gi.imageindex(it->icon));
-						gi.WriteByte(215);
-						gi.WriteByte(POI_FLAG_NONE);
-						gi.unicast(ec, false);
-						gi.local_sound(ec, CHAN_AUTO, gi.soundindex("misc/help_marker.wav"), 1.0f, ATTN_NONE, 0.0f, key);
+					gi.WriteByte(svc_poi);
+					gi.WriteShort(POI_PING + (ent->s.number - 1));
+					gi.WriteShort(5000);
+					gi.WritePosition(other->s.origin);
+					gi.WriteShort(gi.imageindex(it->icon));
+					gi.WriteByte(215);
+					gi.WriteByte(POI_FLAG_NONE);
+					gi.unicast(ec, false);
+					gi.local_sound(ec, CHAN_AUTO, gi.soundindex("misc/help_marker.wav"), 1.0f, ATTN_NONE, 0.0f, key);
 
-						gi.LocClient_Print(ec, PRINT_TTS, G_Fmt("{}{} got the {}.\n", ec->client->sess.team != TEAM_SPECTATOR ? "[TEAM]: " : "", other->client->resp.netname, it->use_name).data());
-					}
+					gi.LocClient_Print(ec, PRINT_TTS, G_Fmt("{}{} got the {}.\n", ec->client->sess.team != TEAM_SPECTATOR ? "[TEAM]: " : "", other->client->resp.netname, it->use_name).data());
 				}
 
 				//BroadcastFriendlyMessage(other->client->sess.team, G_Fmt("{} got the {}.\n", other->client->resp.netname, it->use_name).data());
@@ -4596,10 +4602,10 @@ model="models/items/quaddama/tris.md2"
 model="models/items/quadfire/tris.md2"
 */
 	{
-		/* id */ IT_POWERUP_DUELFIRE,
+		/* id */ IT_POWERUP_HASTE,
 		/* classname */ "item_quadfire",
 		/* pickup */ Pickup_Powerup,
-		/* use */ Use_DuelFire,
+		/* use */ Use_Haste,
 		/* drop */ Drop_General,
 		/* weaponthink */ nullptr,
 		/* pickup_sound */ "items/pkup.wav",
@@ -4607,16 +4613,16 @@ model="models/items/quadfire/tris.md2"
 		/* world_model_flags */ EF_ROTATE | EF_BOB,
 		/* view_model */ nullptr,
 		/* icon */ "p_quadfire",
-		/* use_name */  "DualFire Damage",
-		/* pickup_name */  "$item_dualfire_damage",
-		/* pickup_name_definite */ "$item_dualfire_damage_def",
+		/* use_name */  "Haste",
+		/* pickup_name */  "Haste",
+		/* pickup_name_definite */ "Haste",
 		/* quantity */ 60,
 		/* ammo */ IT_NULL,
 		/* chain */ IT_NULL,
 		/* flags */ IF_POWERUP | IF_POWERUP_WHEEL,
 		/* vwep_model */ nullptr,
 		/* armor_info */ nullptr,
-		/* tag */ POWERUP_DUELFIRE,
+		/* tag */ POWERUP_HASTE,
 		/* precaches */ "items/quadfire1.wav items/quadfire2.wav items/quadfire3.wav"
 	},
 

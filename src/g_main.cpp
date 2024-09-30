@@ -121,7 +121,6 @@ cvar_t *g_dm_intermission_shots;
 cvar_t *g_dm_item_respawn_rate;
 cvar_t *g_dm_no_fall_damage;
 cvar_t *g_dm_no_quad_drop;
-cvar_t *g_dm_no_quadfire_drop;
 cvar_t *g_dm_no_self_damage;
 cvar_t *g_dm_no_stack_double;
 cvar_t *g_dm_overtime;
@@ -253,9 +252,9 @@ void InitSave();
 
 int _gt[] = {
 	/* GT_NONE */ 0,
-	/* GT_FFA */ 0,
-	/* GT_DUEL */ 0,
-	/* GT_TDM */ GTF_TEAMS,
+	/* GT_FFA */ GTF_FRAGS,
+	/* GT_DUEL */ GTF_FRAGS,
+	/* GT_TDM */ GTF_TEAMS | GTF_FRAGS,
 	/* GT_CTF */ GTF_TEAMS | GTF_CTF,
 	/* GT_CA */ GTF_TEAMS | GTF_ARENA | GTF_ROUNDS | GTF_ELIMINATION,
 	/* GT_FREEZE */ GTF_TEAMS | GTF_ELIMINATION,
@@ -579,7 +578,7 @@ void G_LoadMOTD() {
 		
 		if (valid) {
 			game.motd = (const char *)buffer;
-			game.motd_modcount++;
+			game.motd_mod_count++;
 			if (g_verbose->integer)
 				gi.Com_PrintFmt("{}: MotD file verified and loaded: \"{}\"\n", __FUNCTION__, name);
 		} else {
@@ -978,7 +977,6 @@ static void InitGame() {
 	g_dm_item_respawn_rate = gi.cvar("g_dm_item_respawn_rate", "1.0", CVAR_NOFLAGS);
 	g_dm_no_fall_damage = gi.cvar("g_dm_no_fall_damage", "0", CVAR_NOFLAGS);
 	g_dm_no_quad_drop = gi.cvar("g_dm_no_quad_drop", "0", CVAR_NOFLAGS);
-	g_dm_no_quadfire_drop = gi.cvar("g_dm_no_quadfire_drop", "0", CVAR_NOFLAGS);
 	g_dm_no_self_damage = gi.cvar("g_dm_no_self_damage", "0", CVAR_NOFLAGS);
 	g_dm_no_stack_double = gi.cvar("g_dm_no_stack_double", "0", CVAR_NOFLAGS);
 	g_dm_overtime = gi.cvar("g_dm_overtime", "120", CVAR_NOFLAGS);
@@ -1231,6 +1229,7 @@ static void Entities_Reset(bool reset_players, bool reset_ghost, bool reset_scor
 
 				ec->client->eliminated = false;
 				ec->client->respawn_time = level.time;	// +random_time(1_sec, 4_sec);
+				ec->client->pers.last_spawn_time = level.time;
 				ec->client->ps.pmove.pm_type = PM_DEAD;
 				ec->client->anim_priority = ANIM_DEATH;
 				ec->s.frame = FRAME_death308 - 1;
@@ -1417,6 +1416,8 @@ static bool Round_StartNew() {
 			gi.LocBroadcast_Print(PRINT_CENTER, "{} {}\nBegins in...", horde ? "Wave" : "Round", round_num);
 	}
 
+	AnnouncerSound(world, "round_begins_in", nullptr, false);
+
 	return true;
 }
 
@@ -1440,6 +1441,18 @@ void Round_End() {
 	level.round_state = roundst_t::ROUND_ENDED;
 	level.round_state_timer = level.time + 3_sec;
 	level.horde_all_spawned = false;
+}
+
+/*
+=============
+SetMatchID
+=============
+*/
+static void SetMatchID() {
+	//level.match_id = gt_short_name_upper[g_gametype->integer];
+	//level.match_id += "-";
+	level.match_id = stime();
+	level.match_id = stime();
 }
 
 /*
@@ -1474,7 +1487,9 @@ void Match_Start() {
 	Entities_Reset(true, true, true);
 	UnReadyAll();
 
-	gi.LocBroadcast_Print(PRINT_TTS, "The match has started!\n");
+	SetMatchID();
+
+	gi.LocBroadcast_Print(PRINT_TTS, "Match ID: {}\n", level.match_id.c_str());
 
 	if (GT(GT_STRIKE))
 		level.strike_red_attacks = brandom();
@@ -1482,8 +1497,9 @@ void Match_Start() {
 	if (Round_StartNew())
 		return;
 
-	gi.LocBroadcast_Print(PRINT_CENTER, "FIGHT!");
-	gi.positioned_sound(world->s.origin, world, CHAN_AUTO | CHAN_RELIABLE, gi.soundindex("misc/tele_up.wav"), 1, ATTN_NONE, 0);
+	gi.LocBroadcast_Print(PRINT_CENTER, GT(GT_RACE) ? "GO!" : "FIGHT!");
+	//gi.positioned_sound(world->s.origin, world, CHAN_AUTO | CHAN_RELIABLE, gi.soundindex("misc/tele_up.wav"), 1, ATTN_NONE, 0);
+	AnnouncerSound(world, GT(GT_RACE) ? "go" : "fight", "misc/tele_up.wav", true);
 }
 
 /*
@@ -1751,6 +1767,7 @@ static void CheckDMRoundState(void) {
 				bool horde = GT(GT_HORDE);
 				gi.LocBroadcast_Print(PRINT_CHAT, "{} {} has begun!\n", horde ? "Wave" : "Round", level.round_number);
 				gi.LocBroadcast_Print(PRINT_CENTER, horde ? (brandom() ? "INCOMING!" : "LOCK AND LOAD!") : "FIGHT!");
+				AnnouncerSound(world, "fight", nullptr, false);
 
 				if (horde) {
 					level.horde_num_monsters_to_spawn = clamp(15 + (level.round_number * 5), 20, 80);
@@ -1790,9 +1807,11 @@ static void CheckDMRoundState(void) {
 				G_AdjustTeamScore(TEAM_BLUE, points);
 				if (GT(GT_STRIKE))
 					gi.LocBroadcast_Print(PRINT_CENTER, "Turn has ended.\n{} successfully {}!\n", Teams_TeamName(TEAM_BLUE), points ? "attacked" : "defended");
-				else
+				else {
 					gi.LocBroadcast_Print(PRINT_CENTER, "{} wins the round!\n(eliminated {})\n", Teams_TeamName(TEAM_BLUE), Teams_TeamName(TEAM_RED));
-				gi.positioned_sound(world->s.origin, world, CHAN_AUTO | CHAN_RELIABLE, gi.soundindex("ctf/flagcap.wav"), 1, ATTN_NONE, 0);
+					AnnouncerSound(world, "blue_wins_round", "ctf/flagcap.wav", true);
+				}
+				//gi.positioned_sound(world->s.origin, world, CHAN_AUTO | CHAN_RELIABLE, gi.soundindex("ctf/flagcap.wav"), 1, ATTN_NONE, 0);
 				Round_End();
 				return;
 			}
@@ -1801,9 +1820,11 @@ static void CheckDMRoundState(void) {
 				G_AdjustTeamScore(TEAM_RED, points);
 				if (GT(GT_STRIKE)) {
 					gi.LocBroadcast_Print(PRINT_CENTER, "Turn has ended.\n{} successfully {}!\n", Teams_TeamName(TEAM_RED), points ? "attacked" : "defended");
-				} else
+				} else {
 					gi.LocBroadcast_Print(PRINT_CENTER, "{} wins the round!\n(eliminated {})\n", Teams_TeamName(TEAM_RED), Teams_TeamName(TEAM_BLUE));
-				gi.positioned_sound(world->s.origin, world, CHAN_AUTO | CHAN_RELIABLE, gi.soundindex("ctf/flagcap.wav"), 1, ATTN_NONE, 0);
+					AnnouncerSound(world, "red_wins_round", "ctf/flagcap.wav", false);
+				}
+				//gi.positioned_sound(world->s.origin, world, CHAN_AUTO | CHAN_RELIABLE, gi.soundindex("ctf/flagcap.wav"), 1, ATTN_NONE, 0);
 				Round_End();
 				return;
 			}
@@ -1845,11 +1866,13 @@ static void CheckDMRoundState(void) {
 				if (level.num_living_red > level.num_living_blue) {
 					G_AdjustTeamScore(TEAM_RED, 1);
 					gi.LocBroadcast_Print(PRINT_CENTER, "{} wins the round!\n(players remaining: {} vs {})\n", Teams_TeamName(TEAM_RED), level.num_living_red, level.num_living_blue);
-					gi.positioned_sound(world->s.origin, world, CHAN_AUTO | CHAN_RELIABLE, gi.soundindex("ctf/flagcap.wav"), 1, ATTN_NONE, 0);
+					//gi.positioned_sound(world->s.origin, world, CHAN_AUTO | CHAN_RELIABLE, gi.soundindex("ctf/flagcap.wav"), 1, ATTN_NONE, 0);
+					AnnouncerSound(world, "red_wins_round", "ctf/flagcap.wav", false);
 				} else if (level.num_living_blue > level.num_living_red) {
 					G_AdjustTeamScore(TEAM_BLUE, 1);
 					gi.LocBroadcast_Print(PRINT_CENTER, "{} wins the round!\n(players remaining: {} vs {})\n", Teams_TeamName(TEAM_BLUE), level.num_living_blue, level.num_living_red);
-					gi.positioned_sound(world->s.origin, world, CHAN_AUTO | CHAN_RELIABLE, gi.soundindex("ctf/flagcap.wav"), 1, ATTN_NONE, 0);
+					//gi.positioned_sound(world->s.origin, world, CHAN_AUTO | CHAN_RELIABLE, gi.soundindex("ctf/flagcap.wav"), 1, ATTN_NONE, 0);
+					AnnouncerSound(world, "blue_wins_round", "ctf/flagcap.wav", true);
 				} else {
 					int total_health_red = 0, total_health_blue = 0;
 
@@ -1869,11 +1892,13 @@ static void CheckDMRoundState(void) {
 					if (total_health_red > total_health_blue) {
 						G_AdjustTeamScore(TEAM_RED, 1);
 						gi.LocBroadcast_Print(PRINT_CENTER, "{} wins the round!\n(total health: {} vs {})\n", Teams_TeamName(TEAM_RED), total_health_red, total_health_blue);
-						gi.positioned_sound(world->s.origin, world, CHAN_AUTO | CHAN_RELIABLE, gi.soundindex("ctf/flagcap.wav"), 1, ATTN_NONE, 0);
+						//gi.positioned_sound(world->s.origin, world, CHAN_AUTO | CHAN_RELIABLE, gi.soundindex("ctf/flagcap.wav"), 1, ATTN_NONE, 0);
+						AnnouncerSound(world, "red_wins_round", "ctf/flagcap.wav", false);
 					} else if (total_health_blue > total_health_red) {
 						G_AdjustTeamScore(TEAM_BLUE, 1);
 						gi.LocBroadcast_Print(PRINT_CENTER, "{} wins the round!\n(total health: {} vs {})\n", Teams_TeamName(TEAM_BLUE), total_health_blue, total_health_red);
-						gi.positioned_sound(world->s.origin, world, CHAN_AUTO | CHAN_RELIABLE, gi.soundindex("ctf/flagcap.wav"), 1, ATTN_NONE, 0);
+						//gi.positioned_sound(world->s.origin, world, CHAN_AUTO | CHAN_RELIABLE, gi.soundindex("ctf/flagcap.wav"), 1, ATTN_NONE, 0);
+						AnnouncerSound(world, "blue_wins_round", "ctf/flagcap.wav", true);
 					} else {
 						gi.LocBroadcast_Print(PRINT_CENTER, "Round draw!");
 					}
@@ -1910,7 +1935,12 @@ static void CheckDMCountdown(void) {
 
 	if (!level.countdown_check || level.countdown_check.seconds<int>() > t) {
 		if (!(t % 10) || t < 10) {
-			gi.positioned_sound(world->s.origin, world, CHAN_AUTO | CHAN_RELIABLE, gi.soundindex(G_Fmt("world/{}{}.wav", t, t >= 20 ? "sec" : "").data()), 1, ATTN_NONE, 0);
+			AnnouncerSound(world, nullptr, G_Fmt("world/{}{}.wav", t, t >= 20 ? "sec" : "").data(), false);
+			//gi.positioned_sound(world->s.origin, world, CHAN_AUTO | CHAN_RELIABLE, gi.soundindex(G_Fmt("world/{}{}.wav", t, t >= 20 ? "sec" : "").data()), 1, ATTN_NONE, 0);
+			if (t <= 3) {
+				const char *s[3] = { "one", "two", "three" };
+				AnnouncerSound(world, G_Fmt("{}", s[t-1]).data(), nullptr, false);
+			}
 		}
 		level.countdown_check = gtime_t::from_sec(t);
 	}
@@ -1935,9 +1965,12 @@ static void CheckDMMatchEndWarning(void) {
 
 	if (!level.matchendwarn_check || level.matchendwarn_check.seconds<int>() > t) {
 		if (t && (t == 30 || t == 20 || t <= 10)) {
-			gi.positioned_sound(world->s.origin, world, CHAN_AUTO | CHAN_RELIABLE, gi.soundindex(G_Fmt("world/{}{}.wav", t, t >= 20 ? "sec" : "").data()), 1, ATTN_NONE, 0);
+			AnnouncerSound(world, nullptr, G_Fmt("world/{}{}.wav", t, t >= 20 ? "sec" : "").data(), false);
+			//gi.positioned_sound(world->s.origin, world, CHAN_AUTO | CHAN_RELIABLE, gi.soundindex(G_Fmt("world/{}{}.wav", t, t >= 20 ? "sec" : "").data()), 1, ATTN_NONE, 0);
 			if (t >= 10)
 				gi.LocBroadcast_Print(PRINT_HIGH, "{} second warning!\n", t);
+		} else if (t == 300 || t == 60) {
+			AnnouncerSound(world, G_Fmt("{}_minute", t == 300 ? 5 : 1).data(), nullptr, false);
 		}
 		level.matchendwarn_check = gtime_t::from_sec(t);
 	}
@@ -1961,6 +1994,10 @@ static void CheckDMWarmupState(void) {
 			level.warmup_notice_time = 0_sec;
 			return;
 		}
+		// pull in any spectating bots
+		for (auto ec : active_clients())
+			if (!ClientIsPlaying(ec->client) && (ec->client->sess.is_a_bot || ec->svflags & SVF_BOT))
+				SetTeam(ec, PickTeam(-1), false, false, false);
 		return;
 	}
 
@@ -2006,6 +2043,13 @@ static void CheckDMWarmupState(void) {
 		not_enough = true;
 	}
 
+	if (notGT(GT_DUEL)) {
+		// pull in any spectating bots
+		for (auto ec : active_clients())
+			if (!ClientIsPlaying(ec->client) && (ec->client->sess.is_a_bot || ec->svflags & SVF_BOT))
+				SetTeam(ec, PickTeam(-1), false, false, false);
+	}
+
 	if (!g_dm_allow_no_humans->integer && !level.num_playing_human_clients)
 		not_enough = true;
 
@@ -2048,6 +2092,7 @@ static void CheckDMWarmupState(void) {
 		level.match_state = matchst_t::MATCH_WARMUP_DEFAULT;
 		level.warmup_requisite = warmupreq_t::WARMUP_REQ_NONE;
 		level.warmup_notice_time = 0_sec;
+		level.prepare_to_fight = false;
 		return;
 	}
 
@@ -2062,13 +2107,19 @@ countdown:
 
 			if (g_warmup_countdown->integer > 0) {
 				level.match_state_timer = level.time + gtime_t::from_sec(g_warmup_countdown->integer);
-				//gi.positioned_sound(world->s.origin, world, CHAN_AUTO | CHAN_RELIABLE, gi.soundindex("world/10_0.wav"), 1, ATTN_NONE, 0);
 
 				// announce it
-				if (GT(GT_DUEL) && &game.clients[level.sorted_clients[0]] && &game.clients[level.sorted_clients[1]])
+				if ((GT(GT_DUEL) || (level.num_playing_clients == 2 && g_match_lock->integer)) &&
+						&game.clients[level.sorted_clients[0]] && &game.clients[level.sorted_clients[1]])
 					gi.LocBroadcast_Print(PRINT_CENTER, "{} vs {}\nBegins in...", game.clients[level.sorted_clients[0]].resp.netname, game.clients[level.sorted_clients[1]].resp.netname);
 				else
 					gi.LocBroadcast_Print(PRINT_CENTER, "{}\nBegins in...", level.gametype_name);
+
+				//gi.LocBroadcast_Print(PRINT_HIGH, "{}Match {} starting...\n", g_match_lock->integer ? "TEAMS LOCKED! " : "", level.match_id.data());
+				if (!level.prepare_to_fight) {
+					AnnouncerSound(world, (Teams() && level.num_playing_clients >= 4) ? "prepare_your_team" : "prepare_to_fight", nullptr, false);
+					level.prepare_to_fight = true;
+				}
 			} else {
 				level.match_state_timer = 0_ms;
 				goto start;
@@ -2107,17 +2158,24 @@ static void CheckVote(void) {
 	if (!level.vote_client)
 		return;
 	
+	// give it a minimum duration
+	if (level.time - level.vote_time < 1_sec)
+		return;
+
 	if (level.time - level.vote_time >= 30_sec) {
 		gi.LocBroadcast_Print(PRINT_HIGH, "Vote timed out.\n");
+		AnnouncerSound(world, "vote_failed", nullptr, false);
 	} else {
 		int halfpoint = level.num_voting_clients / 2;
 		if (level.vote_yes > halfpoint) {
 			// execute the command, then remove the vote
 			gi.LocBroadcast_Print(PRINT_HIGH, "Vote passed.\n");
 			level.vote_execute_time = level.time + 3_sec;
+			AnnouncerSound(world, "vote_passed", nullptr, false);
 		} else if (level.vote_no >= halfpoint) {
 			// same behavior as a timeout
 			gi.LocBroadcast_Print(PRINT_HIGH, "Vote failed.\n");
+			AnnouncerSound(world, "vote_failed", nullptr, false);
 		} else {
 			// still waiting for a majority
 			return;
@@ -2378,10 +2436,17 @@ static int SortRanks(const void *a, const void *b) {
 		return -1;
 
 	// then sort by score
-	if (ca->resp.score > cb->resp.score)
-		return -1;
-	if (ca->resp.score < cb->resp.score)
-		return 1;
+	if (GT(GT_RACE)) {
+		if (ca->resp.score > 0 && (ca->resp.score < cb->resp.score))
+			return -1;
+		if (cb->resp.score > 0 && (ca->resp.score > cb->resp.score))
+			return 1;
+	} else {
+		if (ca->resp.score > cb->resp.score)
+			return -1;
+		if (ca->resp.score < cb->resp.score)
+			return 1;
+	}
 
 	// then sort by time
 	if (ca->sess.team_join_time < cb->sess.team_join_time)
@@ -2468,6 +2533,14 @@ void CalculateRanks() {
 		}
 	}
 
+	for (size_t i = 0; i < level.num_playing_clients; i++) {
+		if (game.clients[i].pers.connected) {
+			game.clients[level.sorted_clients[i]].resp.old_rank = game.clients[level.sorted_clients[i]].resp.rank;
+		}
+	}
+
+	int lead_score = game.clients[level.sorted_clients[0]].resp.score;
+
 	qsort(level.sorted_clients, level.num_connected_clients, sizeof(level.sorted_clients[0]), SortRanks);
 
 	// set the rank value for all clients that are connected and not spectators
@@ -2489,6 +2562,7 @@ void CalculateRanks() {
 		for (size_t i = 0; i < level.num_playing_clients; i++) {
 			if (game.clients[i].pers.connected) {
 				cl = &game.clients[level.sorted_clients[i]];
+				cl->resp.old_score = cl->resp.score;
 				new_score = cl->resp.score;
 				if (i == 0 || new_score != score) {
 					rank = i;
@@ -2510,6 +2584,99 @@ void CalculateRanks() {
 		level.no_players_time = 0_sec;
 	
 	level.warmup_notice_time = level.time;
+
+	if (level.match_state == MATCH_IN_PROGRESS) {
+		if (GTF(GTF_FRAGS)) {
+			//gi.Com_PrintFmt("new={} old={}\n", game.clients[level.sorted_clients[0]].resp.score, old_first_score);
+			if (fraglimit->integer > 3) {
+				int score_diff = fraglimit->integer - game.clients[level.sorted_clients[0]].resp.score;
+				if (score_diff <= 3 && !level.frag_warning[score_diff - 1]) {
+					AnnouncerSound(world, G_Fmt("{}_frag{}", score_diff, score_diff > 1 ? "s" : "").data(), nullptr, false);
+					level.frag_warning[score_diff - 1] = true;
+					CheckDMExitRules();
+					return;
+				}
+			}
+		}
+		if (!Teams() && game.clients[level.sorted_clients[0]].resp.score > 0) {
+			// check changes in rank to trigger sounds
+			int new_rank = 0, old_rank = 0;
+			bool new_tied = false, old_tied = false;
+			for (auto ec : active_players()) {
+				new_rank = ec->client->resp.rank;
+				old_rank = ec->client->resp.old_rank;
+
+				//if (ec == world + 1)
+				//	gi.Com_PrintFmt("new_rank={} old_rank={}\n", new_rank, old_rank);
+
+				if (new_rank == old_rank)
+					continue;
+
+				if (new_rank & RANK_TIED_FLAG) {
+					new_rank &= ~RANK_TIED_FLAG;
+					new_tied = true;
+				} else {
+					new_tied = false;
+				}
+				if (old_rank & RANK_TIED_FLAG) {
+					old_rank &= ~RANK_TIED_FLAG;
+					old_tied = true;
+				} else {
+					old_tied = false;
+				}
+
+				//if (ec == world + 1)
+				//	gi.Com_PrintFmt("new_rank2={} old_rank2={}\n", new_rank, old_rank);
+
+				if (new_rank == 0 && old_tied != new_tied) {
+					AnnouncerSound(ec, new_tied ? "lead_tied" : "lead_taken", nullptr, false);
+
+					// find and update all spectators who want to follow leader
+					for (auto ec2 : active_clients()) {
+						if (!ClientIsPlaying(ec2->client) && ec2->client->sess.pc.follow_leader && ec2->client->follow_target != ec) {
+							ec2->client->follow_queued_target = ec;
+							ec2->client->follow_queued_time = level.time;
+						}
+					}
+				} else if (new_rank != 0 && old_rank == 0) {
+					AnnouncerSound(ec, "lead_lost", nullptr, false);
+				}
+			}
+		} else if (Teams() && GTF(GTF_FRAGS)) {
+			int new_rank, old_rank;
+
+			if (level.team_old_scores[TEAM_RED] == level.team_old_scores[TEAM_BLUE]) {
+				old_rank = 2;
+			} else if (level.team_old_scores[TEAM_RED] > level.team_old_scores[TEAM_BLUE]) {
+				old_rank = 0;
+			} else {
+				old_rank = 1;
+			}
+			if (level.team_scores[TEAM_RED] == level.team_scores[TEAM_BLUE]) {
+				new_rank = 2;
+			} else if (level.team_scores[TEAM_RED] > level.team_scores[TEAM_BLUE]) {
+				new_rank = 0;
+			} else {
+				new_rank = 1;
+			}
+
+			if (old_rank == 2 && new_rank != 2) {
+				//a team just took the lead
+				AnnouncerSound(world, new_rank ? "blue_leads" : "red_leads", nullptr, false);
+			} else if (old_rank != 2 && new_rank == 2) {
+				//teams just tied
+				AnnouncerSound(world, "teams_tied", nullptr, false);
+			}
+			/*
+			else if ((GTF(GTF_CTF)) && new_rank != 2) {
+				//a team has scored
+				AnnouncerSound(world, new_rank ? "blue_scores" : "red_scores", nullptr, false);
+			}
+			*/
+			level.team_old_scores[TEAM_RED] = level.team_scores[TEAM_RED];
+			level.team_old_scores[TEAM_BLUE] = level.team_scores[TEAM_BLUE];
+		}
+	}
 
 	// see if it is time to end the level
 	CheckDMExitRules();
@@ -2838,6 +3005,8 @@ void Match_End() {
 		return;
 	}
 
+	//MS_EndMatchExport();
+
 	BeginIntermission(ent);
 }
 
@@ -2990,15 +3159,17 @@ void CheckDMExitRules() {
 					if (GT(GT_DUEL) && g_dm_overtime->integer > 0) {
 						level.overtime += gtime_t::from_sec(g_dm_overtime->integer);
 						gi.LocBroadcast_Print(PRINT_CENTER, "Overtime!\n{} added", G_TimeString(g_dm_overtime->integer * 1000, false));
+						AnnouncerSound(world, "overtime", "world/klaxon2.wav", true);
 						play = true;
 					} else if (!level.suddendeath) {
 						gi.LocBroadcast_Print(PRINT_CENTER, "Sudden Death!");
+						AnnouncerSound(world, "sudden_death", "world/klaxon2.wav", true);
 						level.suddendeath = true;
 						play = true;
 					}
 
-					if (play)
-						gi.positioned_sound(world->s.origin, world, CHAN_RELIABLE | CHAN_NO_PHS_ADD | CHAN_AUX, gi.soundindex("world/klaxon2.wav"), 1, ATTN_NONE, 0);
+					//if (play)
+						//gi.positioned_sound(world->s.origin, world, CHAN_RELIABLE | CHAN_NO_PHS_ADD | CHAN_AUX, gi.soundindex("world/klaxon2.wav"), 1, ATTN_NONE, 0);
 					return;
 				}
 
@@ -3055,6 +3226,10 @@ void CheckDMExitRules() {
 
 	// no score limit in horde
 	if (GT(GT_HORDE))
+		return;
+
+	// no score limit in race
+	if (GT(GT_RACE))
 		return;
 	
 	int	scorelimit = GT_ScoreLimit();
@@ -3200,8 +3375,13 @@ void BeginIntermission(gentity_t *targ) {
 	//SetIntermissionPoint();
 
 	// move all clients to the intermission point
-	for (auto ec : active_clients())
+	for (auto ec : active_clients()) {
 		MoveClientToIntermission(ec);
+		if (Teams())
+			AnnouncerSound(ec, level.team_scores[TEAM_RED] > level.team_scores[TEAM_BLUE] ? "red_wins" : "blue_wins", nullptr, false);
+		else
+			AnnouncerSound(ec, ec->client->resp.rank == 0 ? "you_win" : "you_lose", nullptr, false);
+	}
 }
 
 /*
@@ -3214,6 +3394,8 @@ void ExitLevel() {
 		struct tm *ltime;
 		time_t gmtime;
 
+		time(&gmtime);
+		ltime = localtime(&gmtime);
 		time(&gmtime);
 		ltime = localtime(&gmtime);
 

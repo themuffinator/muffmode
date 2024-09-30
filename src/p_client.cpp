@@ -449,6 +449,9 @@ static void ClientObituary(gentity_t *self, gentity_t *inflictor, gentity_t *att
 		case MOD_DOPPEL_EXPLODE:
 			base = "$g_mod_self_dopple_explode";
 			break;
+		case MOD_EXPIRE:
+			base = "{0} ran out of blood.\n";
+			break;
 		default:
 			base = "$g_mod_self_default";
 			break;
@@ -635,9 +638,13 @@ static void ClientObituary(gentity_t *self, gentity_t *inflictor, gentity_t *att
 				if (level.match_state == matchst_t::MATCH_WARMUP_READYUP) {
 					BroadcastReadyReminderMessage();
 				} else if (attacker->client->resp.kill_count && !(attacker->client->resp.kill_count % 10)) {
-					gi.LocBroadcast_Print(PRINT_CENTER, "{} is on a {} spree\nwith {} frags!", attacker->client->resp.netname, GT(GT_FREEZE) ? "freezing" : "fragging", attacker->client->resp.kill_count);
+					gi.LocBroadcast_Print(PRINT_CENTER, "{} is on a rampage\nwith {} frags!", attacker->client->resp.netname, attacker->client->resp.kill_count);
+					AnnouncerSound(attacker, "rampage1", nullptr, false);
+					attacker->client->pers.medal_time = level.time;
+					attacker->client->pers.medal_type = MEDAL_RAMPAGE;
+					attacker->client->pers.medal_count[MEDAL_RAMPAGE]++;
 				} else if (kill_count >= 10) {
-					gi.LocBroadcast_Print(PRINT_CENTER, "{} put an end to {}'s\n{} spree!", attacker->client->resp.netname, self->client->resp.netname, GT(GT_FREEZE) ? "freezing" : "fragging");
+					gi.LocBroadcast_Print(PRINT_CENTER, "{} put an end to {}'s\nrampage!", attacker->client->resp.netname, self->client->resp.netname);
 				} else if (Teams() || level.match_state != matchst_t::MATCH_IN_PROGRESS) {
 					if (attacker->client->sess.pc.show_fragmessages)
 						gi.LocClient_Print(attacker, PRINT_CENTER, "You {} {}", GT(GT_FREEZE) ? "froze" : "fragged", self->client->resp.netname);
@@ -680,7 +687,7 @@ static void TossClientItems(gentity_t *self) {
 
 	gitem_t *wp;
 	gentity_t *drop;
-	bool	quad, doubled, duelfire, protection, invis, regen;
+	bool	quad, doubled, haste, protection, invis, regen;
 
 	// drop weapon
 	wp = self->client->pers.weapon;
@@ -715,14 +722,14 @@ static void TossClientItems(gentity_t *self) {
 
 	// drop powerup
 	quad = g_dm_no_quad_drop->integer ? false : (self->client->pu_time_quad > (level.time + 1_sec));
-	duelfire = g_dm_no_quadfire_drop->integer ? false : (self->client->pu_time_duelfire > (level.time + 1_sec));
+	haste = (self->client->pu_time_haste > (level.time + 1_sec));
 	doubled = (self->client->pu_time_double > (level.time + 1_sec));
 	protection = (self->client->pu_time_protection > (level.time + 1_sec));
 	invis = (self->client->pu_time_invisibility > (level.time + 1_sec));
 	regen = (self->client->pu_time_regeneration > (level.time + 1_sec));
 
 	if (!g_dm_powerup_drop->integer) {
-		quad = doubled = duelfire = protection = invis = regen = false;
+		quad = doubled = haste = protection = invis = regen = false;
 	}
 
 	if (quad) {
@@ -748,19 +755,19 @@ static void TossClientItems(gentity_t *self) {
 		}
 	}
 
-	if (duelfire) {
+	if (haste) {
 		self->client->v_angle[YAW] += 45;
-		drop = Drop_Item(self, GetItemByIndex(IT_POWERUP_DUELFIRE));
+		drop = Drop_Item(self, GetItemByIndex(IT_POWERUP_HASTE));
 		drop->spawnflags |= SPAWNFLAG_ITEM_DROPPED_PLAYER;
 		drop->spawnflags &= ~SPAWNFLAG_ITEM_DROPPED;
 		drop->svflags &= ~SVF_INSTANCED;
 
 		drop->touch = Touch_Item;
-		drop->nextthink = self->client->pu_time_duelfire;
+		drop->nextthink = self->client->pu_time_haste;
 		drop->think = G_FreeEntity;
 
 		// decide how many seconds it has left
-		drop->count = self->client->pu_time_duelfire.seconds<int>() - level.time.seconds<int>();
+		drop->count = self->client->pu_time_haste.seconds<int>() - level.time.seconds<int>();
 		if (drop->count < 1) {
 			drop->count = 1;
 		}
@@ -917,7 +924,7 @@ DIE(player_die) (gentity_t *self, gentity_t *inflictor, gentity_t *attacker, int
 
 	self->maxs[2] = -8;
 
-	if (attacker && attacker->client && level.match_state == matchst_t::MATCH_IN_PROGRESS) {
+	if (attacker && attacker->client && level.match_state == matchst_t::MATCH_IN_PROGRESS && notGT(GT_RACE)) {
 		if (attacker == self || mod.friendly_fire) {
 			if (!mod.no_point_loss)
 				G_AdjustPlayerScore(attacker->client, -1, GT(GT_TDM), -1);
@@ -927,13 +934,34 @@ DIE(player_die) (gentity_t *self, gentity_t *inflictor, gentity_t *attacker, int
 			if (attacker->health > 0)
 				attacker->client->resp.kill_count++;
 
-			MS_Adjust(attacker->client, MSTAT_KILLS, 1);
+			MS_Adjust(attacker->client, MSTAT_KILLS_TOTAL, 1);
+			if (1_sec > (level.time - self->client->respawn_time))
+				MS_Adjust(attacker->client, MSTAT_KILLS_SPAWN, 1);
+
+			if (attacker->client->pers.kill_time && (attacker->client->pers.kill_time + 2_sec > level.time)) {
+				attacker->client->pers.medal_time = level.time;
+				attacker->client->pers.medal_type = MEDAL_EXCELLENT;
+				attacker->client->pers.medal_count[MEDAL_EXCELLENT]++;
+
+				if (attacker->client->pers.medal_count[MEDAL_EXCELLENT] == 1)
+					AnnouncerSound(attacker, "first_excellent", nullptr, false);
+				else
+					AnnouncerSound(attacker, "excellent1", nullptr, false);
+			}
+			attacker->client->pers.kill_time = level.time;
+
+			if (mod.id == MOD_BLASTER || mod.id == MOD_CHAINFIST) {
+				attacker->client->pers.medal_time = level.time;
+				attacker->client->pers.medal_type = MEDAL_HUMILIATION;
+				attacker->client->pers.medal_count[MEDAL_HUMILIATION]++;
+
+				AnnouncerSound(attacker, "humiliation1", nullptr, false);
+			}
 
 			for (auto ec : active_clients()) {
 				if (!ClientIsPlaying(ec->client) && ec->client->sess.pc.follow_killer) {
-					ec->client->follow_target = attacker;
-					ec->client->follow_update = true;
-					UpdateChaseCam(ec);
+					ec->client->follow_queued_target = attacker;
+					ec->client->follow_queued_time = level.time;
 				}
 			}
 		}
@@ -941,16 +969,27 @@ DIE(player_die) (gentity_t *self, gentity_t *inflictor, gentity_t *attacker, int
 		if (!mod.no_point_loss)
 			G_AdjustPlayerScore(self->client, -1, GT(GT_TDM), -1);
 	}
-	MS_Adjust(self->client, MSTAT_DEATHS, 1);
+	MS_Adjust(self->client, MSTAT_DEATHS_TOTAL, 1);
+
+	if (self == attacker)
+		MS_Adjust(self->client, MSTAT_DEATHS_SUICIDES, 1);
+	else if (!attacker)
+		MS_Adjust(self->client, MSTAT_DEATHS_ENVIRO, 1);
+	else if (1_sec > (level.time - self->client->respawn_time))
+		MS_Adjust(self->client, MSTAT_DEATHS_SPAWN, 1);
 
 	self->svflags |= SVF_DEADMONSTER;
 
 	if (!self->deadflag) {
 		self->client->respawn_time = (level.time + 1_sec);
 
-		self->client->respawn_min_time = (level.time + gtime_t::from_sec(g_dm_respawn_delay_min->value));
-		if (deathmatch->integer && g_dm_force_respawn_time->integer) {
-			self->client->respawn_time = (level.time + gtime_t::from_sec(g_dm_force_respawn_time->value));
+		if (deathmatch->integer && g_gametype->integer == GT_RACE) {
+			self->client->respawn_min_time = self->client->respawn_time = level.time;
+		} else {
+			self->client->respawn_min_time = (level.time + gtime_t::from_sec(g_dm_respawn_delay_min->value));
+			if (deathmatch->integer && g_dm_force_respawn_time->integer) {
+				self->client->respawn_time = (level.time + gtime_t::from_sec(g_dm_force_respawn_time->value));
+			}
 		}
 
 		LookAtKiller(self, inflictor, attacker);
@@ -977,7 +1016,7 @@ DIE(player_die) (gentity_t *self, gentity_t *inflictor, gentity_t *attacker, int
 
 	// remove powerups
 	self->client->pu_time_quad = 0_ms;
-	self->client->pu_time_duelfire = 0_ms;
+	self->client->pu_time_haste = 0_ms;
 	self->client->pu_time_double = 0_ms;
 	self->client->pu_time_protection = 0_ms;
 	self->client->pu_time_invisibility = 0_ms;
@@ -1183,6 +1222,12 @@ void InitClientPersistant(gentity_t *ent, gclient_t *client) {
 	client->pers.health = 100;
 	client->pers.max_health = 100;
 
+	client->pers.medal_time = 0_sec;
+	client->pers.medal_type = MEDAL_NONE;
+	client->pers.medal_count[MEDAL_EXCELLENT] = 0;
+	client->pers.medal_count[MEDAL_HUMILIATION] = 0;
+	client->pers.medal_count[MEDAL_IMPRESSIVE] = 0;
+
 	// don't give us weapons if we shouldn't have any
 	if (ClientIsPlaying(client)) {
 		// in coop, if there's already a player in the game and we're new,
@@ -1356,7 +1401,9 @@ void InitClientPersistant(gentity_t *ent, gclient_t *client) {
 			if (level.start_items && *level.start_items)
 				Player_GiveStartItems(ent, level.start_items);
 
-			if (!deathmatch->integer || level.match_state < matchst_t::MATCH_IN_PROGRESS)
+			if (deathmatch->integer && GT(GT_RACE))
+				client->pers.inventory[IT_COMPASS] = 1;
+			else if (!deathmatch->integer || level.match_state < matchst_t::MATCH_IN_PROGRESS)
 				// compass also used for ready status toggling in deathmatch
 				client->pers.inventory[IT_COMPASS] = 1;
 
@@ -1386,25 +1433,26 @@ void InitClientPersistant(gentity_t *ent, gclient_t *client) {
 	client->pers.spawned = true;
 }
 
-static void InitClientResp(gclient_t *client) {
-	bool showed_help = client->resp.showed_help;
-	team_t team = client->sess.team;
+static void InitClientResp(gclient_t *cl) {
+	bool showed_help = cl->resp.showed_help;
+	team_t team = cl->sess.team;
+	int motd_mod_count = cl->resp.motd_mod_count;
 
 	char netname[MAX_NETNAME];
-	Q_strlcpy(netname, client->resp.netname, sizeof(netname));
+	Q_strlcpy(netname, cl->resp.netname, sizeof(netname));
 
-	memset(&client->resp, 0, sizeof(client->resp));
+	memset(&cl->resp, 0, sizeof(cl->resp));
 
-	client->resp.showed_help = showed_help;
+	cl->resp.showed_help = showed_help;
 
-	Q_strlcpy(client->resp.netname, netname, sizeof(client->resp.netname));
+	Q_strlcpy(cl->resp.netname, netname, sizeof(cl->resp.netname));
 
-	client->resp.entertime = level.time;
-	client->resp.coop_respawn = client->pers;
+	cl->resp.entertime = level.time;
+	cl->resp.coop_respawn = cl->pers;
+	
+	cl->resp.motd_mod_count = motd_mod_count;
 
-	client->resp.kill_count = 0;
-
-	client->sess.team = team;
+	cl->sess.team = team;
 }
 
 /*
@@ -2061,12 +2109,17 @@ bool SelectSpawnPoint(gentity_t *ent, vec3_t &origin, vec3_t &angles, bool force
 		if (Teams() && ClientIsPlaying(ent->client))
 			spot = SelectTeamSpawnPoint(ent, force_spawn);
 		else {
-			select_spawn_result_t result = SelectDeathmatchSpawnPoint(ent, ent->client->spawn_origin, (playerspawn_t)clamp(g_dm_spawn_farthest->integer, 0, 3), force_spawn, true, !ClientIsPlaying(ent->client) || ent->client->eliminated, false);
+			if (g_gametype->integer == GT_RACE)
+				spot = SelectSingleSpawnPoint(ent);
 
-			if (!result.any_valid)
-				gi.Com_Error("No valid spawn points found.");
+			if (!spot) {
+				select_spawn_result_t result = SelectDeathmatchSpawnPoint(ent, ent->client->spawn_origin, (playerspawn_t)clamp(g_dm_spawn_farthest->integer, 0, 3), force_spawn, true, !ClientIsPlaying(ent->client) || ent->client->eliminated, false);
 
-			spot = result.spot;
+				if (!result.any_valid)
+					gi.Com_Error("No valid spawn points found.");
+
+				spot = result.spot;
+			}
 		}
 
 		if (spot) {
@@ -2537,9 +2590,9 @@ static bool InitPlayerTeam(gentity_t *ent) {
 
 	ent->client->sess.team = TEAM_SPECTATOR;
 	MoveClientToFreeCam(ent);
-
-	if (!(level.match_state == matchst_t::MATCH_IN_PROGRESS && g_match_lock->integer)) {
-		if (ent->svflags & SVF_BOT || g_dm_force_join->integer || g_dm_auto_join->integer) {
+	
+	if (level.match_state < matchst_t::MATCH_COUNTDOWN || (level.match_state >= matchst_t::MATCH_COUNTDOWN && !g_match_lock->integer)) {
+		if (ent->client->sess.is_a_bot || (ent->svflags & SVF_BOT) || g_dm_force_join->integer || g_dm_auto_join->integer) {
 			if (ent != &g_entities[1] || (ent == &g_entities[1] && g_owner_auto_join->integer)) {
 				SetTeam(ent, PickTeam(-1), false, false, false);
 				return true;
@@ -2758,6 +2811,7 @@ void ClientSpawn(gentity_t *ent) {
 	ent->flags &= ~(FL_NO_KNOCKBACK | FL_ALIVE_KNOCKBACK_ONLY | FL_NO_DAMAGE_EFFECTS | FL_SAM_RAIMI);
 	ent->svflags &= ~SVF_DEADMONSTER;
 	ent->svflags |= SVF_PLAYER;
+	ent->client->pers.last_spawn_time = level.time;
 
 	ent->mins = PLAYER_MINS;
 	ent->maxs = PLAYER_MAXS;
@@ -3447,6 +3501,7 @@ static inline bool CheckBanned(gentity_t *ent, char *userinfo, const char *socia
 
 		gi.local_sound(ent, CHAN_AUTO, gi.soundindex("world/klaxon3.wav"), 1, ATTN_NONE, 0);
 		gi.AddCommandString(G_Fmt("kick {}\n", ent - g_entities - 1).data());
+		G_StuffCmd(ent, "disconnect\n");
 		return true;
 	}
 
@@ -3469,6 +3524,7 @@ static inline bool CheckBanned(gentity_t *ent, char *userinfo, const char *socia
 
 		gi.local_sound(ent, CHAN_AUTO, gi.soundindex("world/klaxon3.wav"), 1, ATTN_NONE, 0);
 		gi.AddCommandString(G_Fmt("kick {}\n", ent - g_entities - 1).data());
+		G_StuffCmd(ent, "disconnect\n");
 		return true;
 	}
 
@@ -3490,9 +3546,9 @@ static inline bool CheckBanned(gentity_t *ent, char *userinfo, const char *socia
 				gi.LocBroadcast_Print(PRINT_CHAT, "{}: bejesus, what a lovely lobby! certainly better than 888's!\n", name);
 			}
 		}
-
 		gi.local_sound(ent, CHAN_AUTO, gi.soundindex("world/klaxon3.wav"), 1, ATTN_NONE, 0);
 		gi.AddCommandString(G_Fmt("kick {}\n", ent - g_entities - 1).data());
+		G_StuffCmd(ent, "disconnect\n");
 		return true;
 	}
 	return false;
@@ -3524,7 +3580,7 @@ bool ClientConnect(gentity_t *ent, char *userinfo, const char *social_id, bool i
 	if (!is_bot && CheckBanned(ent, userinfo, social_id))
 		return false;
 
-	//ent->client->sess.team = deathmatch->integer ? TEAM_SPECTATOR : TEAM_FREE;
+	ent->client->sess.team = deathmatch->integer ? TEAM_NONE : TEAM_FREE;
 
 	// they can connect
 	ent->client = game.clients + (ent - g_entities - 1);
@@ -3540,8 +3596,8 @@ bool ClientConnect(gentity_t *ent, char *userinfo, const char *social_id, bool i
 		if (!ent->client->sess.initialised && !ent->client->sess.team) {
 			//gi.Com_PrintFmt_("ClientConnect: {} q={}\n", ent->client->resp.netname, ent->client->sess.duel_queued);
 			// force team join
-			//ent->client->sess.team = deathmatch->integer ? TEAM_NONE : TEAM_FREE;
-			InitPlayerTeam(ent);
+			ent->client->sess.team = deathmatch->integer ? TEAM_SPECTATOR : TEAM_FREE;
+			//InitPlayerTeam(ent);
 			ent->client->sess.pc.show_id = true;
 			ent->client->sess.pc.show_timer = true;
 			ent->client->sess.pc.show_fragmessages = true;
@@ -3879,13 +3935,20 @@ Actions that happen once a second
 ==================
 */
 static void ClientTimerActions(gentity_t *ent) {
-	// currently only used for health/armor countdown in Q3A ruleset
-	if (!(RS(RS_Q3A)))
+	if (ent->client->time_residual > level.time)
 		return;
 
-	if (level.time >= ent->client->time_residual) {
-		ent->client->time_residual = level.time + 1_sec;
+	MS_Adjust(ent->client, MSTAT_HEALTH_TRACKER, ent->health);
+	MS_Adjust(ent->client, MSTAT_HEALTH_TICKS, 1);
+	if (ent->health > MS_Value(ent->client, MSTAT_HEALTH_PEAK))
+		MS_Set(ent->client, MSTAT_HEALTH_PEAK, ent->health);
 
+	MS_Adjust(ent->client, MSTAT_PING_TRACKER, ent->client->ping);
+	MS_Adjust(ent->client, MSTAT_PING_TICKS, 1);
+	if (ent->client->ping > MS_Value(ent->client, MSTAT_PING_PEAK))
+		MS_Set(ent->client, MSTAT_HEALTH_PEAK, ent->client->ping);
+
+	if (RS(RS_Q3A)) {
 		// count down health when over max
 		if (ent->health > ent->client->pers.max_health)
 			ent->health--;
@@ -3894,6 +3957,8 @@ static void ClientTimerActions(gentity_t *ent) {
 		if (ent->client->pers.inventory[IT_ARMOR_COMBAT] > ent->client->pers.max_health)
 			ent->client->pers.inventory[IT_ARMOR_COMBAT]--;
 	}
+
+	ent->client->time_residual = level.time + 1_sec;
 }
 
 /*
@@ -3941,6 +4006,17 @@ void ClientThink(gentity_t *ent, usercmd_t *ucmd) {
 			client->initial_menu_shown = true;
 		}
 	}
+
+	// check for queued follow targets
+	if (!ClientIsPlaying(client)) {
+		if (client->follow_queued_target && level.time > client->follow_queued_time + 500_ms) {
+			client->follow_target = client->follow_queued_target;
+			client->follow_update = true;
+			client->follow_queued_target = nullptr;
+			client->follow_queued_time = 0_sec;
+			UpdateChaseCam(ent);
+		}
+	}
 	
 	// check for inactivity timer
 	if (!ClientInactivityTimer(ent))
@@ -3964,12 +4040,12 @@ void ClientThink(gentity_t *ent, usercmd_t *ucmd) {
 	
 	if (ent->client->sess.team_join_time) {
 		gtime_t delay = 5_sec;
-		if (ent->client->resp.motd_mod_count != game.motd_modcount) {
+		if (ent->client->resp.motd_mod_count != game.motd_mod_count) {
 			if (level.time >= ent->client->sess.team_join_time + delay) {
 				if (g_showmotd->integer && game.motd.size()) {
 					gi.LocCenter_Print(ent, "{}", game.motd.c_str());
 					delay += 5_sec;
-					ent->client->resp.motd_mod_count = game.motd_modcount;
+					ent->client->resp.motd_mod_count = game.motd_mod_count;
 				}
 			}
 		}
@@ -4063,6 +4139,9 @@ void ClientThink(gentity_t *ent, usercmd_t *ucmd) {
 			client->ps.pmove.pm_flags |= PMF_IGNORE_PLAYER_COLLISION;
 		else
 			client->ps.pmove.pm_flags &= ~PMF_IGNORE_PLAYER_COLLISION;
+
+		// haste support
+		client->ps.pmove.haste = client->pu_time_haste > level.time;
 
 		// trigger_gravity support
 		client->ps.pmove.gravity = (short)(level.gravity * ent->gravity);
