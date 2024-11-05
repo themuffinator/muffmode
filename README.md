@@ -44,11 +44,17 @@ Muff Mode includes the game logic, a server config, bot files and some map entit
 
 ### Muff Maps
 - Almost Lost [ALpha v1] (mm-almostlost-a1)
+  Left out from Quake III: Arena's release, this level was eventually finished off and officially released as a seperate map as pro-q3tourney7. Revised in Quake Live, this map is streamlined for fast-paced FFAs and Duels.
 - Arena of Death [Alpha v3] (mm-arena-a3)
+  A small and simple gem from Quake III: Arena.
 - Hidden Fortress [Alpha v4] (mm-fortress-a4)
+  A small-to-medium-sized level connected via two teleporters. Originally created by Raster Productions for Quake III for Dreamcast, this offers the revised layout found in Quake Live.
 - Longest Yard [Beta v2] (mm-longestyard-b2)
+  The quintessential space map from Quake III: Arena.
 - Proving Grounds [Alpha v4] (mm-proving-a4)
+  A small Duel map from Quake III: Arena.
 - Vertical Vengeance [Alpha v2] (mm-vengeance-a2)
+  A small Duel map from Quake III: Arena.
 
 ### New Gametypes
 - Horde: Battle waves of monsters, stay on top of the scoreboard while defeating up to 16 waves to be victorious! Note: currently does not handle limited lives.
@@ -442,6 +448,7 @@ Some entity overrides are included which add some subtle ambient sounds, mover s
 - Server-side player configs, stats, Elo, ranked matches, Elo team balancing (WIP)
 - Gladiator bots
 - Menu overhaul, adding voting, full admin controls, mymap, player config
+- Quake II Santuary community for testing. A shout out particularly to Sata, TurboPtys_drk and Jobe for their help.
 
 ## Credits:
 - The Stingy Hat Games YouTube channel for their excellent modding tutorial, without it I would never be able to compile the damned source!
