@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WOR - Game Balance Changes</title>
+  <style>
+    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; margin: 0; background: #1e1e1e; color: #f0f0f0; padding: 20px; }
+    h1, h2, h3 { color: #66d9ef; }
+    .section { margin-bottom: 40px; background: #2c2c2c; padding: 20px; border-radius: 8px; box-shadow: 0 0 10px #000; }
+    ul { margin-left: 20px; }
+    table { width: 100%; border-collapse: collapse; margin: 20px 0; background: #2c2c2c; }
+    th, td { border: 1px solid #444; padding: 10px; text-align: center; }
+    th { background: #444; color: #ffcc00; }
+    .small { font-size: 0.9em; color: #ccc; }
+  </style>
+</head>
+<body>
+  <h1>WOR - Game Balance Changes</h1>
+
+  <div class="section">
+    <h2>Weapon Changes</h2>
+    <h3>Rocket Launcher</h3>
+    <ul>
+      <li>Velocity increased from 650 to 800 UPS.</li>
+      <li>Damage fixed at 100 (was random 100-120).</li>
+    </ul>
+
+    <h3>Plasma Beam</h3>
+    <ul>
+      <li>Max distance capped at 768 units (was unlimited).</li>
+      <li>Damage reduced from 15 to 8.</li>
+      <li>Knockback reduced from 75 to 8.</li>
+    </ul>
+
+    <h3>Hunter / Vengeance Spheres</h3>
+    <ul>
+      <li>Travel speed reduced from 500 to 300 UPS.</li>
+      <li>Lifespan reduced from 30s to 10s.</li>
+    </ul>
+
+    <h3>Machinegun / Chaingun</h3>
+    <ul>
+      <li>Vertical spread increased.</li>
+    </ul>
+
+    <h3>Machinegun / Chaingun / Shotgun / Super Shotgun</h3>
+    <ul>
+      <li>Spread calculation updated to Quake III's sin cone projection method.</li>
+    </ul>
+  </div>
+
+  <div class="section">
+    <h2>Knockback</h2>
+    <p>Weapon knockback now mirrors Quake III behavior for radial damage, providing more consistent and responsive movement, especially for rocket jumping.</p>
+  </div>
+
+  <div class="section">
+    <h2>Ammunition Changes</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Ammo Type</th>
+          <th>Capacity (Normal / Bandolier / Ammo Pack)</th>
+          <th>Pickup Amounts (Ammo / Weapon / Bandolier / Pack)</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td>Bullets</td><td>200 / 250 / 300</td><td>50 / 50 / 50 / 30</td></tr>
+        <tr><td>Shells</td><td>50 / 100 / 150</td><td>10 / 10 / 20 / 10</td></tr>
+        <tr><td>Rockets</td><td>25 / 25 / 50</td><td>10 / 5 / 0 / 5</td></tr>
+        <tr><td>Grenades</td><td>25 / 25 / 50</td><td>10 / 5 / 0 / 5</td></tr>
+        <tr><td>Cells</td><td>200 / 200 / 300</td><td>50 / 50 / 0 / 30</td></tr>
+        <tr><td>Slugs</td><td>25 / 25 / 50</td><td>10 / 5 / 0 / 5</td></tr>
+        <tr><td>Mag Slugs</td><td>25 / 25 / 50</td><td>10 / 5 / 0 / 5</td></tr>
+        <tr><td>Flechettes</td><td>100 / 150 / 200</td><td>50 / 50 / 50 / 30</td></tr>
+        <tr><td>Prox</td><td>10 / 10 / 20</td><td>5 / 5 / 0 / 5</td></tr>
+        <tr><td>Rounds</td><td>6 / 6 / 12</td><td>3 / 3 / 0 / 3</td></tr>
+        <tr><td>Trap</td><td>3 / 3 / 12</td><td>1 / 1 / 0 / 0</td></tr>
+        <tr><td>Tesla</td><td>3 / 3 / 12</td><td>1 / 1 / 0 / 0</td></tr>
+      </tbody>
+    </table>
+    <p><strong>Note:</strong> Bandolier and Ammo Backpack respawn times halved: Bandolier (30s), Ammo Pack (90s).</p>
+  </div>
+
+  <div class="section">
+    <h2>Health</h2>
+    <ul>
+      <li>+25 bonus health on spawn, decays 1 per second until max (100).</li>
+      <li>Mega Health timer persists across multiple pickups.</li>
+      <li>Stimpack value increased from 2 to 3.</li>
+      <li>Adrenaline is now holdable (except in duels), adds +5 to max health.</li>
+    </ul>
+  </div>
+
+  <div class="section">
+    <h2>Power Armor</h2>
+    <p>Absorbs 1 damage per cell across all gametypes, aligning its behavior for consistency and balance.</p>
+  </div>
+
+  <div class="section">
+    <h2>Powerups</h2>
+    <ul>
+      <li>Respawn time: 120s, with randomized 30-60s initial spawn delay.</li>
+      <li><strong>Haste</strong> (replaces DuelFire Damage): +50% fire rate, +50% movement speed.</li>
+      <li><strong>Battle Suit</strong> (replaces Invulnerability): Eliminates splash damage, halves direct weapon damage taken, reduces environmental damage.</li>
+      <li><strong>Regeneration</strong>: Gradually restores health over time (new addition from Quake III).</li>
+      <li>Invisibility effect enhanced for stronger stealth.</li>
+      <li>All powerups now droppable: Quad Damage, Double Damage, Haste, Battle Suit, Regeneration, Invisibility.</li>
+      <li>Global sounds for spawn and pickup events encourage competition.</li>
+    </ul>
+  </div>
+
+  <div class="section">
+    <h2>Techs</h2>
+    <p>Auto Doc regen delay increased to 1s, alternating between health and armor regeneration.</p>
+  </div>
+
+  <div class="section">
+    <h2>Overall Assessment</h2>
+    <p><strong>WOR</strong> streamlines Quake II's core gameplay, borrowing refined mechanics from Quake III. Weapon handling is sharper, item management is more strategic, and knockback physics are consistent. Health dynamics, techs, and powerups have been tuned for fairer, faster-paced, and more engaging combat, offering players a thrilling updated experience.</p>
+  </div>
+
+</body>
+</html>
