@@ -24,16 +24,16 @@
 //
 // CreateMonster
 //
-gentity_t *CreateMonster(const vec3_t &origin, const vec3_t &angles, const char *className)
+gentity_t *CreateMonster(const vec3_t &origin, const vec3_t &angles, const char *classname)
 {
 	gentity_t *newEnt;
 
-	newEnt = Spawn();
+	newEnt = G_Spawn();
 
 	newEnt->s.origin = origin;
 	newEnt->s.angles = angles;
-	newEnt->className = className;
-	newEnt->monsterInfo.aiflags |= AI_DO_NOT_COUNT;
+	newEnt->classname = classname;
+	newEnt->monsterinfo.aiflags |= AI_DO_NOT_COUNT;
 
 	newEnt->gravityVector = { 0, 0, -1 };
 	ED_CallSpawn(newEnt);
@@ -42,18 +42,18 @@ gentity_t *CreateMonster(const vec3_t &origin, const vec3_t &angles, const char 
 	return newEnt;
 }
 
-gentity_t *CreateFlyMonster(const vec3_t &origin, const vec3_t &angles, const vec3_t &mins, const vec3_t &maxs, const char *className)
+gentity_t *CreateFlyMonster(const vec3_t &origin, const vec3_t &angles, const vec3_t &mins, const vec3_t &maxs, const char *classname)
 {
 	if (!CheckSpawnPoint(origin, mins, maxs))
 		return nullptr;
 
-	return (CreateMonster(origin, angles, className));
+	return (CreateMonster(origin, angles, classname));
 }
 
 // This is just a wrapper for CreateMonster that looks down height # of CMUs and sees if there
 // are bad things down there or not
 
-gentity_t *CreateGroundMonster(const vec3_t &origin, const vec3_t &angles, const vec3_t &entMins, const vec3_t &entMaxs, const char *className, float height)
+gentity_t *CreateGroundMonster(const vec3_t &origin, const vec3_t &angles, const vec3_t &entMins, const vec3_t &entMaxs, const char *classname, float height)
 {
 	gentity_t *newEnt;
 
@@ -61,7 +61,7 @@ gentity_t *CreateGroundMonster(const vec3_t &origin, const vec3_t &angles, const
 	if (!CheckGroundSpawnPoint(origin, entMins, entMaxs, height, -1.f))
 		return nullptr;
 
-	newEnt = CreateMonster(origin, angles, className);
+	newEnt = CreateMonster(origin, angles, classname);
 	if (!newEnt)
 		return nullptr;
 
@@ -154,21 +154,21 @@ constexpr gtime_t SPAWNGROW_LIFESPAN = 1000_ms;
 
 static THINK(spawngrow_think) (gentity_t *self) -> void
 {
-	if (level.time >= self->timeStamp)
+	if (level.time >= self->timestamp)
 	{
-		FreeEntity(self->target_ent);
-		FreeEntity(self);
+		G_FreeEntity(self->target_ent);
+		G_FreeEntity(self);
 		return;
 	}
 
-	self->s.angles += self->aVelocity * gi.frame_time_s;
+	self->s.angles += self->avelocity * gi.frame_time_s;
 
 	float t = 1.f - ((level.time - self->teleport_time).seconds() / self->wait);
 
 	self->s.scale = clamp(lerp(self->decel, self->accel, t) / 16.f, 0.001f, 16.f);
 	self->s.alpha = t * t;
 
-	self->nextThink += FRAME_TIME_MS;
+	self->nextthink += FRAME_TIME_MS;
 }
 
 static vec3_t SpawnGro_laser_pos(gentity_t *ent)
@@ -190,28 +190,28 @@ static THINK(SpawnGro_laser_think) (gentity_t *self) -> void
 {
 	self->s.old_origin = SpawnGro_laser_pos(self);
 	gi.linkentity(self);
-	self->nextThink = level.time + 1_ms;
+	self->nextthink = level.time + 1_ms;
 }
 
 void SpawnGrow_Spawn(const vec3_t &startpos, float start_size, float end_size)
 {
 	gentity_t *ent;
 
-	ent = Spawn();
+	ent = G_Spawn();
 	ent->s.origin = startpos;
 
 	ent->s.angles[PITCH] = (float) irandom(360);
 	ent->s.angles[YAW] = (float) irandom(360);
 	ent->s.angles[ROLL] = (float) irandom(360);
 
-	ent->aVelocity[0] = frandom(280.f, 360.f) * 2.f;
-	ent->aVelocity[1] = frandom(280.f, 360.f) * 2.f;
-	ent->aVelocity[2] = frandom(280.f, 360.f) * 2.f;
+	ent->avelocity[0] = frandom(280.f, 360.f) * 2.f;
+	ent->avelocity[1] = frandom(280.f, 360.f) * 2.f;
+	ent->avelocity[2] = frandom(280.f, 360.f) * 2.f;
 
 	ent->solid = SOLID_NOT;
 	ent->s.renderfx |= RF_IR_VISIBLE;
-	ent->moveType = MOVETYPE_NONE;
-	ent->className = "spawngro";
+	ent->movetype = MOVETYPE_NONE;
+	ent->classname = "spawngro";
 
 	ent->s.modelindex = gi.modelindex("models/items/spawngro3/tris.md2");
 	ent->s.skinnum = 1;
@@ -224,24 +224,24 @@ void SpawnGrow_Spawn(const vec3_t &startpos, float start_size, float end_size)
 
 	ent->teleport_time = level.time;
 	ent->wait = SPAWNGROW_LIFESPAN.seconds();
-	ent->timeStamp = level.time + SPAWNGROW_LIFESPAN;
+	ent->timestamp = level.time + SPAWNGROW_LIFESPAN;
 
-	ent->nextThink = level.time + FRAME_TIME_MS;
+	ent->nextthink = level.time + FRAME_TIME_MS;
 
 	gi.linkentity(ent);
 
 	// [Paril-KEX]
-	gentity_t *beam = ent->target_ent = Spawn();
+	gentity_t *beam = ent->target_ent = G_Spawn();
 	beam->s.modelindex = MODELINDEX_WORLD;
 	beam->s.renderfx = RF_BEAM_LIGHTNING | RF_NO_ORIGIN_LERP;
 	beam->s.frame = 1;
 	beam->s.skinnum = 0x30303030;
-	beam->className = "spawngro_beam";
+	beam->classname = "spawngro_beam";
 	beam->angle = end_size;
 	beam->owner = ent;
 	beam->s.origin = ent->s.origin;
 	beam->think = SpawnGro_laser_think;
-	beam->nextThink = level.time + 1_ms;
+	beam->nextthink = level.time + 1_ms;
 	beam->s.old_origin = SpawnGro_laser_pos(beam);
 	gi.linkentity(beam);
 }
@@ -279,7 +279,7 @@ static THINK(widowlegs_think) (gentity_t *self) -> void
 	if (self->s.frame < MAX_LEGSFRAME)
 	{
 		self->s.frame++;
-		self->nextThink = level.time + 10_hz;
+		self->nextthink = level.time + 10_hz;
 		return;
 	}
 	else if (self->wait == 0)
@@ -313,7 +313,7 @@ static THINK(widowlegs_think) (gentity_t *self) -> void
 		ThrowWidowGibSized(self, "models/monsters/blackwidow/gib2/tris.md2", 80 + (int) frandom(20.0f), GIB_METALLIC, &point, 0, true);
 		ThrowWidowGibSized(self, "models/monsters/blackwidow/gib3/tris.md2", 80 + (int) frandom(20.0f), GIB_METALLIC, &point, 0, true);
 
-		FreeEntity(self);
+		G_FreeEntity(self);
 		return;
 	}
 	if ((level.time > gtime_t::from_sec(self->wait - 0.5f)) && (self->count == 0))
@@ -337,27 +337,27 @@ static THINK(widowlegs_think) (gentity_t *self) -> void
 		gi.multicast(point, MULTICAST_ALL, false);
 		//		ThrowSmallStuff (self, point);
 
-		self->nextThink = level.time + 10_hz;
+		self->nextthink = level.time + 10_hz;
 		return;
 	}
-	self->nextThink = level.time + 10_hz;
+	self->nextthink = level.time + 10_hz;
 }
 
 void Widowlegs_Spawn(const vec3_t &startpos, const vec3_t &angles)
 {
 	gentity_t *ent;
 
-	ent = Spawn();
+	ent = G_Spawn();
 	ent->s.origin = startpos;
 	ent->s.angles = angles;
 	ent->solid = SOLID_NOT;
 	ent->s.renderfx = RF_IR_VISIBLE;
-	ent->moveType = MOVETYPE_NONE;
-	ent->className = "widowlegs";
+	ent->movetype = MOVETYPE_NONE;
+	ent->classname = "widowlegs";
 
 	ent->s.modelindex = gi.modelindex("models/monsters/legs/tris.md2");
 	ent->think = widowlegs_think;
 
-	ent->nextThink = level.time + 10_hz;
+	ent->nextthink = level.time + 10_hz;
 	gi.linkentity(ent);
 }

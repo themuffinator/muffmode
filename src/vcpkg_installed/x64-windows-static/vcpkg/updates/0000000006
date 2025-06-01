@@ -1,7 +1,6 @@
-Package: jsoncpp
-Version: 1.9.4
-Architecture: x64-windows-static
+Package: vcpkg-cmake-config
+Version: 2021-02-26
+Architecture: x64-windows
 Multi-Arch: same
-Abi: cb59fdc823d95f8a2e7258cee5bf18c764278584cb79ca4006a5345bff47b865
-Description: jsoncpp is an implementation of a JSON reader and writer in C++. JSON (JavaScript Object Notation) is a lightweight data-interchange format that it is easy to parse and redeable for human.
-Status: install ok half-installed
+Abi: d6571768c92c6c963a444aff658325252f6b61618a1968df7d2951fb7e0007c9
+Status: purge ok half-installed

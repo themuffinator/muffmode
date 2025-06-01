@@ -14,7 +14,7 @@ void Bot_SetWeapon(gentity_t *bot, const int weaponIndex, const bool instantSwit
 		return;
 	}
 
-	if ((bot->svFlags & SVF_BOT) == 0) {
+	if ((bot->svflags & SVF_BOT) == 0) {
 		return;
 	}
 
@@ -32,14 +32,14 @@ void Bot_SetWeapon(gentity_t *bot, const int weaponIndex, const bool instantSwit
 		} // already have the gun in hand.
 	}
 
-	const gitem_t *pendingGun = client->newWeapon;
+	const gitem_t *pendingGun = client->newweapon;
 	if (pendingGun != nullptr) {
 		if (pendingGun->id == weaponItemID) {
 			return;
 		} // already in the process of switching to that gun, just be patient!
 	}
 
-	gitem_t *item = &itemList[weaponIndex];
+	gitem_t *item = &itemlist[weaponIndex];
 	if ((item->flags & IF_WEAPON) == 0) {
 		return;
 	}
@@ -66,11 +66,11 @@ Bot_TriggerEntity
 ================
 */
 void Bot_TriggerEntity(gentity_t *bot, gentity_t *entity) {
-	if (!bot->inUse || !entity->inUse) {
+	if (!bot->inuse || !entity->inuse) {
 		return;
 	}
 
-	if ((bot->svFlags & SVF_BOT) == 0) {
+	if ((bot->svflags & SVF_BOT) == 0) {
 		return;
 	}
 
@@ -90,11 +90,11 @@ Bot_UseItem
 ================
 */
 void Bot_UseItem(gentity_t *bot, const int32_t itemID) {
-	if (!bot->inUse) {
+	if (!bot->inuse) {
 		return;
 	}
 
-	if ((bot->svFlags & SVF_BOT) == 0) {
+	if ((bot->svflags & SVF_BOT) == 0) {
 		return;
 	}
 
@@ -111,7 +111,7 @@ void Bot_UseItem(gentity_t *bot, const int32_t itemID) {
 		return;
 	} // the itemID changed on us - don't use it!
 
-	gitem_t *item = &itemList[bot->client->pers.selected_item];
+	gitem_t *item = &itemlist[bot->client->pers.selected_item];
 	bot->client->pers.selected_item = IT_NULL;
 
 	if (item->use == nullptr) {
@@ -127,22 +127,22 @@ void Bot_UseItem(gentity_t *bot, const int32_t itemID) {
 Bot_GetItemID
 ================
 */
-int32_t Bot_GetItemID(const char *className) {
-	if (className == nullptr || className[0] == '\0') {
+int32_t Bot_GetItemID(const char *classname) {
+	if (classname == nullptr || classname[0] == '\0') {
 		return Item_Invalid;
 	}
 
-	if (Q_strcasecmp(className, "none") == 0) {
+	if (Q_strcasecmp(classname, "none") == 0) {
 		return Item_Null;
 	}
 
 	for (int i = 0; i < IT_TOTAL; ++i) {
-		const gitem_t *item = itemList + i;
-		if (item->className == nullptr || item->className[0] == '\0') {
+		const gitem_t *item = itemlist + i;
+		if (item->classname == nullptr || item->classname[0] == '\0') {
 			continue;
 		}
 
-		if (Q_strcasecmp(item->className, className) == 0) {
+		if (Q_strcasecmp(item->classname, classname) == 0) {
 			return item->id;
 		}
 	}
@@ -171,7 +171,7 @@ void Entity_ForceLookAtPoint(gentity_t *entity, gvec3_cref_t point) {
 	if (entity->client != nullptr) {
 		entity->client->ps.pmove.delta_angles = (viewAngles - entity->client->resp.cmd_angles);
 		entity->client->ps.viewangles = {};
-		entity->client->vAngle = {};
+		entity->client->v_angle = {};
 		entity->s.angles = {};
 	}
 }

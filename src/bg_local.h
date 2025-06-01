@@ -12,8 +12,6 @@
 #define GAME_INCLUDE
 #include "game.h"
 
-constexpr int DEFAULT_VIEWHEIGHT = 26;
-
 //
 // p_move.c
 //
@@ -99,7 +97,7 @@ enum powerup_t : uint8_t {
 
 	POWERUP_QUAD,
 	POWERUP_HASTE,
-	POWERUP_BATTLESUIT,
+	POWERUP_PROTECTION,
 	POWERUP_INVISIBILITY,
 	POWERUP_SILENCER,
 	POWERUP_REBREATHER,
@@ -123,7 +121,6 @@ enum powerup_t : uint8_t {
 	POWERUP_TECH_AUTODOC,
 
 	POWERUP_REGEN,
-	POWERUP_SPAWN_PROTECTION,
 
 	POWERUP_MAX
 };
@@ -162,12 +159,12 @@ constexpr size_t NUM_AMMO_STATS = num_of_type_for_bits<uint16_t>(NUM_BITS_FOR_AM
 // if this value is set on an STAT_AMMO_INFO_xxx, don't render ammo
 constexpr uint16_t AMMO_VALUE_INFINITE = bit_v<NUM_BITS_FOR_AMMO> -1;
 
-constexpr void G_SetAmmoStat(uint16_t *start, uint8_t ammoID, uint16_t count) {
-	set_compressed_integer<NUM_BITS_FOR_AMMO>(start, ammoID, count);
+constexpr void G_SetAmmoStat(uint16_t *start, uint8_t ammo_id, uint16_t count) {
+	set_compressed_integer<NUM_BITS_FOR_AMMO>(start, ammo_id, count);
 }
 
-constexpr uint16_t G_GetAmmoStat(uint16_t *start, uint8_t ammoID) {
-	return get_compressed_integer<NUM_BITS_FOR_AMMO>(start, ammoID);
+constexpr uint16_t G_GetAmmoStat(uint16_t *start, uint8_t ammo_id) {
+	return get_compressed_integer<NUM_BITS_FOR_AMMO>(start, ammo_id);
 }
 
 // powerup stats compressed in 2 bits per entry;
@@ -202,7 +199,7 @@ enum player_stat_t {
 	STAT_LAYOUTS = 13,
 	STAT_SCORE = 14,
 	STAT_FLASHES = 15, // cleared each frame, 1 = health, 2 = armor
-	STAT_FOLLOWING = 16,
+	STAT_CHASE = 16,
 	STAT_SPECTATOR = 17,
 
 	STAT_MINISCORE_FIRST_PIC = 18,

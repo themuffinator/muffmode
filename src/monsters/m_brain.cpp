@@ -211,7 +211,7 @@ MMOVE_T(brain_move_duck) = { FRAME_duck01, FRAME_duck08, brain_frames_duck, brai
 
 static void brain_shrink(gentity_t *self) {
 	self->maxs[2] = 0;
-	self->svFlags |= SVF_DEADMONSTER;
+	self->svflags |= SVF_DEADMONSTER;
 	gi.linkentity(self);
 }
 
@@ -259,7 +259,7 @@ static void brain_hit_right(gentity_t *self) {
 	if (fire_hit(self, aim, irandom(15, 20), 40))
 		gi.sound(self, CHAN_WEAPON, sound_melee3, 1, ATTN_NORM, 0);
 	else
-		self->monsterInfo.melee_debounce_time = level.time + 3_sec;
+		self->monsterinfo.melee_debounce_time = level.time + 3_sec;
 }
 
 static void brain_swing_left(gentity_t *self) {
@@ -271,7 +271,7 @@ static void brain_hit_left(gentity_t *self) {
 	if (fire_hit(self, aim, irandom(15, 20), 40))
 		gi.sound(self, CHAN_WEAPON, sound_melee3, 1, ATTN_NORM, 0);
 	else
-		self->monsterInfo.melee_debounce_time = level.time + 3_sec;
+		self->monsterinfo.melee_debounce_time = level.time + 3_sec;
 }
 
 mframe_t brain_frames_attack1[] = {
@@ -298,7 +298,7 @@ MMOVE_T(brain_move_attack1) = { FRAME_attak101, FRAME_attak118, brain_frames_att
 
 static void brain_chest_open(gentity_t *self) {
 	self->count = 0;
-	self->monsterInfo.powerArmorType = IT_NULL;
+	self->monsterinfo.power_armor_type = IT_NULL;
 	gi.sound(self, CHAN_BODY, sound_chest_open, 1, ATTN_NORM, 0);
 }
 
@@ -307,12 +307,12 @@ static void brain_tentacle_attack(gentity_t *self) {
 	if (fire_hit(self, aim, irandom(10, 15), -600))
 		self->count = 1;
 	else
-		self->monsterInfo.melee_debounce_time = level.time + 3_sec;
+		self->monsterinfo.melee_debounce_time = level.time + 3_sec;
 	gi.sound(self, CHAN_WEAPON, sound_tentacles_retract, 1, ATTN_NORM, 0);
 }
 
 static void brain_chest_closed(gentity_t *self) {
-	self->monsterInfo.powerArmorType = IT_POWER_SCREEN;
+	self->monsterinfo.power_armor_type = IT_POWER_SCREEN;
 	if (self->count) {
 		self->count = 0;
 		M_SetAnimation(self, &brain_move_attack1);
@@ -401,7 +401,7 @@ static void brain_tounge_attack(gentity_t *self) {
 	gi.multicast(self->s.origin, MULTICAST_PVS, false);
 
 	dir = start - end;
-	Damage(self->enemy, self, self, dir, self->enemy->s.origin, vec3_origin, damage, 0, DAMAGE_NO_KNOCKBACK, MOD_BRAINTENTACLE);
+	T_Damage(self->enemy, self, self, dir, self->enemy->s.origin, vec3_origin, damage, 0, DAMAGE_NO_KNOCKBACK, MOD_BRAINTENTACLE);
 
 	// pull the enemy in
 	vec3_t forward;
@@ -563,8 +563,8 @@ mframe_t brain_frames_run[] = {
 MMOVE_T(brain_move_run) = { FRAME_walk101, FRAME_walk111, brain_frames_run, nullptr };
 
 MONSTERINFO_RUN(brain_run) (gentity_t *self) -> void {
-	self->monsterInfo.powerArmorType = IT_POWER_SCREEN;
-	if (self->monsterInfo.aiflags & AI_STAND_GROUND)
+	self->monsterinfo.power_armor_type = IT_POWER_SCREEN;
+	if (self->monsterinfo.aiflags & AI_STAND_GROUND)
 		M_SetAnimation(self, &brain_move_stand);
 	else
 		M_SetAnimation(self, &brain_move_run);
@@ -598,7 +598,7 @@ static PAIN(brain_pain) (gentity_t *self, gentity_t *other, float kick, int dama
 		M_SetAnimation(self, &brain_move_pain3);
 
 	// PMM - clear duck flag
-	if (self->monsterInfo.aiflags & AI_DUCKED)
+	if (self->monsterinfo.aiflags & AI_DUCKED)
 		monster_duck_up(self);
 }
 
@@ -617,7 +617,7 @@ void brain_dead(gentity_t *self) {
 
 static DIE(brain_die) (gentity_t *self, gentity_t *inflictor, gentity_t *attacker, int damage, const vec3_t &point, const mod_t &mod) -> void {
 	self->s.effects = EF_NONE;
-	self->monsterInfo.powerArmorType = IT_NULL;
+	self->monsterinfo.power_armor_type = IT_NULL;
 
 	// check for gib
 	if (M_CheckGib(self, mod)) {
@@ -626,11 +626,11 @@ static DIE(brain_die) (gentity_t *self, gentity_t *inflictor, gentity_t *attacke
 		self->s.skinnum /= 2;
 
 		if (self->beam) {
-			FreeEntity(self->beam);
+			G_FreeEntity(self->beam);
 			self->beam = nullptr;
 		}
 		if (self->beam2) {
-			FreeEntity(self->beam2);
+			G_FreeEntity(self->beam2);
 			self->beam2 = nullptr;
 		}
 
@@ -644,17 +644,17 @@ static DIE(brain_die) (gentity_t *self, gentity_t *inflictor, gentity_t *attacke
 			{ 2, "models/monsters/brain/gibs/door.md2", GIB_SKINNED | GIB_UPRIGHT },
 			{ "models/monsters/brain/gibs/head.md2", GIB_SKINNED | GIB_HEAD }
 			});
-		self->deadFlag = true;
+		self->deadflag = true;
 		return;
 	}
 
-	if (self->deadFlag)
+	if (self->deadflag)
 		return;
 
 	// regular death
 	gi.sound(self, CHAN_VOICE, sound_death, 1, ATTN_NORM, 0);
-	self->deadFlag = true;
-	self->takeDamage = true;
+	self->deadflag = true;
+	self->takedamage = true;
 	if (frandom() <= 0.5f)
 		M_SetAnimation(self, &brain_move_death1);
 	else
@@ -671,7 +671,7 @@ MONSTERINFO_DUCK(brain_duck) (gentity_t *self, gtime_t eta) -> bool {
  */
 void SP_monster_brain(gentity_t *self) {
 	if (!M_AllowSpawn(self)) {
-		FreeEntity(self);
+		G_FreeEntity(self);
 		return;
 	}
 
@@ -690,7 +690,7 @@ void SP_monster_brain(gentity_t *self) {
 	sound_melee2.assign("brain/melee2.wav");
 	sound_melee3.assign("brain/melee3.wav");
 
-	self->moveType = MOVETYPE_STEP;
+	self->movetype = MOVETYPE_STEP;
 	self->solid = SOLID_BBOX;
 	self->s.modelindex = gi.modelindex("models/monsters/brain/tris.md2");
 
@@ -705,34 +705,34 @@ void SP_monster_brain(gentity_t *self) {
 	self->maxs = { 16, 16, 32 };
 
 	self->health = 300 * st.health_multiplier;
-	self->gibHealth = -150;
+	self->gib_health = -150;
 	self->mass = 400;
 
 	self->pain = brain_pain;
 	self->die = brain_die;
 
-	self->monsterInfo.stand = brain_stand;
-	self->monsterInfo.walk = brain_walk;
-	self->monsterInfo.run = brain_run;
-	self->monsterInfo.dodge = M_MonsterDodge;
-	self->monsterInfo.duck = brain_duck;
-	self->monsterInfo.unduck = monster_duck_up;
-	self->monsterInfo.attack = brain_attack;
-	self->monsterInfo.melee = brain_melee;
-	self->monsterInfo.sight = brain_sight;
-	self->monsterInfo.search = brain_search;
-	self->monsterInfo.idle = brain_idle;
-	self->monsterInfo.setskin = brain_setskin;
+	self->monsterinfo.stand = brain_stand;
+	self->monsterinfo.walk = brain_walk;
+	self->monsterinfo.run = brain_run;
+	self->monsterinfo.dodge = M_MonsterDodge;
+	self->monsterinfo.duck = brain_duck;
+	self->monsterinfo.unduck = monster_duck_up;
+	self->monsterinfo.attack = brain_attack;
+	self->monsterinfo.melee = brain_melee;
+	self->monsterinfo.sight = brain_sight;
+	self->monsterinfo.search = brain_search;
+	self->monsterinfo.idle = brain_idle;
+	self->monsterinfo.setskin = brain_setskin;
 
-	if (!st.was_key_specified("powerArmorType"))
-		self->monsterInfo.powerArmorType = IT_POWER_SCREEN;
-	if (!st.was_key_specified("powerArmorPower"))
-		self->monsterInfo.powerArmorPower = 100;
+	if (!st.was_key_specified("power_armor_type"))
+		self->monsterinfo.power_armor_type = IT_POWER_SCREEN;
+	if (!st.was_key_specified("power_armor_power"))
+		self->monsterinfo.power_armor_power = 100;
 
 	gi.linkentity(self);
 
 	M_SetAnimation(self, &brain_move_stand);
-	self->monsterInfo.scale = MODEL_SCALE;
+	self->monsterinfo.scale = MODEL_SCALE;
 
 	walkmonster_start(self);
 }

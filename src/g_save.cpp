@@ -60,7 +60,7 @@ static std::unordered_map<std::tuple<const void *, save_data_tag_t>, const save_
 
 #include <cassert>
 
-void G_InitSave() {
+void InitSave() {
 	if (save_data_initialized)
 		return;
 
@@ -188,11 +188,11 @@ enum save_type_id_t {
 
 	// special Quake types
 	ST_ENTITY,		 // serialized as s.number
-	ST_ITEM_POINTER, // serialized as className
-	ST_ITEM_INDEX,	 // serialized as className
+	ST_ITEM_POINTER, // serialized as classname
+	ST_ITEM_INDEX,	 // serialized as classname
 	ST_TIME,		 // serialized as milliseconds
 	ST_DATA,		 // serialized as name of data ptr from global list; `tag` = list tag
-	ST_INVENTORY,	 // serialized as className => number key/value pairs
+	ST_INVENTORY,	 // serialized as classname => number key/value pairs
 	ST_REINFORCEMENTS, // serialized as array of data
 	ST_SAVABLE_DYNAMIC // serialized similar to ST_FIXED_ARRAY but includes count
 };
@@ -576,10 +576,10 @@ struct save_type_deducer<t> \
 SAVE_STRUCT_START
 FIELD_AUTO(map_name),
 FIELD_AUTO(pretty_name),
-FIELD_AUTO(totalSecrets),
-FIELD_AUTO(foundSecrets),
-FIELD_AUTO(totalMonsters),
-FIELD_AUTO(killedMonsters),
+FIELD_AUTO(total_secrets),
+FIELD_AUTO(found_secrets),
+FIELD_AUTO(total_monsters),
+FIELD_AUTO(killed_monsters),
 FIELD_AUTO(time),
 FIELD_AUTO(visit_order)
 SAVE_STRUCT_END
@@ -614,55 +614,54 @@ SAVE_STRUCT_END
 SAVE_STRUCT_START
 FIELD_AUTO(time),
 
-FIELD_AUTO(levelName),
+FIELD_AUTO(level_name),
 FIELD_AUTO(mapname),
 FIELD_AUTO(nextmap),
 
-FIELD_AUTO(intermissionTime),
-FIELD_LEVEL_STRING(changeMap),
+FIELD_AUTO(intermission_time),
+FIELD_LEVEL_STRING(changemap),
 FIELD_LEVEL_STRING(achievement),
-FIELD_AUTO(intermissionPreExit),
-FIELD_AUTO(intermissionClear),
-FIELD_AUTO(intermissionOrigin),
-FIELD_AUTO(intermissionAngle),
+FIELD_AUTO(intermission_exit),
+FIELD_AUTO(intermission_clear),
+FIELD_AUTO(intermission_origin),
+FIELD_AUTO(intermission_angles),
 
-// picHealth is set by worldspawn
-// picPing is set by worldspawn
+// pic_health is set by worldspawn
+// pic_ping is set by worldspawn
 
-FIELD_AUTO(totalSecrets),
-FIELD_AUTO(foundSecrets),
+FIELD_AUTO(total_secrets),
+FIELD_AUTO(found_secrets),
 
-FIELD_AUTO(totalGoals),
-FIELD_AUTO(foundGoals),
+FIELD_AUTO(total_goals),
+FIELD_AUTO(found_goals),
 
-FIELD_AUTO(totalMonsters),
-FIELD_AUTO(monstersRegistered),
-FIELD_AUTO(killedMonsters),
+FIELD_AUTO(total_monsters),
+FIELD_AUTO(monsters_registered),
+FIELD_AUTO(killed_monsters),
 
-// currentEntity not necessary to save
+// current_entity not necessary to save
 
-FIELD_AUTO(bodyQue),
+FIELD_AUTO(body_que),
 
-FIELD_AUTO(powerCubes),
+FIELD_AUTO(power_cubes),
 
-FIELD_AUTO(disguiseViolator),
-FIELD_AUTO(disguiseViolationTime),
+FIELD_AUTO(disguise_violator),
+FIELD_AUTO(disguise_violation_time),
 
-FIELD_AUTO(coopLevelRestartTime),
+FIELD_AUTO(coop_level_restart_time),
 FIELD_LEVEL_STRING(goals),
-FIELD_AUTO(goalNum),
-FIELD_AUTO(viewWeaponOffset),
+FIELD_AUTO(goal_num),
+FIELD_AUTO(vwep_offset),
 
-FIELD_AUTO(validPOI),
-FIELD_AUTO(currentPOI),
-FIELD_AUTO(currentPOIStage),
-FIELD_AUTO(currentPOIImage),
-FIELD_AUTO(currentDynamicPOI),
+FIELD_AUTO(valid_poi),
+FIELD_AUTO(current_poi),
+FIELD_AUTO(current_poi_stage),
+FIELD_AUTO(current_poi_image),
+FIELD_AUTO(current_dynamic_poi),
 
 FIELD_LEVEL_STRING(start_items),
 FIELD_AUTO(no_grapple),
 FIELD_AUTO(no_dm_spawnpads),
-FIELD_AUTO(no_dm_telepads),
 FIELD_AUTO(gravity),
 FIELD_AUTO(hub_map),
 FIELD_AUTO(health_bar_entities),
@@ -681,7 +680,7 @@ FIELD_AUTO(pm_flags),
 FIELD_AUTO(pm_time),
 FIELD_AUTO(gravity),
 FIELD_AUTO(delta_angles),
-FIELD_AUTO(viewHeight)
+FIELD_AUTO(viewheight)
 SAVE_STRUCT_END
 #undef DECLARE_SAVE_STRUCT
 
@@ -717,8 +716,8 @@ SAVE_STRUCT_END
 
 #define DECLARE_SAVE_STRUCT client_persistant_t
 SAVE_STRUCT_START
-FIELD_AUTO(userInfo),
-FIELD_AUTO(socialID),
+FIELD_AUTO(userinfo),
+FIELD_AUTO(social_id),
 FIELD_AUTO(netname),
 FIELD_AUTO(hand),
 
@@ -729,18 +728,20 @@ FIELD_AUTO(saved_flags),
 FIELD_AUTO(selected_item),
 FIELD_SIMPLE(inventory, ST_INVENTORY),
 
-FIELD_AUTO(ammoMax),
+FIELD_AUTO(max_ammo),
 
 FIELD_AUTO(weapon),
 FIELD_AUTO(lastweapon),
 
-FIELD_AUTO(powerCubes),
+FIELD_AUTO(power_cubes),
 FIELD_AUTO(score),
 
 FIELD_AUTO(game_help1changed),
 FIELD_AUTO(game_help2changed),
 FIELD_AUTO(helpchanged),
 FIELD_AUTO(help_time),
+
+//FIELD_AUTO(spectator),
 
 // save the wanted fog, but not the current fog
 // or transition time so it sends immediately
@@ -761,61 +762,60 @@ FIELD_STRUCT(ps, player_state_t),
 FIELD_STRUCT(pers, client_persistant_t),
 
 FIELD_STRUCT(resp.coop_respawn, client_persistant_t),
-FIELD_AUTO(resp.enter_time),
+FIELD_AUTO(resp.entertime),
 FIELD_AUTO(resp.score),
 FIELD_AUTO(resp.cmd_angles),
 //FIELD_AUTO(resp.spectator),
 // old_pmove is not necessary to persist
 
-// showScores, showInventory, showHelp not necessary
+// showscores, showinventory, showhelp not necessary
 
-// buttons, oldButtons, latchedButtons not necessary
-// weaponThunk not necessary
+// buttons, oldbuttons, latched_buttons not necessary
+// weapon_thunk not necessary
 
-FIELD_AUTO(newWeapon),
+FIELD_AUTO(newweapon),
 
 // damage_ members are calculated on damage
 
 FIELD_AUTO(killer_yaw),
 
-FIELD_AUTO(weaponState),
+FIELD_AUTO(weaponstate),
 FIELD_AUTO(kick.angles),
 FIELD_AUTO(kick.origin),
 FIELD_AUTO(kick.total),
 FIELD_AUTO(kick.time),
-FIELD_AUTO(quakeTime),
-FIELD_AUTO(vDamageRoll),
-FIELD_AUTO(vDamagePitch),
-FIELD_AUTO(vDamageTime),
-FIELD_AUTO(fallTime),
-FIELD_AUTO(fallValue),
-FIELD_AUTO(damageAlpha),
-FIELD_AUTO(bonusAlpha),
-FIELD_AUTO(damageBlend),
-FIELD_AUTO(vAngle),
-FIELD_AUTO(bobTime),
-FIELD_AUTO(oldViewAngles),
-FIELD_AUTO(oldVelocity),
-FIELD_AUTO(oldGroundEntity),
+FIELD_AUTO(quake_time),
+FIELD_AUTO(v_dmg_roll),
+FIELD_AUTO(v_dmg_pitch),
+FIELD_AUTO(v_dmg_time),
+FIELD_AUTO(fall_time),
+FIELD_AUTO(fall_value),
+FIELD_AUTO(damage_alpha),
+FIELD_AUTO(bonus_alpha),
+FIELD_AUTO(damage_blend),
+FIELD_AUTO(v_angle),
+FIELD_AUTO(bobtime),
+FIELD_AUTO(oldviewangles),
+FIELD_AUTO(oldvelocity),
+FIELD_AUTO(oldgroundentity),
 
-FIELD_AUTO(nextDrownTime),
-FIELD_AUTO(oldWaterLevel),
-FIELD_AUTO(breatherSound),
+FIELD_AUTO(next_drown_time),
+FIELD_AUTO(old_waterlevel),
+FIELD_AUTO(breather_sound),
 
-FIELD_AUTO(machinegunShots),
+FIELD_AUTO(machinegun_shots),
 
-FIELD_AUTO(animEnd),
-FIELD_AUTO(animPriority),
-FIELD_AUTO(animDuck),
-FIELD_AUTO(animRun),
+FIELD_AUTO(anim_end),
+FIELD_AUTO(anim_priority),
+FIELD_AUTO(anim_duck),
+FIELD_AUTO(anim_run),
 
 FIELD_AUTO(pu_time_quad),
-FIELD_AUTO(pu_time_battlesuit),
+FIELD_AUTO(pu_time_protection),
 FIELD_AUTO(pu_time_rebreather),
 FIELD_AUTO(pu_time_enviro),
 FIELD_AUTO(pu_time_invisibility),
 FIELD_AUTO(pu_time_regeneration),
-FIELD_AUTO(pu_time_spawn_protection),
 
 FIELD_AUTO(grenade_blew_up),
 FIELD_AUTO(grenade_time),
@@ -835,9 +835,9 @@ FIELD_AUTO(respawn_time),
 FIELD_AUTO(pu_time_double),
 FIELD_AUTO(ir_time),
 FIELD_AUTO(nuke_time),
-FIELD_AUTO(trackerPainTime),
+FIELD_AUTO(tracker_pain_time),
 
-// ownedSphere is DM only
+// owned_sphere is DM only
 
 FIELD_AUTO(empty_click_sound),
 FIELD_AUTO(trail_head),
@@ -897,32 +897,32 @@ FIELD_AUTO(s.instance_bits),
 
 // server stuff
 // client is auto-set
-// inUse is implied
+// inuse is implied
 FIELD_AUTO(linkcount),
 // area, num_clusters, clusternums, headnode, areanum, areanum2
 // are set by linkentity and can't be saved
 
-FIELD_AUTO(svFlags),
+FIELD_AUTO(svflags),
 FIELD_AUTO(mins),
 FIELD_AUTO(maxs),
-// absMin, absMax and size are set by linkentity
+// absmin, absmax and size are set by linkentity
 FIELD_AUTO(solid),
-FIELD_AUTO(clipMask),
+FIELD_AUTO(clipmask),
 FIELD_AUTO(owner),
 
 // game stuff
 FIELD_AUTO(spawn_count),
-FIELD_AUTO(moveType),
+FIELD_AUTO(movetype),
 FIELD_AUTO(flags),
 
 FIELD_LEVEL_STRING(model),
-FIELD_AUTO(freeTime),
+FIELD_AUTO(freetime),
 
 FIELD_LEVEL_STRING(message),
-FIELD_LEVEL_STRING(className), // FIXME: should allow loading from constants
+FIELD_LEVEL_STRING(classname), // FIXME: should allow loading from constants
 FIELD_AUTO(spawnflags),
 
-FIELD_AUTO(timeStamp),
+FIELD_AUTO(timestamp),
 
 FIELD_AUTO(angle),
 FIELD_LEVEL_STRING(target),
@@ -945,7 +945,7 @@ FIELD_AUTO(pos2),
 FIELD_AUTO(pos3),
 
 FIELD_AUTO(velocity),
-FIELD_AUTO(aVelocity),
+FIELD_AUTO(avelocity),
 FIELD_AUTO(mass),
 FIELD_AUTO(air_finished),
 FIELD_AUTO(gravity).set_is_empty(edict_t_gravity_is_empty),
@@ -955,7 +955,7 @@ FIELD_AUTO(movetarget),
 FIELD_AUTO(yaw_speed),
 FIELD_AUTO(ideal_yaw),
 
-FIELD_AUTO(nextThink),
+FIELD_AUTO(nextthink),
 FIELD_AUTO(prethink),
 FIELD_AUTO(postthink),
 FIELD_AUTO(think),
@@ -972,30 +972,30 @@ FIELD_AUTO(last_move_time),
 
 FIELD_AUTO(health),
 FIELD_AUTO(max_health),
-FIELD_AUTO(gibHealth),
-FIELD_AUTO(deadFlag),
+FIELD_AUTO(gib_health),
+FIELD_AUTO(deadflag),
 FIELD_AUTO(show_hostile),
 
 FIELD_AUTO(powerarmor_time),
 
 FIELD_LEVEL_STRING(map),
 
-FIELD_AUTO(viewHeight),
-FIELD_AUTO(takeDamage),
+FIELD_AUTO(viewheight),
+FIELD_AUTO(takedamage),
 FIELD_AUTO(dmg),
-FIELD_AUTO(splashDamage),
-FIELD_AUTO(splashRadius),
+FIELD_AUTO(splash_damage),
+FIELD_AUTO(splash_radius),
 FIELD_AUTO(sounds),
 FIELD_AUTO(count),
 
 FIELD_AUTO(chain),
 FIELD_AUTO(enemy),
-FIELD_AUTO(oldEnemy),
+FIELD_AUTO(oldenemy),
 FIELD_AUTO(activator),
-FIELD_AUTO(groundEntity),
-FIELD_AUTO(groundEntity_linkCount),
-FIELD_AUTO(teamChain),
-FIELD_AUTO(teamMaster),
+FIELD_AUTO(groundentity),
+FIELD_AUTO(groundentity_linkcount),
+FIELD_AUTO(teamchain),
+FIELD_AUTO(teammaster),
 
 FIELD_AUTO(mynoise),
 FIELD_AUTO(mynoise2),
@@ -1062,111 +1062,111 @@ FIELD_AUTO(moveinfo.num_subframes),
 FIELD_AUTO(moveinfo.num_frames_done),
 
 // monsterinfo_t
-FIELD_AUTO(monsterInfo.active_move),
-FIELD_AUTO(monsterInfo.next_move),
-FIELD_AUTO(monsterInfo.aiflags),
-FIELD_AUTO(monsterInfo.nextframe),
-FIELD_AUTO(monsterInfo.scale),
+FIELD_AUTO(monsterinfo.active_move),
+FIELD_AUTO(monsterinfo.next_move),
+FIELD_AUTO(monsterinfo.aiflags),
+FIELD_AUTO(monsterinfo.nextframe),
+FIELD_AUTO(monsterinfo.scale),
 
-FIELD_AUTO(monsterInfo.stand),
-FIELD_AUTO(monsterInfo.idle),
-FIELD_AUTO(monsterInfo.search),
-FIELD_AUTO(monsterInfo.walk),
-FIELD_AUTO(monsterInfo.run),
-FIELD_AUTO(monsterInfo.dodge),
-FIELD_AUTO(monsterInfo.attack),
-FIELD_AUTO(monsterInfo.melee),
-FIELD_AUTO(monsterInfo.sight),
-FIELD_AUTO(monsterInfo.checkattack),
-FIELD_AUTO(monsterInfo.setskin),
+FIELD_AUTO(monsterinfo.stand),
+FIELD_AUTO(monsterinfo.idle),
+FIELD_AUTO(monsterinfo.search),
+FIELD_AUTO(monsterinfo.walk),
+FIELD_AUTO(monsterinfo.run),
+FIELD_AUTO(monsterinfo.dodge),
+FIELD_AUTO(monsterinfo.attack),
+FIELD_AUTO(monsterinfo.melee),
+FIELD_AUTO(monsterinfo.sight),
+FIELD_AUTO(monsterinfo.checkattack),
+FIELD_AUTO(monsterinfo.setskin),
 
-FIELD_AUTO(monsterInfo.pausetime),
-FIELD_AUTO(monsterInfo.attack_finished),
-FIELD_AUTO(monsterInfo.fire_wait),
+FIELD_AUTO(monsterinfo.pausetime),
+FIELD_AUTO(monsterinfo.attack_finished),
+FIELD_AUTO(monsterinfo.fire_wait),
 
-FIELD_AUTO(monsterInfo.saved_goal),
-FIELD_AUTO(monsterInfo.search_time),
-FIELD_AUTO(monsterInfo.trail_time),
-FIELD_AUTO(monsterInfo.last_sighting),
-FIELD_AUTO(monsterInfo.attack_state),
-FIELD_AUTO(monsterInfo.lefty),
-FIELD_AUTO(monsterInfo.idle_time),
-FIELD_AUTO(monsterInfo.linkcount),
+FIELD_AUTO(monsterinfo.saved_goal),
+FIELD_AUTO(monsterinfo.search_time),
+FIELD_AUTO(monsterinfo.trail_time),
+FIELD_AUTO(monsterinfo.last_sighting),
+FIELD_AUTO(monsterinfo.attack_state),
+FIELD_AUTO(monsterinfo.lefty),
+FIELD_AUTO(monsterinfo.idle_time),
+FIELD_AUTO(monsterinfo.linkcount),
 
-FIELD_AUTO(monsterInfo.powerArmorType),
-FIELD_AUTO(monsterInfo.powerArmorPower),
-FIELD_AUTO(monsterInfo.initial_power_armor_type),
-FIELD_AUTO(monsterInfo.max_power_armor_power),
-FIELD_AUTO(monsterInfo.weapon_sound),
-FIELD_AUTO(monsterInfo.engine_sound),
+FIELD_AUTO(monsterinfo.power_armor_type),
+FIELD_AUTO(monsterinfo.power_armor_power),
+FIELD_AUTO(monsterinfo.initial_power_armor_type),
+FIELD_AUTO(monsterinfo.max_power_armor_power),
+FIELD_AUTO(monsterinfo.weapon_sound),
+FIELD_AUTO(monsterinfo.engine_sound),
 
-FIELD_AUTO(monsterInfo.blocked),
-FIELD_AUTO(monsterInfo.last_hint_time),
-FIELD_AUTO(monsterInfo.goal_hint),
-FIELD_AUTO(monsterInfo.medicTries),
-FIELD_AUTO(monsterInfo.badMedic1),
-FIELD_AUTO(monsterInfo.badMedic2),
-FIELD_AUTO(monsterInfo.healer),
-FIELD_AUTO(monsterInfo.duck),
-FIELD_AUTO(monsterInfo.unduck),
-FIELD_AUTO(monsterInfo.sidestep),
-FIELD_AUTO(monsterInfo.base_height),
-FIELD_AUTO(monsterInfo.next_duck_time),
-FIELD_AUTO(monsterInfo.duck_wait_time),
-FIELD_AUTO(monsterInfo.last_player_enemy),
-FIELD_AUTO(monsterInfo.blindfire),
-FIELD_AUTO(monsterInfo.can_jump),
-FIELD_AUTO(monsterInfo.had_visibility),
-FIELD_AUTO(monsterInfo.drop_height),
-FIELD_AUTO(monsterInfo.jump_height),
-FIELD_AUTO(monsterInfo.blind_fire_delay),
-FIELD_AUTO(monsterInfo.blind_fire_target),
-FIELD_AUTO(monsterInfo.monster_slots),
-FIELD_AUTO(monsterInfo.monster_used),
-FIELD_AUTO(monsterInfo.commander),
-FIELD_AUTO(monsterInfo.quad_time),
-FIELD_AUTO(monsterInfo.invincibility_time),
-FIELD_AUTO(monsterInfo.double_time),
+FIELD_AUTO(monsterinfo.blocked),
+FIELD_AUTO(monsterinfo.last_hint_time),
+FIELD_AUTO(monsterinfo.goal_hint),
+FIELD_AUTO(monsterinfo.medicTries),
+FIELD_AUTO(monsterinfo.badMedic1),
+FIELD_AUTO(monsterinfo.badMedic2),
+FIELD_AUTO(monsterinfo.healer),
+FIELD_AUTO(monsterinfo.duck),
+FIELD_AUTO(monsterinfo.unduck),
+FIELD_AUTO(monsterinfo.sidestep),
+FIELD_AUTO(monsterinfo.base_height),
+FIELD_AUTO(monsterinfo.next_duck_time),
+FIELD_AUTO(monsterinfo.duck_wait_time),
+FIELD_AUTO(monsterinfo.last_player_enemy),
+FIELD_AUTO(monsterinfo.blindfire),
+FIELD_AUTO(monsterinfo.can_jump),
+FIELD_AUTO(monsterinfo.had_visibility),
+FIELD_AUTO(monsterinfo.drop_height),
+FIELD_AUTO(monsterinfo.jump_height),
+FIELD_AUTO(monsterinfo.blind_fire_delay),
+FIELD_AUTO(monsterinfo.blind_fire_target),
+FIELD_AUTO(monsterinfo.monster_slots),
+FIELD_AUTO(monsterinfo.monster_used),
+FIELD_AUTO(monsterinfo.commander),
+FIELD_AUTO(monsterinfo.quad_time),
+FIELD_AUTO(monsterinfo.invincibility_time),
+FIELD_AUTO(monsterinfo.double_time),
 
-FIELD_AUTO(monsterInfo.surprise_time),
-FIELD_AUTO(monsterInfo.armor_type),
-FIELD_AUTO(monsterInfo.armor_power),
-FIELD_AUTO(monsterInfo.close_sight_tripped),
-FIELD_AUTO(monsterInfo.melee_debounce_time),
-FIELD_AUTO(monsterInfo.strafe_check_time),
-FIELD_AUTO(monsterInfo.base_health),
-FIELD_AUTO(monsterInfo.health_scaling),
-FIELD_AUTO(monsterInfo.next_move_time),
-FIELD_AUTO(monsterInfo.bad_move_time),
-FIELD_AUTO(monsterInfo.bump_time),
-FIELD_AUTO(monsterInfo.random_change_time),
-FIELD_AUTO(monsterInfo.path_blocked_counter),
-FIELD_AUTO(monsterInfo.path_wait_time),
-FIELD_AUTO(monsterInfo.combat_style),
+FIELD_AUTO(monsterinfo.surprise_time),
+FIELD_AUTO(monsterinfo.armor_type),
+FIELD_AUTO(monsterinfo.armor_power),
+FIELD_AUTO(monsterinfo.close_sight_tripped),
+FIELD_AUTO(monsterinfo.melee_debounce_time),
+FIELD_AUTO(monsterinfo.strafe_check_time),
+FIELD_AUTO(monsterinfo.base_health),
+FIELD_AUTO(monsterinfo.health_scaling),
+FIELD_AUTO(monsterinfo.next_move_time),
+FIELD_AUTO(monsterinfo.bad_move_time),
+FIELD_AUTO(monsterinfo.bump_time),
+FIELD_AUTO(monsterinfo.random_change_time),
+FIELD_AUTO(monsterinfo.path_blocked_counter),
+FIELD_AUTO(monsterinfo.path_wait_time),
+FIELD_AUTO(monsterinfo.combat_style),
 
-FIELD_AUTO(monsterInfo.fly_max_distance),
-FIELD_AUTO(monsterInfo.fly_min_distance),
-FIELD_AUTO(monsterInfo.fly_acceleration),
-FIELD_AUTO(monsterInfo.fly_speed),
-FIELD_AUTO(monsterInfo.fly_ideal_position),
-FIELD_AUTO(monsterInfo.fly_position_time),
-FIELD_AUTO(monsterInfo.fly_buzzard),
-FIELD_AUTO(monsterInfo.fly_above),
-FIELD_AUTO(monsterInfo.fly_pinned),
-FIELD_AUTO(monsterInfo.fly_thrusters),
-FIELD_AUTO(monsterInfo.fly_recovery_time),
-FIELD_AUTO(monsterInfo.fly_recovery_dir),
+FIELD_AUTO(monsterinfo.fly_max_distance),
+FIELD_AUTO(monsterinfo.fly_min_distance),
+FIELD_AUTO(monsterinfo.fly_acceleration),
+FIELD_AUTO(monsterinfo.fly_speed),
+FIELD_AUTO(monsterinfo.fly_ideal_position),
+FIELD_AUTO(monsterinfo.fly_position_time),
+FIELD_AUTO(monsterinfo.fly_buzzard),
+FIELD_AUTO(monsterinfo.fly_above),
+FIELD_AUTO(monsterinfo.fly_pinned),
+FIELD_AUTO(monsterinfo.fly_thrusters),
+FIELD_AUTO(monsterinfo.fly_recovery_time),
+FIELD_AUTO(monsterinfo.fly_recovery_dir),
 
-FIELD_AUTO(monsterInfo.checkattack_time),
-FIELD_AUTO(monsterInfo.start_frame),
-FIELD_AUTO(monsterInfo.dodge_time),
-FIELD_AUTO(monsterInfo.move_block_counter),
-FIELD_AUTO(monsterInfo.move_block_change_time),
-FIELD_AUTO(monsterInfo.react_to_damage_time),
-FIELD_AUTO(monsterInfo.jump_time),
+FIELD_AUTO(monsterinfo.checkattack_time),
+FIELD_AUTO(monsterinfo.start_frame),
+FIELD_AUTO(monsterinfo.dodge_time),
+FIELD_AUTO(monsterinfo.move_block_counter),
+FIELD_AUTO(monsterinfo.move_block_change_time),
+FIELD_AUTO(monsterinfo.react_to_damage_time),
+FIELD_AUTO(monsterinfo.jump_time),
 
-FIELD_SIMPLE(monsterInfo.reinforcements, ST_REINFORCEMENTS),
-FIELD_AUTO(monsterInfo.chosen_reinforcements),
+FIELD_SIMPLE(monsterinfo.reinforcements, ST_REINFORCEMENTS),
+FIELD_AUTO(monsterinfo.chosen_reinforcements),
 
 // back to gentity_t
 FIELD_AUTO(plat2flags),
@@ -1592,11 +1592,11 @@ void read_save_type_json(const Json::Value &json, void *data, const save_type_t 
 		if (json.isNull())
 			item = nullptr;
 		else if (json.isString()) {
-			const char *className = json.asCString();
-			item = FindItemByClassname(className);
+			const char *classname = json.asCString();
+			item = FindItemByClassname(classname);
 
 			if (item == nullptr) {
-				json_print_error(field, G_Fmt("item {} missing", className).data(), false);
+				json_print_error(field, G_Fmt("item {} missing", classname).data(), false);
 				return;
 			}
 		} else {
@@ -1640,23 +1640,23 @@ void read_save_type_json(const Json::Value &json, void *data, const save_type_t 
 
 			//for (auto key : json.getMemberNames())
 			for (auto it = json.begin(); it != json.end(); it++) {
-				//const char		   *className = key.c_str();
+				//const char		   *classname = key.c_str();
 				const char *dummy;
-				const char *className = it.memberName(&dummy);
+				const char *classname = it.memberName(&dummy);
 				const Json::Value &value = *it;
 
 				if (!value.isInt()) {
-					json_push_stack(className);
+					json_push_stack(classname);
 					json_print_error(field, "expected integer", false);
 					json_pop_stack();
 					continue;
 				}
 
-				gitem_t *item = FindItemByClassname(className);
+				gitem_t *item = FindItemByClassname(classname);
 
 				if (!item) {
-					json_push_stack(className);
-					json_print_error(field, G_Fmt("can't find item {}", className).data(), false);
+					json_push_stack(classname);
+					json_print_error(field, G_Fmt("can't find item {}", classname).data(), false);
 					json_pop_stack();
 					continue;
 				}
@@ -1690,7 +1690,7 @@ void read_save_type_json(const Json::Value &json, void *data, const save_type_t 
 				// quick type checks
 
 				if (!value["classname"].isString()) {
-					json_push_stack(fmt::format("{}.className", i));
+					json_push_stack(fmt::format("{}.classname", i));
 					json_print_error(field, "expected string", false);
 					json_pop_stack();
 					continue;
@@ -1717,7 +1717,7 @@ void read_save_type_json(const Json::Value &json, void *data, const save_type_t 
 					continue;
 				}
 
-				p->className = CopyString(value["classname"].asCString(), TAG_LEVEL);
+				p->classname = G_CopyString(value["classname"].asCString(), TAG_LEVEL);
 				p->strength = value["strength"].asInt();
 
 				for (int32_t x = 0; x < 3; x++) {
@@ -1990,7 +1990,7 @@ bool write_save_type_json(const void *data, const save_type_t *type, bool null_f
 		const gitem_t *item = *reinterpret_cast<const gitem_t *const *>(data);
 
 		if (item != nullptr && item->id != 0)
-			if (!strlen(item->className))
+			if (!strlen(item->classname))
 				gi.Com_ErrorFmt("Attempt to persist invalid item {} (index {})", item->pickup_name, (int32_t)item->id);
 
 		if (null_for_empty && TYPED_DATA_IS_EMPTY(type, item == nullptr))
@@ -2001,7 +2001,7 @@ bool write_save_type_json(const void *data, const save_type_t *type, bool null_f
 			return true;
 		}
 
-		output = Json::Value(Json::StaticString(item->className));
+		output = Json::Value(Json::StaticString(item->classname));
 		return true;
 	}
 	case ST_ITEM_INDEX: {
@@ -2013,7 +2013,7 @@ bool write_save_type_json(const void *data, const save_type_t *type, bool null_f
 		const gitem_t *item = GetItemByIndex(index);
 
 		if (index)
-			if (!strlen(item->className))
+			if (!strlen(item->classname))
 				gi.Com_ErrorFmt("Attempt to persist invalid item {} (index {})", item->pickup_name, (int32_t)item->id);
 
 		if (null_for_empty && TYPED_DATA_IS_EMPTY(type, item == nullptr))
@@ -2024,7 +2024,7 @@ bool write_save_type_json(const void *data, const save_type_t *type, bool null_f
 			return true;
 		}
 
-		output = Json::Value(Json::StaticString(item->className));
+		output = Json::Value(Json::StaticString(item->classname));
 		return true;
 	}
 	case ST_TIME: {
@@ -2062,15 +2062,15 @@ bool write_save_type_json(const void *data, const save_type_t *type, bool null_f
 		for (item_id_t i = static_cast<item_id_t>(IT_NULL + 1); i < IT_TOTAL; i = static_cast<item_id_t>(i + 1)) {
 			gitem_t *item = GetItemByIndex(i);
 
-			if (!item || !item->className) {
+			if (!item || !item->classname) {
 				if (inventory_ptr[i])
-					gi.Com_ErrorFmt("Item index {} is in inventory but has no className", (int32_t)i);
+					gi.Com_ErrorFmt("Item index {} is in inventory but has no classname", (int32_t)i);
 
 				continue;
 			}
 
 			if (inventory_ptr[i])
-				inventory[item->className] = Json::Value(inventory_ptr[i]);
+				inventory[item->classname] = Json::Value(inventory_ptr[i]);
 		}
 
 		if (null_for_empty && inventory.empty())
@@ -2093,7 +2093,7 @@ bool write_save_type_json(const void *data, const save_type_t *type, bool null_f
 
 			Json::Value obj = Json::Value(Json::objectValue);
 
-			obj["classname"] = Json::StaticString(reinforcement->className);
+			obj["classname"] = Json::StaticString(reinforcement->classname);
 			obj["mins"] = Json::Value(Json::arrayValue);
 			obj["maxs"] = Json::Value(Json::arrayValue);
 			for (int32_t x = 0; x < 3; x++) {
@@ -2146,7 +2146,7 @@ void read_save_struct_json(const Json::Value &json, void *data, const save_struc
 
 	//for (auto key : json.getMemberNames())
 	for (auto it = json.begin(); it != json.end(); it++) {
-		//const char		   *className = key.c_str();
+		//const char		   *classname = key.c_str();
 		const char *dummy;
 		const char *key = it.memberName(&dummy);
 		const Json::Value &value = *it;//json[key];
@@ -2289,9 +2289,9 @@ char *WriteLevelJson(bool transition, size_t *out_size) {
 	char		number[16];
 
 	for (size_t i = 0; i < globals.num_entities; i++) {
-		if (!globals.gentities[i].inUse)
+		if (!globals.gentities[i].inuse)
 			continue;
-		// clear all the client inUse flags before saving so that
+		// clear all the client inuse flags before saving so that
 		// when the level is re-entered, the clients will spawn
 		// at spawn points instead of occupying body shells
 		else if (transition && i >= 1 && i <= game.maxclients)
@@ -2348,7 +2348,7 @@ void ReadLevelJson(const char *jsonString) {
 			globals.num_entities = number + 1;
 
 		gentity_t *ent = &g_entities[number];
-		InitGEntity(ent);
+		G_InitGentity(ent);
 		json_push_stack(fmt::format("entities[{}]", number));
 		read_save_struct_json(value, ent, &gentity_t_savestruct);
 		json_pop_stack();
@@ -2367,14 +2367,14 @@ void ReadLevelJson(const char *jsonString) {
 	for (size_t i = 0; i < globals.num_entities; i++) {
 		gentity_t *ent = &g_entities[i];
 
-		if (!ent->inUse)
+		if (!ent->inuse)
 			continue;
 
 		// fire any cross-level/unit triggers
-		if (ent->className)
-			if (strcmp(ent->className, "target_crosslevel_target") == 0 ||
-				strcmp(ent->className, "target_crossunit_target") == 0)
-				ent->nextThink = level.time + gtime_t::from_sec(ent->delay);
+		if (ent->classname)
+			if (strcmp(ent->classname, "target_crosslevel_target") == 0 ||
+				strcmp(ent->classname, "target_crossunit_target") == 0)
+				ent->nextthink = level.time + gtime_t::from_sec(ent->delay);
 	}
 
 	PrecacheInventoryItems();
@@ -2395,7 +2395,7 @@ bool CanSave() {
 	}
 	// don't allow saving during cameras/intermissions as this
 	// causes the game to act weird when these are loaded
-	else if (level.intermissionTime) {
+	else if (level.intermission_time) {
 		return false;
 	}
 

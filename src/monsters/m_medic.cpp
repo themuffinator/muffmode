@@ -18,7 +18,7 @@ constexpr gtime_t MEDIC_TRY_TIME = 10_sec;
 
 // FIXME -
 //
-// owner moved to monsterInfo.healer instead
+// owner moved to monsterinfo.healer instead
 //
 // For some reason, the healed monsters are rarely ending up in the floor
 //
@@ -70,8 +70,8 @@ constexpr std::array<vec3_t, MAX_REINFORCEMENTS> reinforcement_position = {
 static void M_PickValidReinforcements(gentity_t *self, int32_t space, std::vector<uint8_t> &output) {
 	output.clear();
 
-	for (size_t i = 0; i < self->monsterInfo.reinforcements.num_reinforcements; i++)
-		if (self->monsterInfo.reinforcements.reinforcements[i].strength <= space)
+	for (size_t i = 0; i < self->monsterinfo.reinforcements.num_reinforcements; i++)
+		if (self->monsterinfo.reinforcements.reinforcements[i].strength <= space)
 			output.push_back(i);
 }
 
@@ -87,7 +87,7 @@ std::array<uint8_t, MAX_REINFORCEMENTS> M_PickReinforcements(gentity_t *self, in
 	int32_t num_slots = max(1, (int32_t)log2(frandom(inverse_log_slots)));
 
 	// we only have this many slots left to use
-	int32_t remaining = self->monsterInfo.monster_slots - self->monsterInfo.monster_used;
+	int32_t remaining = self->monsterinfo.monster_slots - self->monsterinfo.monster_used;
 
 	for (num_chosen = 0; num_chosen < num_slots; num_chosen++) {
 		// ran out of slots!
@@ -104,7 +104,7 @@ std::array<uint8_t, MAX_REINFORCEMENTS> M_PickReinforcements(gentity_t *self, in
 		// select monster, TODO fairly
 		chosen[num_chosen] = random_element(available);
 
-		remaining -= self->monsterInfo.reinforcements.reinforcements[chosen[num_chosen]].strength;
+		remaining -= self->monsterinfo.reinforcements.reinforcements[chosen[num_chosen]].strength;
 	}
 
 	return chosen;
@@ -138,24 +138,24 @@ void M_SetupReinforcements(const char *reinforcements, reinforcement_list_t &lis
 		if (!*token || r == list.reinforcements + list.num_reinforcements)
 			break;
 
-		r->className = CopyString(token, TAG_LEVEL);
+		r->classname = G_CopyString(token, TAG_LEVEL);
 
 		token = COM_ParseEx(&p, "; ");
 
 		r->strength = strtoul(token, nullptr, 10);
 
-		gentity_t *newEnt = Spawn();
+		gentity_t *newEnt = G_Spawn();
 
-		newEnt->className = r->className;
+		newEnt->classname = r->classname;
 
-		newEnt->monsterInfo.aiflags |= AI_DO_NOT_COUNT;
+		newEnt->monsterinfo.aiflags |= AI_DO_NOT_COUNT;
 
 		ED_CallSpawn(newEnt);
 
 		r->mins = newEnt->mins;
 		r->maxs = newEnt->maxs;
 
-		FreeEntity(newEnt);
+		G_FreeEntity(newEnt);
 
 		r++;
 	}
@@ -163,51 +163,51 @@ void M_SetupReinforcements(const char *reinforcements, reinforcement_list_t &lis
 
 static void cleanupHeal(gentity_t *self, bool change_frame) {
 	// clean up target, if we have one and it's legit
-	if (self->enemy && self->enemy->inUse)
-		M_CleanupHealTarget(self->enemy);
+	if (self->enemy && self->enemy->inuse)
+		cleanupHealTarget(self->enemy);
 
-	if (self->oldEnemy && self->oldEnemy->inUse && self->oldEnemy->health > 0) {
-		self->enemy = self->oldEnemy;
+	if (self->oldenemy && self->oldenemy->inuse && self->oldenemy->health > 0) {
+		self->enemy = self->oldenemy;
 		HuntTarget(self, false);
 	} else {
 		self->enemy = self->goalentity = nullptr;
-		self->oldEnemy = nullptr;
+		self->oldenemy = nullptr;
 		if (!FindTarget(self)) {
 			// no valid enemy, so stop acting
-			self->monsterInfo.pausetime = HOLD_FOREVER;
-			self->monsterInfo.stand(self);
+			self->monsterinfo.pausetime = HOLD_FOREVER;
+			self->monsterinfo.stand(self);
 			return;
 		}
 	}
 
 	if (change_frame)
-		self->monsterInfo.nextframe = FRAME_attack52;
+		self->monsterinfo.nextframe = FRAME_attack52;
 }
 
 void abortHeal(gentity_t *self, bool change_frame, bool gib, bool mark) {
 	int				 hurt;
 	constexpr vec3_t pain_normal = { 0, 0, 1 };
 
-	if (self->enemy && self->enemy->inUse) {
-		M_CleanupHealTarget(self->enemy);
+	if (self->enemy && self->enemy->inuse) {
+		cleanupHealTarget(self->enemy);
 
 		// gib em!
 		if (mark) {
 			// if the first badMedic slot is filled by a medic, skip it and use the second one
-			if ((self->enemy->monsterInfo.badMedic1) && (self->enemy->monsterInfo.badMedic1->inUse) && (!strncmp(self->enemy->monsterInfo.badMedic1->className, "monster_medic", 13))) {
-				self->enemy->monsterInfo.badMedic2 = self;
+			if ((self->enemy->monsterinfo.badMedic1) && (self->enemy->monsterinfo.badMedic1->inuse) && (!strncmp(self->enemy->monsterinfo.badMedic1->classname, "monster_medic", 13))) {
+				self->enemy->monsterinfo.badMedic2 = self;
 			} else {
-				self->enemy->monsterInfo.badMedic1 = self;
+				self->enemy->monsterinfo.badMedic1 = self;
 			}
 		}
 
 		if (gib) {
-			if (self->enemy->gibHealth)
-				hurt = -self->enemy->gibHealth;
+			if (self->enemy->gib_health)
+				hurt = -self->enemy->gib_health;
 			else
 				hurt = 500;
 
-			Damage(self->enemy, self, self, vec3_origin, self->enemy->s.origin,
+			T_Damage(self->enemy, self, self, vec3_origin, self->enemy->s.origin,
 				pain_normal, hurt, 0, DAMAGE_NONE, MOD_UNKNOWN);
 		}
 	}
@@ -216,8 +216,8 @@ void abortHeal(gentity_t *self, bool change_frame, bool gib, bool mark) {
 	// clean up target
 	cleanupHeal(self, change_frame);
 
-	self->monsterInfo.aiflags &= ~AI_MEDIC;
-	self->monsterInfo.medicTries = 0;
+	self->monsterinfo.aiflags &= ~AI_MEDIC;
+	self->monsterinfo.medicTries = 0;
 }
 
 static bool canReach(gentity_t *self, gentity_t *other) {
@@ -226,9 +226,9 @@ static bool canReach(gentity_t *self, gentity_t *other) {
 	trace_t trace;
 
 	spot1 = self->s.origin;
-	spot1[2] += self->viewHeight;
+	spot1[2] += self->viewheight;
 	spot2 = other->s.origin;
-	spot2[2] += other->viewHeight;
+	spot2[2] += other->viewheight;
 	trace = gi.traceline(spot1, spot2, self, MASK_PROJECTILE | MASK_WATER);
 	return trace.fraction == 1.0f || trace.ent == other;
 }
@@ -238,38 +238,38 @@ static gentity_t *medic_FindDeadMonster(gentity_t *self) {
 	gentity_t *ent = nullptr;
 	gentity_t *best = nullptr;
 
-	if (self->monsterInfo.react_to_damage_time > level.time)
+	if (self->monsterinfo.react_to_damage_time > level.time)
 		return nullptr;
 
-	if (self->monsterInfo.aiflags & AI_STAND_GROUND)
+	if (self->monsterinfo.aiflags & AI_STAND_GROUND)
 		radius = MEDIC_MAX_HEAL_DISTANCE;
 	else
 		radius = 1024;
 
-	while ((ent = FindRadius(ent, self->s.origin, radius)) != nullptr) {
+	while ((ent = findradius(ent, self->s.origin, radius)) != nullptr) {
 		if (ent == self)
 			continue;
-		if (!(ent->svFlags & SVF_MONSTER))
+		if (!(ent->svflags & SVF_MONSTER))
 			continue;
-		if (ent->monsterInfo.aiflags & AI_GOOD_GUY)
+		if (ent->monsterinfo.aiflags & AI_GOOD_GUY)
 			continue;
 		// check to make sure we haven't bailed on this guy already
-		if ((ent->monsterInfo.badMedic1 == self) || (ent->monsterInfo.badMedic2 == self))
+		if ((ent->monsterinfo.badMedic1 == self) || (ent->monsterinfo.badMedic2 == self))
 			continue;
-		if (ent->monsterInfo.healer)
+		if (ent->monsterinfo.healer)
 			// FIXME - this is correcting a bug that is somewhere else
 			// if the healer is a monster, and it's in medic mode .. continue .. otherwise
 			//   we will override the healer, if it passes all the other tests
-			if ((ent->monsterInfo.healer->inUse) && (ent->monsterInfo.healer->health > 0) &&
-				(ent->monsterInfo.healer->svFlags & SVF_MONSTER) && (ent->monsterInfo.healer->monsterInfo.aiflags & AI_MEDIC))
+			if ((ent->monsterinfo.healer->inuse) && (ent->monsterinfo.healer->health > 0) &&
+				(ent->monsterinfo.healer->svflags & SVF_MONSTER) && (ent->monsterinfo.healer->monsterinfo.aiflags & AI_MEDIC))
 				continue;
 		if (ent->health > 0)
 			continue;
-		if ((ent->nextThink) && (ent->think != monster_dead_think))
+		if ((ent->nextthink) && (ent->think != monster_dead_think))
 			continue;
 		if (!visible(self, ent))
 			continue;
-		if (!strncmp(ent->className, "player", 6)) // stop it from trying to heal player_noise entities
+		if (!strncmp(ent->classname, "player", 6)) // stop it from trying to heal player_noise entities
 			continue;
 		// FIXME - there's got to be a better way ..
 		// make sure we don't spawn people right on top of us
@@ -285,7 +285,7 @@ static gentity_t *medic_FindDeadMonster(gentity_t *self) {
 	}
 
 	if (best)
-		self->timeStamp = level.time + MEDIC_TRY_TIME;
+		self->timestamp = level.time + MEDIC_TRY_TIME;
 
 	return best;
 }
@@ -299,13 +299,13 @@ MONSTERINFO_IDLE(medic_idle) (gentity_t *self) -> void {
 	else
 		gi.sound(self, CHAN_VOICE, commander_sound_idle1, 1, ATTN_IDLE, 0);
 
-	if (!self->oldEnemy) {
+	if (!self->oldenemy) {
 		ent = medic_FindDeadMonster(self);
 		if (ent) {
-			self->oldEnemy = self->enemy;
+			self->oldenemy = self->enemy;
 			self->enemy = ent;
-			self->enemy->monsterInfo.healer = self;
-			self->monsterInfo.aiflags |= AI_MEDIC;
+			self->enemy->monsterinfo.healer = self;
+			self->monsterinfo.aiflags |= AI_MEDIC;
 			FoundTarget(self);
 		}
 	}
@@ -320,13 +320,13 @@ MONSTERINFO_SEARCH(medic_search) (gentity_t *self) -> void {
 	else
 		gi.sound(self, CHAN_VOICE, commander_sound_search, 1, ATTN_IDLE, 0);
 
-	if (!self->oldEnemy) {
+	if (!self->oldenemy) {
 		ent = medic_FindDeadMonster(self);
 		if (ent) {
-			self->oldEnemy = self->enemy;
+			self->oldenemy = self->enemy;
 			self->enemy = ent;
-			self->enemy->monsterInfo.healer = self;
-			self->monsterInfo.aiflags |= AI_MEDIC;
+			self->enemy->monsterinfo.healer = self;
+			self->monsterinfo.aiflags |= AI_MEDIC;
 			FoundTarget(self);
 		}
 	}
@@ -471,21 +471,21 @@ MMOVE_T(medic_move_run) = { FRAME_run1, FRAME_run6, medic_frames_run, nullptr };
 MONSTERINFO_RUN(medic_run) (gentity_t *self) -> void {
 	monster_done_dodge(self);
 
-	if (!(self->monsterInfo.aiflags & AI_MEDIC)) {
+	if (!(self->monsterinfo.aiflags & AI_MEDIC)) {
 		gentity_t *ent;
 
 		ent = medic_FindDeadMonster(self);
 		if (ent) {
-			self->oldEnemy = self->enemy;
+			self->oldenemy = self->enemy;
 			self->enemy = ent;
-			self->enemy->monsterInfo.healer = self;
-			self->monsterInfo.aiflags |= AI_MEDIC;
+			self->enemy->monsterinfo.healer = self;
+			self->monsterinfo.aiflags |= AI_MEDIC;
 			FoundTarget(self);
 			return;
 		}
 	}
 
-	if (self->monsterInfo.aiflags & AI_STAND_GROUND)
+	if (self->monsterinfo.aiflags & AI_STAND_GROUND)
 		M_SetAnimation(self, &medic_move_stand);
 	else
 		M_SetAnimation(self, &medic_move_run);
@@ -544,12 +544,12 @@ static PAIN(medic_pain) (gentity_t *self, gentity_t *other, float kick, int dama
 		return; // no pain anims in nightmare
 
 	// if we're healing someone, we ignore pain
-	if (mod.id != MOD_CHAINFIST && (self->monsterInfo.aiflags & AI_MEDIC))
+	if (mod.id != MOD_CHAINFIST && (self->monsterinfo.aiflags & AI_MEDIC))
 		return;
 
 	if (self->mass > 400) {
-		self->monsterInfo.aiflags &= ~AI_MANUAL_STEERING;
-		self->monsterInfo.aiflags &= ~AI_HOLD_FRAME;
+		self->monsterinfo.aiflags &= ~AI_MANUAL_STEERING;
+		self->monsterinfo.aiflags &= ~AI_HOLD_FRAME;
 
 		if (r < (min(((float)damage * 0.005f), 0.5f))) // no more than 50% chance of big pain
 			M_SetAnimation(self, &medic_move_pain2);
@@ -561,7 +561,7 @@ static PAIN(medic_pain) (gentity_t *self, gentity_t *other, float kick, int dama
 		M_SetAnimation(self, &medic_move_pain2);
 
 	// PMM - clear duck flag
-	if (self->monsterInfo.aiflags & AI_DUCKED)
+	if (self->monsterinfo.aiflags & AI_DUCKED)
 		monster_duck_up(self);
 
 	abortHeal(self, false, false, false);
@@ -584,7 +584,7 @@ static void medic_fire_blaster(gentity_t *self) {
 	monster_muzzleflash_id_t mz;
 
 	// paranoia checking
-	if (!(self->enemy && self->enemy->inUse))
+	if (!(self->enemy && self->enemy->inuse))
 		return;
 
 	if ((self->s.frame == FRAME_attack9) || (self->s.frame == FRAME_attack12)) {
@@ -601,11 +601,11 @@ static void medic_fire_blaster(gentity_t *self) {
 	start = M_ProjectFlashSource(self, offset, forward, right);
 
 	end = self->enemy->s.origin;
-	end[2] += self->enemy->viewHeight;
+	end[2] += self->enemy->viewheight;
 	dir = end - start;
 	dir.normalize();
 
-	if (!strcmp(self->enemy->className, "tesla_mine"))
+	if (!strcmp(self->enemy->classname, "tesla_mine"))
 		damage = 3;
 
 	// medic commander shoots blaster2
@@ -623,7 +623,7 @@ static void medic_dead(gentity_t *self) {
 
 static void medic_shrink(gentity_t *self) {
 	self->maxs[2] = -2;
-	self->svFlags |= SVF_DEADMONSTER;
+	self->svflags |= SVF_DEADMONSTER;
 	gi.linkentity(self);
 }
 
@@ -680,11 +680,11 @@ static DIE(medic_die) (gentity_t *self, gentity_t *inflictor, gentity_t *attacke
 			{ "models/monsters/medic/gibs/head.md2", GIB_SKINNED | GIB_HEAD }
 			});
 
-		self->deadFlag = true;
+		self->deadflag = true;
 		return;
 	}
 
-	if (self->deadFlag)
+	if (self->deadflag)
 		return;
 
 	// regular death
@@ -692,8 +692,8 @@ static DIE(medic_die) (gentity_t *self, gentity_t *inflictor, gentity_t *attacke
 		gi.sound(self, CHAN_VOICE, sound_die, 1, ATTN_NORM, 0);
 	else
 		gi.sound(self, CHAN_VOICE, commander_sound_die, 1, ATTN_NORM, 0);
-	self->deadFlag = true;
-	self->takeDamage = true;
+	self->deadflag = true;
+	self->takedamage = true;
 
 	M_SetAnimation(self, &medic_move_death);
 }
@@ -745,7 +745,7 @@ MMOVE_T(medic_move_attackHyperBlaster) = { FRAME_attack15, FRAME_attack34, medic
 static void medic_quick_attack(gentity_t *self) {
 	if (frandom() < 0.5f) {
 		M_SetAnimation(self, &medic_move_attackHyperBlaster, false);
-		self->monsterInfo.nextframe = FRAME_attack16;
+		self->monsterinfo.nextframe = FRAME_attack16;
 	}
 }
 
@@ -797,7 +797,7 @@ static void medic_cable_attack(gentity_t *self) {
 	vec3_t	dir;
 	float	distance;
 
-	if ((!self->enemy) || (!self->enemy->inUse) || (self->enemy->s.effects & EF_GIB)) {
+	if ((!self->enemy) || (!self->enemy->inuse) || (self->enemy->s.effects & EF_GIB)) {
 		abortHeal(self, false, false, false);
 		return;
 	}
@@ -831,11 +831,11 @@ static void medic_cable_attack(gentity_t *self) {
 	if (tr.fraction != 1.0f && tr.ent != self->enemy) {
 		if (tr.ent == world) {
 			// give up on second try
-			if (self->monsterInfo.medicTries > 1) {
+			if (self->monsterinfo.medicTries > 1) {
 				abortHeal(self, true, false, true);
 				return;
 			}
-			self->monsterInfo.medicTries++;
+			self->monsterinfo.medicTries++;
 			cleanupHeal(self, 1);
 			return;
 		}
@@ -850,20 +850,20 @@ static void medic_cable_attack(gentity_t *self) {
 		else
 			gi.sound(self->enemy, CHAN_AUTO, commander_sound_hook_hit, 1, ATTN_NORM, 0);
 
-		self->enemy->monsterInfo.aiflags |= AI_RESURRECTING;
-		self->enemy->takeDamage = false;
+		self->enemy->monsterinfo.aiflags |= AI_RESURRECTING;
+		self->enemy->takedamage = false;
 		M_SetEffects(self->enemy);
 	} else if (self->s.frame == FRAME_attack50) {
 		vec3_t maxs;
 		self->enemy->spawnflags = SPAWNFLAG_NONE;
-		self->enemy->monsterInfo.aiflags &= AI_STINKY | AI_SPAWNED_MASK;
+		self->enemy->monsterinfo.aiflags &= AI_STINKY | AI_SPAWNED_MASK;
 		self->enemy->target = nullptr;
 		self->enemy->targetname = nullptr;
 		self->enemy->combattarget = nullptr;
 		self->enemy->deathtarget = nullptr;
 		self->enemy->healthtarget = nullptr;
 		self->enemy->itemtarget = nullptr;
-		self->enemy->monsterInfo.healer = self;
+		self->enemy->monsterinfo.healer = self;
 
 		maxs = self->enemy->maxs;
 		maxs[2] += 48; // compensate for change when they die
@@ -877,18 +877,18 @@ static void medic_cable_attack(gentity_t *self) {
 			abortHeal(self, true, true, false);
 			return;
 		} else {
-			self->enemy->monsterInfo.aiflags |= AI_DO_NOT_COUNT;
+			self->enemy->monsterinfo.aiflags |= AI_DO_NOT_COUNT;
 
 			// backup & restore health stuff, because of multipliers
 			int32_t old_max_health = self->enemy->max_health;
-			item_id_t old_power_armor_type = self->enemy->monsterInfo.initial_power_armor_type;
-			int32_t old_power_armor_power = self->enemy->monsterInfo.max_power_armor_power;
-			int32_t old_base_health = self->enemy->monsterInfo.base_health;
-			int32_t old_health_scaling = self->enemy->monsterInfo.health_scaling;
-			auto reinforcements = self->enemy->monsterInfo.reinforcements;
-			int32_t monster_slots = self->enemy->monsterInfo.monster_slots;
-			int32_t monster_used = self->enemy->monsterInfo.monster_used;
-			int32_t old_gib_health = self->enemy->gibHealth;
+			item_id_t old_power_armor_type = self->enemy->monsterinfo.initial_power_armor_type;
+			int32_t old_power_armor_power = self->enemy->monsterinfo.max_power_armor_power;
+			int32_t old_base_health = self->enemy->monsterinfo.base_health;
+			int32_t old_health_scaling = self->enemy->monsterinfo.health_scaling;
+			auto reinforcements = self->enemy->monsterinfo.reinforcements;
+			int32_t monster_slots = self->enemy->monsterinfo.monster_slots;
+			int32_t monster_used = self->enemy->monsterinfo.monster_used;
+			int32_t old_gib_health = self->enemy->gib_health;
 
 			st = {};
 			st.keys_specified.emplace("reinforcements");
@@ -896,46 +896,46 @@ static void medic_cable_attack(gentity_t *self) {
 
 			ED_CallSpawn(self->enemy);
 
-			self->enemy->monsterInfo.reinforcements = reinforcements;
-			self->enemy->monsterInfo.monster_slots = monster_slots;
-			self->enemy->monsterInfo.monster_used = monster_used;
+			self->enemy->monsterinfo.reinforcements = reinforcements;
+			self->enemy->monsterinfo.monster_slots = monster_slots;
+			self->enemy->monsterinfo.monster_used = monster_used;
 
-			self->enemy->gibHealth = old_gib_health / 2;
+			self->enemy->gib_health = old_gib_health / 2;
 			self->enemy->health = self->enemy->max_health = old_max_health;
-			self->enemy->monsterInfo.powerArmorPower = self->enemy->monsterInfo.max_power_armor_power = old_power_armor_power;
-			self->enemy->monsterInfo.powerArmorType = self->enemy->monsterInfo.initial_power_armor_type = old_power_armor_type;
-			self->enemy->monsterInfo.base_health = old_base_health;
-			self->enemy->monsterInfo.health_scaling = old_health_scaling;
+			self->enemy->monsterinfo.power_armor_power = self->enemy->monsterinfo.max_power_armor_power = old_power_armor_power;
+			self->enemy->monsterinfo.power_armor_type = self->enemy->monsterinfo.initial_power_armor_type = old_power_armor_type;
+			self->enemy->monsterinfo.base_health = old_base_health;
+			self->enemy->monsterinfo.health_scaling = old_health_scaling;
 
-			if (self->enemy->monsterInfo.setskin)
-				self->enemy->monsterInfo.setskin(self->enemy);
+			if (self->enemy->monsterinfo.setskin)
+				self->enemy->monsterinfo.setskin(self->enemy);
 
 			if (self->enemy->think) {
-				self->enemy->nextThink = level.time;
+				self->enemy->nextthink = level.time;
 				self->enemy->think(self->enemy);
 			}
-			self->enemy->monsterInfo.aiflags &= ~AI_RESURRECTING;
-			self->enemy->monsterInfo.aiflags |= AI_IGNORE_SHOTS | AI_DO_NOT_COUNT;
+			self->enemy->monsterinfo.aiflags &= ~AI_RESURRECTING;
+			self->enemy->monsterinfo.aiflags |= AI_IGNORE_SHOTS | AI_DO_NOT_COUNT;
 			// turn off flies
 			self->enemy->s.effects &= ~EF_FLIES;
-			self->enemy->monsterInfo.healer = nullptr;
+			self->enemy->monsterinfo.healer = nullptr;
 
-			if ((self->oldEnemy) && (self->oldEnemy->inUse) && (self->oldEnemy->health > 0)) {
-				self->enemy->enemy = self->oldEnemy;
+			if ((self->oldenemy) && (self->oldenemy->inuse) && (self->oldenemy->health > 0)) {
+				self->enemy->enemy = self->oldenemy;
 				FoundTarget(self->enemy);
 			} else {
 				self->enemy->enemy = nullptr;
 				if (!FindTarget(self->enemy)) {
 					// no valid enemy, so stop acting
-					self->enemy->monsterInfo.pausetime = HOLD_FOREVER;
-					self->enemy->monsterInfo.stand(self->enemy);
+					self->enemy->monsterinfo.pausetime = HOLD_FOREVER;
+					self->enemy->monsterinfo.stand(self->enemy);
 				}
 				self->enemy = nullptr;
-				self->oldEnemy = nullptr;
+				self->oldenemy = nullptr;
 				if (!FindTarget(self)) {
 					// no valid enemy, so stop acting
-					self->monsterInfo.pausetime = HOLD_FOREVER;
-					self->monsterInfo.stand(self);
+					self->monsterinfo.pausetime = HOLD_FOREVER;
+					self->monsterinfo.stand(self);
 					return;
 				}
 			}
@@ -958,7 +958,7 @@ static void medic_cable_attack(gentity_t *self) {
 
 	// adjust end z for end spot since the monster is currently dead
 	end = self->enemy->s.origin;
-	end[2] = (self->enemy->absMin[2] + self->enemy->absMax[2]) / 2;
+	end[2] = (self->enemy->absmin[2] + self->enemy->absmax[2]) / 2;
 
 	gi.WriteByte(svc_temp_entity);
 	gi.WriteByte(TE_MEDIC_CABLE_ATTACK);
@@ -974,18 +974,18 @@ static void medic_hook_retract(gentity_t *self) {
 	else
 		gi.sound(self, CHAN_WEAPON, sound_hook_retract, 1, ATTN_NORM, 0);
 
-	self->monsterInfo.aiflags &= ~AI_MEDIC;
+	self->monsterinfo.aiflags &= ~AI_MEDIC;
 
-	if (self->oldEnemy && self->oldEnemy->inUse && self->oldEnemy->health > 0) {
-		self->enemy = self->oldEnemy;
+	if (self->oldenemy && self->oldenemy->inuse && self->oldenemy->health > 0) {
+		self->enemy = self->oldenemy;
 		HuntTarget(self, false);
 	} else {
 		self->enemy = self->goalentity = nullptr;
-		self->oldEnemy = nullptr;
+		self->oldenemy = nullptr;
 		if (!FindTarget(self)) {
 			// no valid enemy, so stop acting
-			self->monsterInfo.pausetime = HOLD_FOREVER;
-			self->monsterInfo.stand(self);
+			self->monsterinfo.pausetime = HOLD_FOREVER;
+			self->monsterinfo.stand(self);
 			return;
 		}
 	}
@@ -1017,7 +1017,7 @@ MMOVE_T(medic_move_attackCable) = { FRAME_attack37, FRAME_attack55, medic_frames
 
 static void medic_start_spawn(gentity_t *self) {
 	gi.sound(self, CHAN_WEAPON, commander_sound_spawn, 1, ATTN_NORM, 0);
-	self->monsterInfo.nextframe = FRAME_attack48;
+	self->monsterinfo.nextframe = FRAME_attack48;
 }
 
 static void medic_determine_spawn(gentity_t *self) {
@@ -1028,7 +1028,7 @@ static void medic_determine_spawn(gentity_t *self) {
 	AngleVectors(self->s.angles, f, r, nullptr);
 
 	int num_summoned;
-	self->monsterInfo.chosen_reinforcements = M_PickReinforcements(self, num_summoned);
+	self->monsterinfo.chosen_reinforcements = M_PickReinforcements(self, num_summoned);
 
 	for (count = 0; count < num_summoned; count++) {
 		offset = reinforcement_position[count];
@@ -1040,7 +1040,7 @@ static void medic_determine_spawn(gentity_t *self) {
 		// a little off the ground
 		startpoint[2] += 10 * (self->s.scale ? self->s.scale : 1.0f);
 
-		auto &reinforcement = self->monsterInfo.reinforcements.reinforcements[self->monsterInfo.chosen_reinforcements[count]];
+		auto &reinforcement = self->monsterinfo.reinforcements.reinforcements[self->monsterinfo.chosen_reinforcements[count]];
 
 		if (FindSpawnPoint(startpoint, reinforcement.mins, reinforcement.maxs, spawnpoint, 32)) {
 			if (CheckGroundSpawnPoint(spawnpoint, reinforcement.mins, reinforcement.maxs, 256, -1)) {
@@ -1066,7 +1066,7 @@ static void medic_determine_spawn(gentity_t *self) {
 			// a little off the ground
 			startpoint[2] += 10;
 
-			auto &reinforcement = self->monsterInfo.reinforcements.reinforcements[self->monsterInfo.chosen_reinforcements[count]];
+			auto &reinforcement = self->monsterinfo.reinforcements.reinforcements[self->monsterinfo.chosen_reinforcements[count]];
 
 			if (FindSpawnPoint(startpoint, reinforcement.mins, reinforcement.maxs, spawnpoint, 32)) {
 				if (CheckGroundSpawnPoint(spawnpoint, reinforcement.mins, reinforcement.maxs, 256, -1)) {
@@ -1078,7 +1078,7 @@ static void medic_determine_spawn(gentity_t *self) {
 		}
 
 		if (num_success) {
-			self->monsterInfo.aiflags |= AI_MANUAL_STEERING;
+			self->monsterinfo.aiflags |= AI_MANUAL_STEERING;
 			self->ideal_yaw = anglemod(self->s.angles[YAW]) + 180;
 			if (self->ideal_yaw > 360.0f)
 				self->ideal_yaw -= 360.0f;
@@ -1086,7 +1086,7 @@ static void medic_determine_spawn(gentity_t *self) {
 	}
 
 	if (num_success == 0)
-		self->monsterInfo.nextframe = FRAME_attack53;
+		self->monsterinfo.nextframe = FRAME_attack53;
 }
 
 static void medic_spawngrows(gentity_t *self) {
@@ -1097,16 +1097,16 @@ static void medic_spawngrows(gentity_t *self) {
 	float  current_yaw;
 
 	// if we've been directed to turn around
-	if (self->monsterInfo.aiflags & AI_MANUAL_STEERING) {
+	if (self->monsterinfo.aiflags & AI_MANUAL_STEERING) {
 		current_yaw = anglemod(self->s.angles[YAW]);
 		if (fabsf(current_yaw - self->ideal_yaw) > 0.1f) {
-			self->monsterInfo.aiflags |= AI_HOLD_FRAME;
+			self->monsterinfo.aiflags |= AI_HOLD_FRAME;
 			return;
 		}
 
 		// done turning around
-		self->monsterInfo.aiflags &= ~AI_HOLD_FRAME;
-		self->monsterInfo.aiflags &= ~AI_MANUAL_STEERING;
+		self->monsterinfo.aiflags &= ~AI_HOLD_FRAME;
+		self->monsterinfo.aiflags &= ~AI_MANUAL_STEERING;
 	}
 
 	AngleVectors(self->s.angles, f, r, nullptr);
@@ -1114,7 +1114,7 @@ static void medic_spawngrows(gentity_t *self) {
 	num_summoned = 0;
 
 	for (size_t i = 0; i < MAX_REINFORCEMENTS; i++, num_summoned++)
-		if (self->monsterInfo.chosen_reinforcements[i] == 255)
+		if (self->monsterinfo.chosen_reinforcements[i] == 255)
 			break;
 
 	for (count = 0; count < num_summoned; count++) {
@@ -1125,7 +1125,7 @@ static void medic_spawngrows(gentity_t *self) {
 		// a little off the ground
 		startpoint[2] += 10 * (self->s.scale ? self->s.scale : 1.0f);
 
-		auto &reinforcement = self->monsterInfo.reinforcements.reinforcements[self->monsterInfo.chosen_reinforcements[count]];
+		auto &reinforcement = self->monsterinfo.reinforcements.reinforcements[self->monsterinfo.chosen_reinforcements[count]];
 
 		if (FindSpawnPoint(startpoint, reinforcement.mins, reinforcement.maxs, spawnpoint, 32)) {
 			if (CheckGroundSpawnPoint(spawnpoint, reinforcement.mins, reinforcement.maxs, 256, -1)) {
@@ -1137,7 +1137,7 @@ static void medic_spawngrows(gentity_t *self) {
 	}
 
 	if (num_success == 0)
-		self->monsterInfo.nextframe = FRAME_attack53;
+		self->monsterinfo.nextframe = FRAME_attack53;
 }
 
 static void medic_finish_spawn(gentity_t *self) {
@@ -1152,11 +1152,11 @@ static void medic_finish_spawn(gentity_t *self) {
 	num_summoned = 0;
 
 	for (size_t i = 0; i < MAX_REINFORCEMENTS; i++, num_summoned++)
-		if (self->monsterInfo.chosen_reinforcements[i] == 255)
+		if (self->monsterinfo.chosen_reinforcements[i] == 255)
 			break;
 
 	for (count = 0; count < num_summoned; count++) {
-		auto &reinforcement = self->monsterInfo.reinforcements.reinforcements[self->monsterInfo.chosen_reinforcements[count]];
+		auto &reinforcement = self->monsterinfo.reinforcements.reinforcements[self->monsterinfo.chosen_reinforcements[count]];
 		offset = reinforcement_position[count];
 
 		startpoint = M_ProjectFlashSource(self, offset, f, r);
@@ -1167,28 +1167,28 @@ static void medic_finish_spawn(gentity_t *self) {
 		ent = nullptr;
 		if (FindSpawnPoint(startpoint, reinforcement.mins, reinforcement.maxs, spawnpoint, 32)) {
 			if (CheckSpawnPoint(spawnpoint, reinforcement.mins, reinforcement.maxs))
-				ent = CreateGroundMonster(spawnpoint, self->s.angles, reinforcement.mins, reinforcement.maxs, reinforcement.className, 256);
+				ent = CreateGroundMonster(spawnpoint, self->s.angles, reinforcement.mins, reinforcement.maxs, reinforcement.classname, 256);
 		}
 
 		if (!ent)
 			continue;
 
 		if (ent->think) {
-			ent->nextThink = level.time;
+			ent->nextthink = level.time;
 			ent->think(ent);
 		}
 
-		ent->monsterInfo.aiflags |= AI_IGNORE_SHOTS | AI_DO_NOT_COUNT | AI_SPAWNED_MEDIC_C;
-		ent->monsterInfo.commander = self;
-		ent->monsterInfo.monster_slots = reinforcement.strength;
-		self->monsterInfo.monster_used += reinforcement.strength;
+		ent->monsterinfo.aiflags |= AI_IGNORE_SHOTS | AI_DO_NOT_COUNT | AI_SPAWNED_MEDIC_C;
+		ent->monsterinfo.commander = self;
+		ent->monsterinfo.monster_slots = reinforcement.strength;
+		self->monsterinfo.monster_used += reinforcement.strength;
 
-		if (self->monsterInfo.aiflags & AI_MEDIC)
-			designated_enemy = self->oldEnemy;
+		if (self->monsterinfo.aiflags & AI_MEDIC)
+			designated_enemy = self->oldenemy;
 		else
 			designated_enemy = self->enemy;
 
-		if (CooperativeModeOn()) {
+		if (InCoopStyle()) {
 			designated_enemy = PickCoopTarget(ent);
 			if (designated_enemy) {
 				// try to avoid using my enemy
@@ -1201,12 +1201,12 @@ static void medic_finish_spawn(gentity_t *self) {
 				designated_enemy = self->enemy;
 		}
 
-		if ((designated_enemy) && (designated_enemy->inUse) && (designated_enemy->health > 0)) {
+		if ((designated_enemy) && (designated_enemy->inuse) && (designated_enemy->health > 0)) {
 			ent->enemy = designated_enemy;
 			FoundTarget(ent);
 		} else {
 			ent->enemy = nullptr;
-			ent->monsterInfo.stand(ent);
+			ent->monsterinfo.stand(ent);
 		}
 	}
 }
@@ -1244,19 +1244,19 @@ MONSTERINFO_ATTACK(medic_attack) (gentity_t *self) -> void {
 	float enemy_range = range_to(self, self->enemy);
 
 	// signal from checkattack to spawn
-	if (self->monsterInfo.aiflags & AI_BLOCKED) {
+	if (self->monsterinfo.aiflags & AI_BLOCKED) {
 		M_SetAnimation(self, &medic_move_callReinforcements);
-		self->monsterInfo.aiflags &= ~AI_BLOCKED;
+		self->monsterinfo.aiflags &= ~AI_BLOCKED;
 	}
 
 	float r = frandom();
-	if (self->monsterInfo.aiflags & AI_MEDIC) {
+	if (self->monsterinfo.aiflags & AI_MEDIC) {
 		if ((self->mass > 400) && (r > 0.8f) && M_SlotsLeft(self))
 			M_SetAnimation(self, &medic_move_callReinforcements);
 		else
 			M_SetAnimation(self, &medic_move_attackCable);
 	} else {
-		if (self->monsterInfo.attack_state == AS_BLIND) {
+		if (self->monsterinfo.attack_state == AS_BLIND) {
 			M_SetAnimation(self, &medic_move_callReinforcements);
 			return;
 		}
@@ -1268,17 +1268,17 @@ MONSTERINFO_ATTACK(medic_attack) (gentity_t *self) -> void {
 }
 
 MONSTERINFO_CHECKATTACK(medic_checkattack) (gentity_t *self) -> bool {
-	if (self->monsterInfo.aiflags & AI_MEDIC) {
+	if (self->monsterinfo.aiflags & AI_MEDIC) {
 		// if our target went away
-		if ((!self->enemy) || (!self->enemy->inUse)) {
+		if ((!self->enemy) || (!self->enemy->inuse)) {
 			abortHeal(self, true, false, false);
 			return false;
 		}
 
 		// if we ran out of time, give up
-		if (self->timeStamp < level.time) {
+		if (self->timestamp < level.time) {
 			abortHeal(self, true, false, true);
-			self->timeStamp = 0_ms;
+			self->timestamp = 0_ms;
 			return false;
 		}
 
@@ -1286,28 +1286,28 @@ MONSTERINFO_CHECKATTACK(medic_checkattack) (gentity_t *self) -> bool {
 			medic_attack(self);
 			return true;
 		} else {
-			self->monsterInfo.attack_state = AS_STRAIGHT;
+			self->monsterinfo.attack_state = AS_STRAIGHT;
 			return false;
 		}
 	}
 
 	if (self->enemy->client && !visible(self, self->enemy) && M_SlotsLeft(self)) {
-		self->monsterInfo.attack_state = AS_BLIND;
+		self->monsterinfo.attack_state = AS_BLIND;
 		return true;
 	}
 
 	// give a LARGE bias to spawning things when we have room
 	// use AI_BLOCKED as a signal to attack to spawn
-	if (self->monsterInfo.monster_slots && (frandom() < 0.8f) && (M_SlotsLeft(self) > self->monsterInfo.monster_slots * 0.8f) && (realrange(self, self->enemy) > 150)) {
-		self->monsterInfo.aiflags |= AI_BLOCKED;
-		self->monsterInfo.attack_state = AS_MISSILE;
+	if (self->monsterinfo.monster_slots && (frandom() < 0.8f) && (M_SlotsLeft(self) > self->monsterinfo.monster_slots * 0.8f) && (realrange(self, self->enemy) > 150)) {
+		self->monsterinfo.aiflags |= AI_BLOCKED;
+		self->monsterinfo.attack_state = AS_MISSILE;
 		return true;
 	}
 
 	// since his idle animation looks kinda bad in combat, always attack
 	// when he's on a combat point
-	if (self->monsterInfo.aiflags & AI_STAND_GROUND) {
-		self->monsterInfo.attack_state = AS_MISSILE;
+	if (self->monsterinfo.aiflags & AI_STAND_GROUND) {
+		self->monsterinfo.attack_state = AS_MISSILE;
 		return true;
 	}
 
@@ -1320,15 +1320,15 @@ static void MedicCommanderCache() {
 
 MONSTERINFO_DUCK(medic_duck) (gentity_t *self, gtime_t eta) -> bool {
 	//	don't dodge if you're healing
-	if (self->monsterInfo.aiflags & AI_MEDIC)
+	if (self->monsterinfo.aiflags & AI_MEDIC)
 		return false;
 
-	if ((self->monsterInfo.active_move == &medic_move_attackHyperBlaster) ||
-		(self->monsterInfo.active_move == &medic_move_attackCable) ||
-		(self->monsterInfo.active_move == &medic_move_attackBlaster) ||
-		(self->monsterInfo.active_move == &medic_move_callReinforcements)) {
+	if ((self->monsterinfo.active_move == &medic_move_attackHyperBlaster) ||
+		(self->monsterinfo.active_move == &medic_move_attackCable) ||
+		(self->monsterinfo.active_move == &medic_move_attackBlaster) ||
+		(self->monsterinfo.active_move == &medic_move_callReinforcements)) {
 		// he ignores skill
-		self->monsterInfo.unduck(self);
+		self->monsterinfo.unduck(self);
 		return false;
 	}
 
@@ -1338,15 +1338,15 @@ MONSTERINFO_DUCK(medic_duck) (gentity_t *self, gtime_t eta) -> bool {
 }
 
 MONSTERINFO_SIDESTEP(medic_sidestep) (gentity_t *self) -> bool {
-	if ((self->monsterInfo.active_move == &medic_move_attackHyperBlaster) ||
-		(self->monsterInfo.active_move == &medic_move_attackCable) ||
-		(self->monsterInfo.active_move == &medic_move_attackBlaster) ||
-		(self->monsterInfo.active_move == &medic_move_callReinforcements)) {
+	if ((self->monsterinfo.active_move == &medic_move_attackHyperBlaster) ||
+		(self->monsterinfo.active_move == &medic_move_attackCable) ||
+		(self->monsterinfo.active_move == &medic_move_attackBlaster) ||
+		(self->monsterinfo.active_move == &medic_move_callReinforcements)) {
 		// if we're shooting, don't dodge
 		return false;
 	}
 
-	if (self->monsterInfo.active_move != &medic_move_run)
+	if (self->monsterinfo.active_move != &medic_move_run)
 		M_SetAnimation(self, &medic_move_run);
 
 	return true;
@@ -1367,11 +1367,11 @@ model="models/monsters/medic/tris.md2"
 */
 void SP_monster_medic(gentity_t *self) {
 	if (!M_AllowSpawn(self)) {
-		FreeEntity(self);
+		G_FreeEntity(self);
 		return;
 	}
 
-	self->moveType = MOVETYPE_STEP;
+	self->movetype = MOVETYPE_STEP;
 	self->solid = SOLID_BBOX;
 	self->s.modelindex = gi.modelindex("models/monsters/medic/tris.md2");
 
@@ -1384,45 +1384,45 @@ void SP_monster_medic(gentity_t *self) {
 	self->mins = { -24, -24, -24 };
 	self->maxs = { 24, 24, 32 };
 
-	if (strcmp(self->className, "monster_medic_commander") == 0) {
+	if (strcmp(self->classname, "monster_medic_commander") == 0) {
 		self->health = 600 * st.health_multiplier;
-		self->gibHealth = -130;
+		self->gib_health = -130;
 		self->mass = 600;
 		self->yaw_speed = 40; // default is 20
 		MedicCommanderCache();
 	} else {
 		self->health = 300 * st.health_multiplier;
-		self->gibHealth = -130;
+		self->gib_health = -130;
 		self->mass = 400;
 	}
 
 	self->pain = medic_pain;
 	self->die = medic_die;
 
-	self->monsterInfo.stand = medic_stand;
-	self->monsterInfo.walk = medic_walk;
-	self->monsterInfo.run = medic_run;
-	self->monsterInfo.dodge = M_MonsterDodge;
-	self->monsterInfo.duck = medic_duck;
-	self->monsterInfo.unduck = monster_duck_up;
-	self->monsterInfo.sidestep = medic_sidestep;
-	self->monsterInfo.blocked = medic_blocked;
-	self->monsterInfo.attack = medic_attack;
-	self->monsterInfo.melee = nullptr;
-	self->monsterInfo.sight = medic_sight;
-	self->monsterInfo.idle = medic_idle;
-	self->monsterInfo.search = medic_search;
-	self->monsterInfo.checkattack = medic_checkattack;
-	self->monsterInfo.setskin = medic_setskin;
+	self->monsterinfo.stand = medic_stand;
+	self->monsterinfo.walk = medic_walk;
+	self->monsterinfo.run = medic_run;
+	self->monsterinfo.dodge = M_MonsterDodge;
+	self->monsterinfo.duck = medic_duck;
+	self->monsterinfo.unduck = monster_duck_up;
+	self->monsterinfo.sidestep = medic_sidestep;
+	self->monsterinfo.blocked = medic_blocked;
+	self->monsterinfo.attack = medic_attack;
+	self->monsterinfo.melee = nullptr;
+	self->monsterinfo.sight = medic_sight;
+	self->monsterinfo.idle = medic_idle;
+	self->monsterinfo.search = medic_search;
+	self->monsterinfo.checkattack = medic_checkattack;
+	self->monsterinfo.setskin = medic_setskin;
 
 	gi.linkentity(self);
 
 	M_SetAnimation(self, &medic_move_stand);
-	self->monsterInfo.scale = MODEL_SCALE;
+	self->monsterinfo.scale = MODEL_SCALE;
 
 	walkmonster_start(self);
 
-	self->monsterInfo.aiflags |= AI_IGNORE_SHOTS;
+	self->monsterinfo.aiflags |= AI_IGNORE_SHOTS;
 
 	if (self->mass > 400) {
 		self->s.skinnum = 2;
@@ -1444,15 +1444,15 @@ void SP_monster_medic(gentity_t *self) {
 		const char *reinforcements = default_reinforcements;
 
 		if (!st.was_key_specified("monster_slots"))
-			self->monsterInfo.monster_slots = default_monster_slots_base;
+			self->monsterinfo.monster_slots = default_monster_slots_base;
 		if (st.was_key_specified("reinforcements"))
 			reinforcements = st.reinforcements;
 
-		if (self->monsterInfo.monster_slots && reinforcements && *reinforcements) {
+		if (self->monsterinfo.monster_slots && reinforcements && *reinforcements) {
 			if (skill->integer)
-				self->monsterInfo.monster_slots += floor(self->monsterInfo.monster_slots * (skill->value / 2.f));
+				self->monsterinfo.monster_slots += floor(self->monsterinfo.monster_slots * (skill->value / 2.f));
 
-			M_SetupReinforcements(reinforcements, self->monsterInfo.reinforcements);
+			M_SetupReinforcements(reinforcements, self->monsterinfo.reinforcements);
 		}
 	} else {
 		sound_idle1.assign("medic/idle.wav");

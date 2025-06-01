@@ -44,8 +44,8 @@ static gentity_t *PlayerTrail_Spawn(gentity_t *owner) {
 		trail->chain = trail->enemy = nullptr;
 	} else {
 		// spawn a new head
-		trail = Spawn();
-		trail->className = "player_trail";
+		trail = G_Spawn();
+		trail->classname = "player_trail";
 	}
 
 	// link as new head
@@ -65,9 +65,9 @@ static gentity_t *PlayerTrail_Spawn(gentity_t *owner) {
 // we don't want these to stay around across level loads.
 void PlayerTrail_Destroy(gentity_t *player) {
 	for (size_t i = 0; i < globals.num_entities; i++)
-		if (g_entities[i].className && strcmp(g_entities[i].className, "player_trail") == 0)
+		if (g_entities[i].classname && strcmp(g_entities[i].classname, "player_trail") == 0)
 			if (!player || g_entities[i].owner == player)
-				FreeEntity(&g_entities[i]);
+				G_FreeEntity(&g_entities[i]);
 
 	if (player)
 		player->client->trail_head = player->client->trail_tail = nullptr;
@@ -82,13 +82,13 @@ void PlayerTrail_Add(gentity_t *player) {
 	if (player->client->trail_head && visible(player, player->client->trail_head))
 		return;
 	// don't spawn trails in intermission, if we're dead, if we're noclipping or not on ground yet
-	else if (level.intermissionTime || player->health <= 0 || player->moveType == MOVETYPE_NOCLIP || player->moveType == MOVETYPE_FREECAM ||
-		!player->groundEntity)
+	else if (level.intermission_time || player->health <= 0 || player->movetype == MOVETYPE_NOCLIP || player->movetype == MOVETYPE_FREECAM ||
+		!player->groundentity)
 		return;
 
 	gentity_t *trail = PlayerTrail_Spawn(player);
 	trail->s.origin = player->s.old_origin;
-	trail->timeStamp = level.time;
+	trail->timestamp = level.time;
 	trail->owner = player;
 }
 
@@ -104,7 +104,7 @@ gentity_t *PlayerTrail_Pick(gentity_t *self, bool next) {
 	gentity_t *marker;
 
 	for (marker = self->enemy->client->trail_head; marker; marker = marker->enemy) {
-		if (marker->timeStamp <= self->monsterInfo.trail_time)
+		if (marker->timestamp <= self->monsterinfo.trail_time)
 			continue;
 
 		break;

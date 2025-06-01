@@ -39,14 +39,14 @@ static void floater_fire_blaster(gentity_t *self) {
 	vec3_t	  end;
 	vec3_t	  dir;
 
-	if (!self->enemy || !self->enemy->inUse)
+	if (!self->enemy || !self->enemy->inuse)
 		return;
 
 	AngleVectors(self->s.angles, forward, right, nullptr);
 	start = M_ProjectFlashSource(self, monster_flash_offset[MZ2_FLOAT_BLASTER_1], forward, right);
 
 	end = self->enemy->s.origin;
-	end[2] += self->enemy->viewHeight;
+	end[2] += self->enemy->viewheight;
 	dir = end - start;
 	dir.normalize();
 
@@ -202,7 +202,7 @@ mframe_t floater_frames_disguise[] = {
 MMOVE_T(floater_move_disguise) = { FRAME_actvat01, FRAME_actvat01, floater_frames_disguise, nullptr };
 
 MONSTERINFO_STAND(floater_stand) (gentity_t *self) -> void {
-	if (self->monsterInfo.active_move == &floater_move_disguise)
+	if (self->monsterinfo.active_move == &floater_move_disguise)
 		M_SetAnimation(self, &floater_move_disguise);
 	else if (frandom() <= 0.5f)
 		M_SetAnimation(self, &floater_move_stand1);
@@ -450,9 +450,9 @@ mframe_t floater_frames_run[] = {
 MMOVE_T(floater_move_run) = { FRAME_stand101, FRAME_stand152, floater_frames_run, nullptr };
 
 MONSTERINFO_RUN(floater_run) (gentity_t *self) -> void {
-	if (self->monsterInfo.active_move == &floater_move_disguise)
+	if (self->monsterinfo.active_move == &floater_move_disguise)
 		M_SetAnimation(self, &floater_move_pop);
-	else if (self->monsterInfo.aiflags & AI_STAND_GROUND)
+	else if (self->monsterinfo.aiflags & AI_STAND_GROUND)
 		M_SetAnimation(self, &floater_move_stand1);
 	else
 		M_SetAnimation(self, &floater_move_run);
@@ -467,7 +467,7 @@ void floater_wham(gentity_t *self) {
 	gi.sound(self, CHAN_WEAPON, sound_attack3, 1, ATTN_NORM, 0);
 
 	if (!fire_hit(self, aim, irandom(5, 11), -50))
-		self->monsterInfo.melee_debounce_time = level.time + 3_sec;
+		self->monsterinfo.melee_debounce_time = level.time + 3_sec;
 }
 
 void floater_zap(gentity_t *self) {
@@ -494,20 +494,20 @@ void floater_zap(gentity_t *self) {
 	gi.WriteByte(SPLASH_SPARKS);
 	gi.multicast(origin, MULTICAST_PVS, false);
 
-	Damage(self->enemy, self, self, dir, self->enemy->s.origin, vec3_origin, irandom(5, 11), -10, DAMAGE_ENERGY, MOD_UNKNOWN);
+	T_Damage(self->enemy, self, self, dir, self->enemy->s.origin, vec3_origin, irandom(5, 11), -10, DAMAGE_ENERGY, MOD_UNKNOWN);
 }
 
 MONSTERINFO_ATTACK(floater_attack) (gentity_t *self) -> void {
 	float chance = 0.5f;
 
 	if (frandom() > chance) {
-		self->monsterInfo.attack_state = AS_STRAIGHT;
+		self->monsterinfo.attack_state = AS_STRAIGHT;
 		M_SetAnimation(self, &floater_move_attack1);
 	} else // circle strafe
 	{
 		if (frandom() <= 0.5f) // switch directions
-			self->monsterInfo.lefty = !self->monsterInfo.lefty;
-		self->monsterInfo.attack_state = AS_SLIDING;
+			self->monsterinfo.lefty = !self->monsterinfo.lefty;
+		self->monsterinfo.attack_state = AS_SLIDING;
 		M_SetAnimation(self, &floater_move_attack1a);
 	}
 }
@@ -526,8 +526,8 @@ static PAIN(floater_pain) (gentity_t *self, gentity_t *other, float kick, int da
 		return;
 
 	// no pain anims if poppin'
-	if (self->monsterInfo.active_move == &floater_move_disguise ||
-		self->monsterInfo.active_move == &floater_move_pop)
+	if (self->monsterinfo.active_move == &floater_move_disguise ||
+		self->monsterinfo.active_move == &floater_move_pop)
 		return;
 
 	n = irandom(3);
@@ -557,9 +557,9 @@ MONSTERINFO_SETSKIN(floater_setskin) (gentity_t *self) -> void {
 void floater_dead(gentity_t *self) {
 	self->mins = { -16, -16, -24 };
 	self->maxs = { 16, 16, -8 };
-	self->moveType = MOVETYPE_TOSS;
-	self->svFlags |= SVF_DEADMONSTER;
-	self->nextThink = 0_ms;
+	self->movetype = MOVETYPE_TOSS;
+	self->svflags |= SVF_DEADMONSTER;
+	self->nextthink = 0_ms;
 	gi.linkentity(self);
 }
 
@@ -584,12 +584,12 @@ static DIE(floater_die) (gentity_t *self, gentity_t *inflictor, gentity_t *attac
 }
 
 static void float_set_fly_parameters(gentity_t *self) {
-	self->monsterInfo.fly_thrusters = false;
-	self->monsterInfo.fly_acceleration = 10.f;
-	self->monsterInfo.fly_speed = 100.f;
+	self->monsterinfo.fly_thrusters = false;
+	self->monsterinfo.fly_acceleration = 10.f;
+	self->monsterinfo.fly_speed = 100.f;
 	// Technician gets in closer because he has two melee attacks
-	self->monsterInfo.fly_min_distance = 20.f;
-	self->monsterInfo.fly_max_distance = 200.f;
+	self->monsterinfo.fly_min_distance = 20.f;
+	self->monsterinfo.fly_max_distance = 200.f;
 }
 
 constexpr spawnflags_t SPAWNFLAG_FLOATER_DISGUISE = 8_spawnflag;
@@ -598,7 +598,7 @@ constexpr spawnflags_t SPAWNFLAG_FLOATER_DISGUISE = 8_spawnflag;
  */
 void SP_monster_floater(gentity_t *self) {
 	if (!M_AllowSpawn(self)) {
-		FreeEntity(self);
+		G_FreeEntity(self);
 		return;
 	}
 
@@ -612,9 +612,9 @@ void SP_monster_floater(gentity_t *self) {
 
 	gi.soundindex("floater/fltatck1.wav");
 
-	self->monsterInfo.engine_sound = gi.soundindex("floater/fltsrch1.wav");
+	self->monsterinfo.engine_sound = gi.soundindex("floater/fltsrch1.wav");
 
-	self->moveType = MOVETYPE_STEP;
+	self->movetype = MOVETYPE_STEP;
 	self->solid = SOLID_BBOX;
 	self->s.modelindex = gi.modelindex("models/monsters/float/tris.md2");
 
@@ -627,20 +627,20 @@ void SP_monster_floater(gentity_t *self) {
 	self->maxs = { 24, 24, 48 };
 
 	self->health = 200 * st.health_multiplier;
-	self->gibHealth = -80;
+	self->gib_health = -80;
 	self->mass = 300;
 
 	self->pain = floater_pain;
 	self->die = floater_die;
 
-	self->monsterInfo.stand = floater_stand;
-	self->monsterInfo.walk = floater_walk;
-	self->monsterInfo.run = floater_run;
-	self->monsterInfo.attack = floater_attack;
-	self->monsterInfo.melee = floater_melee;
-	self->monsterInfo.sight = floater_sight;
-	self->monsterInfo.idle = floater_idle;
-	self->monsterInfo.setskin = floater_setskin;
+	self->monsterinfo.stand = floater_stand;
+	self->monsterinfo.walk = floater_walk;
+	self->monsterinfo.run = floater_run;
+	self->monsterinfo.attack = floater_attack;
+	self->monsterinfo.melee = floater_melee;
+	self->monsterinfo.sight = floater_sight;
+	self->monsterinfo.idle = floater_idle;
+	self->monsterinfo.setskin = floater_setskin;
 
 	gi.linkentity(self);
 
@@ -651,9 +651,9 @@ void SP_monster_floater(gentity_t *self) {
 	else
 		M_SetAnimation(self, &floater_move_stand2);
 
-	self->monsterInfo.scale = MODEL_SCALE;
+	self->monsterinfo.scale = MODEL_SCALE;
 
-	self->monsterInfo.aiflags |= AI_ALTERNATE_FLY;
+	self->monsterinfo.aiflags |= AI_ALTERNATE_FLY;
 	float_set_fly_parameters(self);
 
 	flymonster_start(self);

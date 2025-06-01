@@ -9,8 +9,8 @@ carrier
 ==============================================================================
 */
 
-// self->timeStamp used for frame calculations in grenade & spawn code
-// self->monsterInfo.fire_wait used to prevent rapid refire of rocket launcher
+// self->timestamp used for frame calculations in grenade & spawn code
+// self->monsterinfo.fire_wait used to prevent rapid refire of rocket launcher
 
 #include "../g_local.h"
 #include "m_carrier.h"
@@ -81,7 +81,7 @@ static void CarrierCoopCheck(gentity_t *self) {
 	trace_t	 tr;
 
 	// if we are, and we have recently fired, bail
-	if (self->monsterInfo.fire_wait > level.time)
+	if (self->monsterinfo.fire_wait > level.time)
 		return;
 
 	targets = {};
@@ -102,7 +102,7 @@ static void CarrierCoopCheck(gentity_t *self) {
 	target = irandom(num_targets);
 
 	// make sure to prevent rapid fire rockets
-	self->monsterInfo.fire_wait = level.time + CARRIER_ROCKET_TIME;
+	self->monsterinfo.fire_wait = level.time + CARRIER_ROCKET_TIME;
 
 	// save off the real enemy
 	ent = self->enemy;
@@ -135,7 +135,7 @@ static void CarrierGrenade(gentity_t *self) {
 	else
 		direction = 1.0f;
 
-	mytime = (int)((level.time - self->timeStamp) / 0.4f).seconds();
+	mytime = (int)((level.time - self->timestamp) / 0.4f).seconds();
 
 	if (mytime == 0) {
 		spreadR = 0.15f * direction;
@@ -261,7 +261,7 @@ static void carrier_firebullet_right(gentity_t *self) {
 	monster_muzzleflash_id_t flashnum;
 
 	// if we're in manual steering mode, it means we're leaning down .. use the lower shot
-	if (self->monsterInfo.aiflags & AI_MANUAL_STEERING)
+	if (self->monsterinfo.aiflags & AI_MANUAL_STEERING)
 		flashnum = MZ2_CARRIER_MACHINEGUN_R2;
 	else
 		flashnum = MZ2_CARRIER_MACHINEGUN_R1;
@@ -277,7 +277,7 @@ static void carrier_firebullet_left(gentity_t *self) {
 	monster_muzzleflash_id_t flashnum;
 
 	// if we're in manual steering mode, it means we're leaning down .. use the lower shot
-	if (self->monsterInfo.aiflags & AI_MANUAL_STEERING)
+	if (self->monsterinfo.aiflags & AI_MANUAL_STEERING)
 		flashnum = MZ2_CARRIER_MACHINEGUN_L2;
 	else
 		flashnum = MZ2_CARRIER_MACHINEGUN_L1;
@@ -306,45 +306,45 @@ static void CarrierSpawn(gentity_t *self) {
 
 	startpoint = M_ProjectFlashSource(self, offset, f, r);
 
-	if (self->monsterInfo.chosen_reinforcements[0] == 255)
+	if (self->monsterinfo.chosen_reinforcements[0] == 255)
 		return;
 
-	auto &reinforcement = self->monsterInfo.reinforcements.reinforcements[self->monsterInfo.chosen_reinforcements[0]];
+	auto &reinforcement = self->monsterinfo.reinforcements.reinforcements[self->monsterinfo.chosen_reinforcements[0]];
 
 	if (FindSpawnPoint(startpoint, reinforcement.mins, reinforcement.maxs, spawnpoint, 32, false)) {
-		ent = CreateFlyMonster(spawnpoint, self->s.angles, reinforcement.mins, reinforcement.maxs, reinforcement.className);
+		ent = CreateFlyMonster(spawnpoint, self->s.angles, reinforcement.mins, reinforcement.maxs, reinforcement.classname);
 
 		if (!ent)
 			return;
 
 		gi.sound(self, CHAN_BODY, sound_spawn, 1, ATTN_NONE, 0);
 
-		ent->nextThink = level.time;
+		ent->nextthink = level.time;
 		ent->think(ent);
 
-		ent->monsterInfo.aiflags |= AI_SPAWNED_CARRIER | AI_DO_NOT_COUNT | AI_IGNORE_SHOTS;
-		ent->monsterInfo.commander = self;
-		ent->monsterInfo.monster_slots = reinforcement.strength;
-		self->monsterInfo.monster_used += reinforcement.strength;
+		ent->monsterinfo.aiflags |= AI_SPAWNED_CARRIER | AI_DO_NOT_COUNT | AI_IGNORE_SHOTS;
+		ent->monsterinfo.commander = self;
+		ent->monsterinfo.monster_slots = reinforcement.strength;
+		self->monsterinfo.monster_used += reinforcement.strength;
 
-		if ((self->enemy->inUse) && (self->enemy->health > 0)) {
+		if ((self->enemy->inuse) && (self->enemy->health > 0)) {
 			ent->enemy = self->enemy;
 			FoundTarget(ent);
 
-			if (!strcmp(ent->className, "monster_kamikaze")) {
-				ent->monsterInfo.lefty = false;
-				ent->monsterInfo.attack_state = AS_STRAIGHT;
+			if (!strcmp(ent->classname, "monster_kamikaze")) {
+				ent->monsterinfo.lefty = false;
+				ent->monsterinfo.attack_state = AS_STRAIGHT;
 				M_SetAnimation(ent, &flyer_move_kamikaze);
-				ent->monsterInfo.aiflags |= AI_CHARGING;
+				ent->monsterinfo.aiflags |= AI_CHARGING;
 				ent->owner = self;
-			} else if (!strcmp(ent->className, "monster_flyer")) {
+			} else if (!strcmp(ent->classname, "monster_flyer")) {
 				if (brandom()) {
-					ent->monsterInfo.lefty = false;
-					ent->monsterInfo.attack_state = AS_SLIDING;
+					ent->monsterinfo.lefty = false;
+					ent->monsterinfo.attack_state = AS_SLIDING;
 					M_SetAnimation(ent, &flyer_move_attack3);
 				} else {
-					ent->monsterInfo.lefty = true;
-					ent->monsterInfo.attack_state = AS_SLIDING;
+					ent->monsterinfo.lefty = true;
+					ent->monsterinfo.attack_state = AS_SLIDING;
 					M_SetAnimation(ent, &flyer_move_attack3);
 				}
 			}
@@ -354,8 +354,8 @@ static void CarrierSpawn(gentity_t *self) {
 
 void carrier_prep_spawn(gentity_t *self) {
 	CarrierCoopCheck(self);
-	self->monsterInfo.aiflags |= AI_MANUAL_STEERING;
-	self->timeStamp = level.time;
+	self->monsterinfo.aiflags |= AI_MANUAL_STEERING;
+	self->timestamp = level.time;
 	self->yaw_speed = 10;
 }
 
@@ -363,12 +363,12 @@ void carrier_spawn_check(gentity_t *self) {
 	CarrierCoopCheck(self);
 	CarrierSpawn(self);
 
-	if (level.time > (self->timeStamp + 2.0_sec)) // 0.5 seconds per flyer.  this gets three
+	if (level.time > (self->timestamp + 2.0_sec)) // 0.5 seconds per flyer.  this gets three
 	{
-		self->monsterInfo.aiflags &= ~AI_MANUAL_STEERING;
+		self->monsterinfo.aiflags &= ~AI_MANUAL_STEERING;
 		self->yaw_speed = orig_yaw_speed;
 	} else
-		self->monsterInfo.nextframe = FRAME_spawn08;
+		self->monsterinfo.nextframe = FRAME_spawn08;
 }
 
 static void carrier_ready_spawn(gentity_t *self) {
@@ -380,20 +380,20 @@ static void carrier_ready_spawn(gentity_t *self) {
 	current_yaw = anglemod(self->s.angles[YAW]);
 
 	if (fabsf(current_yaw - self->ideal_yaw) > 0.1f) {
-		self->monsterInfo.aiflags |= AI_HOLD_FRAME;
-		self->timeStamp += FRAME_TIME_S;
+		self->monsterinfo.aiflags |= AI_HOLD_FRAME;
+		self->timestamp += FRAME_TIME_S;
 		return;
 	}
 
-	self->monsterInfo.aiflags &= ~AI_HOLD_FRAME;
+	self->monsterinfo.aiflags &= ~AI_HOLD_FRAME;
 
 	int num_summoned;
-	self->monsterInfo.chosen_reinforcements = M_PickReinforcements(self, num_summoned, 1);
+	self->monsterinfo.chosen_reinforcements = M_PickReinforcements(self, num_summoned, 1);
 
 	if (!num_summoned)
 		return;
 
-	auto &reinforcement = self->monsterInfo.reinforcements.reinforcements[self->monsterInfo.chosen_reinforcements[0]];
+	auto &reinforcement = self->monsterinfo.reinforcements.reinforcements[self->monsterinfo.chosen_reinforcements[0]];
 
 	offset = { 105, 0, -58 };
 	AngleVectors(self->s.angles, f, r, nullptr);
@@ -417,7 +417,7 @@ void carrier_start_spawn(gentity_t *self) {
 	if (!self->enemy)
 		return;
 
-	mytime = (int)((level.time - self->timeStamp) / 0.5).seconds();
+	mytime = (int)((level.time - self->timestamp) / 0.5).seconds();
 
 	temp = self->enemy->s.origin - self->s.origin;
 	enemy_yaw = vectoyaw(temp);
@@ -486,7 +486,7 @@ static void CarrierSpool(gentity_t *self) {
 	CarrierCoopCheck(self);
 	gi.sound(self, CHAN_BODY, sound_cg_up, 1, 0.5f, 0);
 
-	self->monsterInfo.weapon_sound = sound_cg_loop;
+	self->monsterinfo.weapon_sound = sound_cg_loop;
 }
 
 mframe_t carrier_frames_attack_pre_mg[] = {
@@ -564,13 +564,13 @@ static void CarrierRail(gentity_t *self) {
 	dir.normalize();
 
 	monster_fire_railgun(self, start, dir, 50, 100, MZ2_CARRIER_RAILGUN);
-	self->monsterInfo.attack_finished = level.time + RAIL_FIRE_TIME;
+	self->monsterinfo.attack_finished = level.time + RAIL_FIRE_TIME;
 }
 
 static void CarrierSaveLoc(gentity_t *self) {
 	CarrierCoopCheck(self);
 	self->pos1 = self->enemy->s.origin; // save for aiming the shot
-	self->pos1[2] += self->enemy->viewHeight;
+	self->pos1[2] += self->enemy->viewheight;
 };
 
 mframe_t carrier_frames_attack_rail[] = {
@@ -655,9 +655,9 @@ MONSTERINFO_STAND(carrier_stand) (gentity_t *self) -> void {
 }
 
 MONSTERINFO_RUN(carrier_run) (gentity_t *self) -> void {
-	self->monsterInfo.aiflags &= ~AI_HOLD_FRAME;
+	self->monsterinfo.aiflags &= ~AI_HOLD_FRAME;
 
-	if (self->monsterInfo.aiflags & AI_STAND_GROUND)
+	if (self->monsterinfo.aiflags & AI_STAND_GROUND)
 		M_SetAnimation(self, &carrier_move_stand);
 	else
 		M_SetAnimation(self, &carrier_move_run);
@@ -676,9 +676,9 @@ MONSTERINFO_ATTACK(carrier_attack) (gentity_t *self) -> void {
 	float  range, luck;
 	bool   enemy_inback, enemy_infront, enemy_below;
 
-	self->monsterInfo.aiflags &= ~AI_HOLD_FRAME;
+	self->monsterinfo.aiflags &= ~AI_HOLD_FRAME;
 
-	if ((!self->enemy) || (!self->enemy->inUse))
+	if ((!self->enemy) || (!self->enemy->inuse))
 		return;
 
 	enemy_inback = inback(self, self->enemy);
@@ -688,7 +688,7 @@ MONSTERINFO_ATTACK(carrier_attack) (gentity_t *self) -> void {
 	if (self->bad_area) {
 		if ((enemy_inback) || (enemy_below))
 			M_SetAnimation(self, &carrier_move_attack_rocket);
-		else if ((frandom() < 0.1f) || (level.time < self->monsterInfo.attack_finished))
+		else if ((frandom() < 0.1f) || (level.time < self->monsterinfo.attack_finished))
 			M_SetAnimation(self, &carrier_move_attack_pre_mg);
 		else {
 			gi.sound(self, CHAN_WEAPON, sound_rail, 1, ATTN_NORM, 0);
@@ -697,14 +697,14 @@ MONSTERINFO_ATTACK(carrier_attack) (gentity_t *self) -> void {
 		return;
 	}
 
-	if (self->monsterInfo.attack_state == AS_BLIND) {
+	if (self->monsterinfo.attack_state == AS_BLIND) {
 		M_SetAnimation(self, &carrier_move_spawn);
 		return;
 	}
 
 	if (!enemy_inback && !enemy_infront && !enemy_below) // to side and not under
 	{
-		if ((frandom() < 0.1f) || (level.time < self->monsterInfo.attack_finished))
+		if ((frandom() < 0.1f) || (level.time < self->monsterinfo.attack_finished))
 			M_SetAnimation(self, &carrier_move_attack_pre_mg);
 		else {
 			gi.sound(self, CHAN_WEAPON, sound_rail, 1, ATTN_NORM, 0);
@@ -717,7 +717,7 @@ MONSTERINFO_ATTACK(carrier_attack) (gentity_t *self) -> void {
 		vec = self->enemy->s.origin - self->s.origin;
 		range = vec.length();
 		if (range <= 125) {
-			if ((frandom() < 0.8f) || (level.time < self->monsterInfo.attack_finished))
+			if ((frandom() < 0.8f) || (level.time < self->monsterinfo.attack_finished))
 				M_SetAnimation(self, &carrier_move_attack_pre_mg);
 			else {
 				gi.sound(self, CHAN_WEAPON, sound_rail, 1, ATTN_NORM, 0);
@@ -730,7 +730,7 @@ MONSTERINFO_ATTACK(carrier_attack) (gentity_t *self) -> void {
 					M_SetAnimation(self, &carrier_move_attack_pre_mg);
 				else if (luck <= 0.40f)
 					M_SetAnimation(self, &carrier_move_attack_pre_gren);
-				else if ((luck <= 0.7f) && !(level.time < self->monsterInfo.attack_finished)) {
+				else if ((luck <= 0.7f) && !(level.time < self->monsterinfo.attack_finished)) {
 					gi.sound(self, CHAN_WEAPON, sound_rail, 1, ATTN_NORM, 0);
 					M_SetAnimation(self, &carrier_move_attack_rail);
 				} else
@@ -740,7 +740,7 @@ MONSTERINFO_ATTACK(carrier_attack) (gentity_t *self) -> void {
 					M_SetAnimation(self, &carrier_move_attack_pre_mg);
 				else if (luck <= 0.65f)
 					M_SetAnimation(self, &carrier_move_attack_pre_gren);
-				else if (level.time >= self->monsterInfo.attack_finished) {
+				else if (level.time >= self->monsterinfo.attack_finished) {
 					gi.sound(self, CHAN_WEAPON, sound_rail, 1, ATTN_NORM, 0);
 					M_SetAnimation(self, &carrier_move_attack_rail);
 				} else
@@ -752,15 +752,15 @@ MONSTERINFO_ATTACK(carrier_attack) (gentity_t *self) -> void {
 			if (M_SlotsLeft(self) > 2) {
 				if (luck < 0.3f)
 					M_SetAnimation(self, &carrier_move_attack_pre_mg);
-				else if ((luck < 0.65f) && !(level.time < self->monsterInfo.attack_finished)) {
+				else if ((luck < 0.65f) && !(level.time < self->monsterinfo.attack_finished)) {
 					gi.sound(self, CHAN_WEAPON, sound_rail, 1, ATTN_NORM, 0);
 					self->pos1 = self->enemy->s.origin; // save for aiming the shot
-					self->pos1[2] += self->enemy->viewHeight;
+					self->pos1[2] += self->enemy->viewheight;
 					M_SetAnimation(self, &carrier_move_attack_rail);
 				} else
 					M_SetAnimation(self, &carrier_move_spawn);
 			} else {
-				if ((luck < 0.45f) || (level.time < self->monsterInfo.attack_finished))
+				if ((luck < 0.45f) || (level.time < self->monsterinfo.attack_finished))
 					M_SetAnimation(self, &carrier_move_attack_pre_mg);
 				else {
 					gi.sound(self, CHAN_WEAPON, sound_rail, 1, ATTN_NORM, 0);
@@ -776,7 +776,7 @@ MONSTERINFO_ATTACK(carrier_attack) (gentity_t *self) -> void {
 void carrier_attack_mg(gentity_t *self) {
 	CarrierCoopCheck(self);
 	M_SetAnimation(self, &carrier_move_attack_mg);
-	self->monsterInfo.melee_debounce_time = level.time + random_time(1.2_sec, 2_sec);
+	self->monsterinfo.melee_debounce_time = level.time + random_time(1.2_sec, 2_sec);
 }
 
 void carrier_reattack_mg(gentity_t *self) {
@@ -785,30 +785,30 @@ void carrier_reattack_mg(gentity_t *self) {
 	CarrierCoopCheck(self);
 	if (visible(self, self->enemy) && infront(self, self->enemy)) {
 		if (frandom() < 0.6f) {
-			self->monsterInfo.melee_debounce_time += random_time(250_ms, 500_ms);
+			self->monsterinfo.melee_debounce_time += random_time(250_ms, 500_ms);
 			M_SetAnimation(self, &carrier_move_attack_mg);
 			return;
-		} else if (self->monsterInfo.melee_debounce_time > level.time) {
+		} else if (self->monsterinfo.melee_debounce_time > level.time) {
 			M_SetAnimation(self, &carrier_move_attack_mg);
 			return;
 		}
 	}
 
 	M_SetAnimation(self, &carrier_move_attack_post_mg);
-	self->monsterInfo.weapon_sound = 0;
+	self->monsterinfo.weapon_sound = 0;
 	gi.sound(self, CHAN_BODY, sound_cg_down, 1, 0.5f, 0);
 }
 
 void carrier_attack_gren(gentity_t *self) {
 	CarrierCoopCheck(self);
-	self->timeStamp = level.time;
+	self->timestamp = level.time;
 	M_SetAnimation(self, &carrier_move_attack_gren);
 }
 
 void carrier_reattack_gren(gentity_t *self) {
 	CarrierCoopCheck(self);
 	if (infront(self, self->enemy))
-		if (self->timeStamp + 1.3_sec > level.time) // four grenades
+		if (self->timestamp + 1.3_sec > level.time) // four grenades
 		{
 			M_SetAnimation(self, &carrier_move_attack_gren);
 			return;
@@ -834,7 +834,7 @@ static PAIN(carrier_pain) (gentity_t *self, gentity_t *other, float kick, int da
 	if (!M_ShouldReactToPain(self, mod))
 		return; // no pain anims in nightmare
 
-	self->monsterInfo.weapon_sound = 0;
+	self->monsterinfo.weapon_sound = 0;
 
 	if (damage >= 10) {
 		if (damage < 30) {
@@ -850,8 +850,8 @@ static PAIN(carrier_pain) (gentity_t *self, gentity_t *other, float kick, int da
 
 	// if we changed frames, clean up our little messes
 	if (changed) {
-		self->monsterInfo.aiflags &= ~AI_HOLD_FRAME;
-		self->monsterInfo.aiflags &= ~AI_MANUAL_STEERING;
+		self->monsterinfo.aiflags &= ~AI_HOLD_FRAME;
+		self->monsterinfo.aiflags &= ~AI_MANUAL_STEERING;
 		self->yaw_speed = orig_yaw_speed;
 	}
 }
@@ -892,13 +892,13 @@ void carrier_dead(gentity_t *self) {
 
 static DIE(carrier_die) (gentity_t *self, gentity_t *inflictor, gentity_t *attacker, int damage, const vec3_t &point, const mod_t &mod) -> void {
 	gi.sound(self, CHAN_VOICE, sound_death, 1, ATTN_NONE, 0);
-	self->deadFlag = true;
-	self->takeDamage = false;
+	self->deadflag = true;
+	self->takedamage = false;
 	self->count = 0;
 	M_SetAnimation(self, &carrier_move_death);
 	self->velocity = {};
 	self->gravityVector.z *= 0.01f;
-	self->monsterInfo.weapon_sound = 0;
+	self->monsterinfo.weapon_sound = 0;
 }
 
 MONSTERINFO_CHECKATTACK(Carrier_CheckAttack) (gentity_t *self) -> bool {
@@ -909,13 +909,13 @@ MONSTERINFO_CHECKATTACK(Carrier_CheckAttack) (gentity_t *self) -> bool {
 	// PMM - shoot out the back if appropriate
 	if ((enemy_inback) || (!enemy_infront && enemy_below)) {
 		// this is using wait because the attack is supposed to be independent
-		if (level.time >= self->monsterInfo.fire_wait) {
-			self->monsterInfo.fire_wait = level.time + CARRIER_ROCKET_TIME;
-			self->monsterInfo.attack(self);
+		if (level.time >= self->monsterinfo.fire_wait) {
+			self->monsterinfo.fire_wait = level.time + CARRIER_ROCKET_TIME;
+			self->monsterinfo.attack(self);
 			if (frandom() < 0.6f)
-				self->monsterInfo.attack_state = AS_SLIDING;
+				self->monsterinfo.attack_state = AS_SLIDING;
 			else
-				self->monsterInfo.attack_state = AS_STRAIGHT;
+				self->monsterinfo.attack_state = AS_STRAIGHT;
 			return true;
 		}
 	}
@@ -952,7 +952,7 @@ static void CarrierPrecache() {
  */
 void SP_monster_carrier(gentity_t *self) {
 	if (!M_AllowSpawn(self)) {
-		FreeEntity(self);
+		G_FreeEntity(self);
 		return;
 	}
 
@@ -968,9 +968,9 @@ void SP_monster_carrier(gentity_t *self) {
 	sound_cg_loop.assign("weapons/chngnl1a.wav");
 	sound_cg_up.assign("weapons/chngnu1a.wav");
 
-	self->monsterInfo.engine_sound = gi.soundindex("bosshovr/bhvengn1.wav");
+	self->monsterinfo.engine_sound = gi.soundindex("bosshovr/bhvengn1.wav");
 
-	self->moveType = MOVETYPE_STEP;
+	self->movetype = MOVETYPE_STEP;
 	self->solid = SOLID_BBOX;
 	self->s.modelindex = gi.modelindex("models/monsters/carrier/tris.md2");
 
@@ -991,58 +991,58 @@ void SP_monster_carrier(gentity_t *self) {
 	// 2000 - 4000 health
 	self->health = max(2000, 2000 + 1000 * (skill->integer - 1)) * st.health_multiplier;
 	// add health in coop (500 * skill)
-	if (CooperativeModeOn())
+	if (InCoopStyle())
 		self->health += 500 * skill->integer;
 
-	self->gibHealth = -200;
+	self->gib_health = -200;
 	self->mass = 1000;
 
 	self->yaw_speed = 15;
 	orig_yaw_speed = self->yaw_speed;
 
 	self->flags |= FL_IMMUNE_LASER;
-	self->monsterInfo.aiflags |= AI_IGNORE_SHOTS;
+	self->monsterinfo.aiflags |= AI_IGNORE_SHOTS;
 
 	self->pain = carrier_pain;
 	self->die = carrier_die;
 
-	self->monsterInfo.melee = nullptr;
-	self->monsterInfo.stand = carrier_stand;
-	self->monsterInfo.walk = carrier_walk;
-	self->monsterInfo.run = carrier_run;
-	self->monsterInfo.attack = carrier_attack;
-	self->monsterInfo.sight = carrier_sight;
-	self->monsterInfo.checkattack = Carrier_CheckAttack;
-	self->monsterInfo.setskin = carrier_setskin;
+	self->monsterinfo.melee = nullptr;
+	self->monsterinfo.stand = carrier_stand;
+	self->monsterinfo.walk = carrier_walk;
+	self->monsterinfo.run = carrier_run;
+	self->monsterinfo.attack = carrier_attack;
+	self->monsterinfo.sight = carrier_sight;
+	self->monsterinfo.checkattack = Carrier_CheckAttack;
+	self->monsterinfo.setskin = carrier_setskin;
 	gi.linkentity(self);
 
 	M_SetAnimation(self, &carrier_move_stand);
-	self->monsterInfo.scale = MODEL_SCALE;
+	self->monsterinfo.scale = MODEL_SCALE;
 
 	CarrierPrecache();
 
 	flymonster_start(self);
 
-	self->monsterInfo.attack_finished = 0_ms;
+	self->monsterinfo.attack_finished = 0_ms;
 
 	const char *reinforcements = default_reinforcements;
 
 	if (!st.was_key_specified("monster_slots"))
-		self->monsterInfo.monster_slots = default_monster_slots_base;
+		self->monsterinfo.monster_slots = default_monster_slots_base;
 	if (st.was_key_specified("reinforcements"))
 		reinforcements = st.reinforcements;
 
-	if (self->monsterInfo.monster_slots && reinforcements && *reinforcements) {
+	if (self->monsterinfo.monster_slots && reinforcements && *reinforcements) {
 		if (skill->integer)
-			self->monsterInfo.monster_slots += floor(self->monsterInfo.monster_slots * (skill->value / 2.f));
+			self->monsterinfo.monster_slots += floor(self->monsterinfo.monster_slots * (skill->value / 2.f));
 
-		M_SetupReinforcements(reinforcements, self->monsterInfo.reinforcements);
+		M_SetupReinforcements(reinforcements, self->monsterinfo.reinforcements);
 	}
 
-	self->monsterInfo.aiflags |= AI_ALTERNATE_FLY;
-	self->monsterInfo.fly_acceleration = 5.f;
-	self->monsterInfo.fly_speed = 50.f;
-	self->monsterInfo.fly_above = true;
-	self->monsterInfo.fly_min_distance = 1000.f;
-	self->monsterInfo.fly_max_distance = 1000.f;
+	self->monsterinfo.aiflags |= AI_ALTERNATE_FLY;
+	self->monsterinfo.fly_acceleration = 5.f;
+	self->monsterinfo.fly_speed = 50.f;
+	self->monsterinfo.fly_above = true;
+	self->monsterinfo.fly_min_distance = 1000.f;
+	self->monsterinfo.fly_max_distance = 1000.f;
 }

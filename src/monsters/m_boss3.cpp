@@ -18,7 +18,7 @@ USE(Use_Boss3) (gentity_t *self, gentity_t *other, gentity_t *activator) -> void
 	gi.multicast(self->s.origin, MULTICAST_PHS, false);
 
 	// just hide, don't kill ent so we can trigger it again
-	self->svFlags |= SVF_NOCLIENT;
+	self->svflags |= SVF_NOCLIENT;
 	self->solid = SOLID_NOT;
 }
 
@@ -27,7 +27,7 @@ static THINK(Think_Boss3Stand) (gentity_t *self) -> void {
 		self->s.frame = FRAME_stand201;
 	else
 		self->s.frame++;
-	self->nextThink = level.time + 10_hz;
+	self->nextthink = level.time + 10_hz;
 }
 
 /*QUAKED monster_boss3_stand (1 .5 0) (-32 -32 0) (32 32 90) x x x x x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
@@ -36,11 +36,11 @@ Just stands and cycles in one place until targeted, then teleports away.
 */
 void SP_monster_boss3_stand(gentity_t *self) {
 	if (!M_AllowSpawn(self)) {
-		FreeEntity(self);
+		G_FreeEntity(self);
 		return;
 	}
 
-	self->moveType = MOVETYPE_STEP;
+	self->movetype = MOVETYPE_STEP;
 	self->solid = SOLID_BBOX;
 	self->model = "models/monsters/boss3/rider/tris.md2";
 	self->s.modelindex = gi.modelindex(self->model);
@@ -53,6 +53,6 @@ void SP_monster_boss3_stand(gentity_t *self) {
 
 	self->use = Use_Boss3;
 	self->think = Think_Boss3Stand;
-	self->nextThink = level.time + FRAME_TIME_S;
+	self->nextthink = level.time + FRAME_TIME_S;
 	gi.linkentity(self);
 }

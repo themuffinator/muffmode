@@ -8,7 +8,7 @@ black widow
 ==============================================================================
 */
 
-// self->timeStamp used to prevent rapid fire of railgun
+// self->timestamp used to prevent rapid fire of railgun
 // self->plat2flags used for fire count (flashes)
 
 #include "../g_local.h"
@@ -67,7 +67,7 @@ void WidowCalcSlots(gentity_t *self);
 MONSTERINFO_SEARCH(widow_search) (gentity_t *self) -> void {}
 
 MONSTERINFO_SIGHT(widow_sight) (gentity_t *self, gentity_t *other) -> void {
-	self->monsterInfo.fire_wait = 0_ms;
+	self->monsterinfo.fire_wait = 0_ms;
 }
 
 extern const mmove_t widow_move_attack_post_blaster;
@@ -96,13 +96,13 @@ static int WidowTorso(gentity_t *self) {
 
 	if (enemy_yaw >= 105) {
 		M_SetAnimation(self, &widow_move_attack_post_blaster_r);
-		self->monsterInfo.aiflags &= ~AI_MANUAL_STEERING;
+		self->monsterinfo.aiflags &= ~AI_MANUAL_STEERING;
 		return 0;
 	}
 
 	if (enemy_yaw <= -75.0f) {
 		M_SetAnimation(self, &widow_move_attack_post_blaster_l);
-		self->monsterInfo.aiflags &= ~AI_MANUAL_STEERING;
+		self->monsterinfo.aiflags &= ~AI_MANUAL_STEERING;
 		return 0;
 	}
 
@@ -183,12 +183,12 @@ static void WidowBlaster(gentity_t *self) {
 		float  aim_angle, target_angle;
 		float  error;
 
-		self->monsterInfo.aiflags |= AI_MANUAL_STEERING;
+		self->monsterinfo.aiflags |= AI_MANUAL_STEERING;
 
-		self->monsterInfo.nextframe = WidowTorso(self);
+		self->monsterinfo.nextframe = WidowTorso(self);
 
-		if (!self->monsterInfo.nextframe)
-			self->monsterInfo.nextframe = self->s.frame;
+		if (!self->monsterinfo.nextframe)
+			self->monsterinfo.nextframe = self->s.frame;
 
 		if (self->s.frame == FRAME_fired02a)
 			flashnum = MZ2_WIDOW_BLASTER_0;
@@ -227,7 +227,7 @@ static void WidowBlaster(gentity_t *self) {
 		start = G_ProjectSource(self->s.origin, monster_flash_offset[flashnum], forward, right);
 
 		target = self->enemy->s.origin - start;
-		target[2] += self->enemy->viewHeight;
+		target[2] += self->enemy->viewheight;
 		target.normalize();
 
 		monster_fire_blaster2(self, start, target, BLASTER2_DAMAGE * widow_damage_multiplier, 1000, flashnum, effect);
@@ -252,15 +252,15 @@ static void WidowSpawn(gentity_t *self) {
 			if (!ent)
 				continue;
 
-			self->monsterInfo.monster_used++;
-			ent->monsterInfo.commander = self;
+			self->monsterinfo.monster_used++;
+			ent->monsterinfo.commander = self;
 
-			ent->nextThink = level.time;
+			ent->nextthink = level.time;
 			ent->think(ent);
 
-			ent->monsterInfo.aiflags |= AI_SPAWNED_WIDOW | AI_DO_NOT_COUNT | AI_IGNORE_SHOTS;
+			ent->monsterinfo.aiflags |= AI_SPAWNED_WIDOW | AI_DO_NOT_COUNT | AI_IGNORE_SHOTS;
 
-			if (!CooperativeModeOn()) {
+			if (!InCoopStyle()) {
 				designated_enemy = self->enemy;
 			} else {
 				designated_enemy = PickCoopTarget(ent);
@@ -275,10 +275,10 @@ static void WidowSpawn(gentity_t *self) {
 					designated_enemy = self->enemy;
 			}
 
-			if ((designated_enemy->inUse) && (designated_enemy->health > 0)) {
+			if ((designated_enemy->inuse) && (designated_enemy->health > 0)) {
 				ent->enemy = designated_enemy;
 				FoundTarget(ent);
-				ent->monsterInfo.attack(ent);
+				ent->monsterinfo.attack(ent);
 			}
 		}
 	}
@@ -383,17 +383,17 @@ MMOVE_T(widow_move_run_attack) = { FRAME_run01, FRAME_run08, widow_frames_run_at
 
 void widow_start_run_5(gentity_t *self) {
 	M_SetAnimation(self, &widow_move_run);
-	self->monsterInfo.nextframe = FRAME_walk05;
+	self->monsterinfo.nextframe = FRAME_walk05;
 }
 
 void widow_start_run_10(gentity_t *self) {
 	M_SetAnimation(self, &widow_move_run);
-	self->monsterInfo.nextframe = FRAME_walk10;
+	self->monsterinfo.nextframe = FRAME_walk10;
 }
 
 void widow_start_run_12(gentity_t *self) {
 	M_SetAnimation(self, &widow_move_run);
-	self->monsterInfo.nextframe = FRAME_walk12;
+	self->monsterinfo.nextframe = FRAME_walk12;
 }
 
 mframe_t widow_frames_attack_pre_blaster[] = {
@@ -463,9 +463,9 @@ void WidowRail(gentity_t *self) {
 
 	AngleVectors(self->s.angles, forward, right, nullptr);
 
-	if (self->monsterInfo.active_move == &widow_move_attack_rail_l) {
+	if (self->monsterinfo.active_move == &widow_move_attack_rail_l) {
 		flash = MZ2_WIDOW_RAIL_LEFT;
-	} else if (self->monsterInfo.active_move == &widow_move_attack_rail_r) {
+	} else if (self->monsterinfo.active_move == &widow_move_attack_rail_r) {
 		flash = MZ2_WIDOW_RAIL_RIGHT;
 	} else
 		flash = MZ2_WIDOW_RAIL;
@@ -477,20 +477,20 @@ void WidowRail(gentity_t *self) {
 	dir.normalize();
 
 	monster_fire_railgun(self, start, dir, WIDOW_RAIL_DAMAGE * widow_damage_multiplier, 100, flash);
-	self->timeStamp = level.time + RAIL_TIME;
+	self->timestamp = level.time + RAIL_TIME;
 }
 
 static void WidowSaveLoc(gentity_t *self) {
 	self->pos1 = self->enemy->s.origin; // save for aiming the shot
-	self->pos1[2] += self->enemy->viewHeight;
+	self->pos1[2] += self->enemy->viewheight;
 };
 
 static void widow_start_rail(gentity_t *self) {
-	self->monsterInfo.aiflags |= AI_MANUAL_STEERING;
+	self->monsterinfo.aiflags |= AI_MANUAL_STEERING;
 }
 
 static void widow_rail_done(gentity_t *self) {
-	self->monsterInfo.aiflags &= ~AI_MANUAL_STEERING;
+	self->monsterinfo.aiflags &= ~AI_MANUAL_STEERING;
 }
 
 mframe_t widow_frames_attack_pre_rail[] = {
@@ -554,11 +554,11 @@ void widow_attack_rail(gentity_t *self) {
 }
 
 void widow_start_spawn(gentity_t *self) {
-	self->monsterInfo.aiflags |= AI_MANUAL_STEERING;
+	self->monsterinfo.aiflags |= AI_MANUAL_STEERING;
 }
 
 void widow_done_spawn(gentity_t *self) {
-	self->monsterInfo.aiflags &= ~AI_MANUAL_STEERING;
+	self->monsterinfo.aiflags &= ~AI_MANUAL_STEERING;
 }
 
 mframe_t widow_frames_spawn[] = {
@@ -655,7 +655,7 @@ static void spawn_out_do(gentity_t *self) {
 
 	Widowlegs_Spawn(self->s.origin, self->s.angles);
 
-	FreeEntity(self);
+	G_FreeEntity(self);
 }
 
 mframe_t widow_frames_death[] = {
@@ -695,7 +695,7 @@ MMOVE_T(widow_move_death) = { FRAME_death01, FRAME_death31, widow_frames_death, 
 
 static void widow_attack_kick(gentity_t *self) {
 	vec3_t aim = { 100, 0, 4 };
-	if (self->enemy->groundEntity)
+	if (self->enemy->groundentity)
 		fire_hit(self, aim, irandom(50, 56), 500);
 	else // not as much kick if they're in the air .. makes it harder to land on her head
 		fire_hit(self, aim, irandom(50, 56), 250);
@@ -720,9 +720,9 @@ MONSTERINFO_STAND(widow_stand) (gentity_t *self) -> void {
 }
 
 MONSTERINFO_RUN(widow_run) (gentity_t *self) -> void {
-	self->monsterInfo.aiflags &= ~AI_HOLD_FRAME;
+	self->monsterinfo.aiflags &= ~AI_HOLD_FRAME;
 
-	if (self->monsterInfo.aiflags & AI_STAND_GROUND)
+	if (self->monsterinfo.aiflags & AI_STAND_GROUND)
 		M_SetAnimation(self, &widow_move_stand);
 	else
 		M_SetAnimation(self, &widow_move_run);
@@ -738,21 +738,21 @@ MONSTERINFO_ATTACK(widow_attack) (gentity_t *self) -> void {
 
 	self->movetarget = nullptr;
 
-	if (self->monsterInfo.aiflags & AI_BLOCKED) {
+	if (self->monsterinfo.aiflags & AI_BLOCKED) {
 		blocked = true;
-		self->monsterInfo.aiflags &= ~AI_BLOCKED;
+		self->monsterinfo.aiflags &= ~AI_BLOCKED;
 	}
 
-	if (self->monsterInfo.aiflags & AI_TARGET_ANGER) {
+	if (self->monsterinfo.aiflags & AI_TARGET_ANGER) {
 		anger = true;
-		self->monsterInfo.aiflags &= ~AI_TARGET_ANGER;
+		self->monsterinfo.aiflags &= ~AI_TARGET_ANGER;
 	}
 
-	if ((!self->enemy) || (!self->enemy->inUse))
+	if ((!self->enemy) || (!self->enemy->inuse))
 		return;
 
 	if (self->bad_area) {
-		if ((frandom() < 0.1f) || (level.time < self->timeStamp))
+		if ((frandom() < 0.1f) || (level.time < self->timestamp))
 			M_SetAnimation(self, &widow_move_attack_pre_blaster);
 		else {
 			gi.sound(self, CHAN_WEAPON, sound_rail, 1, ATTN_NORM, 0);
@@ -773,7 +773,7 @@ MONSTERINFO_ATTACK(widow_attack) (gentity_t *self) -> void {
 	WidowCalcSlots(self);
 
 	// if we can't see the target, spawn stuff regardless of frame
-	if ((self->monsterInfo.attack_state == AS_BLIND) && (M_SlotsLeft(self) >= 2)) {
+	if ((self->monsterinfo.attack_state == AS_BLIND) && (M_SlotsLeft(self) >= 2)) {
 		M_SetAnimation(self, &widow_move_spawn);
 		return;
 	}
@@ -793,14 +793,14 @@ MONSTERINFO_ATTACK(widow_attack) (gentity_t *self) -> void {
 		if (M_SlotsLeft(self) >= 2) {
 			M_SetAnimation(self, &widow_move_spawn);
 			return;
-		} else if (self->monsterInfo.fire_wait + BLASTER_TIME <= level.time) {
+		} else if (self->monsterinfo.fire_wait + BLASTER_TIME <= level.time) {
 			M_SetAnimation(self, &widow_move_attack_pre_blaster);
 			return;
 		}
 	}
 
 	if (rail_frames) {
-		if (!(level.time < self->timeStamp)) {
+		if (!(level.time < self->timestamp)) {
 			gi.sound(self, CHAN_WEAPON, sound_rail, 1, ATTN_NORM, 0);
 			M_SetAnimation(self, &widow_move_attack_pre_rail);
 		}
@@ -811,17 +811,17 @@ MONSTERINFO_ATTACK(widow_attack) (gentity_t *self) -> void {
 
 	luck = frandom();
 	if (M_SlotsLeft(self) >= 2) {
-		if ((luck <= 0.40f) && (self->monsterInfo.fire_wait + BLASTER_TIME <= level.time))
+		if ((luck <= 0.40f) && (self->monsterinfo.fire_wait + BLASTER_TIME <= level.time))
 			M_SetAnimation(self, &widow_move_attack_pre_blaster);
-		else if ((luck <= 0.7f) && !(level.time < self->timeStamp)) {
+		else if ((luck <= 0.7f) && !(level.time < self->timestamp)) {
 			gi.sound(self, CHAN_WEAPON, sound_rail, 1, ATTN_NORM, 0);
 			M_SetAnimation(self, &widow_move_attack_pre_rail);
 		} else
 			M_SetAnimation(self, &widow_move_spawn);
 	} else {
-		if (level.time < self->timeStamp)
+		if (level.time < self->timestamp)
 			M_SetAnimation(self, &widow_move_attack_pre_blaster);
-		else if ((luck <= 0.50f) || (level.time + BLASTER_TIME >= self->monsterInfo.fire_wait)) {
+		else if ((luck <= 0.50f) || (level.time + BLASTER_TIME >= self->monsterinfo.fire_wait)) {
 			gi.sound(self, CHAN_WEAPON, sound_rail, 1, ATTN_NORM, 0);
 			M_SetAnimation(self, &widow_move_attack_pre_rail);
 		} else // holdout to blaster
@@ -830,24 +830,24 @@ MONSTERINFO_ATTACK(widow_attack) (gentity_t *self) -> void {
 }
 
 void widow_attack_blaster(gentity_t *self) {
-	self->monsterInfo.fire_wait = level.time + random_time(1_sec, 3_sec);
+	self->monsterinfo.fire_wait = level.time + random_time(1_sec, 3_sec);
 	M_SetAnimation(self, &widow_move_attack_blaster);
-	self->monsterInfo.nextframe = WidowTorso(self);
+	self->monsterinfo.nextframe = WidowTorso(self);
 }
 
 void widow_reattack_blaster(gentity_t *self) {
 	WidowBlaster(self);
 
 	// if WidowBlaster bailed us out of the frames, just bail
-	if ((self->monsterInfo.active_move == &widow_move_attack_post_blaster_l) ||
-		(self->monsterInfo.active_move == &widow_move_attack_post_blaster_r))
+	if ((self->monsterinfo.active_move == &widow_move_attack_post_blaster_l) ||
+		(self->monsterinfo.active_move == &widow_move_attack_post_blaster_r))
 		return;
 
 	// if we're not done with the attack, don't leave the sequence
-	if (self->monsterInfo.fire_wait >= level.time)
+	if (self->monsterinfo.fire_wait >= level.time)
 		return;
 
-	self->monsterInfo.aiflags &= ~AI_MANUAL_STEERING;
+	self->monsterinfo.aiflags &= ~AI_MANUAL_STEERING;
 
 	M_SetAnimation(self, &widow_move_attack_post_blaster);
 }
@@ -868,18 +868,18 @@ static PAIN(widow_pain) (gentity_t *self, gentity_t *other, float kick, int dama
 	if (!M_ShouldReactToPain(self, mod))
 		return; // no pain anims in nightmare
 
-	self->monsterInfo.fire_wait = 0_ms;
+	self->monsterinfo.fire_wait = 0_ms;
 
 	if (damage >= 15) {
 		if (damage < 75) {
 			if ((skill->integer < 3) && (frandom() < (0.6f - (0.2f * skill->integer)))) {
 				M_SetAnimation(self, &widow_move_pain_light);
-				self->monsterInfo.aiflags &= ~AI_MANUAL_STEERING;
+				self->monsterinfo.aiflags &= ~AI_MANUAL_STEERING;
 			}
 		} else {
 			if ((skill->integer < 3) && (frandom() < (0.75f - (0.1f * skill->integer)))) {
 				M_SetAnimation(self, &widow_move_pain_heavy);
-				self->monsterInfo.aiflags &= ~AI_MANUAL_STEERING;
+				self->monsterinfo.aiflags &= ~AI_MANUAL_STEERING;
 			}
 		}
 	}
@@ -895,19 +895,19 @@ MONSTERINFO_SETSKIN(widow_setskin) (gentity_t *self) -> void {
 void widow_dead(gentity_t *self) {
 	self->mins = { -56, -56, 0 };
 	self->maxs = { 56, 56, 80 };
-	self->moveType = MOVETYPE_TOSS;
-	self->svFlags |= SVF_DEADMONSTER;
-	self->nextThink = 0_ms;
+	self->movetype = MOVETYPE_TOSS;
+	self->svflags |= SVF_DEADMONSTER;
+	self->nextthink = 0_ms;
 	gi.linkentity(self);
 }
 
 DIE(widow_die) (gentity_t *self, gentity_t *inflictor, gentity_t *attacker, int damage, const vec3_t &point, const mod_t &mod) -> void {
-	self->deadFlag = true;
-	self->takeDamage = false;
+	self->deadflag = true;
+	self->takedamage = false;
 	self->count = 0;
-	self->monsterInfo.quad_time = 0_ms;
-	self->monsterInfo.double_time = 0_ms;
-	self->monsterInfo.invincibility_time = 0_ms;
+	self->monsterinfo.quad_time = 0_ms;
+	self->monsterinfo.double_time = 0_ms;
+	self->monsterinfo.invincibility_time = 0_ms;
 	M_SetAnimation(self, &widow_move_death);
 }
 
@@ -917,24 +917,24 @@ MONSTERINFO_MELEE(widow_melee) (gentity_t *self) -> void {
 }
 
 static void WidowGoinQuad(gentity_t *self, gtime_t time) {
-	self->monsterInfo.quad_time = time;
+	self->monsterinfo.quad_time = time;
 	widow_damage_multiplier = 4;
 }
 
 static void WidowDouble(gentity_t *self, gtime_t time) {
-	self->monsterInfo.double_time = time;
+	self->monsterinfo.double_time = time;
 	widow_damage_multiplier = 2;
 }
 
 static void WidowPent(gentity_t *self, gtime_t time) {
-	self->monsterInfo.invincibility_time = time;
+	self->monsterinfo.invincibility_time = time;
 }
 
 static void WidowPowerArmor(gentity_t *self) {
-	self->monsterInfo.powerArmorType = IT_POWER_SHIELD;
+	self->monsterinfo.power_armor_type = IT_POWER_SHIELD;
 	// I don't like this, but it works
-	if (self->monsterInfo.powerArmorPower <= 0)
-		self->monsterInfo.powerArmorPower += 250 * skill->integer;
+	if (self->monsterinfo.power_armor_power <= 0)
+		self->monsterinfo.power_armor_power += 250 * skill->integer;
 }
 
 static void WidowRespondPowerup(gentity_t *self, gentity_t *other) {
@@ -961,16 +961,16 @@ static void WidowRespondPowerup(gentity_t *self, gentity_t *other) {
 		if (skill->integer == 1)
 			WidowPowerArmor(self);
 		else if (skill->integer == 2)
-			WidowPent(self, other->client->pu_time_battlesuit);
+			WidowPent(self, other->client->pu_time_protection);
 		else if (skill->integer >= 3) {
-			WidowPent(self, other->client->pu_time_battlesuit);
+			WidowPent(self, other->client->pu_time_protection);
 			WidowPowerArmor(self);
 		}
 	}
 }
 
 void WidowPowerups(gentity_t *self) {
-	if (!CooperativeModeOn()) {
+	if (!InCoopStyle()) {
 		WidowRespondPowerup(self, self->enemy);
 		return;
 	}
@@ -1002,7 +1002,7 @@ MONSTERINFO_CHECKATTACK(Widow_CheckAttack) (gentity_t *self) -> bool {
 
 	WidowPowerups(self);
 
-	if (self->monsterInfo.active_move == &widow_move_run) {
+	if (self->monsterinfo.active_move == &widow_move_run) {
 		// if we're in run, make sure we're in a good frame for attacking before doing anything else
 		// frames 1,2,3,9,10,11,13 good to fire
 		switch (self->s.frame) {
@@ -1021,8 +1021,8 @@ MONSTERINFO_CHECKATTACK(Widow_CheckAttack) (gentity_t *self) -> bool {
 	// give a LARGE bias to spawning things when we have room
 	// use AI_BLOCKED as a signal to attack to spawn
 	if ((frandom() < 0.8f) && (M_SlotsLeft(self) >= 2) && (realrange(self, self->enemy) > 150)) {
-		self->monsterInfo.aiflags |= AI_BLOCKED;
-		self->monsterInfo.attack_state = AS_MISSILE;
+		self->monsterinfo.aiflags |= AI_BLOCKED;
+		self->monsterinfo.attack_state = AS_MISSILE;
 		return true;
 	}
 
@@ -1035,12 +1035,12 @@ MONSTERINFO_BLOCKED(widow_blocked) (gentity_t *self, float dist) -> bool {
 	//
 	// I'm using AI_TARGET_ANGER for this purpose
 
-	if (self->monsterInfo.active_move == &widow_move_run_attack) {
-		self->monsterInfo.aiflags |= AI_TARGET_ANGER;
-		if (self->monsterInfo.checkattack(self))
-			self->monsterInfo.attack(self);
+	if (self->monsterinfo.active_move == &widow_move_run_attack) {
+		self->monsterinfo.aiflags |= AI_TARGET_ANGER;
+		if (self->monsterinfo.checkattack(self))
+			self->monsterinfo.attack(self);
 		else
-			self->monsterInfo.run(self);
+			self->monsterinfo.run(self);
 		return true;
 	}
 
@@ -1051,20 +1051,20 @@ void WidowCalcSlots(gentity_t *self) {
 	switch (skill->integer) {
 	case 0:
 	case 1:
-		self->monsterInfo.monster_slots = 3;
+		self->monsterinfo.monster_slots = 3;
 		break;
 	case 2:
-		self->monsterInfo.monster_slots = 4;
+		self->monsterinfo.monster_slots = 4;
 		break;
 	case 3:
-		self->monsterInfo.monster_slots = 6;
+		self->monsterinfo.monster_slots = 6;
 		break;
 	default:
-		self->monsterInfo.monster_slots = 3;
+		self->monsterinfo.monster_slots = 3;
 		break;
 	}
-	if (CooperativeModeOn())
-		self->monsterInfo.monster_slots = min(6, self->monsterInfo.monster_slots + (skill->integer * (CountPlayers() - 1)));
+	if (InCoopStyle())
+		self->monsterinfo.monster_slots = min(6, self->monsterinfo.monster_slots + (skill->integer * (CountPlayers() - 1)));
 }
 
 static void WidowPrecache() {
@@ -1104,7 +1104,7 @@ static void WidowPrecache() {
  */
 void SP_monster_widow(gentity_t *self) {
 	if (!M_AllowSpawn(self)) {
-		FreeEntity(self);
+		G_FreeEntity(self);
 		return;
 	}
 
@@ -1113,48 +1113,48 @@ void SP_monster_widow(gentity_t *self) {
 	sound_pain3.assign("widow/bw1pain3.wav");
 	sound_rail.assign("gladiator/railgun.wav");
 
-	self->moveType = MOVETYPE_STEP;
+	self->movetype = MOVETYPE_STEP;
 	self->solid = SOLID_BBOX;
 	self->s.modelindex = gi.modelindex("models/monsters/blackwidow/tris.md2");
 	self->mins = { -40, -40, 0 };
 	self->maxs = { 40, 40, 144 };
 
 	self->health = (2000 + 1000 * skill->integer) * st.health_multiplier;
-	if (CooperativeModeOn())
+	if (InCoopStyle())
 		self->health += 500 * skill->integer;
-	self->gibHealth = -5000;
+	self->gib_health = -5000;
 	self->mass = 1500;
 
 	if (skill->integer >= 3) {
-		if (!st.was_key_specified("powerArmorType"))
-			self->monsterInfo.powerArmorType = IT_POWER_SHIELD;
-		if (!st.was_key_specified("powerArmorPower"))
-			self->monsterInfo.powerArmorPower = 500;
+		if (!st.was_key_specified("power_armor_type"))
+			self->monsterinfo.power_armor_type = IT_POWER_SHIELD;
+		if (!st.was_key_specified("power_armor_power"))
+			self->monsterinfo.power_armor_power = 500;
 	}
 
 	self->yaw_speed = 30;
 
 	self->flags |= FL_IMMUNE_LASER;
-	self->monsterInfo.aiflags |= AI_IGNORE_SHOTS;
+	self->monsterinfo.aiflags |= AI_IGNORE_SHOTS;
 
 	self->pain = widow_pain;
 	self->die = widow_die;
 
-	self->monsterInfo.melee = widow_melee;
-	self->monsterInfo.stand = widow_stand;
-	self->monsterInfo.walk = widow_walk;
-	self->monsterInfo.run = widow_run;
-	self->monsterInfo.attack = widow_attack;
-	self->monsterInfo.search = widow_search;
-	self->monsterInfo.checkattack = Widow_CheckAttack;
-	self->monsterInfo.sight = widow_sight;
-	self->monsterInfo.setskin = widow_setskin;
-	self->monsterInfo.blocked = widow_blocked;
+	self->monsterinfo.melee = widow_melee;
+	self->monsterinfo.stand = widow_stand;
+	self->monsterinfo.walk = widow_walk;
+	self->monsterinfo.run = widow_run;
+	self->monsterinfo.attack = widow_attack;
+	self->monsterinfo.search = widow_search;
+	self->monsterinfo.checkattack = Widow_CheckAttack;
+	self->monsterinfo.sight = widow_sight;
+	self->monsterinfo.setskin = widow_setskin;
+	self->monsterinfo.blocked = widow_blocked;
 
 	gi.linkentity(self);
 
 	M_SetAnimation(self, &widow_move_stand);
-	self->monsterInfo.scale = MODEL_SCALE;
+	self->monsterinfo.scale = MODEL_SCALE;
 
 	WidowPrecache();
 	WidowCalcSlots(self);

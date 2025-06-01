@@ -19,7 +19,7 @@ bool InfiniteAmmoOn(gitem_t *item) {
 	if (item && item->flags & IF_NO_INFINITE_AMMO)
 		return false;
 
-	return g_infinite_ammo->integer || (deathmatch->integer && (g_instagib->integer || g_nadefest->integer || g_gametype->integer == GT_RACE));
+	return g_infinite_ammo->integer || (deathmatch->integer && (g_instagib->integer || g_nadefest->integer));
 }
 
 /*
@@ -28,33 +28,31 @@ Stats_AddShot
 ================
 */
 static void Stats_AddShot(gentity_t *ent) {
+	MS_Adjust(ent->client, MSTAT_SHOTS, 1);
 }
 
 /*
 ================
-PlayerDamageModifier
+P_DamageModifier
 ================
 */
-byte PlayerDamageModifier(gentity_t *ent) {
+byte P_DamageModifier(gentity_t *ent) {
 	is_quad = false;
-	damage_multiplier = 0;
-
-	//WOR: make these stack but additive rather than multiplicative
+	damage_multiplier = 1;
 
 	if (ent->client->pu_time_quad > level.time) {
-		damage_multiplier += 4;
+		damage_multiplier *= 4;
 		is_quad = true;
+
+		// if we're quad and DF_NO_STACK_DOUBLE is on, return now.
+		if (g_dm_no_stack_double->integer)
+			return damage_multiplier;
 	}
 
 	if (ent->client->pu_time_double > level.time) {
-		damage_multiplier += 2;
+		damage_multiplier *= 2;
 		is_quad = true;
 	}
-
-	if (ent->client->pers.inventory[IT_TECH_POWER_AMP])
-		damage_multiplier += 2;
-
-	damage_multiplier = damage_multiplier ? damage_multiplier : 1;
 
 	return damage_multiplier;
 }
@@ -122,7 +120,7 @@ void P_ProjectSource(gentity_t *ent, const vec3_t &angles, vec3_t distance, vec3
 		distance[1] = 0;
 
 	vec3_t forward, right, up;
-	vec3_t eye_position = (ent->s.origin + vec3_t{ 0, 0, (float)ent->viewHeight });
+	vec3_t eye_position = (ent->s.origin + vec3_t{ 0, 0, (float)ent->viewheight });
 
 	AngleVectors(angles, forward, right, up);
 
@@ -172,9 +170,6 @@ void PlayerNoise(gentity_t *who, const vec3_t &where, player_noise_t type) {
 			who->client->silencer_shots--;
 			return;
 		}
-
-		if (who->client->pu_time_spawn_protection > level.time)
-			who->client->pu_time_spawn_protection = 0_ms;
 	}
 
 	if (deathmatch->integer)
@@ -189,27 +184,27 @@ void PlayerNoise(gentity_t *who, const vec3_t &where, player_noise_t type) {
 
 	if (who->flags & FL_DISGUISED) {
 		if (type == PNOISE_WEAPON) {
-			level.disguiseViolator = who;
-			level.disguiseViolationTime = level.time + 500_ms;
+			level.disguise_violator = who;
+			level.disguise_violation_time = level.time + 500_ms;
 		} else
 			return;
 	}
 
 	if (!who->mynoise) {
-		noise = Spawn();
-		noise->className = "player_noise";
+		noise = G_Spawn();
+		noise->classname = "player_noise";
 		noise->mins = { -8, -8, -8 };
 		noise->maxs = { 8, 8, 8 };
 		noise->owner = who;
-		noise->svFlags = SVF_NOCLIENT;
+		noise->svflags = SVF_NOCLIENT;
 		who->mynoise = noise;
 
-		noise = Spawn();
-		noise->className = "player_noise";
+		noise = G_Spawn();
+		noise->classname = "player_noise";
 		noise->mins = { -8, -8, -8 };
 		noise->maxs = { 8, 8, 8 };
 		noise->owner = who;
-		noise->svFlags = SVF_NOCLIENT;
+		noise->svflags = SVF_NOCLIENT;
 		who->mynoise2 = noise;
 	}
 
@@ -225,8 +220,8 @@ void PlayerNoise(gentity_t *who, const vec3_t &where, player_noise_t type) {
 	}
 
 	noise->s.origin = where;
-	noise->absMin = where - noise->maxs;
-	noise->absMax = where + noise->maxs;
+	noise->absmin = where - noise->maxs;
+	noise->absmax = where + noise->maxs;
 	noise->teleport_time = level.time;
 	gi.linkentity(noise);
 }
@@ -269,56 +264,37 @@ bool Pickup_Weapon(gentity_t *ent, gentity_t *other) {
 			if (InfiniteAmmoOn(ammo))
 				Add_Ammo(other, ammo, AMMO_INFINITE);
 			else {
-				int count = 0;
+				int quantity = 0;
 
 				if (RS(RS_Q3A)) {
 					if (ent->count)
-						count = ent->count;
+						quantity = ent->count;
 					else {
 						if (ammo->id == IT_AMMO_GRENADES ||
 							ammo->id == IT_AMMO_ROCKETS ||
 							ammo->id == IT_AMMO_SLUGS)
-							count = 10;
+							quantity = 10;
 						else
-							count = ammo->quantity;
+							quantity = ammo->quantity;
 					}
 
-					if (other->client->pers.inventory[ammo->id] < count)
-						count = count - other->client->pers.inventory[ammo->id];
+					if (other->client->pers.inventory[ammo->id] < quantity)
+						quantity = quantity - other->client->pers.inventory[ammo->id];
 					else
-						count = 1;
+						quantity = 1;
 
 				} else {
-					if (ammo && InfiniteAmmoOn(ent->item))
-						count = AMMO_INFINITE;
-					else if (ent->count)
-						count = ent->count;
+					if (ent->count)
+						quantity = ent->count;
 					else {
-						if (ammo->id == IT_AMMO_SLUGS) {
-							switch (game.ruleset) {
-							case RS_Q1:
-								count = 1;
-								break;
-							case RS_Q3A:
-
-								if (other->client->pers.inventory[ammo->id] < count)
-									count = count - other->client->pers.inventory[ammo->id];
-								else
-									count = 1;
-
-								count = 10;
-								break;
-							default:
-								count = 8;
-								break;
-							}
-						} else {
-							count = ammo->quantity;
-						}
+						if (RS(RS_Q2RE) && ammo->id == IT_AMMO_SLUGS)
+							quantity = 10;
+						else
+							quantity = ammo->quantity;
 					}
 				}
 				
-				Add_Ammo(other, ammo, count);
+				Add_Ammo(other, ammo, quantity);
 			}
 		}
 
@@ -351,7 +327,7 @@ static void Weapon_RunThink(gentity_t *ent) {
 	if (!ent->client->pers.weapon->weaponthink)
 		return;
 
-	PlayerDamageModifier(ent);
+	P_DamageModifier(ent);
 
 	is_haste = (ent->client->pu_time_haste > level.time);
 
@@ -372,7 +348,7 @@ current
 */
 void Change_Weapon(gentity_t *ent) {
 	// [Paril-KEX]
-	if (ent->health > 0 && !g_instant_weapon_switch->integer && !g_frenzy->integer && ((ent->client->latchedButtons | ent->client->buttons) & BUTTON_HOLSTER))
+	if (ent->health > 0 && !g_instant_weapon_switch->integer && !g_frenzy->integer && ((ent->client->latched_buttons | ent->client->buttons) & BUTTON_HOLSTER))
 		return;
 
 	if (ent->client->grenade_time) {
@@ -385,15 +361,15 @@ void Change_Weapon(gentity_t *ent) {
 	if (ent->client->pers.weapon) {
 		ent->client->pers.lastweapon = ent->client->pers.weapon;
 
-		if (ent->client->newWeapon && ent->client->newWeapon != ent->client->pers.weapon) {
+		if (ent->client->newweapon && ent->client->newweapon != ent->client->pers.weapon) {
 			//muff: only make the sound if we can switch faster
 			if (g_quick_weapon_switch->integer || g_instant_weapon_switch->integer)
 				gi.sound(ent, CHAN_WEAPON, gi.soundindex("weapons/change.wav"), 1, ATTN_NORM, 0);
 		}
 	}
 
-	ent->client->pers.weapon = ent->client->newWeapon;
-	ent->client->newWeapon = nullptr;
+	ent->client->pers.weapon = ent->client->newweapon;
+	ent->client->newweapon = nullptr;
 
 	// set visible model
 	if (ent->s.modelindex == MODELINDEX_PLAYER)
@@ -405,21 +381,21 @@ void Change_Weapon(gentity_t *ent) {
 		return;
 	}
 
-	ent->client->weaponState = WEAPON_ACTIVATING;
+	ent->client->weaponstate = WEAPON_ACTIVATING;
 	ent->client->ps.gunframe = 0;
 	ent->client->ps.gunindex = gi.modelindex(ent->client->pers.weapon->view_model);
 	ent->client->ps.gunskin = 0;
 	ent->client->weapon_sound = 0;
 
-	ent->client->animPriority = ANIM_PAIN;
+	ent->client->anim_priority = ANIM_PAIN;
 	if (ent->client->ps.pmove.pm_flags & PMF_DUCKED) {
 		ent->s.frame = FRAME_crpain1;
-		ent->client->animEnd = FRAME_crpain4;
+		ent->client->anim_end = FRAME_crpain4;
 	} else {
 		ent->s.frame = FRAME_pain301;
-		ent->client->animEnd = FRAME_pain304;
+		ent->client->anim_end = FRAME_pain304;
 	}
-	ent->client->animTime = 0_ms;
+	ent->client->anim_time = 0_ms;
 
 	// for instantweap, run think immediately
 	// to set up correct start frame
@@ -473,7 +449,7 @@ void NoAmmoWeaponChange(gentity_t *ent, bool sound) {
 		if (item->ammo && ent->client->pers.inventory[item->ammo] < item->quantity)
 			continue;
 
-		ent->client->newWeapon = item;
+		ent->client->newweapon = item;
 		return;
 	}
 }
@@ -498,7 +474,8 @@ static void RemoveAmmo(gentity_t *ent, int32_t quantity) {
 	if (!pre_warning && post_warning)
 		gi.local_sound(ent, CHAN_AUTO, gi.soundindex("weapons/lowammo.wav"), 1, ATTN_NORM, 0);
 
-	CheckPowerArmorState(ent);
+	if (ent->client->pers.weapon->ammo == IT_AMMO_CELLS)
+		G_CheckPowerArmor(ent);
 }
 
 /*
@@ -510,12 +487,12 @@ Weapon_AnimationTime
 */
 static inline gtime_t Weapon_AnimationTime(gentity_t *ent) {
 	if ((g_quick_weapon_switch->integer || g_frenzy->integer) && (gi.tick_rate >= 20) &&
-		(ent->client->weaponState == WEAPON_ACTIVATING || ent->client->weaponState == WEAPON_DROPPING))
+		(ent->client->weaponstate == WEAPON_ACTIVATING || ent->client->weaponstate == WEAPON_DROPPING))
 		ent->client->ps.gunrate = 20;
 	else
 		ent->client->ps.gunrate = 10;
 
-	if (ent->client->ps.gunframe != 0 && (!(ent->client->pers.weapon->flags & IF_NO_HASTE) || ent->client->weaponState != WEAPON_FIRING)) {
+	if (ent->client->ps.gunframe != 0 && (!(ent->client->pers.weapon->flags & IF_NO_HASTE) || ent->client->weaponstate != WEAPON_FIRING)) {
 		if (is_haste)
 			ent->client->ps.gunrate *= 1.5;
 		if (Tech_ApplyTimeAccel(ent))
@@ -546,12 +523,12 @@ void Think_Weapon(gentity_t *ent) {
 
 	// if just died, put the weapon away
 	if (ent->health < 1) {
-		ent->client->newWeapon = nullptr;
+		ent->client->newweapon = nullptr;
 		Change_Weapon(ent);
 	}
 
 	if (!ent->client->pers.weapon) {
-		if (ent->client->newWeapon)
+		if (ent->client->newweapon)
 			Change_Weapon(ent);
 		return;
 	}
@@ -568,11 +545,11 @@ void Think_Weapon(gentity_t *ent) {
 		if (relative_time < FRAME_TIME_MS) {
 			// check how many we can't run before the next server tick
 			gtime_t next_frame = level.time + FRAME_TIME_S;
-			int64_t remaining_ms = (next_frame - ent->client->weaponThinkTime).milliseconds();
+			int64_t remaining_ms = (next_frame - ent->client->weapon_think_time).milliseconds();
 
 			while (remaining_ms > 0) {
-				ent->client->weaponThinkTime -= relative_time;
-				ent->client->weaponFireFinished -= relative_time;
+				ent->client->weapon_think_time -= relative_time;
+				ent->client->weapon_fire_finished -= relative_time;
 				Weapon_RunThink(ent);
 				remaining_ms -= relative_time.milliseconds();
 			}
@@ -594,8 +571,6 @@ enum weap_switch_t {
 };
 
 static weap_switch_t Weapon_AttemptSwitch(gentity_t *ent, gitem_t *item, bool silent) {
-	if (!item)
-		return WEAP_SWITCH_NO_WEAPON;
 	if (ent->client->pers.weapon == item)
 		return WEAP_SWITCH_ALREADY_USING;
 	else if (!ent->client->pers.inventory[item->id])
@@ -635,8 +610,8 @@ void Use_Weapon(gentity_t *ent, gitem_t *item) {
 
 	// if we're switching to a weapon in this chain already,
 	// start from the weapon after this one in the chain
-	if (!ent->client->no_weapon_chains && Weapon_IsPartOfChain(item, ent->client->newWeapon)) {
-		root = ent->client->newWeapon;
+	if (!ent->client->no_weapon_chains && Weapon_IsPartOfChain(item, ent->client->newweapon)) {
+		root = ent->client->newweapon;
 		wanted = root->chain_next;
 	}
 	// if we're already holding a weapon in this chain,
@@ -655,7 +630,7 @@ void Use_Weapon(gentity_t *ent, gitem_t *item) {
 			break;
 
 		// no chains
-		if (!wanted || !wanted->chain_next || ent->client->no_weapon_chains)
+		if (!wanted->chain_next || ent->client->no_weapon_chains)
 			break;
 
 		wanted = wanted->chain_next;
@@ -666,8 +641,8 @@ void Use_Weapon(gentity_t *ent, gitem_t *item) {
 	}
 
 	if (result == WEAP_SWITCH_VALID)
-		ent->client->newWeapon = wanted; // change to this weapon when down
-	else if ((result = Weapon_AttemptSwitch(ent, wanted, true)) == WEAP_SWITCH_NO_WEAPON && wanted != ent->client->pers.weapon && wanted != ent->client->newWeapon)
+		ent->client->newweapon = wanted; // change to this weapon when down
+	else if ((result = Weapon_AttemptSwitch(ent, wanted, true)) == WEAP_SWITCH_NO_WEAPON && wanted != ent->client->pers.weapon && wanted != ent->client->newweapon)
 		gi.LocClient_Print(ent, PRINT_HIGH, "$g_out_of_item", wanted->pickup_name);
 }
 
@@ -688,57 +663,39 @@ void Drop_Weapon(gentity_t *ent, gitem_t *item) {
 
 	gentity_t *drop = Drop_Item(ent, item);
 	drop->spawnflags |= SPAWNFLAG_ITEM_DROPPED_PLAYER;
-	drop->svFlags &= ~SVF_INSTANCED;
+	drop->svflags &= ~SVF_INSTANCED;
 
-	if (drop->item->id != IT_WEAPON_BLASTER && drop->item->id != IT_WEAPON_GRAPPLE && drop->item->id != IT_WEAPON_CHAINFIST) {
-		gitem_t *ammo = GetItemByIndex(drop->item->ammo);
-		if (!ammo) {
-			FreeEntity(drop);
-			return;
-		}
-		if (ent->client->pers.inventory[ammo->id] <= 0) {
-			FreeEntity(drop);
-			return;
-		}
+	gitem_t *ammo = GetItemByIndex(drop->item->ammo);
+	if (!ammo)
+		return;
+	if (ent->client->pers.inventory[ammo->id] <= 0)
+		return;
+	
+	drop->count = ammo->quantity;
 
-		drop->count = ammo->quantity;
-
-		if (item->id == IT_WEAPON_RAILGUN) {
+	if (item->id == IT_WEAPON_RAILGUN) {
+		if (!(RS(RS_MM)))
 			drop->count += 5;
-		} else if (item->id == IT_WEAPON_BLASTER) {
-			drop->count = AMMO_INFINITE;
-		}
-		drop->count = clamp(drop->count, drop->count, ent->client->pers.inventory[ammo->id]);
-
-		if (drop->count <= 0) {
-			FreeEntity(drop);
-			return;
-		}
-
-		if (ent->client->pers.inventory[ammo->id] - drop->count < 0) {
-			FreeEntity(drop);
-			return;
-		}
-
-		if (drop->count != AMMO_INFINITE)
-			Add_Ammo(ent, ammo, -(drop->count));
-
-		// see if we were already using it
-		if ((item == ent->client->pers.weapon) || (item == ent->client->newWeapon)) {
-			if (ent->client->pers.inventory[index] < 1 || ent->client->pers.inventory[ammo->id] < 1)
-				NoAmmoWeaponChange(ent, true);
-		}
-	} else {
-		drop->count = AMMO_INFINITE;
-
-		// see if we were already using it
-		if ((item == ent->client->pers.weapon) || (item == ent->client->newWeapon)) {
-			if (ent->client->pers.inventory[index] == 1)
-				NoAmmoWeaponChange(ent, true);
-		}
 	}
-		//ent->client->pers.inventory[ammo->id] -= drop->count;
+
+	drop->count = clamp(drop->count, drop->count, ent->client->pers.inventory[ammo->id]);
+
+	if (drop->count <= 0)
+		return;
+
+	if (ent->client->pers.inventory[ammo->id] - drop->count < 0) {
+		G_FreeEntity(drop);
+		return;
+	}
+
+	ent->client->pers.inventory[ammo->id] -= drop->count;
 	ent->client->pers.inventory[index]--;
+
+	// see if we were already using it
+	if ((item == ent->client->pers.weapon) || (item == ent->client->newweapon)) {
+		if (ent->client->pers.inventory[index] < 1 || ent->client->pers.inventory[ammo->id] < 1)
+			NoAmmoWeaponChange(ent, true);
+	}
 }
 
 /*
@@ -771,7 +728,7 @@ Weapon_CanAnimate
 */
 static inline bool Weapon_CanAnimate(gentity_t *ent) {
 	// VWep animations screw up corpses
-	return !ent->deadFlag && ent->s.modelindex == MODELINDEX_PLAYER;
+	return !ent->deadflag && ent->s.modelindex == MODELINDEX_PLAYER;
 }
 
 /*
@@ -783,7 +740,7 @@ we're allowed to switch to fire again
 ================
 */
 static inline void Weapon_SetFinished(gentity_t *ent) {
-	ent->client->weaponFireFinished = level.time + Weapon_AnimationTime(ent);
+	ent->client->weapon_fire_finished = level.time + Weapon_AnimationTime(ent);
 }
 
 /*
@@ -792,25 +749,25 @@ Weapon_HandleDropping
 ================
 */
 static inline bool Weapon_HandleDropping(gentity_t *ent, int FRAME_DEACTIVATE_LAST) {
-	if (ent->client->weaponState == WEAPON_DROPPING) {
-		if (ent->client->weaponThinkTime <= level.time) {
+	if (ent->client->weaponstate == WEAPON_DROPPING) {
+		if (ent->client->weapon_think_time <= level.time) {
 			if (ent->client->ps.gunframe == FRAME_DEACTIVATE_LAST) {
 				Change_Weapon(ent);
 				return true;
 			} else if ((FRAME_DEACTIVATE_LAST - ent->client->ps.gunframe) == 4) {
-				ent->client->animPriority = ANIM_ATTACK | ANIM_REVERSED;
+				ent->client->anim_priority = ANIM_ATTACK | ANIM_REVERSED;
 				if (ent->client->ps.pmove.pm_flags & PMF_DUCKED) {
 					ent->s.frame = FRAME_crpain4 + 1;
-					ent->client->animEnd = FRAME_crpain1;
+					ent->client->anim_end = FRAME_crpain1;
 				} else {
 					ent->s.frame = FRAME_pain304 + 1;
-					ent->client->animEnd = FRAME_pain301;
+					ent->client->anim_end = FRAME_pain301;
 				}
-				ent->client->animTime = 0_ms;
+				ent->client->anim_time = 0_ms;
 			}
 
 			ent->client->ps.gunframe++;
-			ent->client->weaponThinkTime = level.time + Weapon_AnimationTime(ent);
+			ent->client->weapon_think_time = level.time + Weapon_AnimationTime(ent);
 		}
 		return true;
 	}
@@ -824,18 +781,18 @@ Weapon_HandleActivating
 ================
 */
 static inline bool Weapon_HandleActivating(gentity_t *ent, int FRAME_ACTIVATE_LAST, int FRAME_IDLE_FIRST) {
-	if (ent->client->weaponState == WEAPON_ACTIVATING) {
-		if (ent->client->weaponThinkTime <= level.time || g_instant_weapon_switch->integer || g_frenzy->integer) {
-			ent->client->weaponThinkTime = level.time + Weapon_AnimationTime(ent);
+	if (ent->client->weaponstate == WEAPON_ACTIVATING) {
+		if (ent->client->weapon_think_time <= level.time || g_instant_weapon_switch->integer || g_frenzy->integer) {
+			ent->client->weapon_think_time = level.time + Weapon_AnimationTime(ent);
 
 			if (ent->client->ps.gunframe == FRAME_ACTIVATE_LAST || g_instant_weapon_switch->integer || g_frenzy->integer) {
-				ent->client->weaponState = WEAPON_READY;
+				ent->client->weaponstate = WEAPON_READY;
 				ent->client->ps.gunframe = FRAME_IDLE_FIRST;
-				ent->client->weaponFireBuffered = false;
+				ent->client->weapon_fire_buffered = false;
 				if (!g_instant_weapon_switch->integer || g_frenzy->integer)
 					Weapon_SetFinished(ent);
 				else
-					ent->client->weaponFireFinished = 0_ms;
+					ent->client->weapon_fire_finished = 0_ms;
 				return true;
 			}
 
@@ -856,14 +813,14 @@ static inline bool Weapon_HandleNewWeapon(gentity_t *ent, int FRAME_DEACTIVATE_F
 	bool is_holstering = false;
 
 	if (!g_instant_weapon_switch->integer || g_frenzy->integer)
-		is_holstering = ((ent->client->latchedButtons | ent->client->buttons) & BUTTON_HOLSTER);
+		is_holstering = ((ent->client->latched_buttons | ent->client->buttons) & BUTTON_HOLSTER);
 
-	if ((ent->client->newWeapon || is_holstering) && (ent->client->weaponState != WEAPON_FIRING)) {
-		if (g_instant_weapon_switch->integer || g_frenzy->integer || ent->client->weaponThinkTime <= level.time) {
-			if (!ent->client->newWeapon)
-				ent->client->newWeapon = ent->client->pers.weapon;
+	if ((ent->client->newweapon || is_holstering) && (ent->client->weaponstate != WEAPON_FIRING)) {
+		if (g_instant_weapon_switch->integer || g_frenzy->integer || ent->client->weapon_think_time <= level.time) {
+			if (!ent->client->newweapon)
+				ent->client->newweapon = ent->client->pers.weapon;
 
-			ent->client->weaponState = WEAPON_DROPPING;
+			ent->client->weaponstate = WEAPON_DROPPING;
 
 			if (g_instant_weapon_switch->integer || g_frenzy->integer) {
 				Change_Weapon(ent);
@@ -873,18 +830,18 @@ static inline bool Weapon_HandleNewWeapon(gentity_t *ent, int FRAME_DEACTIVATE_F
 			ent->client->ps.gunframe = FRAME_DEACTIVATE_FIRST;
 
 			if ((FRAME_DEACTIVATE_LAST - FRAME_DEACTIVATE_FIRST) < 4) {
-				ent->client->animPriority = ANIM_ATTACK | ANIM_REVERSED;
+				ent->client->anim_priority = ANIM_ATTACK | ANIM_REVERSED;
 				if (ent->client->ps.pmove.pm_flags & PMF_DUCKED) {
 					ent->s.frame = FRAME_crpain4 + 1;
-					ent->client->animEnd = FRAME_crpain1;
+					ent->client->anim_end = FRAME_crpain1;
 				} else {
 					ent->s.frame = FRAME_pain304 + 1;
-					ent->client->animEnd = FRAME_pain301;
+					ent->client->anim_end = FRAME_pain301;
 				}
-				ent->client->animTime = 0_ms;
+				ent->client->anim_time = 0_ms;
 			}
 
-			ent->client->weaponThinkTime = level.time + Weapon_AnimationTime(ent);
+			ent->client->weapon_think_time = level.time + Weapon_AnimationTime(ent);
 		}
 		return true;
 	}
@@ -904,30 +861,30 @@ enum weapon_ready_state_t {
 };
 
 static inline weapon_ready_state_t Weapon_HandleReady(gentity_t *ent, int FRAME_FIRE_FIRST, int FRAME_IDLE_FIRST, int FRAME_IDLE_LAST, const int *pause_frames) {
-	if (ent->client->weaponState == WEAPON_READY) {
+	if (ent->client->weaponstate == WEAPON_READY) {
 		bool request_firing;
 
-		if (CombatIsDisabled()) {
+		if (IsCombatDisabled()) {
 			request_firing = false;
-			ent->client->latchedButtons &= ~BUTTON_ATTACK;
+			ent->client->latched_buttons &= ~BUTTON_ATTACK;
 		} else
-			request_firing = ent->client->weaponFireBuffered || ((ent->client->latchedButtons | ent->client->buttons) & BUTTON_ATTACK);
+			request_firing = ent->client->weapon_fire_buffered || ((ent->client->latched_buttons | ent->client->buttons) & BUTTON_ATTACK);
 
-		if (request_firing && ent->client->weaponFireFinished <= level.time) {
-			ent->client->latchedButtons &= ~BUTTON_ATTACK;
-			ent->client->weaponThinkTime = level.time;
+		if (request_firing && ent->client->weapon_fire_finished <= level.time) {
+			ent->client->latched_buttons &= ~BUTTON_ATTACK;
+			ent->client->weapon_think_time = level.time;
 
 			if ((!ent->client->pers.weapon->ammo) ||
 				(ent->client->pers.inventory[ent->client->pers.weapon->ammo] >= ent->client->pers.weapon->quantity)) {
-				ent->client->weaponState = WEAPON_FIRING;
+				ent->client->weaponstate = WEAPON_FIRING;
 				ent->client->last_firing_time = level.time + COOP_DAMAGE_FIRING_TIME;
 				return READY_FIRING;
 			} else {
 				NoAmmoWeaponChange(ent, true);
 				return READY_CHANGING;
 			}
-		} else if (ent->client->weaponThinkTime <= level.time) {
-			ent->client->weaponThinkTime = level.time + Weapon_AnimationTime(ent);
+		} else if (ent->client->weapon_think_time <= level.time) {
+			ent->client->weapon_think_time = level.time + Weapon_AnimationTime(ent);
 
 			if (ent->client->ps.gunframe == FRAME_IDLE_LAST) {
 				ent->client->ps.gunframe = FRAME_IDLE_FIRST;
@@ -956,22 +913,19 @@ Weapon_HandleFiring
 static inline void Weapon_HandleFiring(gentity_t *ent, int32_t FRAME_IDLE_FIRST, std::function<void()> fire_handler) {
 	Weapon_SetFinished(ent);
 
-	if (ent->client->weaponFireBuffered) {
+	if (ent->client->weapon_fire_buffered) {
 		ent->client->buttons |= BUTTON_ATTACK;
-		ent->client->weaponFireBuffered = false;
-
-		if (ent->client->pu_time_spawn_protection > level.time)
-			ent->client->pu_time_spawn_protection = 0_ms;
+		ent->client->weapon_fire_buffered = false;
 	}
 
 	fire_handler();
 
 	if (ent->client->ps.gunframe == FRAME_IDLE_FIRST) {
-		ent->client->weaponState = WEAPON_READY;
-		ent->client->weaponFireBuffered = false;
+		ent->client->weaponstate = WEAPON_READY;
+		ent->client->weapon_fire_buffered = false;
 	}
 
-	ent->client->weaponThinkTime = level.time + Weapon_AnimationTime(ent);
+	ent->client->weapon_think_time = level.time + Weapon_AnimationTime(ent);
 }
 
 /*
@@ -996,12 +950,12 @@ void Weapon_Generic(gentity_t *ent, int FRAME_ACTIVATE_LAST, int FRAME_FIRE_LAST
 	else if (auto state = Weapon_HandleReady(ent, FRAME_FIRE_FIRST, FRAME_IDLE_FIRST, FRAME_IDLE_LAST, pause_frames)) {
 		if (state == READY_FIRING) {
 			ent->client->ps.gunframe = FRAME_FIRE_FIRST;
-			ent->client->weaponFireBuffered = false;
+			ent->client->weapon_fire_buffered = false;
 
-			if (ent->client->weaponThunk)
-				ent->client->weaponThinkTime += FRAME_TIME_S;
+			if (ent->client->weapon_thunk)
+				ent->client->weapon_think_time += FRAME_TIME_S;
 
-			ent->client->weaponThinkTime += Weapon_AnimationTime(ent);
+			ent->client->weapon_think_time += Weapon_AnimationTime(ent);
 			Weapon_SetFinished(ent);
 
 			for (int n = 0; fire_frames[n]; n++) {
@@ -1013,21 +967,21 @@ void Weapon_Generic(gentity_t *ent, int FRAME_ACTIVATE_LAST, int FRAME_FIRE_LAST
 			}
 
 			// start the animation
-			ent->client->animPriority = ANIM_ATTACK;
+			ent->client->anim_priority = ANIM_ATTACK;
 			if (ent->client->ps.pmove.pm_flags & PMF_DUCKED) {
 				ent->s.frame = FRAME_crattak1 - 1;
-				ent->client->animEnd = FRAME_crattak9;
+				ent->client->anim_end = FRAME_crattak9;
 			} else {
 				ent->s.frame = FRAME_attack1 - 1;
-				ent->client->animEnd = FRAME_attack8;
+				ent->client->anim_end = FRAME_attack8;
 			}
-			ent->client->animTime = 0_ms;
+			ent->client->anim_time = 0_ms;
 		}
 
 		return;
 	}
 
-	if (ent->client->weaponState == WEAPON_FIRING && ent->client->weaponThinkTime <= level.time) {
+	if (ent->client->weaponstate == WEAPON_FIRING && ent->client->weapon_think_time <= level.time) {
 		ent->client->last_firing_time = level.time + COOP_DAMAGE_FIRING_TIME;
 		ent->client->ps.gunframe++;
 		Weapon_HandleFiring(ent, FRAME_IDLE_FIRST, [&]() {
@@ -1064,12 +1018,12 @@ void Weapon_Repeating(gentity_t *ent, int FRAME_ACTIVATE_LAST, int FRAME_FIRE_LA
 	else if (Weapon_HandleReady(ent, FRAME_FIRE_FIRST, FRAME_IDLE_FIRST, FRAME_IDLE_LAST, pause_frames) == READY_CHANGING)
 		return;
 
-	if (ent->client->weaponState == WEAPON_FIRING && ent->client->weaponThinkTime <= level.time) {
+	if (ent->client->weaponstate == WEAPON_FIRING && ent->client->weapon_think_time <= level.time) {
 		ent->client->last_firing_time = level.time + COOP_DAMAGE_FIRING_TIME;
 		Weapon_HandleFiring(ent, FRAME_IDLE_FIRST, [&]() { fire(ent); });
 
-		if (ent->client->weaponThunk)
-			ent->client->weaponThinkTime += FRAME_TIME_S;
+		if (ent->client->weapon_thunk)
+			ent->client->weapon_think_time += FRAME_TIME_S;
 	}
 }
 
@@ -1092,7 +1046,7 @@ static void Weapon_HandGrenade_Fire(gentity_t *ent, bool held) {
 	vec3_t start, dir;
 	// Paril: kill sideways angle on grenades
 	// limit upwards angle so you don't throw behind you
-	P_ProjectSource(ent, { max(-62.5f, ent->client->vAngle[PITCH]), ent->client->vAngle[YAW], ent->client->vAngle[ROLL] }, { 2, 0, -14 }, start, dir);
+	P_ProjectSource(ent, { max(-62.5f, ent->client->v_angle[PITCH]), ent->client->v_angle[YAW], ent->client->v_angle[ROLL] }, { 2, 0, -14 }, start, dir);
 
 	gtime_t timer = ent->client->grenade_time - level.time;
 	speed = (int)(ent->health <= 0 ? GRENADE_MINSPEED : min(GRENADE_MINSPEED + (GRENADE_TIMER - timer).seconds() * ((GRENADE_MAXSPEED - GRENADE_MINSPEED) / GRENADE_TIMER.seconds()), GRENADE_MAXSPEED));
@@ -1101,8 +1055,6 @@ static void Weapon_HandGrenade_Fire(gentity_t *ent, bool held) {
 
 	fire_handgrenade(ent, start, dir, damage, speed, timer, radius, held);
 
-	ent->client->sess.match.totalShots++;
-	ent->client->sess.match.totalShotsPerWeapon[WEAP_HAND_GRENADES]++;
 	RemoveAmmo(ent, 1);
 }
 
@@ -1114,55 +1066,56 @@ void Throw_Generic(gentity_t *ent, int FRAME_FIRE_LAST, int FRAME_IDLE_LAST, int
 	// when we die, just toss what we had in our hands.
 	if (ent->health <= 0) {
 		fire(ent, true);
+		MS_Adjust(ent->client, MSTAT_SHOTS, 1);
 		return;
 	}
 
 	int n;
 	int FRAME_IDLE_FIRST = (FRAME_FIRE_LAST + 1);
 
-	if (ent->client->newWeapon && (ent->client->weaponState == WEAPON_READY)) {
-		if (ent->client->weaponThinkTime <= level.time) {
+	if (ent->client->newweapon && (ent->client->weaponstate == WEAPON_READY)) {
+		if (ent->client->weapon_think_time <= level.time) {
 			Change_Weapon(ent);
-			ent->client->weaponThinkTime = level.time + Weapon_AnimationTime(ent);
+			ent->client->weapon_think_time = level.time + Weapon_AnimationTime(ent);
 		}
 		return;
 	}
 
-	if (ent->client->weaponState == WEAPON_ACTIVATING) {
-		if (ent->client->weaponThinkTime <= level.time) {
-			ent->client->weaponState = WEAPON_READY;
+	if (ent->client->weaponstate == WEAPON_ACTIVATING) {
+		if (ent->client->weapon_think_time <= level.time) {
+			ent->client->weaponstate = WEAPON_READY;
 			if (!extra_idle_frame)
 				ent->client->ps.gunframe = FRAME_IDLE_FIRST;
 			else
 				ent->client->ps.gunframe = FRAME_IDLE_LAST + 1;
-			ent->client->weaponThinkTime = level.time + Weapon_AnimationTime(ent);
+			ent->client->weapon_think_time = level.time + Weapon_AnimationTime(ent);
 			Weapon_SetFinished(ent);
 		}
 		return;
 	}
 
-	if (ent->client->weaponState == WEAPON_READY) {
+	if (ent->client->weaponstate == WEAPON_READY) {
 		bool request_firing;
 
-		if (CombatIsDisabled()) {
+		if (IsCombatDisabled()) {
 			request_firing = false;
-			ent->client->latchedButtons &= ~BUTTON_ATTACK;
+			ent->client->latched_buttons &= ~BUTTON_ATTACK;
 		} else
-			request_firing = ent->client->weaponFireBuffered || ((ent->client->latchedButtons | ent->client->buttons) & BUTTON_ATTACK);
+			request_firing = ent->client->weapon_fire_buffered || ((ent->client->latched_buttons | ent->client->buttons) & BUTTON_ATTACK);
 
-		if (request_firing && ent->client->weaponFireFinished <= level.time) {
-			ent->client->latchedButtons &= ~BUTTON_ATTACK;
+		if (request_firing && ent->client->weapon_fire_finished <= level.time) {
+			ent->client->latched_buttons &= ~BUTTON_ATTACK;
 
 			if (ent->client->pers.inventory[ent->client->pers.weapon->ammo]) {
 				ent->client->ps.gunframe = 1;
-				ent->client->weaponState = WEAPON_FIRING;
+				ent->client->weaponstate = WEAPON_FIRING;
 				ent->client->grenade_time = 0_ms;
-				ent->client->weaponThinkTime = level.time + Weapon_AnimationTime(ent);
+				ent->client->weapon_think_time = level.time + Weapon_AnimationTime(ent);
 			} else
 				NoAmmoWeaponChange(ent, true);
 			return;
-		} else if (ent->client->weaponThinkTime <= level.time) {
-			ent->client->weaponThinkTime = level.time + Weapon_AnimationTime(ent);
+		} else if (ent->client->weapon_think_time <= level.time) {
+			ent->client->weapon_think_time = level.time + Weapon_AnimationTime(ent);
 
 			if (ent->client->ps.gunframe >= FRAME_IDLE_LAST) {
 				ent->client->ps.gunframe = FRAME_IDLE_FIRST;
@@ -1183,10 +1136,10 @@ void Throw_Generic(gentity_t *ent, int FRAME_FIRE_LAST, int FRAME_IDLE_LAST, int
 		return;
 	}
 
-	if (ent->client->weaponState == WEAPON_FIRING) {
+	if (ent->client->weaponstate == WEAPON_FIRING) {
 		ent->client->last_firing_time = level.time + COOP_DAMAGE_FIRING_TIME;
 
-		if (ent->client->weaponThinkTime <= level.time) {
+		if (ent->client->weapon_think_time <= level.time) {
 			if (prime_sound && ent->client->ps.gunframe == FRAME_PRIME_SOUND)
 				gi.sound(ent, CHAN_WEAPON, gi.soundindex(prime_sound), 1, ATTN_NORM, 0);
 
@@ -1212,6 +1165,7 @@ void Throw_Generic(gentity_t *ent, int FRAME_FIRE_LAST, int FRAME_IDLE_LAST, int
 					Weapon_PowerupSound(ent);
 					ent->client->weapon_sound = 0;
 					fire(ent, true);
+					MS_Adjust(ent->client, MSTAT_SHOTS, 1);
 
 					ent->client->grenade_blew_up = true;
 
@@ -1219,7 +1173,7 @@ void Throw_Generic(gentity_t *ent, int FRAME_FIRE_LAST, int FRAME_IDLE_LAST, int
 				}
 
 				if (ent->client->buttons & BUTTON_ATTACK) {
-					ent->client->weaponThinkTime = level.time + 1_ms;
+					ent->client->weapon_think_time = level.time + 1_ms;
 					return;
 				}
 
@@ -1227,7 +1181,7 @@ void Throw_Generic(gentity_t *ent, int FRAME_FIRE_LAST, int FRAME_IDLE_LAST, int
 					if (level.time >= ent->client->grenade_finished_time) {
 						ent->client->ps.gunframe = FRAME_FIRE_LAST;
 						ent->client->grenade_blew_up = false;
-						ent->client->weaponThinkTime = level.time + Weapon_AnimationTime(ent);
+						ent->client->weapon_think_time = level.time + Weapon_AnimationTime(ent);
 					} else {
 						return;
 					}
@@ -1237,27 +1191,28 @@ void Throw_Generic(gentity_t *ent, int FRAME_FIRE_LAST, int FRAME_IDLE_LAST, int
 					Weapon_PowerupSound(ent);
 					ent->client->weapon_sound = 0;
 					fire(ent, false);
+					MS_Adjust(ent->client, MSTAT_SHOTS, 1);
 
 					if (!EXPLODE || !ent->client->grenade_blew_up)
 						ent->client->grenade_finished_time = level.time + grenade_wait_time;
 
-					if (!ent->deadFlag && ent->s.modelindex == MODELINDEX_PLAYER && ent->health > 0) // VWep animations screw up corpses
+					if (!ent->deadflag && ent->s.modelindex == MODELINDEX_PLAYER && ent->health > 0) // VWep animations screw up corpses
 					{
 						if (ent->client->ps.pmove.pm_flags & PMF_DUCKED) {
-							ent->client->animPriority = ANIM_ATTACK;
+							ent->client->anim_priority = ANIM_ATTACK;
 							ent->s.frame = FRAME_crattak1 - 1;
-							ent->client->animEnd = FRAME_crattak3;
+							ent->client->anim_end = FRAME_crattak3;
 						} else {
-							ent->client->animPriority = ANIM_ATTACK | ANIM_REVERSED;
+							ent->client->anim_priority = ANIM_ATTACK | ANIM_REVERSED;
 							ent->s.frame = FRAME_wave08;
-							ent->client->animEnd = FRAME_wave01;
+							ent->client->anim_end = FRAME_wave01;
 						}
-						ent->client->animTime = 0_ms;
+						ent->client->anim_time = 0_ms;
 					}
 				}
 			}
 
-			ent->client->weaponThinkTime = level.time + Weapon_AnimationTime(ent);
+			ent->client->weapon_think_time = level.time + Weapon_AnimationTime(ent);
 
 			if ((ent->client->ps.gunframe == FRAME_FIRE_LAST) && (level.time < ent->client->grenade_finished_time))
 				return;
@@ -1266,8 +1221,8 @@ void Throw_Generic(gentity_t *ent, int FRAME_FIRE_LAST, int FRAME_IDLE_LAST, int
 
 			if (ent->client->ps.gunframe == FRAME_IDLE_FIRST) {
 				ent->client->grenade_finished_time = 0_ms;
-				ent->client->weaponState = WEAPON_READY;
-				ent->client->weaponFireBuffered = false;
+				ent->client->weaponstate = WEAPON_READY;
+				ent->client->weapon_fire_buffered = false;
 				Weapon_SetFinished(ent);
 
 				if (extra_idle_frame)
@@ -1305,16 +1260,16 @@ GRENADE LAUNCHER
 
 static void Weapon_GrenadeLauncher_Fire(gentity_t *ent) {
 	int		damage;
-	float	splashRadius;
+	float	splash_radius;
 	int		speed;
 
 	if (RS(RS_Q3A)) {
 		damage = 100;
-		splashRadius = 150;
+		splash_radius = 150;
 		speed = 700;
 	} else {
 		damage = 120;
-		splashRadius = (float)(damage + 40);
+		splash_radius = (float)(damage + 40);
 		speed = 600;
 	}
 
@@ -1325,11 +1280,11 @@ static void Weapon_GrenadeLauncher_Fire(gentity_t *ent) {
 	// Paril: kill sideways angle on grenades
 	// muffmode: but why is this the exception? reverted
 	// limit upwards angle so you don't fire it behind you
-	P_ProjectSource(ent, { max(-62.5f, ent->client->vAngle[PITCH]), ent->client->vAngle[YAW], ent->client->vAngle[ROLL] }, { 8, 0, -8 }, start, dir);
+	P_ProjectSource(ent, { max(-62.5f, ent->client->v_angle[PITCH]), ent->client->v_angle[YAW], ent->client->v_angle[ROLL] }, { 8, 0, -8 }, start, dir);
 
-	P_AddWeaponKick(ent, ent->client->vForward * -2, { -1.f, 0.f, 0.f });
+	P_AddWeaponKick(ent, ent->client->v_forward * -2, { -1.f, 0.f, 0.f });
 
-	fire_grenade(ent, start, dir, damage, speed, 2.5_sec, splashRadius, (crandom_open() * 10.0f), (200 + crandom_open() * 10.0f), false);
+	fire_grenade(ent, start, dir, damage, speed, 2.5_sec, splash_radius, (crandom_open() * 10.0f), (200 + crandom_open() * 10.0f), false);
 
 	gi.WriteByte(svc_muzzleflash);
 	gi.WriteEntity(ent);
@@ -1338,8 +1293,6 @@ static void Weapon_GrenadeLauncher_Fire(gentity_t *ent) {
 
 	PlayerNoise(ent, start, PNOISE_WEAPON);
 
-	ent->client->sess.match.totalShots++;
-	ent->client->sess.match.totalShotsPerWeapon[WEAP_GRENADE_LAUNCHER]++;
 	RemoveAmmo(ent, 1);
 }
 
@@ -1359,20 +1312,34 @@ ROCKET LAUNCHER
 */
 
 static void Weapon_RocketLauncher_Fire(gentity_t *ent) {
-	int damage = 100;	// 120;
-	int splashRadius = 100;	//120;
-	int splashDamage = damage;
-	int speed;
+	int	  damage, splash_damage;
+	float splash_radius;
+	int	  speed;
 
 	switch (game.ruleset) {
-	case RS_Q1:
-		speed = 1000;
+	case RS_MM:
+		damage = 100;
+		splash_radius = 120;
+		splash_damage = damage;
+		speed = 650;
 		break;
 	case RS_Q3A:
+		damage = 100;
+		splash_radius = 120;
+		splash_damage = 120;
 		speed = 900;
 		break;
+	case RS_Q1:
+		damage = irandom(100, 120);
+		splash_radius = 120;
+		splash_damage = 120;
+		speed = 1000;
+		break;
 	default:
-		speed = 800;	// 650;
+		damage = irandom(100, 120);
+		splash_radius = 120;
+		splash_damage = 120;
+		speed = 650;
 		break;
 	}
 	if (g_frenzy->integer)
@@ -1380,14 +1347,14 @@ static void Weapon_RocketLauncher_Fire(gentity_t *ent) {
 
 	if (is_quad) {
 		damage *= damage_multiplier;
-		splashDamage *= damage_multiplier;
+		splash_damage *= damage_multiplier;
 	}
 
 	vec3_t start, dir;
-	P_ProjectSource(ent, ent->client->vAngle, { 8, 8, -8 }, start, dir);
-	fire_rocket(ent, start, dir, damage, speed, splashRadius, splashDamage);
+	P_ProjectSource(ent, ent->client->v_angle, { 8, 8, -8 }, start, dir);
+	fire_rocket(ent, start, dir, damage, speed, splash_radius, splash_damage);
 
-	P_AddWeaponKick(ent, ent->client->vForward * -2, { -1.f, 0.f, 0.f });
+	P_AddWeaponKick(ent, ent->client->v_forward * -2, { -1.f, 0.f, 0.f });
 
 	// send muzzle flash
 	gi.WriteByte(svc_muzzleflash);
@@ -1397,8 +1364,6 @@ static void Weapon_RocketLauncher_Fire(gentity_t *ent) {
 
 	PlayerNoise(ent, start, PNOISE_WEAPON);
 
-	ent->client->sess.match.totalShots++;
-	ent->client->sess.match.totalShotsPerWeapon[WEAP_ROCKET_LAUNCHER]++;
 	RemoveAmmo(ent, 1);
 }
 
@@ -1431,7 +1396,7 @@ static void Weapon_Grapple_Reset(gentity_t *self) {
 	cl->grapple_release_time = level.time + 1_sec;
 	cl->grapple_state = GRAPPLE_STATE_FLY; // we're firing, not on hook
 	self->owner->flags &= ~FL_NO_KNOCKBACK;
-	FreeEntity(self);
+	G_FreeEntity(self);
 }
 
 void Weapon_Grapple_DoReset(gclient_t *cl) {
@@ -1439,7 +1404,7 @@ void Weapon_Grapple_DoReset(gclient_t *cl) {
 		Weapon_Grapple_Reset(cl->grapple_ent);
 }
 
-static TOUCH(Weapon_Grapple_Touch) (gentity_t *self, gentity_t *other, const trace_t &tr, bool otherTouchingSelf) -> void {
+static TOUCH(Weapon_Grapple_Touch) (gentity_t *self, gentity_t *other, const trace_t &tr, bool other_touching_self) -> void {
 	float volume = 1.0;
 
 	if (other == self->owner)
@@ -1457,9 +1422,9 @@ static TOUCH(Weapon_Grapple_Touch) (gentity_t *self, gentity_t *other, const tra
 
 	PlayerNoise(self->owner, self->s.origin, PNOISE_IMPACT);
 
-	if (other->takeDamage) {
+	if (other->takedamage) {
 		if (self->dmg)
-			Damage(other, self, self->owner, self->velocity, self->s.origin, tr.plane.normal, self->dmg, 1, DAMAGE_NONE | DAMAGE_STAT_ONCE, MOD_GRAPPLE);
+			T_Damage(other, self, self->owner, self->velocity, self->s.origin, tr.plane.normal, self->dmg, 1, DAMAGE_NONE | DAMAGE_STAT_ONCE, MOD_GRAPPLE);
 		Weapon_Grapple_Reset(self);
 		return;
 	}
@@ -1488,7 +1453,7 @@ static void Weapon_Grapple_DrawCable(gentity_t *self) {
 		return;
 
 	vec3_t start, dir;
-	P_ProjectSource(self->owner, self->owner->client->vAngle, { 7, 2, -9 }, start, dir);
+	P_ProjectSource(self->owner, self->owner->client->v_angle, { 7, 2, -9 }, start, dir);
 
 	gi.WriteByte(svc_temp_entity);
 	gi.WriteByte(TE_GRAPPLE_CABLE_2);
@@ -1504,11 +1469,11 @@ void Weapon_Grapple_Pull(gentity_t *self) {
 	float  vlen;
 
 	if (self->owner->client->pers.weapon && self->owner->client->pers.weapon->id == IT_WEAPON_GRAPPLE &&
-		!(self->owner->client->newWeapon || ((self->owner->client->latchedButtons | self->owner->client->buttons) & BUTTON_HOLSTER)) &&
-		self->owner->client->weaponState != WEAPON_FIRING &&
-		self->owner->client->weaponState != WEAPON_ACTIVATING) {
-		if (!self->owner->client->newWeapon)
-			self->owner->client->newWeapon = self->owner->client->pers.weapon;
+		!(self->owner->client->newweapon || ((self->owner->client->latched_buttons | self->owner->client->buttons) & BUTTON_HOLSTER)) &&
+		self->owner->client->weaponstate != WEAPON_FIRING &&
+		self->owner->client->weaponstate != WEAPON_ACTIVATING) {
+		if (!self->owner->client->newweapon)
+			self->owner->client->newweapon = self->owner->client->pers.weapon;
 
 		Weapon_Grapple_Reset(self);
 		return;
@@ -1527,7 +1492,7 @@ void Weapon_Grapple_Pull(gentity_t *self) {
 		} else
 			self->velocity = self->enemy->velocity;
 
-		if (self->enemy->deadFlag) { // he died
+		if (self->enemy->deadflag) { // he died
 			Weapon_Grapple_Reset(self);
 			return;
 		}
@@ -1539,9 +1504,9 @@ void Weapon_Grapple_Pull(gentity_t *self) {
 		// pull player toward grapple
 		vec3_t forward, up;
 
-		AngleVectors(self->owner->client->vAngle, forward, nullptr, up);
+		AngleVectors(self->owner->client->v_angle, forward, nullptr, up);
 		v = self->owner->s.origin;
-		v[2] += self->owner->viewHeight;
+		v[2] += self->owner->viewheight;
 		hookdir = self->s.origin - v;
 
 		vlen = hookdir.length();
@@ -1570,16 +1535,16 @@ static bool Weapon_Grapple_FireHook(gentity_t *self, const vec3_t &start, const 
 	trace_t	tr;
 	vec3_t	normalized = dir.normalized();
 
-	grapple = Spawn();
+	grapple = G_Spawn();
 	grapple->s.origin = start;
 	grapple->s.old_origin = start;
 	grapple->s.angles = vectoangles(normalized);
 	grapple->velocity = normalized * speed;
-	grapple->moveType = MOVETYPE_FLYMISSILE;
-	grapple->clipMask = MASK_PROJECTILE;
+	grapple->movetype = MOVETYPE_FLYMISSILE;
+	grapple->clipmask = MASK_PROJECTILE;
 	// [Paril-KEX]
 	if (self->client && !G_ShouldPlayersCollide(true))
-		grapple->clipMask &= ~CONTENTS_PLAYER;
+		grapple->clipmask &= ~CONTENTS_PLAYER;
 	grapple->solid = SOLID_BBOX;
 	grapple->s.effects |= effect;
 	grapple->s.modelindex = gi.modelindex("models/weapons/grapple/hook/tris.md2");
@@ -1587,13 +1552,13 @@ static bool Weapon_Grapple_FireHook(gentity_t *self, const vec3_t &start, const 
 	grapple->touch = Weapon_Grapple_Touch;
 	grapple->dmg = damage;
 	grapple->flags |= FL_NO_KNOCKBACK | FL_NO_DAMAGE_EFFECTS;
-	grapple->takeDamage = true;
+	grapple->takedamage = true;
 	grapple->die = Weapon_Grapple_Die;
 	self->client->grapple_ent = grapple;
 	self->client->grapple_state = GRAPPLE_STATE_FLY; // we're firing, not on hook
 	gi.linkentity(grapple);
 
-	tr = gi.traceline(self->s.origin, grapple->s.origin, grapple, grapple->clipMask);
+	tr = gi.traceline(self->s.origin, grapple->s.origin, grapple, grapple->clipmask);
 	if (tr.fraction < 1.0f) {
 		grapple->s.origin = tr.endpos + (tr.plane.normal * 1.f);
 		grapple->touch(grapple, tr.ent, tr, false);
@@ -1612,7 +1577,7 @@ static void Weapon_Grapple_DoFire(gentity_t *ent, const vec3_t &g_offset, int da
 		return; // it's already out
 
 	vec3_t start, dir;
-	P_ProjectSource(ent, ent->client->vAngle, vec3_t{ 24, 8, -8 + 2 } + g_offset, start, dir);
+	P_ProjectSource(ent, ent->client->v_angle, vec3_t{ 24, 8, -8 + 2 } + g_offset, start, dir);
 
 	if (ent->client->silencer_shots)
 		volume = 0.2f;
@@ -1634,46 +1599,46 @@ void Weapon_Grapple(gentity_t *ent) {
 
 	// if the the attack button is still down, stay in the firing frame
 	if ((ent->client->buttons & (BUTTON_ATTACK | BUTTON_HOLSTER)) &&
-		ent->client->weaponState == WEAPON_FIRING &&
+		ent->client->weaponstate == WEAPON_FIRING &&
 		ent->client->grapple_ent)
 		ent->client->ps.gunframe = 6;
 
 	if (!(ent->client->buttons & (BUTTON_ATTACK | BUTTON_HOLSTER)) &&
 		ent->client->grapple_ent) {
 		Weapon_Grapple_Reset(ent->client->grapple_ent);
-		if (ent->client->weaponState == WEAPON_FIRING)
-			ent->client->weaponState = WEAPON_READY;
+		if (ent->client->weaponstate == WEAPON_FIRING)
+			ent->client->weaponstate = WEAPON_READY;
 	}
 
-	if ((ent->client->newWeapon || ((ent->client->latchedButtons | ent->client->buttons) & BUTTON_HOLSTER)) &&
+	if ((ent->client->newweapon || ((ent->client->latched_buttons | ent->client->buttons) & BUTTON_HOLSTER)) &&
 		ent->client->grapple_state > GRAPPLE_STATE_FLY &&
-		ent->client->weaponState == WEAPON_FIRING) {
+		ent->client->weaponstate == WEAPON_FIRING) {
 		// he wants to change weapons while grappled
-		if (!ent->client->newWeapon)
-			ent->client->newWeapon = ent->client->pers.weapon;
-		ent->client->weaponState = WEAPON_DROPPING;
+		if (!ent->client->newweapon)
+			ent->client->newweapon = ent->client->pers.weapon;
+		ent->client->weaponstate = WEAPON_DROPPING;
 		ent->client->ps.gunframe = 32;
 	}
 
-	prevstate = ent->client->weaponState;
+	prevstate = ent->client->weaponstate;
 	Weapon_Generic(ent, 5, 10, 31, 36, pause_frames, fire_frames,
 		Weapon_Grapple_Fire);
 
 	// if the the attack button is still down, stay in the firing frame
 	if ((ent->client->buttons & (BUTTON_ATTACK | BUTTON_HOLSTER)) &&
-		ent->client->weaponState == WEAPON_FIRING &&
+		ent->client->weaponstate == WEAPON_FIRING &&
 		ent->client->grapple_ent)
 		ent->client->ps.gunframe = 6;
 
 	// if we just switched back to grapple, immediately go to fire frame
 	if (prevstate == WEAPON_ACTIVATING &&
-		ent->client->weaponState == WEAPON_READY &&
+		ent->client->weaponstate == WEAPON_READY &&
 		ent->client->grapple_state > GRAPPLE_STATE_FLY) {
 		if (!(ent->client->buttons & (BUTTON_ATTACK | BUTTON_HOLSTER)))
 			ent->client->ps.gunframe = 6;
 		else
 			ent->client->ps.gunframe = 5;
-		ent->client->weaponState = WEAPON_FIRING;
+		ent->client->weaponstate = WEAPON_FIRING;
 	}
 }
 
@@ -1691,7 +1656,7 @@ static void Weapon_Hook_DoFire(gentity_t *ent, const vec3_t &g_offset, int damag
 		return; // it's already out
 
 	vec3_t start, dir;
-	P_ProjectSource(ent, ent->client->vAngle, vec3_t{ 24, 0, 0 } + g_offset, start, dir);
+	P_ProjectSource(ent, ent->client->v_angle, vec3_t{ 24, 0, 0 } + g_offset, start, dir);
 
 	if (Weapon_Grapple_FireHook(ent, start, dir, damage, g_grapple_fly_speed->value, effect))
 		gi.sound(ent, CHAN_WEAPON, gi.soundindex("weapons/grapple/grfire.wav"), ent->client->silencer_shots ? 0.2f : 1.0f, ATTN_NORM, 0);
@@ -1716,12 +1681,12 @@ static void Weapon_Blaster_Fire(gentity_t *ent, const vec3_t &g_offset, int dama
 		damage *= damage_multiplier;
 
 	vec3_t start, dir;
-	P_ProjectSource(ent, ent->client->vAngle, vec3_t{ 24, 8, -8 } + g_offset, start, dir);
+	P_ProjectSource(ent, ent->client->v_angle, vec3_t{ 24, 8, -8 } + g_offset, start, dir);
 
 	if (hyper)
-		P_AddWeaponKick(ent, ent->client->vForward * -2, { crandom() * 0.7f, crandom() * 0.7f, crandom() * 0.7f });
+		P_AddWeaponKick(ent, ent->client->v_forward * -2, { crandom() * 0.7f, crandom() * 0.7f, crandom() * 0.7f });
 	else
-		P_AddWeaponKick(ent, ent->client->vForward * -2, { -1.f, 0.f, 0.f });
+		P_AddWeaponKick(ent, ent->client->v_forward * -2, { -1.f, 0.f, 0.f });
 
 	// let the regular blaster projectiles travel a bit faster because it is a completely useless gun
 	int speed;
@@ -1743,8 +1708,7 @@ static void Weapon_Blaster_Fire(gentity_t *ent, const vec3_t &g_offset, int dama
 
 	PlayerNoise(ent, start, PNOISE_WEAPON);
 
-	ent->client->sess.match.totalShots++;
-	ent->client->sess.match.totalShotsPerWeapon[WEAP_BLASTER]++;
+	Stats_AddShot(ent);
 }
 
 static void Weapon_Blaster_DoFire(gentity_t *ent) {
@@ -1786,13 +1750,13 @@ static void Weapon_HyperBlaster_Fire(gentity_t *ent) {
 		ent->client->weapon_sound = 0;
 	
 	// fire frames
-	bool request_firing = ent->client->weaponFireBuffered || (ent->client->buttons & BUTTON_ATTACK);
+	bool request_firing = ent->client->weapon_fire_buffered || (ent->client->buttons & BUTTON_ATTACK);
 
 	if (request_firing) {
 		if (ent->client->ps.gunframe >= 6 && ent->client->ps.gunframe <= 11) {
 			vec3_t offset = { 0 };
 
-			ent->client->weaponFireBuffered = false;
+			ent->client->weapon_fire_buffered = false;
 
 			if (!ent->client->pers.inventory[ent->client->pers.weapon->ammo]) {
 				NoAmmoWeaponChange(ent, true);
@@ -1813,19 +1777,17 @@ static void Weapon_HyperBlaster_Fire(gentity_t *ent) {
 			Weapon_Blaster_Fire(ent, offset, damage, true, (ent->client->ps.gunframe % 4) ? EF_NONE : EF_HYPERBLASTER);
 			Weapon_PowerupSound(ent);
 
-			ent->client->sess.match.totalShots++;
-			ent->client->sess.match.totalShotsPerWeapon[WEAP_HYPERBLASTER]++;
 			RemoveAmmo(ent, 1);
 
-			ent->client->animPriority = ANIM_ATTACK;
+			ent->client->anim_priority = ANIM_ATTACK;
 			if (ent->client->ps.pmove.pm_flags & PMF_DUCKED) {
 				ent->s.frame = FRAME_crattak1 - (int)(frandom() + 0.25f);
-				ent->client->animEnd = FRAME_crattak9;
+				ent->client->anim_end = FRAME_crattak9;
 			} else {
 				ent->s.frame = FRAME_attack1 - (int)(frandom() + 0.25f);
-				ent->client->animEnd = FRAME_attack8;
+				ent->client->anim_end = FRAME_attack8;
 			}
-			ent->client->animTime = 0_ms;
+			ent->client->anim_time = 0_ms;
 		}
 	}
 }
@@ -1880,17 +1842,17 @@ static void Weapon_Machinegun_Fire(gentity_t *ent) {
 		kick *= damage_multiplier;
 	}
 
-	vec3_t kickOrigin{}, kick_angles{};
+	vec3_t kick_origin{}, kick_angles{};
 	for (size_t i = 0; i < 3; i++) {
-		kickOrigin[i] = crandom() * 0.35f;
+		kick_origin[i] = crandom() * 0.35f;
 		kick_angles[i] = crandom() * 0.7f;
 	}
-	P_AddWeaponKick(ent, kickOrigin, kick_angles);
+	P_AddWeaponKick(ent, kick_origin, kick_angles);
 
 	// get start / end positions
 	vec3_t start, dir;
 	// Paril: kill sideways angle on hitscan
-	P_ProjectSource(ent, ent->client->vAngle, { 0, 0, -8 }, start, dir);
+	P_ProjectSource(ent, ent->client->v_angle, { 0, 0, -8 }, start, dir);
 	G_LagCompensate(ent, start, dir);
 
 
@@ -1905,19 +1867,17 @@ static void Weapon_Machinegun_Fire(gentity_t *ent) {
 
 	PlayerNoise(ent, start, PNOISE_WEAPON);
 
-	ent->client->sess.match.totalShots++;
-	ent->client->sess.match.totalShotsPerWeapon[WEAP_MACHINEGUN]++;
 	RemoveAmmo(ent, 1);
 
-	ent->client->animPriority = ANIM_ATTACK;
+	ent->client->anim_priority = ANIM_ATTACK;
 	if (ent->client->ps.pmove.pm_flags & PMF_DUCKED) {
 		ent->s.frame = FRAME_crattak1 - (int)(frandom() + 0.25f);
-		ent->client->animEnd = FRAME_crattak9;
+		ent->client->anim_end = FRAME_crattak9;
 	} else {
 		ent->s.frame = FRAME_attack1 - (int)(frandom() + 0.25f);
-		ent->client->animEnd = FRAME_attack8;
+		ent->client->anim_end = FRAME_attack8;
 	}
-	ent->client->animTime = 0_ms;
+	ent->client->anim_time = 0_ms;
 }
 
 void Weapon_Machinegun(gentity_t *ent) {
@@ -1929,6 +1889,7 @@ void Weapon_Machinegun(gentity_t *ent) {
 static void Weapon_Chaingun_Fire(gentity_t *ent) {
 	int	  i;
 	int	  shots;
+	float r, u;
 	int	  damage = deathmatch->integer ? 6 : 8;
 	int	  kick = 2;
 
@@ -1955,15 +1916,15 @@ static void Weapon_Chaingun_Fire(gentity_t *ent) {
 
 	ent->client->weapon_sound = gi.soundindex("weapons/chngnl1a.wav");
 
-	ent->client->animPriority = ANIM_ATTACK;
+	ent->client->anim_priority = ANIM_ATTACK;
 	if (ent->client->ps.pmove.pm_flags & PMF_DUCKED) {
 		ent->s.frame = FRAME_crattak1 - (ent->client->ps.gunframe & 1);
-		ent->client->animEnd = FRAME_crattak9;
+		ent->client->anim_end = FRAME_crattak9;
 	} else {
 		ent->s.frame = FRAME_attack1 - (ent->client->ps.gunframe & 1);
-		ent->client->animEnd = FRAME_attack8;
+		ent->client->anim_end = FRAME_attack8;
 	}
-	ent->client->animTime = 0_ms;
+	ent->client->anim_time = 0_ms;
 
 	if (ent->client->ps.gunframe <= 9)
 		shots = 1;
@@ -1988,21 +1949,23 @@ static void Weapon_Chaingun_Fire(gentity_t *ent) {
 		kick *= damage_multiplier;
 	}
 
-	vec3_t kickOrigin{}, kick_angles{};
+	vec3_t kick_origin{}, kick_angles{};
 	for (i = 0; i < 3; i++) {
-		kickOrigin[i] = crandom() * 0.35f;
+		kick_origin[i] = crandom() * 0.35f;
 		kick_angles[i] = crandom() * (0.5f + (shots * 0.15f));
 	}
-	P_AddWeaponKick(ent, kickOrigin, kick_angles);
+	P_AddWeaponKick(ent, kick_origin, kick_angles);
 
 	vec3_t start, dir;
-	P_ProjectSource(ent, ent->client->vAngle, { 0, 0, -8 }, start, dir);
+	P_ProjectSource(ent, ent->client->v_angle, { 0, 0, -8 }, start, dir);
 
 	G_LagCompensate(ent, start, dir);
 	for (i = 0; i < shots; i++) {
 		// get start / end positions
 		// Paril: kill sideways angle on hitscan
-		P_ProjectSource(ent, ent->client->vAngle, { 0, 0, -8 }, start, dir);
+		r = crandom() * 4;
+		u = crandom() * 4;
+		P_ProjectSource(ent, ent->client->v_angle, { 0, r, u + -8 }, start, dir);
 
 		fire_bullet(ent, start, dir, damage, kick, DEFAULT_BULLET_HSPREAD, DEFAULT_BULLET_VSPREAD, MOD_CHAINGUN);
 	}
@@ -2018,8 +1981,7 @@ static void Weapon_Chaingun_Fire(gentity_t *ent) {
 
 	PlayerNoise(ent, start, PNOISE_WEAPON);
 
-	ent->client->sess.match.totalShots += shots;
-	ent->client->sess.match.totalShotsPerWeapon[WEAP_CHAINGUN] += shots;
+	Stats_AddShot(ent);
 	RemoveAmmo(ent, shots);
 }
 
@@ -2039,13 +2001,13 @@ SHOTGUN / SUPERSHOTGUN
 
 static void Weapon_Shotgun_Fire(gentity_t *ent) {
 	int damage = 4;
-	int kick = 4;	// 8;
+	int kick = 8;
 
 	vec3_t start, dir;
 	// Paril: kill sideways angle on hitscan
-	P_ProjectSource(ent, ent->client->vAngle, { 0, 0, -8 }, start, dir);
+	P_ProjectSource(ent, ent->client->v_angle, { 0, 0, -8 }, start, dir);
 
-	P_AddWeaponKick(ent, ent->client->vForward * -2, { -2.f, 0.f, 0.f });
+	P_AddWeaponKick(ent, ent->client->v_forward * -2, { -2.f, 0.f, 0.f });
 
 	if (RS(RS_Q3A))
 		damage = 10;
@@ -2055,10 +2017,8 @@ static void Weapon_Shotgun_Fire(gentity_t *ent) {
 		kick *= damage_multiplier;
 	}
 
-	int count = RS(RS_Q3A) ? 11 : 12;
-
 	G_LagCompensate(ent, start, dir);
-	fire_shotgun(ent, start, dir, damage, kick, 500, 500, count, MOD_SHOTGUN);
+	fire_shotgun(ent, start, dir, damage, kick, 500, 500, RS(RS_Q3A) ? 11 : 12, MOD_SHOTGUN);
 	G_UnLagCompensate();
 
 	// send muzzle flash
@@ -2069,8 +2029,7 @@ static void Weapon_Shotgun_Fire(gentity_t *ent) {
 
 	PlayerNoise(ent, start, PNOISE_WEAPON);
 
-	ent->client->sess.match.totalShots += count;
-	ent->client->sess.match.totalShotsPerWeapon[WEAP_SHOTGUN] += count;
+	Stats_AddShot(ent);
 	RemoveAmmo(ent, 1);
 }
 
@@ -2083,7 +2042,7 @@ void Weapon_Shotgun(gentity_t *ent) {
 
 static void Weapon_SuperShotgun_Fire(gentity_t *ent) {
 	int damage = 6;
-	int kick = 6;	// 12;
+	int kick = 12;
 
 	if (is_quad) {
 		damage *= damage_multiplier;
@@ -2092,21 +2051,21 @@ static void Weapon_SuperShotgun_Fire(gentity_t *ent) {
 
 	vec3_t start, dir;
 	// Paril: kill sideways angle on hitscan
-	P_ProjectSource(ent, ent->client->vAngle, { 0, 0, -8 }, start, dir);
+	P_ProjectSource(ent, ent->client->v_angle, { 0, 0, -8 }, start, dir);
 	G_LagCompensate(ent, start, dir);
 	vec3_t v;
-	v[PITCH] = ent->client->vAngle[PITCH];
-	v[YAW] = ent->client->vAngle[YAW] - 5;
-	v[ROLL] = ent->client->vAngle[ROLL];
+	v[PITCH] = ent->client->v_angle[PITCH];
+	v[YAW] = ent->client->v_angle[YAW] - 5;
+	v[ROLL] = ent->client->v_angle[ROLL];
 	// Paril: kill sideways angle on hitscan
 	P_ProjectSource(ent, v, { 0, 0, -8 }, start, dir);
 	fire_shotgun(ent, start, dir, damage, kick, DEFAULT_SHOTGUN_HSPREAD, DEFAULT_SHOTGUN_VSPREAD, DEFAULT_SSHOTGUN_COUNT / 2, MOD_SSHOTGUN);
-	v[YAW] = ent->client->vAngle[YAW] + 5;
+	v[YAW] = ent->client->v_angle[YAW] + 5;
 	P_ProjectSource(ent, v, { 0, 0, -8 }, start, dir);
 	fire_shotgun(ent, start, dir, damage, kick, DEFAULT_SHOTGUN_HSPREAD, DEFAULT_SHOTGUN_VSPREAD, DEFAULT_SSHOTGUN_COUNT / 2, MOD_SSHOTGUN);
 	G_UnLagCompensate();
 
-	P_AddWeaponKick(ent, ent->client->vForward * -2, { -2.f, 0.f, 0.f });
+	P_AddWeaponKick(ent, ent->client->v_forward * -2, { -2.f, 0.f, 0.f });
 
 	// send muzzle flash
 	gi.WriteByte(svc_muzzleflash);
@@ -2116,8 +2075,7 @@ static void Weapon_SuperShotgun_Fire(gentity_t *ent) {
 
 	PlayerNoise(ent, start, PNOISE_WEAPON);
 
-	ent->client->sess.match.totalShots += DEFAULT_SSHOTGUN_COUNT;
-	ent->client->sess.match.totalShotsPerWeapon[WEAP_SUPER_SHOTGUN] += DEFAULT_SSHOTGUN_COUNT;
+	Stats_AddShot(ent);
 	RemoveAmmo(ent, 2);
 }
 
@@ -2139,7 +2097,7 @@ RAILGUN
 static void Weapon_Railgun_Fire(gentity_t *ent) {
 	// normal damage too extreme for DM
 	int damage = deathmatch->integer ? 100 : 150;
-	int kick = damage;	// RS(RS_Q3A) ? damage : damage * 2;
+	int kick = !!(RS(RS_MM)) ? (damage * 2) : (deathmatch->integer ? 200 : 225);
 
 	if (is_quad) {
 		damage *= damage_multiplier;
@@ -2147,12 +2105,12 @@ static void Weapon_Railgun_Fire(gentity_t *ent) {
 	}
 
 	vec3_t start, dir;
-	P_ProjectSource(ent, ent->client->vAngle, { 0, 7, -8 }, start, dir);
+	P_ProjectSource(ent, ent->client->v_angle, { 0, 7, -8 }, start, dir);
 	G_LagCompensate(ent, start, dir);
 	fire_rail(ent, start, dir, damage, kick);
 	G_UnLagCompensate();
 
-	P_AddWeaponKick(ent, ent->client->vForward * -3, { -3.f, 0.f, 0.f });
+	P_AddWeaponKick(ent, ent->client->v_forward * -3, { -3.f, 0.f, 0.f });
 
 	// send muzzle flash
 	gi.WriteByte(svc_muzzleflash);
@@ -2162,8 +2120,7 @@ static void Weapon_Railgun_Fire(gentity_t *ent) {
 
 	PlayerNoise(ent, start, PNOISE_WEAPON);
 
-	ent->client->sess.match.totalShots++;
-	ent->client->sess.match.totalShotsPerWeapon[WEAP_RAILGUN]++;
+	Stats_AddShot(ent);
 	RemoveAmmo(ent, 1);
 }
 
@@ -2184,15 +2141,15 @@ BFG10K
 static void Weapon_BFG_Fire(gentity_t *ent) {
 	bool	q3 = RS(RS_Q3A);
 	int		damage, speed;
-	float	splashRadius;
+	float	splash_radius;
 
 	if (q3) {
 		damage = 100;
-		splashRadius = 120;
+		splash_radius = 120;
 		speed = 1000;
 	} else {
 		damage = deathmatch->integer ? 200 : 500;
-		splashRadius = 1000;
+		splash_radius = 1000;
 		speed = 400;
 	}
 
@@ -2216,13 +2173,13 @@ static void Weapon_BFG_Fire(gentity_t *ent) {
 		damage *= damage_multiplier;
 
 	vec3_t start, dir;
-	P_ProjectSource(ent, ent->client->vAngle, { 8, 8, -8 }, start, dir);
-	fire_bfg(ent, start, dir, damage, speed, splashRadius);
+	P_ProjectSource(ent, ent->client->v_angle, { 8, 8, -8 }, start, dir);
+	fire_bfg(ent, start, dir, damage, speed, splash_radius);
 
 	if (q3) {
-		P_AddWeaponKick(ent, ent->client->vForward * -2, { -1.f, 0.f, 0.f });
+		P_AddWeaponKick(ent, ent->client->v_forward * -2, { -1.f, 0.f, 0.f });
 	} else {
-		P_AddWeaponKick(ent, ent->client->vForward * -2, { -20.f, 0, crandom() * 8 });
+		P_AddWeaponKick(ent, ent->client->v_forward * -2, { -20.f, 0, crandom() * 8 });
 		ent->client->kick.total = DAMAGE_TIME();
 		ent->client->kick.time = level.time + ent->client->kick.total;
 	}
@@ -2235,8 +2192,7 @@ static void Weapon_BFG_Fire(gentity_t *ent) {
 
 	PlayerNoise(ent, start, PNOISE_WEAPON);
 
-	ent->client->sess.match.totalShots++;
-	ent->client->sess.match.totalShotsPerWeapon[WEAP_BFG]++;
+	Stats_AddShot(ent);
 	RemoveAmmo(ent, q3 ? 10 : 50);
 }
 
@@ -2259,9 +2215,9 @@ static void Weapon_ProxLauncher_Fire(gentity_t *ent) {
 	vec3_t start, dir;
 	// Paril: kill sideways angle on grenades
 	// limit upwards angle so you don't fire behind you
-	P_ProjectSource(ent, { max(-62.5f, ent->client->vAngle[PITCH]), ent->client->vAngle[YAW], ent->client->vAngle[ROLL] }, { 8, 8, -8 }, start, dir);
+	P_ProjectSource(ent, { max(-62.5f, ent->client->v_angle[PITCH]), ent->client->v_angle[YAW], ent->client->v_angle[ROLL] }, { 8, 8, -8 }, start, dir);
 
-	P_AddWeaponKick(ent, ent->client->vForward * -2, { -1.f, 0.f, 0.f });
+	P_AddWeaponKick(ent, ent->client->v_forward * -2, { -1.f, 0.f, 0.f });
 
 	fire_prox(ent, start, dir, damage_multiplier, 600);
 
@@ -2272,8 +2228,7 @@ static void Weapon_ProxLauncher_Fire(gentity_t *ent) {
 
 	PlayerNoise(ent, start, PNOISE_WEAPON);
 
-	ent->client->sess.match.totalShots++;
-	ent->client->sess.match.totalShotsPerWeapon[WEAP_PROX_LAUNCHER]++;
+	Stats_AddShot(ent);
 	RemoveAmmo(ent, 1);
 }
 
@@ -2296,7 +2251,7 @@ static void Weapon_Tesla_Fire(gentity_t *ent, bool held) {
 	vec3_t start, dir;
 	// Paril: kill sideways angle on grenades
 	// limit upwards angle so you don't throw behind you
-	P_ProjectSource(ent, { max(-62.5f, ent->client->vAngle[PITCH]), ent->client->vAngle[YAW], ent->client->vAngle[ROLL] }, { 0, 0, -22 }, start, dir);
+	P_ProjectSource(ent, { max(-62.5f, ent->client->v_angle[PITCH]), ent->client->v_angle[YAW], ent->client->v_angle[ROLL] }, { 0, 0, -22 }, start, dir);
 
 	gtime_t timer = ent->client->grenade_time - level.time;
 	int	  speed = (int)(ent->health <= 0 ? GRENADE_MINSPEED : min(GRENADE_MINSPEED + (GRENADE_TIMER - timer).seconds() * ((GRENADE_MAXSPEED - GRENADE_MINSPEED) / GRENADE_TIMER.seconds()), GRENADE_MAXSPEED));
@@ -2305,8 +2260,7 @@ static void Weapon_Tesla_Fire(gentity_t *ent, bool held) {
 
 	fire_tesla(ent, start, dir, damage_multiplier, speed);
 
-	ent->client->sess.match.totalShots++;
-	ent->client->sess.match.totalShotsPerWeapon[WEAP_TESLA_MINE]++;
+	Stats_AddShot(ent);
 	RemoveAmmo(ent, 1);
 }
 
@@ -2360,7 +2314,7 @@ static void Weapon_ChainFist_Fire(gentity_t *ent) {
 		return;
 	}
 
-	P_ProjectSource(ent, ent->client->vAngle, { 0, 0, -4 }, start, dir);
+	P_ProjectSource(ent, ent->client->v_angle, { 0, 0, -4 }, start, dir);
 
 	if (fire_player_melee(ent, start, dir, CHAINFIST_REACH, damage, 100, MOD_CHAINFIST)) {
 		if (ent->client->empty_click_sound < level.time) {
@@ -2383,23 +2337,23 @@ static void Weapon_ChainFist_Fire(gentity_t *ent) {
 	}
 
 	// start the animation
-	if (ent->client->animPriority != ANIM_ATTACK || frandom() < 0.25f) {
-		ent->client->animPriority = ANIM_ATTACK;
+	if (ent->client->anim_priority != ANIM_ATTACK || frandom() < 0.25f) {
+		ent->client->anim_priority = ANIM_ATTACK;
 		if (ent->client->ps.pmove.pm_flags & PMF_DUCKED) {
 			ent->s.frame = FRAME_crattak1 - 1;
-			ent->client->animEnd = FRAME_crattak9;
+			ent->client->anim_end = FRAME_crattak9;
 		} else {
 			ent->s.frame = FRAME_attack1 - 1;
-			ent->client->animEnd = FRAME_attack8;
+			ent->client->anim_end = FRAME_attack8;
 		}
-		ent->client->animTime = 0_ms;
+		ent->client->anim_time = 0_ms;
 	}
 }
 
 // this spits out some smoke from the motor. it's a two-stroke, you know.
 static void Weapon_ChainFist_smoke(gentity_t *ent) {
 	vec3_t tempVec, dir;
-	P_ProjectSource(ent, ent->client->vAngle, { 8, 8, -4 }, tempVec, dir);
+	P_ProjectSource(ent, ent->client->v_angle, { 8, 8, -4 }, tempVec, dir);
 
 	gi.WriteByte(svc_temp_entity);
 	gi.WriteByte(TE_CHAINFIST_SMOKE);
@@ -2422,9 +2376,9 @@ void Weapon_ChainFist(gentity_t *ent) {
 	}
 
 	// set the appropriate weapon sound.
-	if (ent->client->weaponState == WEAPON_FIRING)
+	if (ent->client->weaponstate == WEAPON_FIRING)
 		ent->client->weapon_sound = gi.soundindex("weapons/sawhit.wav");
-	else if (ent->client->weaponState == WEAPON_DROPPING)
+	else if (ent->client->weaponstate == WEAPON_DROPPING)
 		ent->client->weapon_sound = 0;
 	else if (ent->client->pers.weapon->id == IT_WEAPON_CHAINFIST)
 		ent->client->weapon_sound = gi.soundindex("weapons/sawidle.wav");
@@ -2454,7 +2408,7 @@ static void Weapon_Disruptor_Fire(gentity_t *ent) {
 	maxs = { 16, 16, 16 };
 
 	vec3_t start, dir;
-	P_ProjectSource(ent, ent->client->vAngle, { 24, 8, -8 }, start, dir);
+	P_ProjectSource(ent, ent->client->v_angle, { 24, 8, -8 }, start, dir);
 
 	end = start + (dir * 8192);
 	enemy = nullptr;
@@ -2469,21 +2423,21 @@ static void Weapon_Disruptor_Fire(gentity_t *ent) {
 	tr = gi.traceline(start, end, ent, mask);
 	G_UnLagCompensate();
 	if (tr.ent != world) {
-		if ((tr.ent->svFlags & SVF_MONSTER) || tr.ent->client || (tr.ent->flags & FL_DAMAGEABLE)) {
+		if ((tr.ent->svflags & SVF_MONSTER) || tr.ent->client || (tr.ent->flags & FL_DAMAGEABLE)) {
 			if (tr.ent->health > 0)
 				enemy = tr.ent;
 		}
 	} else {
 		tr = gi.trace(start, mins, maxs, end, ent, mask);
 		if (tr.ent != world) {
-			if ((tr.ent->svFlags & SVF_MONSTER) || tr.ent->client || (tr.ent->flags & FL_DAMAGEABLE)) {
+			if ((tr.ent->svflags & SVF_MONSTER) || tr.ent->client || (tr.ent->flags & FL_DAMAGEABLE)) {
 				if (tr.ent->health > 0)
 					enemy = tr.ent;
 			}
 		}
 	}
 
-	P_AddWeaponKick(ent, ent->client->vForward * -2, { -1.f, 0.f, 0.f });
+	P_AddWeaponKick(ent, ent->client->v_forward * -2, { -1.f, 0.f, 0.f });
 
 	fire_disruptor(ent, start, dir, damage, 1000, enemy);
 
@@ -2495,8 +2449,7 @@ static void Weapon_Disruptor_Fire(gentity_t *ent) {
 
 	PlayerNoise(ent, start, PNOISE_WEAPON);
 
-	ent->client->sess.match.totalShots++;
-	ent->client->sess.match.totalShotsPerWeapon[WEAP_DISRUPTOR]++;
+	Stats_AddShot(ent);
 	RemoveAmmo(ent, 1);
 }
 
@@ -2541,12 +2494,12 @@ static void Weapon_ETF_Rifle_Fire(gentity_t *ent) {
 		kick *= damage_multiplier;
 	}
 
-	vec3_t kickOrigin{}, kick_angles{};
+	vec3_t kick_origin{}, kick_angles{};
 	for (i = 0; i < 3; i++) {
-		kickOrigin[i] = crandom() * 0.85f;
+		kick_origin[i] = crandom() * 0.85f;
 		kick_angles[i] = crandom() * 0.85f;
 	}
-	P_AddWeaponKick(ent, kickOrigin, kick_angles);
+	P_AddWeaponKick(ent, kick_origin, kick_angles);
 
 	// get start / end positions
 	if (ent->client->ps.gunframe == 6)
@@ -2555,7 +2508,7 @@ static void Weapon_ETF_Rifle_Fire(gentity_t *ent) {
 		offset = { 15, 6, -8 };
 
 	vec3_t start, dir;
-	P_ProjectSource(ent, ent->client->vAngle + kick_angles, offset, start, dir);
+	P_ProjectSource(ent, ent->client->v_angle + kick_angles, offset, start, dir);
 	fire_flechette(ent, start, dir, damage, 1150, kick);
 	Weapon_PowerupSound(ent);
 
@@ -2567,19 +2520,18 @@ static void Weapon_ETF_Rifle_Fire(gentity_t *ent) {
 
 	PlayerNoise(ent, start, PNOISE_WEAPON);
 
-	ent->client->sess.match.totalShots++;
-	ent->client->sess.match.totalShotsPerWeapon[WEAP_ETF_RIFLE]++;
+	Stats_AddShot(ent);
 	RemoveAmmo(ent, 1);
 
-	ent->client->animPriority = ANIM_ATTACK;
+	ent->client->anim_priority = ANIM_ATTACK;
 	if (ent->client->ps.pmove.pm_flags & PMF_DUCKED) {
 		ent->s.frame = FRAME_crattak1 - (int)(frandom() + 0.25f);
-		ent->client->animEnd = FRAME_crattak9;
+		ent->client->anim_end = FRAME_crattak9;
 	} else {
 		ent->s.frame = FRAME_attack1 - (int)(frandom() + 0.25f);
-		ent->client->animEnd = FRAME_attack8;
+		ent->client->anim_end = FRAME_attack8;
 	}
-	ent->client->animTime = 0_ms;
+	ent->client->anim_time = 0_ms;
 }
 
 void Weapon_ETF_Rifle(gentity_t *ent) {
@@ -2597,7 +2549,7 @@ PLASMA BEAM
 */
 
 static void Weapon_PlasmaBeam_Fire(gentity_t *ent) {
-	bool firing = (ent->client->buttons & BUTTON_ATTACK) && !CombatIsDisabled();
+	bool firing = (ent->client->buttons & BUTTON_ATTACK) && !IsCombatDisabled();
 	bool has_ammo = ent->client->pers.inventory[ent->client->pers.weapon->ammo] >= ent->client->pers.weapon->quantity;
 
 	if (!firing || !has_ammo) {
@@ -2620,7 +2572,7 @@ static void Weapon_PlasmaBeam_Fire(gentity_t *ent) {
 		ent->client->ps.gunframe = 8;
 
 	// play weapon sound for firing
-	ent->client->weapon_sound = gi.soundindex("weapons/tesla.wav");
+	ent->client->weapon_sound = gi.soundindex("weapons/bfg__l1a.wav");
 	ent->client->ps.gunskin = 1;
 
 	int damage;
@@ -2630,17 +2582,17 @@ static void Weapon_PlasmaBeam_Fire(gentity_t *ent) {
 	// jim requested more damage, so try 15/15 --- PGM 07/23/98
 	// muffmode: jim you are a silly boy, 15 is way OP for DM
 	switch (game.ruleset) {
+	case RS_MM:
+		damage = deathmatch->integer ? 10 : 15;
+		kick = deathmatch->integer ? 50 : 30;
+		break;
 	case RS_Q3A:
 		damage = deathmatch->integer ? 8 : 15;
 		kick = damage;
 		break;
-	case RS_Q1:
-		damage = 30;
-		kick = damage;
-		break;
 	default:
-		damage = deathmatch->integer ? 8 : 15;
-		kick = damage;
+		damage = 15;
+		kick = deathmatch->integer ? 75 : 30;
 		break;
 	}
 
@@ -2653,7 +2605,7 @@ static void Weapon_PlasmaBeam_Fire(gentity_t *ent) {
 
 	// This offset is the "view" offset for the beam start (used by trace)
 	vec3_t start, dir;
-	P_ProjectSource(ent, ent->client->vAngle, { 7, 2, -3 }, start, dir);
+	P_ProjectSource(ent, ent->client->v_angle, { 7, 2, -3 }, start, dir);
 
 	// This offset is the entity offset
 	G_LagCompensate(ent, start, dir);
@@ -2669,19 +2621,18 @@ static void Weapon_PlasmaBeam_Fire(gentity_t *ent) {
 
 	PlayerNoise(ent, start, PNOISE_WEAPON);
 
-	ent->client->sess.match.totalShots++;
-	ent->client->sess.match.totalShotsPerWeapon[WEAP_PLASMABEAM]++;
-	RemoveAmmo(ent, RS(RS_Q1) ? 2 : 1);
+	Stats_AddShot(ent);
+	RemoveAmmo(ent, 2);
 
-	ent->client->animPriority = ANIM_ATTACK;
+	ent->client->anim_priority = ANIM_ATTACK;
 	if (ent->client->ps.pmove.pm_flags & PMF_DUCKED) {
 		ent->s.frame = FRAME_crattak1 - (int)(frandom() + 0.25f);
-		ent->client->animEnd = FRAME_crattak9;
+		ent->client->anim_end = FRAME_crattak9;
 	} else {
 		ent->s.frame = FRAME_attack1 - (int)(frandom() + 0.25f);
-		ent->client->animEnd = FRAME_attack8;
+		ent->client->anim_end = FRAME_attack8;
 	}
-	ent->client->animTime = 0_ms;
+	ent->client->anim_time = 0_ms;
 }
 
 void Weapon_PlasmaBeam(gentity_t *ent) {
@@ -2699,21 +2650,21 @@ ION RIPPER
 ======================================================================
 */
 static void Weapon_IonRipper_Fire(gentity_t *ent) {
-	vec3_t tempAngle;
-	int	   damage = deathmatch->integer ? 20 : 50;
+	vec3_t tempang;
+	int	   damage = deathmatch->integer ? (RS(RS_MM)) ? 20 : 30 : 50;
 
 	if (is_quad)
 		damage *= damage_multiplier;
 
-	tempAngle = ent->client->vAngle;
-	tempAngle[YAW] += crandom();
+	tempang = ent->client->v_angle;
+	tempang[YAW] += crandom();
 
 	vec3_t start, dir;
-	P_ProjectSource(ent, tempAngle, { 16, 7, -8 }, start, dir);
+	P_ProjectSource(ent, tempang, { 16, 7, -8 }, start, dir);
 
-	P_AddWeaponKick(ent, ent->client->vForward * -3, { -3.f, 0.f, 0.f });
+	P_AddWeaponKick(ent, ent->client->v_forward * -3, { -3.f, 0.f, 0.f });
 
-	fire_ionripper(ent, start, dir, damage, 500, EF_IONRIPPER);
+	fire_ionripper(ent, start, dir, damage, (RS(RS_MM)) ? 800 : 500, EF_IONRIPPER);	//500
 
 	// send muzzle flash
 	gi.WriteByte(svc_muzzleflash);
@@ -2723,8 +2674,7 @@ static void Weapon_IonRipper_Fire(gentity_t *ent) {
 
 	PlayerNoise(ent, start, PNOISE_WEAPON);
 
-	ent->client->sess.match.totalShots++;
-	ent->client->sess.match.totalShotsPerWeapon[WEAP_IONRIPPER]++;
+	Stats_AddShot(ent);
 	RemoveAmmo(ent, 1);
 }
 
@@ -2745,32 +2695,32 @@ PHALANX
 static void Weapon_Phalanx_Fire(gentity_t *ent) {
 	vec3_t v;
 	int	   damage;
-	float  splashRadius;
-	int	   splashDamage;
+	float  splash_radius;
+	int	   splash_damage;
 
 	damage = irandom(70, 80);
-	splashDamage = 120;
-	splashRadius = 120;
+	splash_damage = 120;
+	splash_radius = 120;
 
 	if (is_quad) {
 		damage *= damage_multiplier;
-		splashDamage *= damage_multiplier;
+		splash_damage *= damage_multiplier;
 	}
 
 	vec3_t dir;
 
 	if (ent->client->ps.gunframe == 8) {
-		v[PITCH] = ent->client->vAngle[PITCH];
-		v[YAW] = ent->client->vAngle[YAW] - 1.5f;
-		v[ROLL] = ent->client->vAngle[ROLL];
+		v[PITCH] = ent->client->v_angle[PITCH];
+		v[YAW] = ent->client->v_angle[YAW] - 1.5f;
+		v[ROLL] = ent->client->v_angle[ROLL];
 
 		vec3_t start;
 		P_ProjectSource(ent, v, { 0, 8, -8 }, start, dir);
 
-		splashDamage = 30;
-		splashRadius = 120;
+		splash_damage = 30;
+		splash_radius = 120;
 
-		fire_phalanx(ent, start, dir, damage, 725, splashRadius, splashDamage);
+		fire_phalanx(ent, start, dir, damage, 725, splash_radius, splash_damage);
 
 		// send muzzle flash
 		gi.WriteByte(svc_muzzleflash);
@@ -2778,18 +2728,17 @@ static void Weapon_Phalanx_Fire(gentity_t *ent) {
 		gi.WriteByte(MZ_PHALANX2 | is_silenced);
 		gi.multicast(ent->s.origin, MULTICAST_PVS, false);
 
-		ent->client->sess.match.totalShots += 2;
-		ent->client->sess.match.totalShotsPerWeapon[WEAP_PHALANX] += 2;
+		Stats_AddShot(ent);
 		RemoveAmmo(ent, 1);
 	} else {
-		v[PITCH] = ent->client->vAngle[PITCH];
-		v[YAW] = ent->client->vAngle[YAW] + 1.5f;
-		v[ROLL] = ent->client->vAngle[ROLL];
+		v[PITCH] = ent->client->v_angle[PITCH];
+		v[YAW] = ent->client->v_angle[YAW] + 1.5f;
+		v[ROLL] = ent->client->v_angle[ROLL];
 
 		vec3_t start;
 		P_ProjectSource(ent, v, { 0, 8, -8 }, start, dir);
 
-		fire_phalanx(ent, start, dir, damage, 725, splashRadius, splashDamage);
+		fire_phalanx(ent, start, dir, damage, 725, splash_radius, splash_damage);
 
 		// send muzzle flash
 		gi.WriteByte(svc_muzzleflash);
@@ -2800,7 +2749,7 @@ static void Weapon_Phalanx_Fire(gentity_t *ent) {
 		PlayerNoise(ent, start, PNOISE_WEAPON);
 	}
 
-	P_AddWeaponKick(ent, ent->client->vForward * -2, { -2.f, 0.f, 0.f });
+	P_AddWeaponKick(ent, ent->client->v_forward * -2, { -2.f, 0.f, 0.f });
 }
 
 void Weapon_Phalanx(gentity_t *ent) {
@@ -2828,7 +2777,7 @@ static void Weapon_Trap_Fire(gentity_t *ent, bool held) {
 	vec3_t start, dir;
 	// Paril: kill sideways angle on grenades
 	// limit upwards angle so you don't throw behind you
-	P_ProjectSource(ent, { max(-62.5f, ent->client->vAngle[PITCH]), ent->client->vAngle[YAW], ent->client->vAngle[ROLL] }, { 8, 0, -8 }, start, dir);
+	P_ProjectSource(ent, { max(-62.5f, ent->client->v_angle[PITCH]), ent->client->v_angle[YAW], ent->client->v_angle[ROLL] }, { 8, 0, -8 }, start, dir);
 
 	gtime_t timer = ent->client->grenade_time - level.time;
 	speed = (int)(ent->health <= 0 ? TRAP_MINSPEED : min(TRAP_MINSPEED + (TRAP_TIMER - timer).seconds() * ((TRAP_MAXSPEED - TRAP_MINSPEED) / TRAP_TIMER.seconds()), TRAP_MAXSPEED));
@@ -2837,8 +2786,7 @@ static void Weapon_Trap_Fire(gentity_t *ent, bool held) {
 
 	fire_trap(ent, start, dir, speed);
 
-	ent->client->sess.match.totalShots++;
-	ent->client->sess.match.totalShotsPerWeapon[WEAP_TRAP]++;
+	Stats_AddShot(ent);
 	RemoveAmmo(ent, 1);
 }
 

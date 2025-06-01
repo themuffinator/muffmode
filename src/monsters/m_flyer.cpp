@@ -198,7 +198,7 @@ MMOVE_T(flyer_move_kamikaze) = { FRAME_rollr02, FRAME_rollr06, flyer_frames_kami
 MONSTERINFO_RUN(flyer_run) (gentity_t *self) -> void {
 	if (self->mass > 50)
 		M_SetAnimation(self, &flyer_move_kamikaze);
-	else if (self->monsterInfo.aiflags & AI_STAND_GROUND)
+	else if (self->monsterinfo.aiflags & AI_STAND_GROUND)
 		M_SetAnimation(self, &flyer_move_stand);
 	else
 		M_SetAnimation(self, &flyer_move_run);
@@ -222,13 +222,13 @@ MONSTERINFO_STAND(flyer_stand) (gentity_t *self) -> void {
 static void flyer_kamikaze_explode(gentity_t *self) {
 	vec3_t dir;
 
-	if (self->monsterInfo.commander && self->monsterInfo.commander->inUse &&
-		!strcmp(self->monsterInfo.commander->className, "monster_carrier"))
-		self->monsterInfo.commander->monsterInfo.monster_slots++;
+	if (self->monsterinfo.commander && self->monsterinfo.commander->inuse &&
+		!strcmp(self->monsterinfo.commander->classname, "monster_carrier"))
+		self->monsterinfo.commander->monsterinfo.monster_slots++;
 
 	if (self->enemy) {
 		dir = self->enemy->s.origin - self->s.origin;
-		Damage(self->enemy, self, self, dir, self->s.origin, vec3_origin, (int)50, (int)50, DAMAGE_RADIUS, MOD_UNKNOWN);
+		T_Damage(self->enemy, self, self, dir, self->s.origin, vec3_origin, (int)50, (int)50, DAMAGE_RADIUS, MOD_UNKNOWN);
 	}
 
 	flyer_die(self, nullptr, nullptr, 0, dir, MOD_EXPLOSIVE);
@@ -242,10 +242,10 @@ void flyer_kamikaze_check(gentity_t *self) {
 	float dist;
 
 	// PMM - this needed because we could have gone away before we get here (blocked code)
-	if (!self->inUse)
+	if (!self->inuse)
 		return;
 
-	if ((!self->enemy) || (!self->enemy->inUse)) {
+	if ((!self->enemy) || (!self->enemy->inuse)) {
 		flyer_kamikaze_explode(self);
 		return;
 	}
@@ -295,14 +295,14 @@ static void flyer_fire(gentity_t *self, monster_muzzleflash_id_t flash_number) {
 	vec3_t	  end;
 	vec3_t	  dir;
 
-	if (!self->enemy || !self->enemy->inUse)
+	if (!self->enemy || !self->enemy->inuse)
 		return;
 
 	AngleVectors(self->s.angles, forward, right, nullptr);
 	start = M_ProjectFlashSource(self, monster_flash_offset[flash_number], forward, right);
 
 	end = self->enemy->s.origin;
-	end[2] += self->enemy->viewHeight;
+	end[2] += self->enemy->viewheight;
 	dir = end - start;
 	dir.normalize();
 
@@ -363,14 +363,14 @@ MMOVE_T(flyer_move_attack3) = { FRAME_attak201, FRAME_attak217, flyer_frames_att
 static void flyer_slash_left(gentity_t *self) {
 	vec3_t aim = { MELEE_DISTANCE, self->mins[0], 0 };
 	if (!fire_hit(self, aim, 5, 0))
-		self->monsterInfo.melee_debounce_time = level.time + 1.5_sec;
+		self->monsterinfo.melee_debounce_time = level.time + 1.5_sec;
 	gi.sound(self, CHAN_WEAPON, sound_slash, 1, ATTN_NORM, 0);
 }
 
 static void flyer_slash_right(gentity_t *self) {
 	vec3_t aim = { MELEE_DISTANCE, self->maxs[0], 0 };
 	if (!fire_hit(self, aim, 5, 0))
-		self->monsterInfo.melee_debounce_time = level.time + 1.5_sec;
+		self->monsterinfo.melee_debounce_time = level.time + 1.5_sec;
 	gi.sound(self, CHAN_WEAPON, sound_slash, 1, ATTN_NORM, 0);
 }
 
@@ -415,19 +415,19 @@ void flyer_loop_melee(gentity_t *self) {
 static void flyer_set_fly_parameters(gentity_t *self, bool melee) {
 	if (melee) {
 		// engage thrusters for a slice
-		self->monsterInfo.fly_pinned = false;
-		self->monsterInfo.fly_thrusters = true;
-		self->monsterInfo.fly_position_time = 0_ms;
-		self->monsterInfo.fly_acceleration = 20.f;
-		self->monsterInfo.fly_speed = 210.f;
-		self->monsterInfo.fly_min_distance = 0.f;
-		self->monsterInfo.fly_max_distance = 10.f;
+		self->monsterinfo.fly_pinned = false;
+		self->monsterinfo.fly_thrusters = true;
+		self->monsterinfo.fly_position_time = 0_ms;
+		self->monsterinfo.fly_acceleration = 20.f;
+		self->monsterinfo.fly_speed = 210.f;
+		self->monsterinfo.fly_min_distance = 0.f;
+		self->monsterinfo.fly_max_distance = 10.f;
 	} else {
-		self->monsterInfo.fly_thrusters = false;
-		self->monsterInfo.fly_acceleration = 15.f;
-		self->monsterInfo.fly_speed = 165.f;
-		self->monsterInfo.fly_min_distance = 45.f;
-		self->monsterInfo.fly_max_distance = 200.f;
+		self->monsterinfo.fly_thrusters = false;
+		self->monsterinfo.fly_acceleration = 15.f;
+		self->monsterinfo.fly_speed = 165.f;
+		self->monsterinfo.fly_min_distance = 45.f;
+		self->monsterinfo.fly_max_distance = 200.f;
 	}
 }
 
@@ -441,24 +441,24 @@ MONSTERINFO_ATTACK(flyer_attack) (gentity_t *self) -> void {
 
 	if (self->enemy && visible(self, self->enemy) && range <= 225.f && frandom() > (range / 225.f) * 0.35f) {
 		// fly-by slicing!
-		self->monsterInfo.attack_state = AS_STRAIGHT;
+		self->monsterinfo.attack_state = AS_STRAIGHT;
 		M_SetAnimation(self, &flyer_move_start_melee);
 		flyer_set_fly_parameters(self, true);
 	} else {
-		self->monsterInfo.attack_state = AS_STRAIGHT;
+		self->monsterinfo.attack_state = AS_STRAIGHT;
 		M_SetAnimation(self, &flyer_move_attack2);
 	}
 
 	// [Paril-KEX] for alternate fly mode, sometimes we'll pin us
 	// down, kind of like a pseudo-stand ground
-	if (!self->monsterInfo.fly_pinned && brandom() && self->enemy && visible(self, self->enemy)) {
-		self->monsterInfo.fly_pinned = true;
-		self->monsterInfo.fly_position_time = max(self->monsterInfo.fly_position_time, self->monsterInfo.fly_position_time + 1.7_sec); // make sure there's enough time for attack2/3
+	if (!self->monsterinfo.fly_pinned && brandom() && self->enemy && visible(self, self->enemy)) {
+		self->monsterinfo.fly_pinned = true;
+		self->monsterinfo.fly_position_time = max(self->monsterinfo.fly_position_time, self->monsterinfo.fly_position_time + 1.7_sec); // make sure there's enough time for attack2/3
 
 		if (brandom())
-			self->monsterInfo.fly_ideal_position = self->s.origin + (self->velocity * frandom()); // pin to our current position
+			self->monsterinfo.fly_ideal_position = self->s.origin + (self->velocity * frandom()); // pin to our current position
 		else
-			self->monsterInfo.fly_ideal_position += self->enemy->s.origin; // make un-relative
+			self->monsterinfo.fly_ideal_position += self->enemy->s.origin; // make un-relative
 	}
 
 	// if we're currently pinned, fly_position_time will unpin us eventually
@@ -475,7 +475,7 @@ MONSTERINFO_MELEE(flyer_melee) (gentity_t *self) -> void {
 
 void flyer_check_melee(gentity_t *self) {
 	if (range_to(self, self->enemy) <= RANGE_MELEE) {
-		if (self->monsterInfo.melee_debounce_time <= level.time) {
+		if (self->monsterinfo.melee_debounce_time <= level.time) {
 			M_SetAnimation(self, &flyer_move_loop_melee);
 			return;
 		}
@@ -555,8 +555,8 @@ MONSTERINFO_BLOCKED(flyer_blocked) (gentity_t *self, float dist) -> bool {
 		flyer_kamikaze_check(self);
 
 		// if the above didn't blow us up (i.e. I got blocked by the player)
-		if (self->inUse)
-			Damage(self, self, self, vec3_origin, self->s.origin, vec3_origin, 9999, 100, DAMAGE_NONE, MOD_UNKNOWN);
+		if (self->inuse)
+			T_Damage(self, self, self, vec3_origin, self->s.origin, vec3_origin, 9999, 100, DAMAGE_NONE, MOD_UNKNOWN);
 
 		return true;
 	}
@@ -564,15 +564,15 @@ MONSTERINFO_BLOCKED(flyer_blocked) (gentity_t *self, float dist) -> bool {
 	return false;
 }
 
-static TOUCH(kamikaze_touch) (gentity_t *ent, gentity_t *other, const trace_t &tr, bool otherTouchingSelf) -> void {
-	Damage(ent, ent, ent, ent->velocity.normalized(), ent->s.origin, ent->velocity.normalized(), 9999, 100, DAMAGE_NONE, MOD_UNKNOWN);
+static TOUCH(kamikaze_touch) (gentity_t *ent, gentity_t *other, const trace_t &tr, bool other_touching_self) -> void {
+	T_Damage(ent, ent, ent, ent->velocity.normalized(), ent->s.origin, ent->velocity.normalized(), 9999, 100, DAMAGE_NONE, MOD_UNKNOWN);
 }
 
-static TOUCH(flyer_touch) (gentity_t *ent, gentity_t *other, const trace_t &tr, bool otherTouchingSelf) -> void {
-	if ((other->monsterInfo.aiflags & AI_ALTERNATE_FLY) && (other->flags & FL_FLY) &&
-		(ent->monsterInfo.duck_wait_time < level.time)) {
-		ent->monsterInfo.duck_wait_time = level.time + 1_sec;
-		ent->monsterInfo.fly_thrusters = false;
+static TOUCH(flyer_touch) (gentity_t *ent, gentity_t *other, const trace_t &tr, bool other_touching_self) -> void {
+	if ((other->monsterinfo.aiflags & AI_ALTERNATE_FLY) && (other->flags & FL_FLY) &&
+		(ent->monsterinfo.duck_wait_time < level.time)) {
+		ent->monsterinfo.duck_wait_time = level.time + 1_sec;
+		ent->monsterinfo.fly_thrusters = false;
 
 		vec3_t dir = (ent->s.origin - other->s.origin).normalized();
 		ent->velocity = dir * 500.f;
@@ -591,7 +591,7 @@ static TOUCH(flyer_touch) (gentity_t *ent, gentity_t *other, const trace_t &tr, 
  */
 void SP_monster_flyer(gentity_t *self) {
 	if (!M_AllowSpawn(self)) {
-		FreeEntity(self);
+		G_FreeEntity(self);
 		return;
 	}
 
@@ -614,12 +614,12 @@ void SP_monster_flyer(gentity_t *self) {
 
 	self->mins = { -16, -16, -24 };
 	self->maxs = { 16, 16, 16 };
-	self->moveType = MOVETYPE_STEP;
+	self->movetype = MOVETYPE_STEP;
 	self->solid = SOLID_BBOX;
 
-	self->viewHeight = 12;
+	self->viewheight = 12;
 
-	self->monsterInfo.engine_sound = gi.soundindex("flyer/flyidle1.wav");
+	self->monsterinfo.engine_sound = gi.soundindex("flyer/flyidle1.wav");
 
 	self->health = 50 * st.health_multiplier;
 	self->mass = 50;
@@ -627,20 +627,20 @@ void SP_monster_flyer(gentity_t *self) {
 	self->pain = flyer_pain;
 	self->die = flyer_die;
 
-	self->monsterInfo.stand = flyer_stand;
-	self->monsterInfo.walk = flyer_walk;
-	self->monsterInfo.run = flyer_run;
-	self->monsterInfo.attack = flyer_attack;
-	self->monsterInfo.melee = flyer_melee;
-	self->monsterInfo.sight = flyer_sight;
-	self->monsterInfo.idle = flyer_idle;
-	self->monsterInfo.blocked = flyer_blocked;
-	self->monsterInfo.setskin = flyer_setskin;
+	self->monsterinfo.stand = flyer_stand;
+	self->monsterinfo.walk = flyer_walk;
+	self->monsterinfo.run = flyer_run;
+	self->monsterinfo.attack = flyer_attack;
+	self->monsterinfo.melee = flyer_melee;
+	self->monsterinfo.sight = flyer_sight;
+	self->monsterinfo.idle = flyer_idle;
+	self->monsterinfo.blocked = flyer_blocked;
+	self->monsterinfo.setskin = flyer_setskin;
 
 	gi.linkentity(self);
 
 	M_SetAnimation(self, &flyer_move_stand);
-	self->monsterInfo.scale = MODEL_SCALE;
+	self->monsterinfo.scale = MODEL_SCALE;
 
 	if (self->s.effects & EF_ROCKET) {
 		// PMM - normal flyer has mass of 50
@@ -648,8 +648,8 @@ void SP_monster_flyer(gentity_t *self) {
 		self->yaw_speed = 5;
 		self->touch = kamikaze_touch;
 	} else {
-		self->monsterInfo.aiflags |= AI_ALTERNATE_FLY;
-		self->monsterInfo.fly_buzzard = true;
+		self->monsterinfo.aiflags |= AI_ALTERNATE_FLY;
+		self->monsterinfo.fly_buzzard = true;
 		flyer_set_fly_parameters(self, false);
 		self->touch = flyer_touch;
 	}
@@ -660,7 +660,7 @@ void SP_monster_flyer(gentity_t *self) {
 // suicide fliers
 void SP_monster_kamikaze(gentity_t *self) {
 	if (!M_AllowSpawn(self)) {
-		FreeEntity(self);
+		G_FreeEntity(self);
 		return;
 	}
 

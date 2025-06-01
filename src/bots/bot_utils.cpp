@@ -16,7 +16,7 @@ static void Player_UpdateState(gentity_t *player) {
 	const client_persistant_t &persistant = player->client->pers;
 
 	player->sv.ent_flags = SVFL_NONE;
-	if (player->groundEntity != nullptr || (player->flags & FL_PARTIALGROUND) != 0) {
+	if (player->groundentity != nullptr || (player->flags & FL_PARTIALGROUND) != 0) {
 		player->sv.ent_flags |= SVFL_ONGROUND;
 	} else {
 		if (player->client->ps.pmove.pm_flags & PMF_JUMP_HELD) {
@@ -40,7 +40,7 @@ static void Player_UpdateState(gentity_t *player) {
 		player->sv.ent_flags |= SVFL_HAS_DMG_BOOST;
 	}
 
-	if (player->client->pu_time_battlesuit > level.time) {
+	if (player->client->pu_time_protection > level.time) {
 		player->sv.ent_flags |= SVFL_HAS_PROTECTION;
 	}
 
@@ -48,11 +48,11 @@ static void Player_UpdateState(gentity_t *player) {
 		player->sv.ent_flags |= SVFL_HAS_INVISIBILITY;
 	}
 
-	if ((player->client->ps.pmove.pm_flags & PMF_TIME_KNOCKBACK) != 0) {
+	if ((player->client->ps.pmove.pm_flags & PMF_TIME_TELEPORT) != 0) {
 		player->sv.ent_flags |= SVFL_HAS_TELEPORTED;
 	}
 
-	if (player->takeDamage) {
+	if (player->takedamage) {
 		player->sv.ent_flags |= SVFL_TAKES_DAMAGE;
 	}
 
@@ -74,31 +74,31 @@ static void Player_UpdateState(gentity_t *player) {
 		player->sv.ent_flags |= SVFL_GOD_MODE;
 	}
 
-	if (player->moveType == MOVETYPE_NOCLIP) {
+	if (player->movetype == MOVETYPE_NOCLIP) {
 		player->sv.ent_flags |= SVFL_IS_NOCLIP;
 	}
 
-	if (player->client->animEnd == FRAME_flip12) {
+	if (player->client->anim_end == FRAME_flip12) {
 		player->sv.ent_flags |= SVFL_IS_FLIPPING_OFF;
 	}
 
-	if (player->client->animEnd == FRAME_salute11) {
+	if (player->client->anim_end == FRAME_salute11) {
 		player->sv.ent_flags |= SVFL_IS_SALUTING;
 	}
 
-	if (player->client->animEnd == FRAME_taunt17) {
+	if (player->client->anim_end == FRAME_taunt17) {
 		player->sv.ent_flags |= SVFL_IS_TAUNTING;
 	}
 
-	if (player->client->animEnd == FRAME_wave11) {
+	if (player->client->anim_end == FRAME_wave11) {
 		player->sv.ent_flags |= SVFL_IS_WAVING;
 	}
 
-	if (player->client->animEnd == FRAME_point12) {
+	if (player->client->anim_end == FRAME_point12) {
 		player->sv.ent_flags |= SVFL_IS_POINTING;
 	}
 
-	if ((player->client->ps.pmove.pm_flags & PMF_DUCKED) == 0 && player->client->animPriority <= ANIM_WAVE) {
+	if ((player->client->ps.pmove.pm_flags & PMF_DUCKED) == 0 && player->client->anim_priority <= ANIM_WAVE) {
 		player->sv.ent_flags |= SVFL_CAN_GESTURE;
 	}
 
@@ -120,19 +120,19 @@ static void Player_UpdateState(gentity_t *player) {
 	player->sv.armor_type = armorType;
 	player->sv.armor_value = persistant.inventory[armorType];
 
-	player->sv.health = (player->deadFlag != true) ? player->health : -1;
+	player->sv.health = (player->deadflag != true) ? player->health : -1;
 	player->sv.weapon = (persistant.weapon != nullptr) ? persistant.weapon->id : IT_NULL;
 
 	player->sv.last_attackertime = static_cast<int32_t>(player->client->last_attacker_time.milliseconds());
 	player->sv.respawntime = static_cast<int32_t>(player->client->respawn_time.milliseconds());
 	player->sv.waterlevel = player->waterlevel;
-	player->sv.viewHeight = player->viewHeight;
+	player->sv.viewheight = player->viewheight;
 
-	player->sv.viewangles = player->client->vAngle;
-	player->sv.viewforward = player->client->vForward;
+	player->sv.viewangles = player->client->v_angle;
+	player->sv.viewforward = player->client->v_forward;
 	player->sv.velocity = player->velocity;
 
-	player->sv.ground_entity = player->groundEntity;
+	player->sv.ground_entity = player->groundentity;
 	player->sv.enemy = player->enemy;
 
 	static_assert(sizeof(persistant.inventory) <= sizeof(player->sv.inventory));
@@ -140,7 +140,7 @@ static void Player_UpdateState(gentity_t *player) {
 
 	if (!player->sv.init) {
 		player->sv.init = true;
-		player->sv.className = player->className;
+		player->sv.classname = player->classname;
 		player->sv.targetname = player->targetname;
 		player->sv.lobby_usernum = P_GetLobbyUserNum(player);
 		player->sv.starting_health = player->health;
@@ -152,13 +152,13 @@ static void Player_UpdateState(gentity_t *player) {
 		// NOTE: Check "Max_Armor_Types" to raise/lower the armor count.
 		armorInfo_t *armorInfo = player->sv.armor_info;
 		armorInfo[0].item_id = IT_ARMOR_BODY;
-		armorInfo[0].max_count = armor_stats[game.ruleset][ARMOR_BODY].max_count;
+		armorInfo[0].max_count = bodyarmor_info.max_count;
 		armorInfo[1].item_id = IT_ARMOR_COMBAT;
-		armorInfo[1].max_count = armor_stats[game.ruleset][ARMOR_COMBAT].max_count;
+		armorInfo[1].max_count = combatarmor_info.max_count;
 		armorInfo[2].item_id = IT_ARMOR_JACKET;
-		armorInfo[2].max_count = armor_stats[game.ruleset][ARMOR_JACKET].max_count;
+		armorInfo[2].max_count = jacketarmor_info.max_count;
 
-		gi.Info_ValueForKey(player->client->pers.userInfo, "name", player->sv.netname, sizeof(player->sv.netname));
+		gi.Info_ValueForKey(player->client->pers.userinfo, "name", player->sv.netname, sizeof(player->sv.netname));
 
 		gi.Bot_RegisterEntity(player);
 	}
@@ -171,15 +171,15 @@ Monster_UpdateState
 */
 static void Monster_UpdateState(gentity_t *monster) {
 	monster->sv.ent_flags = SVFL_NONE;
-	if (monster->groundEntity != nullptr) {
+	if (monster->groundentity != nullptr) {
 		monster->sv.ent_flags |= SVFL_ONGROUND;
 	}
 
-	if (monster->takeDamage) {
+	if (monster->takedamage) {
 		monster->sv.ent_flags |= SVFL_TAKES_DAMAGE;
 	}
 
-	if (monster->solid == SOLID_NOT || monster->moveType == MOVETYPE_NONE) {
+	if (monster->solid == SOLID_NOT || monster->movetype == MOVETYPE_NONE) {
 		monster->sv.ent_flags |= SVFL_IS_HIDDEN;
 	}
 
@@ -187,22 +187,22 @@ static void Monster_UpdateState(gentity_t *monster) {
 		monster->sv.ent_flags |= SVFL_IN_WATER;
 	}
 
-	if (CooperativeModeOn()) {
+	if (InCoopStyle()) {
 		monster->sv.team = Team_Coop_Monster;
 	} else {
 		monster->sv.team = Team_None; // TODO: CTF/TDM/etc...
 	}
 
-	monster->sv.health = (monster->deadFlag != true) ? monster->health : -1;
+	monster->sv.health = (monster->deadflag != true) ? monster->health : -1;
 	monster->sv.waterlevel = monster->waterlevel;
 	monster->sv.enemy = monster->enemy;
-	monster->sv.ground_entity = monster->groundEntity;
+	monster->sv.ground_entity = monster->groundentity;
 
-	int32_t viewHeight = monster->viewHeight;
-	if ((monster->monsterInfo.aiflags & AI_DUCKED) != 0) {
+	int32_t viewHeight = monster->viewheight;
+	if ((monster->monsterinfo.aiflags & AI_DUCKED) != 0) {
 		viewHeight = int32_t(monster->maxs[2] - 4.0f);
 	}
-	monster->sv.viewHeight = viewHeight;
+	monster->sv.viewheight = viewHeight;
 
 	monster->sv.viewangles = monster->s.angles;
 
@@ -212,7 +212,7 @@ static void Monster_UpdateState(gentity_t *monster) {
 
 	if (!monster->sv.init) {
 		monster->sv.init = true;
-		monster->sv.className = monster->className;
+		monster->sv.classname = monster->classname;
 		monster->sv.targetname = monster->targetname;
 		monster->sv.starting_health = monster->health;
 		monster->sv.max_health = monster->max_health;
@@ -237,9 +237,9 @@ static void Item_UpdateState(gentity_t *item) {
 	if (item->solid == SOLID_NOT) {
 		item->sv.ent_flags |= SVFL_IS_HIDDEN;
 
-		if (item->nextThink.milliseconds() > 0) {
-			if ((item->svFlags & SVF_RESPAWNING) != 0) {
-				const gtime_t pendingRespawnTime = (item->nextThink - level.time);
+		if (item->nextthink.milliseconds() > 0) {
+			if ((item->svflags & SVF_RESPAWNING) != 0) {
+				const gtime_t pendingRespawnTime = (item->nextthink - level.time);
 				item->sv.respawntime = static_cast<int32_t>(pendingRespawnTime.milliseconds());
 			} else {
 				// item will respawn at some unknown time in the future...
@@ -256,7 +256,7 @@ static void Item_UpdateState(gentity_t *item) {
 
 	// always need to update these for items, since random item spawning
 	// could change them at any time...
-	item->sv.className = item->className;
+	item->sv.classname = item->classname;
 	item->sv.item_id = item->item->id;
 
 	if (!item->sv.init) {
@@ -282,7 +282,7 @@ static void Trap_UpdateState(gentity_t *danger) {
 		danger->sv.team = pl_skinnum.team_index;
 	}
 
-	if (danger->groundEntity != nullptr) {
+	if (danger->groundentity != nullptr) {
 		danger->sv.ent_flags |= SVFL_ONGROUND;
 	}
 
@@ -291,7 +291,7 @@ static void Trap_UpdateState(gentity_t *danger) {
 	} else {
 		danger->sv.start_origin = danger->s.origin;
 		danger->sv.end_origin = danger->s.old_origin;
-		if ((danger->svFlags & SVF_NOCLIENT) == 0) {
+		if ((danger->svflags & SVF_NOCLIENT) == 0) {
 			if ((danger->s.renderfx & RF_BEAM)) {
 				danger->sv.ent_flags |= SVFL_ACTIVE; // lasers are active!!
 			}
@@ -300,7 +300,7 @@ static void Trap_UpdateState(gentity_t *danger) {
 
 	if (!danger->sv.init) {
 		danger->sv.init = true;
-		danger->sv.className = danger->className;
+		danger->sv.classname = danger->classname;
 
 		gi.Bot_RegisterEntity(danger);
 	}
@@ -315,12 +315,12 @@ static void Mover_UpdateState(gentity_t *entity) {
 	entity->sv.ent_flags = SVFL_NONE;
 	entity->sv.health = entity->health;
 
-	if (entity->takeDamage) {
+	if (entity->takedamage) {
 		entity->sv.ent_flags |= SVFL_TAKES_DAMAGE;
 	}
 
 	// plats, movers, and doors use this to determine move state.
-	const bool isDoor = ((entity->svFlags & SVF_DOOR) != 0);
+	const bool isDoor = ((entity->svflags & SVF_DOOR) != 0);
 	const bool isReversedDoor = (isDoor && entity->spawnflags.has(SPAWNFLAG_DOOR_REVERSE));
 
 	// doors have their top/bottom states reversed from plats
@@ -346,7 +346,7 @@ static void Mover_UpdateState(gentity_t *entity) {
 	entity->sv.start_origin = entity->moveinfo.start_origin;
 	entity->sv.end_origin = entity->moveinfo.end_origin;
 
-	if (entity->svFlags & SVF_DOOR) {
+	if (entity->svflags & SVF_DOOR) {
 		if (entity->flags & FL_LOCKED) {
 			entity->sv.ent_flags |= SVFL_IS_LOCKED_DOOR;
 		}
@@ -354,7 +354,7 @@ static void Mover_UpdateState(gentity_t *entity) {
 
 	if (!entity->sv.init) {
 		entity->sv.init = true;
-		entity->sv.className = entity->className;
+		entity->sv.classname = entity->classname;
 		entity->sv.targetname = entity->targetname;
 		entity->sv.spawnflags = entity->spawnflags.value;
 	}
@@ -366,7 +366,7 @@ Entity_UpdateState
 ================
 */
 void Entity_UpdateState(gentity_t *ent) {
-	if (ent->svFlags & SVF_MONSTER) {
+	if (ent->svflags & SVF_MONSTER) {
 		Monster_UpdateState(ent);
 	} else if (ent->flags & FL_TRAP || ent->flags & FL_TRAP_LASER_FIELD) {
 		Trap_UpdateState(ent);
@@ -383,7 +383,7 @@ static USE(info_nav_lock_use) (gentity_t *self, gentity_t *other, gentity_t *act
 	gentity_t *n = nullptr;
 
 	while ((n = G_FindByString<&gentity_t::targetname>(n, self->target))) {
-		if (!(n->svFlags & SVF_DOOR)) {
+		if (!(n->svflags & SVF_DOOR)) {
 			gi.Com_PrintFmt("{} tried targeting {}, a non-SVF_DOOR\n", *self, *n);
 			continue;
 		}
@@ -398,17 +398,17 @@ Toggles locked state on linked entity.
 void SP_info_nav_lock(gentity_t *self) {
 	if (!self->targetname) {
 		gi.Com_PrintFmt("{} missing targetname\n", *self);
-		FreeEntity(self);
+		G_FreeEntity(self);
 		return;
 	}
 
 	if (!self->target) {
 		gi.Com_PrintFmt("{} missing target\n", *self);
-		FreeEntity(self);
+		G_FreeEntity(self);
 		return;
 	}
 
-	self->svFlags |= SVF_NOCLIENT;
+	self->svflags |= SVF_NOCLIENT;
 	self->use = info_nav_lock_use;
 }
 
@@ -422,7 +422,7 @@ const gentity_t *FindLocalPlayer() {
 
 	const gentity_t *ent = &g_entities[0];
 	for (size_t i = 0; i < globals.num_entities; i++, ent++) {
-		if (!ent->inUse || !(ent->svFlags & SVF_PLAYER)) {
+		if (!ent->inuse || !(ent->svflags & SVF_PLAYER)) {
 			continue;
 		}
 
@@ -447,7 +447,7 @@ const gentity_t *FindFirstBot() {
 
 	const gentity_t *ent = &g_entities[0];
 	for (size_t i = 0; i < globals.num_entities; i++, ent++) {
-		if (!ent->inUse || !(ent->svFlags & SVF_PLAYER)) {
+		if (!ent->inuse || !(ent->svflags & SVF_PLAYER)) {
 			continue;
 		}
 
@@ -455,7 +455,7 @@ const gentity_t *FindFirstBot() {
 			continue;
 		}
 
-		if (!(ent->svFlags & SVF_BOT)) {
+		if (!(ent->svflags & SVF_BOT)) {
 			continue;
 		}
 
@@ -476,7 +476,7 @@ const gentity_t *FindFirstMonster() {
 
 	const gentity_t *ent = &g_entities[0];
 	for (size_t i = 0; i < globals.num_entities; i++, ent++) {
-		if (!ent->inUse || !(ent->svFlags & SVF_MONSTER)) {
+		if (!ent->inuse || !(ent->svflags & SVF_MONSTER)) {
 			continue;
 		}
 
@@ -499,25 +499,25 @@ FindFirstMonster
 ================
 */
 const gentity_t *FindActorUnderCrosshair(const gentity_t *player) {
-	if (player == nullptr || !player->inUse) {
+	if (player == nullptr || !player->inuse) {
 		return nullptr;
 	}
 
 	vec3_t forward, right, up;
-	AngleVectors(player->client->vAngle, forward, right, up);
+	AngleVectors(player->client->v_angle, forward, right, up);
 
-	const vec3_t eye_position = (player->s.origin + vec3_t{ 0.0f, 0.0f, (float)player->viewHeight });
+	const vec3_t eye_position = (player->s.origin + vec3_t{ 0.0f, 0.0f, (float)player->viewheight });
 	const vec3_t end = (eye_position + (forward * 8192.0f));
 	const contents_t mask = (MASK_PROJECTILE & ~CONTENTS_DEADMONSTER);
 
 	trace_t tr = gi.traceline(eye_position, end, player, mask);
 
 	const gentity_t *traceEnt = tr.ent;
-	if (traceEnt == nullptr || !tr.ent->inUse) {
+	if (traceEnt == nullptr || !tr.ent->inuse) {
 		return nullptr;
 	}
 
-	if (!(traceEnt->svFlags & SVF_PLAYER) && !(traceEnt->svFlags & SVF_MONSTER)) {
+	if (!(traceEnt->svflags & SVF_PLAYER) && !(traceEnt->svflags & SVF_MONSTER)) {
 		return nullptr;
 	}
 

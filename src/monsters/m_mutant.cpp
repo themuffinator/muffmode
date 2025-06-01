@@ -127,7 +127,7 @@ MONSTERINFO_STAND(mutant_stand) (gentity_t *self) -> void {
 
 static void mutant_idle_loop(gentity_t *self) {
 	if (frandom() < 0.75f)
-		self->monsterInfo.nextframe = FRAME_stand155;
+		self->monsterinfo.nextframe = FRAME_stand155;
 }
 
 mframe_t mutant_frames_idle[] = {
@@ -203,7 +203,7 @@ mframe_t mutant_frames_run[] = {
 MMOVE_T(mutant_move_run) = { FRAME_run03, FRAME_run08, mutant_frames_run, nullptr };
 
 MONSTERINFO_RUN(mutant_run) (gentity_t *self) -> void {
-	if (self->monsterInfo.aiflags & AI_STAND_GROUND)
+	if (self->monsterinfo.aiflags & AI_STAND_GROUND)
 		M_SetAnimation(self, &mutant_move_stand);
 	else
 		M_SetAnimation(self, &mutant_move_run);
@@ -219,7 +219,7 @@ static void mutant_hit_left(gentity_t *self) {
 		gi.sound(self, CHAN_WEAPON, sound_hit, 1, ATTN_NORM, 0);
 	else {
 		gi.sound(self, CHAN_WEAPON, sound_swing, 1, ATTN_NORM, 0);
-		self->monsterInfo.melee_debounce_time = level.time + 1.5_sec;
+		self->monsterinfo.melee_debounce_time = level.time + 1.5_sec;
 	}
 }
 
@@ -229,16 +229,16 @@ static void mutant_hit_right(gentity_t *self) {
 		gi.sound(self, CHAN_WEAPON, sound_hit2, 1, ATTN_NORM, 0);
 	else {
 		gi.sound(self, CHAN_WEAPON, sound_swing, 1, ATTN_NORM, 0);
-		self->monsterInfo.melee_debounce_time = level.time + 1.5_sec;
+		self->monsterinfo.melee_debounce_time = level.time + 1.5_sec;
 	}
 }
 
 static void mutant_check_refire(gentity_t *self) {
-	if (!self->enemy || !self->enemy->inUse || self->enemy->health <= 0)
+	if (!self->enemy || !self->enemy->inuse || self->enemy->health <= 0)
 		return;
 
-	if ((self->monsterInfo.melee_debounce_time <= level.time) && ((frandom() < 0.5f) || (range_to(self, self->enemy) <= RANGE_MELEE)))
-		self->monsterInfo.nextframe = FRAME_attack09;
+	if ((self->monsterinfo.melee_debounce_time <= level.time) && ((frandom() < 0.5f) || (range_to(self, self->enemy) <= RANGE_MELEE)))
+		self->monsterinfo.nextframe = FRAME_attack09;
 }
 
 mframe_t mutant_frames_attack[] = {
@@ -260,13 +260,13 @@ MONSTERINFO_MELEE(mutant_melee) (gentity_t *self) -> void {
 // ATTACK
 //
 
-static TOUCH(mutant_jump_touch) (gentity_t *self, gentity_t *other, const trace_t &tr, bool otherTouchingSelf) -> void {
+static TOUCH(mutant_jump_touch) (gentity_t *self, gentity_t *other, const trace_t &tr, bool other_touching_self) -> void {
 	if (self->health <= 0) {
 		self->touch = nullptr;
 		return;
 	}
 
-	if (self->style == 1 && other->takeDamage) {
+	if (self->style == 1 && other->takedamage) {
 		// [Paril-KEX] only if we're actually moving fast enough to hurt
 		if (self->velocity.length() > 30) {
 			vec3_t point;
@@ -277,14 +277,14 @@ static TOUCH(mutant_jump_touch) (gentity_t *self, gentity_t *other, const trace_
 			normal.normalize();
 			point = self->s.origin + (normal * self->maxs[0]);
 			damage = (int)frandom(40, 50);
-			Damage(other, self, self, self->velocity, point, normal, damage, damage, DAMAGE_NONE, MOD_UNKNOWN);
+			T_Damage(other, self, self, self->velocity, point, normal, damage, damage, DAMAGE_NONE, MOD_UNKNOWN);
 			self->style = 0;
 		}
 	}
 
 	if (!M_CheckBottom(self)) {
-		if (self->groundEntity) {
-			self->monsterInfo.nextframe = FRAME_attack02;
+		if (self->groundentity) {
+			self->monsterinfo.nextframe = FRAME_attack02;
 			self->touch = nullptr;
 		}
 		return;
@@ -301,9 +301,9 @@ static void mutant_jump_takeoff(gentity_t *self) {
 	self->s.origin[2] += 1;
 	self->velocity = forward * 425;
 	self->velocity[2] = 160;
-	self->groundEntity = nullptr;
-	self->monsterInfo.aiflags |= AI_DUCKED;
-	self->monsterInfo.attack_finished = level.time + 3_sec;
+	self->groundentity = nullptr;
+	self->monsterinfo.aiflags |= AI_DUCKED;
+	self->monsterinfo.attack_finished = level.time + 3_sec;
 	self->style = 1;
 	self->touch = mutant_jump_touch;
 }
@@ -311,23 +311,23 @@ static void mutant_jump_takeoff(gentity_t *self) {
 static void mutant_check_landing(gentity_t *self) {
 	monster_jump_finished(self);
 
-	if (self->groundEntity) {
+	if (self->groundentity) {
 		gi.sound(self, CHAN_WEAPON, sound_thud, 1, ATTN_NORM, 0);
-		self->monsterInfo.attack_finished = level.time + random_time(500_ms, 1.5_sec);
+		self->monsterinfo.attack_finished = level.time + random_time(500_ms, 1.5_sec);
 
-		if (self->monsterInfo.unduck)
-			self->monsterInfo.unduck(self);
+		if (self->monsterinfo.unduck)
+			self->monsterinfo.unduck(self);
 
 		if (range_to(self, self->enemy) <= RANGE_MELEE * 2.f)
-			self->monsterInfo.melee(self);
+			self->monsterinfo.melee(self);
 
 		return;
 	}
 
-	if (level.time > self->monsterInfo.attack_finished)
-		self->monsterInfo.nextframe = FRAME_attack02;
+	if (level.time > self->monsterinfo.attack_finished)
+		self->monsterinfo.nextframe = FRAME_attack02;
 	else
-		self->monsterInfo.nextframe = FRAME_attack05;
+		self->monsterinfo.nextframe = FRAME_attack05;
 }
 
 mframe_t mutant_frames_jump[] = {
@@ -351,7 +351,7 @@ MONSTERINFO_ATTACK(mutant_jump) (gentity_t *self) -> void {
 //
 
 static bool mutant_check_melee(gentity_t *self) {
-	return range_to(self, self->enemy) <= RANGE_MELEE && self->monsterInfo.melee_debounce_time <= level.time;
+	return range_to(self, self->enemy) <= RANGE_MELEE && self->monsterinfo.melee_debounce_time <= level.time;
 }
 
 static bool mutant_check_jump(gentity_t *self) {
@@ -359,11 +359,11 @@ static bool mutant_check_jump(gentity_t *self) {
 	float  distance;
 
 	// Paril: no harm in letting them jump down if you're below them
-	// if (self->absMin[2] > (self->enemy->absMin[2] + 0.75 * self->enemy->size[2]))
+	// if (self->absmin[2] > (self->enemy->absmin[2] + 0.75 * self->enemy->size[2]))
 	//	return false;
 
 	// don't jump if there's no way we can reach standing height
-	if (self->absMin[2] + 125 < self->enemy->absMin[2])
+	if (self->absmin[2] + 125 < self->enemy->absmin[2])
 		return false;
 
 	v[0] = self->s.origin[0] - self->enemy->s.origin[0];
@@ -372,13 +372,13 @@ static bool mutant_check_jump(gentity_t *self) {
 	distance = v.length();
 
 	// if we're not trying to avoid a melee, then don't jump
-	if (distance < 100 && self->monsterInfo.melee_debounce_time <= level.time)
+	if (distance < 100 && self->monsterinfo.melee_debounce_time <= level.time)
 		return false;
 	// only use it to close distance gaps
 	if (distance > 265)
 		return false;
 
-	return self->monsterInfo.attack_finished < level.time && brandom();
+	return self->monsterinfo.attack_finished < level.time && brandom();
 }
 
 MONSTERINFO_CHECKATTACK(mutant_checkattack) (gentity_t *self) -> bool {
@@ -386,12 +386,12 @@ MONSTERINFO_CHECKATTACK(mutant_checkattack) (gentity_t *self) -> bool {
 		return false;
 
 	if (mutant_check_melee(self)) {
-		self->monsterInfo.attack_state = AS_MELEE;
+		self->monsterinfo.attack_state = AS_MELEE;
 		return true;
 	}
 
 	if (!self->spawnflags.has(SPAWNFLAG_MUTANT_NOJUMPING) && mutant_check_jump(self)) {
-		self->monsterInfo.attack_state = AS_MISSILE;
+		self->monsterinfo.attack_state = AS_MISSILE;
 		return true;
 	}
 
@@ -476,7 +476,7 @@ MONSTERINFO_SETSKIN(mutant_setskin) (gentity_t *self) -> void {
 
 static void mutant_shrink(gentity_t *self) {
 	self->maxs[2] = 0;
-	self->svFlags |= SVF_DEADMONSTER;
+	self->svflags |= SVF_DEADMONSTER;
 	gi.linkentity(self);
 }
 
@@ -531,16 +531,16 @@ static DIE(mutant_die) (gentity_t *self, gentity_t *inflictor, gentity_t *attack
 			{ "models/monsters/mutant/gibs/head.md2", GIB_SKINNED | GIB_HEAD }
 			});
 
-		self->deadFlag = true;
+		self->deadflag = true;
 		return;
 	}
 
-	if (self->deadFlag)
+	if (self->deadflag)
 		return;
 
 	gi.sound(self, CHAN_VOICE, sound_death, 1, ATTN_NORM, 0);
-	self->deadFlag = true;
-	self->takeDamage = true;
+	self->deadflag = true;
+	self->takedamage = true;
 
 	if (frandom() < 0.5f)
 		M_SetAnimation(self, &mutant_move_death1);
@@ -565,10 +565,10 @@ static void mutant_jump_up(gentity_t *self) {
 }
 
 static void mutant_jump_wait_land(gentity_t *self) {
-	if (!monster_jump_finished(self) && self->groundEntity == nullptr)
-		self->monsterInfo.nextframe = self->s.frame;
+	if (!monster_jump_finished(self) && self->groundentity == nullptr)
+		self->monsterinfo.nextframe = self->s.frame;
 	else
-		self->monsterInfo.nextframe = self->s.frame + 1;
+		self->monsterinfo.nextframe = self->s.frame + 1;
 }
 
 mframe_t mutant_frames_jump_up[] = {
@@ -626,7 +626,7 @@ model="models/monsters/mutant/tris.md2"
 */
 void SP_monster_mutant(gentity_t *self) {
 	if (!M_AllowSpawn(self)) {
-		FreeEntity(self);
+		G_FreeEntity(self);
 		return;
 	}
 
@@ -644,9 +644,9 @@ void SP_monster_mutant(gentity_t *self) {
 	sound_step3.assign("mutant/step3.wav");
 	sound_thud.assign("mutant/thud1.wav");
 
-	self->monsterInfo.aiflags |= AI_STINKY;
+	self->monsterinfo.aiflags |= AI_STINKY;
 
-	self->moveType = MOVETYPE_STEP;
+	self->movetype = MOVETYPE_STEP;
 	self->solid = SOLID_BBOX;
 	self->s.modelindex = gi.modelindex("models/monsters/mutant/tris.md2");
 
@@ -659,35 +659,35 @@ void SP_monster_mutant(gentity_t *self) {
 	self->maxs = { 18, 18, 30 };
 
 	self->health = 300 * st.health_multiplier;
-	self->gibHealth = -120;
+	self->gib_health = -120;
 	self->mass = 300;
 
 	self->pain = mutant_pain;
 	self->die = mutant_die;
 
-	self->monsterInfo.stand = mutant_stand;
-	self->monsterInfo.walk = mutant_walk;
-	self->monsterInfo.run = mutant_run;
-	self->monsterInfo.dodge = nullptr;
-	self->monsterInfo.attack = mutant_jump;
-	self->monsterInfo.melee = mutant_melee;
-	self->monsterInfo.sight = mutant_sight;
-	self->monsterInfo.search = mutant_search;
-	self->monsterInfo.idle = mutant_idle;
-	self->monsterInfo.checkattack = mutant_checkattack;
-	self->monsterInfo.blocked = mutant_blocked;
-	self->monsterInfo.setskin = mutant_setskin;
+	self->monsterinfo.stand = mutant_stand;
+	self->monsterinfo.walk = mutant_walk;
+	self->monsterinfo.run = mutant_run;
+	self->monsterinfo.dodge = nullptr;
+	self->monsterinfo.attack = mutant_jump;
+	self->monsterinfo.melee = mutant_melee;
+	self->monsterinfo.sight = mutant_sight;
+	self->monsterinfo.search = mutant_search;
+	self->monsterinfo.idle = mutant_idle;
+	self->monsterinfo.checkattack = mutant_checkattack;
+	self->monsterinfo.blocked = mutant_blocked;
+	self->monsterinfo.setskin = mutant_setskin;
 
 	gi.linkentity(self);
 
 	M_SetAnimation(self, &mutant_move_stand);
 
-	self->monsterInfo.combat_style = COMBAT_MELEE;
+	self->monsterinfo.combat_style = COMBAT_MELEE;
 
-	self->monsterInfo.scale = MODEL_SCALE;
-	self->monsterInfo.can_jump = !(self->spawnflags & SPAWNFLAG_MUTANT_NOJUMPING);
-	self->monsterInfo.drop_height = 256;
-	self->monsterInfo.jump_height = 68;
+	self->monsterinfo.scale = MODEL_SCALE;
+	self->monsterinfo.can_jump = !(self->spawnflags & SPAWNFLAG_MUTANT_NOJUMPING);
+	self->monsterinfo.drop_height = 256;
+	self->monsterinfo.jump_height = 68;
 
 	walkmonster_start(self);
 }

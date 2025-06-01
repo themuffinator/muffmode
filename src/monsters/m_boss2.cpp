@@ -278,7 +278,7 @@ static void Boss2HyperBlaster(gentity_t *self) {
 	AngleVectors(self->s.angles, forward, right, nullptr);
 	start = M_ProjectFlashSource(self, monster_flash_offset[id], forward, right);
 	target = self->enemy->s.origin;
-	target[2] += self->enemy->viewHeight;
+	target[2] += self->enemy->viewheight;
 	forward = target - start;
 	forward.normalize();
 
@@ -446,7 +446,7 @@ MONSTERINFO_STAND(boss2_stand) (gentity_t *self) -> void {
 }
 
 MONSTERINFO_RUN(boss2_run) (gentity_t *self) -> void {
-	if (self->monsterInfo.aiflags & AI_STAND_GROUND)
+	if (self->monsterinfo.aiflags & AI_STAND_GROUND)
 		M_SetAnimation(self, &boss2_move_stand);
 	else
 		M_SetAnimation(self, &boss2_move_run);
@@ -546,8 +546,8 @@ static void boss2_gib(gentity_t *self) {
 void boss2_dead(gentity_t *self) {
 	// no blowy on deady
 	if (self->spawnflags.has(SPAWNFLAG_MONSTER_DEAD)) {
-		self->deadFlag = false;
-		self->takeDamage = true;
+		self->deadflag = false;
+		self->takedamage = true;
 		return;
 	}
 
@@ -559,16 +559,16 @@ static DIE(boss2_die) (gentity_t *self, gentity_t *inflictor, gentity_t *attacke
 		// check for gib
 		if (M_CheckGib(self, mod)) {
 			boss2_gib(self);
-			self->deadFlag = true;
+			self->deadflag = true;
 			return;
 		}
 
-		if (self->deadFlag)
+		if (self->deadflag)
 			return;
 	} else {
 		gi.sound(self, CHAN_VOICE, sound_death, 1, ATTN_NONE, 0);
-		self->deadFlag = true;
-		self->takeDamage = false;
+		self->deadflag = true;
+		self->takedamage = false;
 		self->count = 0;
 		self->velocity = {};
 		self->gravityVector.z *= 0.30f;
@@ -586,7 +586,7 @@ MONSTERINFO_CHECKATTACK(Boss2_CheckAttack) (gentity_t *self) -> bool {
  */
 void SP_monster_boss2(gentity_t *self) {
 	if (!M_AllowSpawn(self)) {
-		FreeEntity(self);
+		G_FreeEntity(self);
 		return;
 	}
 
@@ -603,9 +603,9 @@ void SP_monster_boss2(gentity_t *self) {
 	else
 		gi.soundindex("infantry/infatck1.wav");
 
-	self->monsterInfo.weapon_sound = gi.soundindex("bosshovr/bhvengn1.wav");
+	self->monsterinfo.weapon_sound = gi.soundindex("bosshovr/bhvengn1.wav");
 
-	self->moveType = MOVETYPE_STEP;
+	self->movetype = MOVETYPE_STEP;
 	self->solid = SOLID_BBOX;
 	self->s.modelindex = gi.modelindex("models/monsters/boss2/tris.md2");
 
@@ -624,7 +624,7 @@ void SP_monster_boss2(gentity_t *self) {
 	self->maxs = { 56, 56, 80 };
 
 	self->health = 2000 * st.health_multiplier;
-	self->gibHealth = -200;
+	self->gib_health = -200;
 	self->mass = 1000;
 
 	self->yaw_speed = 50;
@@ -634,20 +634,20 @@ void SP_monster_boss2(gentity_t *self) {
 	self->pain = boss2_pain;
 	self->die = boss2_die;
 
-	self->monsterInfo.stand = boss2_stand;
-	self->monsterInfo.walk = boss2_walk;
-	self->monsterInfo.run = boss2_run;
-	self->monsterInfo.attack = boss2_attack;
-	self->monsterInfo.search = boss2_search;
-	self->monsterInfo.checkattack = Boss2_CheckAttack;
-	self->monsterInfo.setskin = boss2_setskin;
+	self->monsterinfo.stand = boss2_stand;
+	self->monsterinfo.walk = boss2_walk;
+	self->monsterinfo.run = boss2_run;
+	self->monsterinfo.attack = boss2_attack;
+	self->monsterinfo.search = boss2_search;
+	self->monsterinfo.checkattack = Boss2_CheckAttack;
+	self->monsterinfo.setskin = boss2_setskin;
 	gi.linkentity(self);
 
 	M_SetAnimation(self, &boss2_move_stand);
-	self->monsterInfo.scale = MODEL_SCALE;
+	self->monsterinfo.scale = MODEL_SCALE;
 
 	// [Paril-KEX]
-	self->monsterInfo.aiflags |= AI_IGNORE_SHOTS;
+	self->monsterinfo.aiflags |= AI_IGNORE_SHOTS;
 
 	flymonster_start(self);
 }

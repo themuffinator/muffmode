@@ -22,9 +22,9 @@ bool blocked_checkplat(gentity_t *self, float dist) {
 		return false;
 
 	// check player's relative altitude
-	if (self->enemy->absMin[2] >= self->absMax[2])
+	if (self->enemy->absmin[2] >= self->absmax[2])
 		playerPosition = 1;
-	else if (self->enemy->absMax[2] <= self->absMin[2])
+	else if (self->enemy->absmax[2] <= self->absmin[2])
 		playerPosition = -1;
 	else
 		playerPosition = 0;
@@ -36,9 +36,9 @@ bool blocked_checkplat(gentity_t *self, float dist) {
 	plat = nullptr;
 
 	// see if we're already standing on a plat.
-	if (self->groundEntity && self->groundEntity != world) {
-		if (!strncmp(self->groundEntity->className, "func_plat", 8))
-			plat = self->groundEntity;
+	if (self->groundentity && self->groundentity != world) {
+		if (!strncmp(self->groundentity->classname, "func_plat", 8))
+			plat = self->groundentity;
 	}
 
 	// if we're not, check to see if we'll step onto one with this move
@@ -50,7 +50,7 @@ bool blocked_checkplat(gentity_t *self, float dist) {
 
 		trace = gi.traceline(pt1, pt2, self, MASK_MONSTERSOLID);
 		if (trace.fraction < 1 && !trace.allsolid && !trace.startsolid) {
-			if (!strncmp(trace.ent->className, "func_plat", 8)) {
+			if (!strncmp(trace.ent->classname, "func_plat", 8)) {
 				plat = trace.ent;
 			}
 		}
@@ -59,14 +59,14 @@ bool blocked_checkplat(gentity_t *self, float dist) {
 	// if we've found a plat, trigger it.
 	if (plat && plat->use) {
 		if (playerPosition == 1) {
-			if ((self->groundEntity == plat && plat->moveinfo.state == STATE_BOTTOM) ||
-				(self->groundEntity != plat && plat->moveinfo.state == STATE_TOP)) {
+			if ((self->groundentity == plat && plat->moveinfo.state == STATE_BOTTOM) ||
+				(self->groundentity != plat && plat->moveinfo.state == STATE_TOP)) {
 				plat->use(plat, self, self);
 				return true;
 			}
 		} else if (playerPosition == -1) {
-			if ((self->groundEntity == plat && plat->moveinfo.state == STATE_TOP) ||
-				(self->groundEntity != plat && plat->moveinfo.state == STATE_BOTTOM)) {
+			if ((self->groundentity == plat && plat->moveinfo.state == STATE_TOP) ||
+				(self->groundentity != plat && plat->moveinfo.state == STATE_BOTTOM)) {
 				plat->use(plat, self, self);
 				return true;
 			}
@@ -83,7 +83,7 @@ bool blocked_checkplat(gentity_t *self, float dist) {
 static inline void monster_jump_start(gentity_t *self) {
 	monster_done_dodge(self);
 
-	self->monsterInfo.jump_time = level.time + 3_sec;
+	self->monsterinfo.jump_time = level.time + 3_sec;
 }
 
 bool monster_jump_finished(gentity_t *self) {
@@ -100,30 +100,30 @@ bool monster_jump_finished(gentity_t *self) {
 		self->velocity.z = z_velocity;
 	}
 
-	return self->monsterInfo.jump_time < level.time;
+	return self->monsterinfo.jump_time < level.time;
 }
 
 // blocked_checkjump
 //	dist: how far they are trying to walk.
-//  self->monsterInfo.drop_height/self->monsterInfo.jump_height: how far they'll ok a jump for. set to 0 to disable that direction.
+//  self->monsterinfo.drop_height/self->monsterinfo.jump_height: how far they'll ok a jump for. set to 0 to disable that direction.
 blocked_jump_result_t blocked_checkjump(gentity_t *self, float dist) {
 	// can't jump even if we physically can
-	if (!self->monsterInfo.can_jump)
+	if (!self->monsterinfo.can_jump)
 		return blocked_jump_result_t::NO_JUMP;
 	// no enemy to path to
 	else if (!self->enemy)
 		return blocked_jump_result_t::NO_JUMP;
 
 	// we just jumped recently, don't try again
-	if (self->monsterInfo.jump_time > level.time)
+	if (self->monsterinfo.jump_time > level.time)
 		return blocked_jump_result_t::NO_JUMP;
 
 	// if we're pathing, the nodes will ensure we can reach the destination.
-	if (self->monsterInfo.aiflags & AI_PATHING) {
-		if (self->monsterInfo.nav_path.returnCode != PathReturnCode::TraversalPending)
+	if (self->monsterinfo.aiflags & AI_PATHING) {
+		if (self->monsterinfo.nav_path.returnCode != PathReturnCode::TraversalPending)
 			return blocked_jump_result_t::NO_JUMP;
 
-		float yaw = vectoyaw((self->monsterInfo.nav_path.firstMovePoint - self->monsterInfo.nav_path.secondMovePoint).normalized());
+		float yaw = vectoyaw((self->monsterinfo.nav_path.firstMovePoint - self->monsterinfo.nav_path.secondMovePoint).normalized());
 		self->ideal_yaw = yaw + 180;
 		if (self->ideal_yaw > 360)
 			self->ideal_yaw -= 360;
@@ -135,7 +135,7 @@ blocked_jump_result_t blocked_checkjump(gentity_t *self, float dist) {
 
 		monster_jump_start(self);
 
-		if (self->monsterInfo.nav_path.secondMovePoint.z > self->monsterInfo.nav_path.firstMovePoint.z)
+		if (self->monsterinfo.nav_path.secondMovePoint.z > self->monsterinfo.nav_path.firstMovePoint.z)
 			return blocked_jump_result_t::JUMP_JUMP_UP;
 		else
 			return blocked_jump_result_t::JUMP_JUMP_DOWN;
@@ -148,23 +148,23 @@ blocked_jump_result_t blocked_checkjump(gentity_t *self, float dist) {
 
 	AngleVectors(self->s.angles, forward, nullptr, up);
 
-	if (self->monsterInfo.aiflags & AI_PATHING) {
-		if (self->monsterInfo.nav_path.secondMovePoint[2] > (self->absMin[2] + (self->s.origin[2] < 0 ? STEPSIZE_BELOW : STEPSIZE)))
+	if (self->monsterinfo.aiflags & AI_PATHING) {
+		if (self->monsterinfo.nav_path.secondMovePoint[2] > (self->absmin[2] + (self->s.origin[2] < 0 ? STEPSIZE_BELOW : STEPSIZE)))
 			playerPosition = 1;
-		else if (self->monsterInfo.nav_path.secondMovePoint[2] < (self->absMin[2] - (self->s.origin[2] < 0 ? STEPSIZE_BELOW : STEPSIZE)))
+		else if (self->monsterinfo.nav_path.secondMovePoint[2] < (self->absmin[2] - (self->s.origin[2] < 0 ? STEPSIZE_BELOW : STEPSIZE)))
 			playerPosition = -1;
 		else
 			playerPosition = 0;
 	} else {
-		if (self->enemy->absMin[2] > (self->absMin[2] + (self->s.origin[2] < 0 ? STEPSIZE_BELOW : STEPSIZE)))
+		if (self->enemy->absmin[2] > (self->absmin[2] + (self->s.origin[2] < 0 ? STEPSIZE_BELOW : STEPSIZE)))
 			playerPosition = 1;
-		else if (self->enemy->absMin[2] < (self->absMin[2] - (self->s.origin[2] < 0 ? STEPSIZE_BELOW : STEPSIZE)))
+		else if (self->enemy->absmin[2] < (self->absmin[2] - (self->s.origin[2] < 0 ? STEPSIZE_BELOW : STEPSIZE)))
 			playerPosition = -1;
 		else
 			playerPosition = 0;
 	}
 
-	if (playerPosition == -1 && self->monsterInfo.drop_height) {
+	if (playerPosition == -1 && self->monsterinfo.drop_height) {
 		// check to make sure we can even get to the spot we're going to "fall" from
 		pt1 = self->s.origin + (forward * 48);
 		trace = gi.trace(self->s.origin, self->mins, self->maxs, pt1, self, MASK_MONSTERSOLID);
@@ -172,7 +172,7 @@ blocked_jump_result_t blocked_checkjump(gentity_t *self, float dist) {
 			return blocked_jump_result_t::NO_JUMP;
 
 		pt2 = pt1;
-		pt2[2] = self->absMin[2] - self->monsterInfo.drop_height - 1;
+		pt2[2] = self->absmin[2] - self->monsterinfo.drop_height - 1;
 
 		trace = gi.traceline(pt1, pt2, self, MASK_MONSTERSOLID | MASK_WATER);
 		if (trace.fraction < 1 && !trace.allsolid && !trace.startsolid) {
@@ -188,12 +188,12 @@ blocked_jump_result_t blocked_checkjump(gentity_t *self, float dist) {
 					return blocked_jump_result_t::NO_JUMP;
 			}
 
-			if ((self->absMin[2] - trace.endpos[2]) >= 24 && (trace.contents & (MASK_SOLID | CONTENTS_WATER))) {
-				if (self->monsterInfo.aiflags & AI_PATHING) {
-					if ((self->monsterInfo.nav_path.secondMovePoint[2] - trace.endpos[2]) > 32)
+			if ((self->absmin[2] - trace.endpos[2]) >= 24 && (trace.contents & (MASK_SOLID | CONTENTS_WATER))) {
+				if (self->monsterinfo.aiflags & AI_PATHING) {
+					if ((self->monsterinfo.nav_path.secondMovePoint[2] - trace.endpos[2]) > 32)
 						return blocked_jump_result_t::NO_JUMP;
 				} else {
-					if ((self->enemy->absMin[2] - trace.endpos[2]) > 32)
+					if ((self->enemy->absmin[2] - trace.endpos[2]) > 32)
 						return blocked_jump_result_t::NO_JUMP;
 
 					if (trace.plane.normal[2] < 0.9f)
@@ -205,14 +205,14 @@ blocked_jump_result_t blocked_checkjump(gentity_t *self, float dist) {
 				return blocked_jump_result_t::JUMP_JUMP_DOWN;
 			}
 		}
-	} else if (playerPosition == 1 && self->monsterInfo.jump_height) {
+	} else if (playerPosition == 1 && self->monsterinfo.jump_height) {
 		pt1 = self->s.origin + (forward * 48);
 		pt2 = pt1;
-		pt1[2] = self->absMax[2] + self->monsterInfo.jump_height;
+		pt1[2] = self->absmax[2] + self->monsterinfo.jump_height;
 
 		trace = gi.traceline(pt1, pt2, self, MASK_MONSTERSOLID | MASK_WATER);
 		if (trace.fraction < 1 && !trace.allsolid && !trace.startsolid) {
-			if ((trace.endpos[2] - self->absMin[2]) <= self->monsterInfo.jump_height && (trace.contents & (MASK_SOLID | CONTENTS_WATER))) {
+			if ((trace.endpos[2] - self->absmin[2]) <= self->monsterinfo.jump_height && (trace.contents & (MASK_SOLID | CONTENTS_WATER))) {
 				face_wall(self);
 
 				monster_jump_start(self);
@@ -325,12 +325,12 @@ static void hintpath_go(gentity_t *self, gentity_t *point) {
 
 	self->ideal_yaw = vectoyaw(dir);
 	self->goalentity = self->movetarget = point;
-	self->monsterInfo.pausetime = 0_ms;
-	self->monsterInfo.aiflags |= AI_HINT_PATH;
-	self->monsterInfo.aiflags &= ~(AI_SOUND_TARGET | AI_PURSUIT_LAST_SEEN | AI_PURSUE_NEXT | AI_PURSUE_TEMP);
+	self->monsterinfo.pausetime = 0_ms;
+	self->monsterinfo.aiflags |= AI_HINT_PATH;
+	self->monsterinfo.aiflags &= ~(AI_SOUND_TARGET | AI_PURSUIT_LAST_SEEN | AI_PURSUE_NEXT | AI_PURSUE_TEMP);
 	// run for it
-	self->monsterInfo.search_time = level.time;
-	self->monsterInfo.run(self);
+	self->monsterinfo.search_time = level.time;
+	self->monsterinfo.run(self);
 }
 
 // =============
@@ -339,9 +339,9 @@ static void hintpath_go(gentity_t *self, gentity_t *point) {
 void hintpath_stop(gentity_t *self) {
 	self->goalentity = nullptr;
 	self->movetarget = nullptr;
-	self->monsterInfo.last_hint_time = level.time;
-	self->monsterInfo.goal_hint = nullptr;
-	self->monsterInfo.aiflags &= ~AI_HINT_PATH;
+	self->monsterinfo.last_hint_time = level.time;
+	self->monsterinfo.goal_hint = nullptr;
+	self->monsterinfo.aiflags &= ~AI_HINT_PATH;
 	if (has_valid_enemy(self)) {
 		// if we can see our target, go nuts
 		if (visible(self, self->enemy)) {
@@ -358,8 +358,8 @@ void hintpath_stop(gentity_t *self) {
 	// will just revert to walking with no target and
 	// the monsters will wonder around aimlessly trying
 	// to hunt the world entity
-	self->monsterInfo.pausetime = HOLD_FOREVER;
-	self->monsterInfo.stand(self);
+	self->monsterinfo.pausetime = HOLD_FOREVER;
+	self->monsterinfo.stand(self);
 }
 
 // =============
@@ -386,10 +386,10 @@ bool monsterlost_checkhint(gentity_t *self) {
 		return false;
 
 	// [Paril-KEX] don't do hint paths if we're using nav nodes
-	if (self->monsterInfo.aiflags & (AI_STAND_GROUND | AI_PATHING))
+	if (self->monsterinfo.aiflags & (AI_STAND_GROUND | AI_PATHING))
 		return false;
 
-	if (!strcmp(self->className, "monster_turret"))
+	if (!strcmp(self->classname, "monster_turret"))
 		return false;
 
 	monster_pathchain = nullptr;
@@ -629,7 +629,7 @@ bool monsterlost_checkhint(gentity_t *self) {
 
 	destination = closest;
 
-	self->monsterInfo.goal_hint = destination;
+	self->monsterinfo.goal_hint = destination;
 	hintpath_go(self, start);
 
 	return true;
@@ -642,13 +642,13 @@ bool monsterlost_checkhint(gentity_t *self) {
 // =============
 // hint_path_touch - someone's touched the hint_path
 // =============
-static TOUCH(hint_path_touch) (gentity_t *self, gentity_t *other, const trace_t &tr, bool otherTouchingSelf) -> void {
+static TOUCH(hint_path_touch) (gentity_t *self, gentity_t *other, const trace_t &tr, bool other_touching_self) -> void {
 	gentity_t *e, *goal, *next = nullptr;
 	bool goalFound = false;
 
 	// make sure we're the target of it's obsession
 	if (other->movetarget == self) {
-		goal = other->monsterInfo.goal_hint;
+		goal = other->monsterinfo.goal_hint;
 
 		// if the monster is where he wants to be
 		if (goal == self) {
@@ -687,7 +687,7 @@ static TOUCH(hint_path_touch) (gentity_t *self, gentity_t *other, const trace_t 
 		// have the monster freeze if the hint path we just touched has a wait time
 		// on it, for example, when riding a plat.
 		if (self->wait)
-			other->nextThink = level.time + gtime_t::from_sec(self->wait);
+			other->nextthink = level.time + gtime_t::from_sec(self->wait);
 	}
 }
 
@@ -700,13 +700,13 @@ END - set this flag on the endpoints of each hintpath.
 */
 void SP_hint_path(gentity_t *self) {
 	if (deathmatch->integer) {
-		FreeEntity(self);
+		G_FreeEntity(self);
 		return;
 	}
 
 	if (!self->targetname && !self->target) {
 		gi.Com_PrintFmt("{}: unlinked\n", *self);
-		FreeEntity(self);
+		G_FreeEntity(self);
 		return;
 	}
 
@@ -714,7 +714,7 @@ void SP_hint_path(gentity_t *self) {
 	self->touch = hint_path_touch;
 	self->mins = { -8, -8, -8 };
 	self->maxs = { 8, 8, 8 };
-	self->svFlags |= SVF_NOCLIENT;
+	self->svflags |= SVF_NOCLIENT;
 	gi.linkentity(self);
 }
 
@@ -728,7 +728,7 @@ void InitHintPaths() {
 	hint_paths_present = 0;
 
 	// check all the hint_paths.
-	e = G_FindByString<&gentity_t::className>(nullptr, "hint_path");
+	e = G_FindByString<&gentity_t::classname>(nullptr, "hint_path");
 	if (e)
 		hint_paths_present = 1;
 	else
@@ -752,7 +752,7 @@ void InitHintPaths() {
 				}
 			}
 		}
-		e = G_FindByString<&gentity_t::className>(e, "hint_path");
+		e = G_FindByString<&gentity_t::classname>(e, "hint_path");
 	}
 
 	for (i = 0; i < num_hint_paths; i++) {
@@ -842,7 +842,7 @@ bool face_wall(gentity_t *self) {
 // Monster "Bad" Areas
 //
 
-static TOUCH(badarea_touch) (gentity_t *ent, gentity_t *other, const trace_t &tr, bool otherTouchingSelf) -> void {}
+static TOUCH(badarea_touch) (gentity_t *ent, gentity_t *other, const trace_t &tr, bool other_touching_self) -> void {}
 
 gentity_t *SpawnBadArea(const vec3_t &mins, const vec3_t &maxs, gtime_t lifespan, gentity_t *owner) {
 	gentity_t *badarea;
@@ -851,20 +851,20 @@ gentity_t *SpawnBadArea(const vec3_t &mins, const vec3_t &maxs, gtime_t lifespan
 	origin = mins + maxs;
 	origin *= 0.5f;
 
-	badarea = Spawn();
+	badarea = G_Spawn();
 	badarea->s.origin = origin;
 
 	badarea->maxs = maxs - origin;
 	badarea->mins = mins - origin;
 	badarea->touch = badarea_touch;
-	badarea->moveType = MOVETYPE_NONE;
+	badarea->movetype = MOVETYPE_NONE;
 	badarea->solid = SOLID_TRIGGER;
-	badarea->className = "bad_area";
+	badarea->classname = "bad_area";
 	gi.linkentity(badarea);
 
 	if (lifespan) {
-		badarea->think = FreeEntity;
-		badarea->nextThink = level.time + lifespan;
+		badarea->think = G_FreeEntity;
+		badarea->nextthink = level.time + lifespan;
 	}
 	if (owner) {
 		badarea->owner = owner;
@@ -885,7 +885,7 @@ static BoxEntitiesResult_t CheckForBadArea_BoxFilter(gentity_t *hit, void *data)
 }
 
 // CheckForBadArea
-//		This is a customized version of TouchTriggers that will check
+//		This is a customized version of G_TouchTriggers that will check
 //		for bad area triggers and return them if they're touched.
 gentity_t *CheckForBadArea(gentity_t *ent) {
 	vec3_t	 mins, maxs;
@@ -914,29 +914,29 @@ bool MarkTeslaArea(gentity_t *self, gentity_t *tesla) {
 	area = nullptr;
 
 	// make sure this tesla doesn't have a bad area around it already...
-	e = tesla->teamChain;
+	e = tesla->teamchain;
 	tail = tesla;
 	while (e) {
-		tail = tail->teamChain;
-		if (!strcmp(e->className, "bad_area"))
+		tail = tail->teamchain;
+		if (!strcmp(e->classname, "bad_area"))
 			return false;
 
-		e = e->teamChain;
+		e = e->teamchain;
 	}
 
 	// see if we can grab the trigger directly
-	if (tesla->teamChain && tesla->teamChain->inUse) {
+	if (tesla->teamchain && tesla->teamchain->inuse) {
 		gentity_t *trigger;
 
-		trigger = tesla->teamChain;
+		trigger = tesla->teamchain;
 
-		mins = trigger->absMin;
-		maxs = trigger->absMax;
+		mins = trigger->absmin;
+		maxs = trigger->absmax;
 
 		if (tesla->air_finished)
 			area = SpawnBadArea(mins, maxs, tesla->air_finished, tesla);
 		else
-			area = SpawnBadArea(mins, maxs, tesla->nextThink, tesla);
+			area = SpawnBadArea(mins, maxs, tesla->nextthink, tesla);
 	}
 	// otherwise we just guess at how long it'll last.
 	else {
@@ -949,7 +949,7 @@ bool MarkTeslaArea(gentity_t *self, gentity_t *tesla) {
 
 	// if we spawned a bad area, then link it to the tesla
 	if (area)
-		tail->teamChain = area;
+		tail->teamchain = area;
 
 	return true;
 }
@@ -960,20 +960,20 @@ bool MarkTeslaArea(gentity_t *self, gentity_t *tesla) {
 // bolt_speed is how fast the shot is (or 0 for hitscan)
 // eye_height is a boolean to say whether or not to adjust to targets eye_height
 // offset is how much time to miss by
-// aimDir is the resulting aim direction (pass in nullptr if you don't want it)
+// aimdir is the resulting aim direction (pass in nullptr if you don't want it)
 // aimpoint is the resulting aimpoint (pass in nullptr if don't want it)
-void PredictAim(gentity_t *self, gentity_t *target, const vec3_t &start, float bolt_speed, bool eye_height, float offset, vec3_t *aimDir, vec3_t *aimpoint) {
+void PredictAim(gentity_t *self, gentity_t *target, const vec3_t &start, float bolt_speed, bool eye_height, float offset, vec3_t *aimdir, vec3_t *aimpoint) {
 	vec3_t dir, vec;
 	float  dist, time;
 
-	if (!target || !target->inUse) {
-		*aimDir = {};
+	if (!target || !target->inuse) {
+		*aimdir = {};
 		return;
 	}
 
 	dir = target->s.origin - start;
 	if (eye_height)
-		dir[2] += target->viewHeight;
+		dir[2] += target->viewheight;
 	dist = dir.length();
 
 	// [Paril-KEX] if our current attempt is blocked, try the opposite one
@@ -983,7 +983,7 @@ void PredictAim(gentity_t *self, gentity_t *target, const vec3_t &start, float b
 		eye_height = !eye_height;
 		dir = target->s.origin - start;
 		if (eye_height)
-			dir[2] += target->viewHeight;
+			dir[2] += target->viewheight;
 		dist = dir.length();
 	}
 
@@ -1004,10 +1004,10 @@ void PredictAim(gentity_t *self, gentity_t *target, const vec3_t &start, float b
 	}
 
 	if (eye_height)
-		vec[2] += target->viewHeight;
+		vec[2] += target->viewheight;
 
-	if (aimDir)
-		*aimDir = (vec - start).normalized();
+	if (aimdir)
+		*aimdir = (vec - start).normalized();
 
 	if (aimpoint)
 		*aimpoint = vec;
@@ -1105,8 +1105,8 @@ void drawbbox(gentity_t *self) {
 	vec3_t newbox;
 	vec3_t f, r, u, dir;
 
-	coords[0] = self->absMin;
-	coords[1] = self->absMax;
+	coords[0] = self->absmin;
+	coords[1] = self->absmax;
 
 	for (i = 0; i <= 1; i++) {
 		for (j = 0; j <= 1; j++) {
@@ -1174,9 +1174,9 @@ MONSTERINFO_DODGE(M_MonsterDodge) (gentity_t *self, gentity_t *attacker, gtime_t
 	if (self->health < 1)
 		return;
 
-	if ((self->monsterInfo.duck) && (self->monsterInfo.unduck) && !gravity)
+	if ((self->monsterinfo.duck) && (self->monsterinfo.unduck) && !gravity)
 		ducker = true;
-	if ((self->monsterInfo.sidestep) && !(self->monsterInfo.aiflags & AI_STAND_GROUND))
+	if ((self->monsterinfo.sidestep) && !(self->monsterinfo.aiflags & AI_STAND_GROUND))
 		dodger = true;
 
 	if ((!ducker) && (!dodger))
@@ -1197,24 +1197,24 @@ MONSTERINFO_DODGE(M_MonsterDodge) (gentity_t *self, gentity_t *attacker, gtime_t
 		return;
 
 	if (ducker && tr) {
-		height = self->absMax[2] - 32 - 1; // the -1 is because the absMax is s.origin + maxs + 1
+		height = self->absmax[2] - 32 - 1; // the -1 is because the absmax is s.origin + maxs + 1
 
-		if ((!dodger) && ((tr->endpos[2] <= height) || (self->monsterInfo.aiflags & AI_DUCKED)))
+		if ((!dodger) && ((tr->endpos[2] <= height) || (self->monsterinfo.aiflags & AI_DUCKED)))
 			return;
 	} else
-		height = self->absMax[2];
+		height = self->absmax[2];
 
 	if (dodger) {
 		// if we're already dodging, just finish the sequence, i.e. don't do anything else
-		if (self->monsterInfo.aiflags & AI_DODGING)
+		if (self->monsterinfo.aiflags & AI_DODGING)
 			return;
 
 		// if we're ducking already, or the shot is at our knees
-		if ((!ducker || !tr || tr->endpos[2] <= height) || (self->monsterInfo.aiflags & AI_DUCKED)) {
+		if ((!ducker || !tr || tr->endpos[2] <= height) || (self->monsterinfo.aiflags & AI_DUCKED)) {
 			// on Easy & Normal, don't sidestep as often (25% on Easy, 50% on Normal)
 			if (!G_SkillCheck({ 0.25f, 0.50f, 1.0f, 1.0f, 1.0f })) {
 				gtime_t delay = skill->integer > 3 ? random_time(400_ms, 500_ms) : random_time(0.8_sec, 1.4_sec);
-				self->monsterInfo.dodge_time = level.time + delay;
+				self->monsterinfo.dodge_time = level.time + delay;
 				return;
 			} else {
 				if (tr) {
@@ -1224,23 +1224,23 @@ MONSTERINFO_DODGE(M_MonsterDodge) (gentity_t *self, gentity_t *attacker, gtime_t
 					diff = tr->endpos - self->s.origin;
 
 					if (right.dot(diff) < 0)
-						self->monsterInfo.lefty = false;
+						self->monsterinfo.lefty = false;
 					else
-						self->monsterInfo.lefty = true;
+						self->monsterinfo.lefty = true;
 				} else
-					self->monsterInfo.lefty = brandom();
+					self->monsterinfo.lefty = brandom();
 
 				// call the monster specific code here
-				if (self->monsterInfo.sidestep(self)) {
+				if (self->monsterinfo.sidestep(self)) {
 					// if we are currently ducked, unduck
-					if ((ducker) && (self->monsterInfo.aiflags & AI_DUCKED))
-						self->monsterInfo.unduck(self);
+					if ((ducker) && (self->monsterinfo.aiflags & AI_DUCKED))
+						self->monsterinfo.unduck(self);
 
-					self->monsterInfo.aiflags |= AI_DODGING;
-					self->monsterInfo.attack_state = AS_SLIDING;
+					self->monsterinfo.aiflags |= AI_DODGING;
+					self->monsterinfo.attack_state = AS_SLIDING;
 
 					gtime_t delay = skill->integer > 3 ? random_time(400_ms, 500_ms) : random_time(0.4_sec, 2.0_sec);
-					self->monsterInfo.dodge_time = level.time + delay;
+					self->monsterinfo.dodge_time = level.time + delay;
 				}
 				return;
 			}
@@ -1250,55 +1250,55 @@ MONSTERINFO_DODGE(M_MonsterDodge) (gentity_t *self, gentity_t *attacker, gtime_t
 	// [Paril-KEX] we don't need to duck until projectiles are going to hit us very
 	// soon.
 	if (ducker && tr && eta < 0.5_sec) {
-		if (self->monsterInfo.next_duck_time > level.time)
+		if (self->monsterinfo.next_duck_time > level.time)
 			return;
 
 		monster_done_dodge(self);
 
-		if (self->monsterInfo.duck(self, eta)) {
+		if (self->monsterinfo.duck(self, eta)) {
 			// if duck didn't set us yet, do it now
-			if (self->monsterInfo.duck_wait_time < level.time)
-				self->monsterInfo.duck_wait_time = level.time + eta;
+			if (self->monsterinfo.duck_wait_time < level.time)
+				self->monsterinfo.duck_wait_time = level.time + eta;
 
 			monster_duck_down(self);
 
 			// on Easy & Normal mode, duck longer
 			if (skill->integer == 0)
-				self->monsterInfo.duck_wait_time += random_time(500_ms, 1000_ms);
+				self->monsterinfo.duck_wait_time += random_time(500_ms, 1000_ms);
 			else if (skill->integer == 1)
-				self->monsterInfo.duck_wait_time += random_time(100_ms, 350_ms);
+				self->monsterinfo.duck_wait_time += random_time(100_ms, 350_ms);
 		}
 
-		self->monsterInfo.dodge_time = level.time + random_time(0.2_sec, 0.7_sec);
+		self->monsterinfo.dodge_time = level.time + random_time(0.2_sec, 0.7_sec);
 	}
 }
 
 void monster_duck_down(gentity_t *self) {
-	self->monsterInfo.aiflags |= AI_DUCKED;
+	self->monsterinfo.aiflags |= AI_DUCKED;
 
-	self->maxs[2] = self->monsterInfo.base_height - 32;
-	self->takeDamage = true;
-	self->monsterInfo.next_duck_time = level.time + DUCK_INTERVAL;
+	self->maxs[2] = self->monsterinfo.base_height - 32;
+	self->takedamage = true;
+	self->monsterinfo.next_duck_time = level.time + DUCK_INTERVAL;
 	gi.linkentity(self);
 }
 
 void monster_duck_hold(gentity_t *self) {
-	if (level.time >= self->monsterInfo.duck_wait_time)
-		self->monsterInfo.aiflags &= ~AI_HOLD_FRAME;
+	if (level.time >= self->monsterinfo.duck_wait_time)
+		self->monsterinfo.aiflags &= ~AI_HOLD_FRAME;
 	else
-		self->monsterInfo.aiflags |= AI_HOLD_FRAME;
+		self->monsterinfo.aiflags |= AI_HOLD_FRAME;
 }
 
 MONSTERINFO_UNDUCK(monster_duck_up) (gentity_t *self) -> void {
-	if (!(self->monsterInfo.aiflags & AI_DUCKED))
+	if (!(self->monsterinfo.aiflags & AI_DUCKED))
 		return;
 
-	self->monsterInfo.aiflags &= ~AI_DUCKED;
-	self->maxs[2] = self->monsterInfo.base_height;
-	self->takeDamage = true;
+	self->monsterinfo.aiflags &= ~AI_DUCKED;
+	self->maxs[2] = self->monsterinfo.base_height;
+	self->takedamage = true;
 	// we finished a duck-up successfully, so cut the time remaining in half
-	if (self->monsterInfo.next_duck_time > level.time)
-		self->monsterInfo.next_duck_time = level.time + ((self->monsterInfo.next_duck_time - level.time) / 2);
+	if (self->monsterinfo.next_duck_time > level.time)
+		self->monsterinfo.next_duck_time = level.time + ((self->monsterinfo.next_duck_time - level.time) / 2);
 	gi.linkentity(self);
 }
 
@@ -1308,7 +1308,7 @@ bool has_valid_enemy(gentity_t *self) {
 	if (!self->enemy)
 		return false;
 
-	if (!self->enemy->inUse)
+	if (!self->enemy->inuse)
 		return false;
 
 	if (self->enemy->health < 1)
@@ -1322,24 +1322,24 @@ void TargetTesla(gentity_t *self, gentity_t *tesla) {
 		return;
 
 	// PMM - medic bails on healing things
-	if (self->monsterInfo.aiflags & AI_MEDIC) {
+	if (self->monsterinfo.aiflags & AI_MEDIC) {
 		if (self->enemy)
-			M_CleanupHealTarget(self->enemy);
-		self->monsterInfo.aiflags &= ~AI_MEDIC;
+			cleanupHealTarget(self->enemy);
+		self->monsterinfo.aiflags &= ~AI_MEDIC;
 	}
 
 	// store the player enemy in case we lose track of him.
 	if (self->enemy && self->enemy->client)
-		self->monsterInfo.last_player_enemy = self->enemy;
+		self->monsterinfo.last_player_enemy = self->enemy;
 
 	if (self->enemy != tesla) {
-		self->oldEnemy = self->enemy;
+		self->oldenemy = self->enemy;
 		self->enemy = tesla;
-		if (self->monsterInfo.attack) {
+		if (self->monsterinfo.attack) {
 			if (self->health <= 0)
 				return;
 
-			self->monsterInfo.attack(self);
+			self->monsterinfo.attack(self);
 		} else
 			FoundTarget(self);
 	}
@@ -1353,7 +1353,7 @@ gentity_t *PickCoopTarget(gentity_t *self) {
 	int		 num_targets = 0, targetID;
 
 	// if we're not in coop, this is a noop
-	if (!CooperativeModeOn())
+	if (!InCoopStyle())
 		return nullptr;
 
 	targets = (gentity_t **)alloca(sizeof(gentity_t *) * game.maxclients);
@@ -1374,7 +1374,7 @@ gentity_t *PickCoopTarget(gentity_t *self) {
 // only meant to be used in coop
 int CountPlayers() {
 	// if we're not in coop, this is a noop
-	if (!CooperativeModeOn())
+	if (!InCoopStyle())
 		return 1;
 
 	int count = 0;
@@ -1386,8 +1386,8 @@ int CountPlayers() {
 
 static THINK(BossExplode_think) (gentity_t *self) -> void {
 	// owner gone or changed
-	if (!self->owner->inUse || self->owner->s.modelindex != self->style || self->count != self->owner->spawn_count) {
-		FreeEntity(self);
+	if (!self->owner->inuse || self->owner->s.modelindex != self->style || self->count != self->owner->spawn_count) {
+		G_FreeEntity(self);
 		return;
 	}
 
@@ -1398,13 +1398,13 @@ static THINK(BossExplode_think) (gentity_t *self) -> void {
 	org.z += frandom() * self->owner->size.z;
 
 	gi.WriteByte(svc_temp_entity);
-	gi.WriteByte(!(self->viewHeight % 3) ? TE_EXPLOSION1 : TE_EXPLOSION1_NL);
+	gi.WriteByte(!(self->viewheight % 3) ? TE_EXPLOSION1 : TE_EXPLOSION1_NL);
 	gi.WritePosition(org);
 	gi.multicast(org, MULTICAST_PVS, false);
 
-	self->viewHeight++;
+	self->viewheight++;
 
-	self->nextThink = level.time + random_time(50_ms, 200_ms);
+	self->nextthink = level.time + random_time(50_ms, 200_ms);
 }
 
 void BossExplode(gentity_t *self) {
@@ -1412,11 +1412,11 @@ void BossExplode(gentity_t *self) {
 	if (self->spawnflags.has(SPAWNFLAG_MONSTER_DEAD))
 		return;
 
-	gentity_t *exploder = Spawn();
+	gentity_t *exploder = G_Spawn();
 	exploder->owner = self;
 	exploder->count = self->spawn_count;
 	exploder->style = self->s.modelindex;
 	exploder->think = BossExplode_think;
-	exploder->nextThink = level.time + random_time(75_ms, 250_ms);
-	exploder->viewHeight = 0;
+	exploder->nextthink = level.time + random_time(75_ms, 250_ms);
+	exploder->viewheight = 0;
 }

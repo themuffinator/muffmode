@@ -141,7 +141,7 @@ mframe_t guardian_frames_run[] = {
 MMOVE_T(guardian_move_run) = { FRAME_walk1, FRAME_walk19, guardian_frames_run, nullptr };
 
 MONSTERINFO_RUN(guardian_run) (gentity_t *self) -> void {
-	if (self->monsterInfo.aiflags & AI_STAND_GROUND) {
+	if (self->monsterinfo.aiflags & AI_STAND_GROUND) {
 		M_SetAnimation(self, &guardian_move_stand);
 		return;
 	}
@@ -191,7 +191,7 @@ static PAIN(guardian_pain) (gentity_t *self, gentity_t *other, float kick, int d
 		return; // no pain anims in nightmare
 
 	M_SetAnimation(self, &guardian_move_pain1);
-	self->monsterInfo.weapon_sound = 0;
+	self->monsterinfo.weapon_sound = 0;
 }
 
 mframe_t guardian_frames_atk1_out[] = {
@@ -203,14 +203,14 @@ MMOVE_T(guardian_atk1_out) = { FRAME_atk1_out1, FRAME_atk1_out3, guardian_frames
 
 static void guardian_atk1_finish(gentity_t *self) {
 	M_SetAnimation(self, &guardian_atk1_out);
-	self->monsterInfo.weapon_sound = 0;
+	self->monsterinfo.weapon_sound = 0;
 }
 
 static cached_soundindex sound_charge;
 static cached_soundindex sound_spin_loop;
 
 static void guardian_atk1_charge(gentity_t *self) {
-	self->monsterInfo.weapon_sound = sound_spin_loop;
+	self->monsterinfo.weapon_sound = sound_spin_loop;
 	gi.sound(self, CHAN_WEAPON, sound_charge, 1.f, ATTN_NORM, 0.f);
 }
 
@@ -222,7 +222,7 @@ static void guardian_fire_blaster(gentity_t *self) {
 	AngleVectors(self->s.angles, forward, right, nullptr);
 	start = M_ProjectFlashSource(self, monster_flash_offset[id], forward, right);
 	target = self->enemy->s.origin;
-	target[2] += self->enemy->viewHeight;
+	target[2] += self->enemy->viewheight;
 	for (int i = 0; i < 3; i++)
 		target[i] += crandom_open() * 5.f;
 	forward = target - start;
@@ -231,8 +231,8 @@ static void guardian_fire_blaster(gentity_t *self) {
 	monster_fire_blaster(self, start, forward, 2, 1000, id, (self->s.frame % 4) ? EF_NONE : EF_HYPERBLASTER);
 
 	if (self->enemy && self->enemy->health > 0 &&
-		self->s.frame == FRAME_atk1_spin12 && self->timeStamp > level.time && visible(self, self->enemy))
-		self->monsterInfo.nextframe = FRAME_atk1_spin5;
+		self->s.frame == FRAME_atk1_spin12 && self->timestamp > level.time && visible(self, self->enemy))
+		self->monsterinfo.nextframe = FRAME_atk1_spin5;
 }
 
 mframe_t guardian_frames_atk1_spin[] = {
@@ -256,7 +256,7 @@ MMOVE_T(guardian_move_atk1_spin) = { FRAME_atk1_spin1, FRAME_atk1_spin15, guardi
 
 static void guardian_atk1(gentity_t *self) {
 	M_SetAnimation(self, &guardian_move_atk1_spin);
-	self->timeStamp = level.time + 650_ms + random_time(1.5_sec);
+	self->timestamp = level.time + 650_ms + random_time(1.5_sec);
 }
 
 mframe_t guardian_frames_atk1_in[] = {
@@ -343,7 +343,7 @@ MMOVE_T(guardian_move_atk2_in) = { FRAME_atk2_in1, FRAME_atk2_in12, guardian_fra
 
 static void guardian_kick(gentity_t *self) {
 	if (!fire_hit(self, { MELEE_DISTANCE, 0, -80 }, 85, 700))
-		self->monsterInfo.melee_debounce_time = level.time + 1000_ms;
+		self->monsterinfo.melee_debounce_time = level.time + 1000_ms;
 }
 
 mframe_t guardian_frames_kick[] = {
@@ -364,14 +364,14 @@ mframe_t guardian_frames_kick[] = {
 MMOVE_T(guardian_move_kick) = { FRAME_kick_in1, FRAME_kick_in13, guardian_frames_kick, guardian_run };
 
 MONSTERINFO_ATTACK(guardian_attack) (gentity_t *self) -> void {
-	if (!self->enemy || !self->enemy->inUse)
+	if (!self->enemy || !self->enemy->inuse)
 		return;
 
 	float r = range_to(self, self->enemy);
 
 	if (r > RANGE_NEAR)
 		M_SetAnimation(self, &guardian_move_atk2_in);
-	else if (self->monsterInfo.melee_debounce_time < level.time && r < 120.f)
+	else if (self->monsterinfo.melee_debounce_time < level.time && r < 120.f)
 		M_SetAnimation(self, &guardian_move_kick);
 	else
 		M_SetAnimation(self, &guardian_move_atk1_in);
@@ -448,9 +448,9 @@ MMOVE_T(guardian_move_death) = { FRAME_death1, FRAME_death26, guardian_frames_de
 static DIE(guardian_die) (gentity_t *self, gentity_t *inflictor, gentity_t *attacker, int damage, const vec3_t &point, const mod_t &mod) -> void {
 	// regular death
 	//gi.sound(self, CHAN_VOICE, sound_die, 1, ATTN_NORM, 0);
-	self->monsterInfo.weapon_sound = 0;
-	self->deadFlag = true;
-	self->takeDamage = true;
+	self->monsterinfo.weapon_sound = 0;
+	self->deadflag = true;
+	self->takedamage = true;
 
 	M_SetAnimation(self, &guardian_move_death);
 }
@@ -463,7 +463,7 @@ static DIE(guardian_die) (gentity_t *self, gentity_t *inflictor, gentity_t *atta
  */
 void SP_monster_guardian(gentity_t *self) {
 	if (!M_AllowSpawn(self)) {
-		FreeEntity(self);
+		G_FreeEntity(self);
 		return;
 	}
 
@@ -478,22 +478,22 @@ void SP_monster_guardian(gentity_t *self) {
 	self->s.modelindex = gi.modelindex("models/monsters/guardian/tris.md2");
 	self->mins = { -96, -96, -66 };
 	self->maxs = { 96, 96, 62 };
-	self->moveType = MOVETYPE_STEP;
+	self->movetype = MOVETYPE_STEP;
 	self->solid = SOLID_BBOX;
 
 	self->health = 2500 * st.health_multiplier;
-	self->gibHealth = -200;
+	self->gib_health = -200;
 
-	self->monsterInfo.scale = MODEL_SCALE;
+	self->monsterinfo.scale = MODEL_SCALE;
 
 	self->mass = 850;
 
 	self->pain = guardian_pain;
 	self->die = guardian_die;
-	self->monsterInfo.stand = guardian_stand;
-	self->monsterInfo.walk = guardian_walk;
-	self->monsterInfo.run = guardian_run;
-	self->monsterInfo.attack = guardian_attack;
+	self->monsterinfo.stand = guardian_stand;
+	self->monsterinfo.walk = guardian_walk;
+	self->monsterinfo.run = guardian_run;
+	self->monsterinfo.attack = guardian_attack;
 
 	gi.linkentity(self);
 

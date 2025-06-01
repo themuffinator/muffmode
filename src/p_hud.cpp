@@ -12,7 +12,7 @@ INTERMISSION
 */
 
 static const char *EndMatchVictorString() {
-	if (!level.intermissionTime)
+	if (!level.intermission_time)
 		return nullptr;
 
 	const char *s = nullptr;
@@ -31,42 +31,43 @@ void MoveClientToIntermission(gentity_t *ent) {
 	if (ent->client->ps.pmove.pm_type != PM_FREEZE)
 		ent->s.event = EV_OTHER_TELEPORT;
 	if (deathmatch->integer) {
-		ent->client->showScores = true;
+		ent->client->showscores = true;
 		ent->client->ps.stats[STAT_SHOW_STATUSBAR] = 0;
 	}
-	ent->s.origin = level.intermissionOrigin;
-	ent->client->ps.pmove.origin = level.intermissionOrigin;
-	ent->client->ps.viewangles = level.intermissionAngle;
-	ent->client->ps.pmove.pm_type = PM_FREEZE;
+	ent->s.origin = level.intermission_origin;
+	ent->client->ps.pmove.origin = level.intermission_origin;
+	ent->s.angles = level.intermission_angles;
+	ent->client->ps.viewangles = level.intermission_angles;
+	ent->client->ps.pmove.delta_angles = level.intermission_angles;
+	//ent->client->ps.pmove.pm_type = PM_FREEZE;
 	ent->client->ps.gunindex = 0;
 	ent->client->ps.gunskin = 0;
-	ent->client->ps.damageBlend[3] = ent->client->ps.screen_blend[3] = 0;
+	ent->client->ps.damage_blend[3] = ent->client->ps.screen_blend[3] = 0;
 	ent->client->ps.rdflags = RDF_NONE;
 
 	// clean up powerup info
 	ent->client->pu_time_quad = 0_ms;
-	ent->client->pu_time_battlesuit = 0_ms;
+	ent->client->pu_time_protection = 0_ms;
 	ent->client->pu_time_rebreather = 0_ms;
 	ent->client->pu_time_enviro = 0_ms;
 	ent->client->pu_time_invisibility = 0_ms;
 	ent->client->pu_time_regeneration = 0_ms;
 	ent->client->pu_time_haste = 0_ms;
 	ent->client->pu_time_double = 0_ms;
-	ent->client->pu_time_spawn_protection = 0_ms;
 
 	ent->client->grenade_blew_up = false;
 	ent->client->grenade_time = 0_ms;
 
-	ent->client->showHelp = false;
-	ent->client->showScores = false;
+	ent->client->showhelp = false;
+	ent->client->showscores = false;
 
 	globals.server_flags &= ~SERVER_FLAG_SLOW_TIME;
 
 	ent->client->ir_time = 0_ms;
 	ent->client->nuke_time = 0_ms;
-	ent->client->trackerPainTime = 0_ms;
+	ent->client->tracker_pain_time = 0_ms;
 
-	ent->viewHeight = 0;
+	ent->viewheight = 0;
 	ent->s.modelindex = 0;
 	ent->s.modelindex2 = 0;
 	ent->s.modelindex3 = 0;
@@ -74,15 +75,17 @@ void MoveClientToIntermission(gentity_t *ent) {
 	ent->s.effects = EF_NONE;
 	ent->s.sound = 0;
 	ent->solid = SOLID_NOT;
-	ent->moveType = MOVETYPE_FREECAM;
+	ent->movetype = MOVETYPE_FREECAM;
 
 	gi.linkentity(ent);
+
+	SetMiniScoreStats(ent);
 
 	// add the layout
 
 	if (deathmatch->integer) {
 		MultiplayerScoreboard(ent);
-		ent->client->showScores = true;
+		ent->client->showscores = true;
 		ent->client->ps.stats[STAT_SHOW_STATUSBAR] = 0;
 	}
 }
@@ -92,10 +95,10 @@ void G_UpdateLevelEntry() {
 	if (!level.entry)
 		return;
 
-	level.entry->foundSecrets = level.foundSecrets;
-	level.entry->totalSecrets = level.totalSecrets;
-	level.entry->killedMonsters = level.killedMonsters;
-	level.entry->totalMonsters = level.totalMonsters;
+	level.entry->found_secrets = level.found_secrets;
+	level.entry->total_secrets = level.total_secrets;
+	level.entry->killed_monsters = level.killed_monsters;
+	level.entry->total_monsters = level.total_monsters;
 }
 
 static inline void G_EndOfUnitEntry(std::stringstream &layout, const int &y, const level_entry_t &entry) {
@@ -108,8 +111,8 @@ static inline void G_EndOfUnitEntry(std::stringstream &layout, const int &y, con
 	}
 
 	layout << G_Fmt("table_row 4 \"{}\" ", entry.pretty_name) <<
-		G_Fmt("{}/{} ", entry.killedMonsters, entry.totalMonsters) <<
-		G_Fmt("{}/{} ", entry.foundSecrets, entry.totalSecrets);
+		G_Fmt("{}/{} ", entry.killed_monsters, entry.total_monsters) <<
+		G_Fmt("{}/{} ", entry.found_secrets, entry.total_secrets);
 
 	int32_t minutes = entry.time.milliseconds() / 60000;
 	int32_t seconds = (entry.time.milliseconds() / 1000) % 60;
@@ -146,11 +149,11 @@ void G_EndOfUnitMessage() {
 
 		y += 8;
 
-		totals.foundSecrets += entry.foundSecrets;
-		totals.killedMonsters += entry.killedMonsters;
+		totals.found_secrets += entry.found_secrets;
+		totals.killed_monsters += entry.killed_monsters;
 		totals.time += entry.time;
-		totals.totalMonsters += entry.totalMonsters;
-		totals.totalSecrets += entry.totalSecrets;
+		totals.total_monsters += entry.total_monsters;
+		totals.total_secrets += entry.total_secrets;
 
 		if (entry.visit_order)
 			num_rows++;
@@ -174,7 +177,7 @@ void G_EndOfUnitMessage() {
 	gi.multicast(vec3_origin, MULTICAST_ALL, true);
 
 	for (auto player : active_clients())
-		player->client->showEOU = true;
+		player->client->showeou = true;
 }
 
 // data is binary now.
@@ -289,7 +292,7 @@ void TeamsScoreboardMessage(gentity_t *ent, gentity_t *killer) {
 	totalscore[0] = totalscore[1] = 0;
 	for (i = 0; i < game.maxclients; i++) {
 		cl_ent = g_entities + 1 + i;
-		if (!cl_ent->inUse)
+		if (!cl_ent->inuse)
 			continue;
 		if (game.clients[i].sess.team == TEAM_RED)
 			team = 0;
@@ -319,32 +322,32 @@ void TeamsScoreboardMessage(gentity_t *ent, gentity_t *killer) {
 	static std::string string;
 	string.clear();
 
-	fmt::format_to(std::back_inserter(string), FMT_STRING("xv 0 yv -40 cstring2 \"{} on {}\" "), level.gametype_name, level.levelName);
+	fmt::format_to(std::back_inserter(string), FMT_STRING("xv 0 yv -40 cstring2 \"{} on {}\" "), level.gametype_name, level.level_name);
 	fmt::format_to(std::back_inserter(string), FMT_STRING("xv 0 yv -30 cstring2 \"Score Limit: {}\" "), GT_ScoreLimit());
 
-	if (level.intermissionTime) {
+	if (level.intermission_time) {
 		//fmt::format_to(std::back_inserter(string), FMT_STRING("xv 0 yv -50 cstring2 \"{} - {}\" "), level.gamemod_name, level.gametype_name);
-		//fmt::format_to(std::back_inserter(string), FMT_STRING("xv 0 yv -40 cstring2 \"[{}] {}\" "), level.mapname, level.levelName);
-		if (level.matchStartTime) {
-			int	t = (level.intermissionTime - level.matchStartTime - 1_sec).milliseconds();
-			fmt::format_to(std::back_inserter(string), FMT_STRING("xv 0 yv -50 cstring2 \"Total Match Time: {}\" "), TimeString(t, true, false));
+		//fmt::format_to(std::back_inserter(string), FMT_STRING("xv 0 yv -40 cstring2 \"[{}] {}\" "), level.mapname, level.level_name);
+		if (level.match_start_time) {
+			int	t = (level.intermission_time - level.match_start_time - 1_sec).milliseconds();
+			fmt::format_to(std::back_inserter(string), FMT_STRING("xv 0 yv -50 cstring2 \"Total Match Time: {}\" "), G_TimeStringMs(t, false));
 		}
 		if (level.intermission_victor_msg[0])
 			fmt::format_to(std::back_inserter(string), FMT_STRING("xv 0 yv -10 cstring2 \"{}\" "), level.intermission_victor_msg);
 
 		fmt::format_to(std::back_inserter(string), FMT_STRING("ifgef {} yb -48 xv 0 loc_cstring2 0 \"$m_eou_press_button\" endif "), (level.intermission_server_frame + (5_sec).frames()));
-	} else if (level.match_state == MatchState::MATCH_IN_PROGRESS) {
+	} else if (level.match_state == MATCH_IN_PROGRESS) {
 		if (ent->client && ClientIsPlaying(ent->client) && ent->client->resp.score && level.num_playing_clients > 1) {
 			fmt::format_to(std::back_inserter(string), FMT_STRING("xv 0 yv -10 cstring2 \"{} place with a score of {}\" "),
-				PlaceString(ent->client->resp.rank + 1), ent->client->resp.score);
+				G_PlaceString(ent->client->resp.rank + 1), ent->client->resp.score);
 		}
-		//if (fraglimit->integer && notGTF(GTF_ROUNDS))
+		//if (fraglimit->integer && !(GTF(GTF_ROUNDS)))
 		//	fmt::format_to(std::back_inserter(string), FMT_STRING("xv -20 yv -10 loc_string2 1 $g_score_frags \"{}\" "), fraglimit->integer);
 		/*
 		else if (GT(GT_HORDE) && level.round_number > 0)
 			fmt::format_to(std::back_inserter(string), FMT_STRING("xv -20 yv -10 loc_string2 1 Wave: \"{}\" "), level.round_number);
 			*/
-		if (timelimit->value && !level.intermissionTime) {
+		if (timelimit->value && !level.intermission_time) {
 			//fmt::format_to(std::back_inserter(string), FMT_STRING("xv 340 yv -10 time_limit {} "), gi.ServerFrame() + ((gtime_t::from_min(timelimit->value) - level.time)).milliseconds() / gi.frame_time_ms);
 #if 0
 		//fmt::format_to(std::back_inserter(string), FMT_STRING("xv 340 yv -10 loc_string2 1 {} "), gi.ServerFrame() + level.time.milliseconds() / gi.frame_time_ms);
@@ -358,19 +361,19 @@ void TeamsScoreboardMessage(gentity_t *ent, gentity_t *killer) {
 #endif
 		}
 
-		//fmt::format_to(std::back_inserter(string), FMT_STRING("xv 0 yb -48 cstring2 \"{}\" "), "Use inventory bind to toggle menu.");
+		fmt::format_to(std::back_inserter(string), FMT_STRING("xv 0 yb -48 cstring2 \"{}\" "), "Use inventory bind to toggle menu.");
 	}
 
 	if (GT(GT_CTF)) {
 		fmt::format_to(std::back_inserter(string),
 			FMT_STRING("if 25 xv -32 yv 8 pic 25 endif "
 				"xv 0 yv 28 string \"{}/{}\" "
-				"xv 58 yv 12 num 2 19 "
+				"xv 58 yv 12 num 3 19 "
 				"xv -40 yv 42 string \"SC\" "
 				"xv -12 yv 42 picn ping "
 				"if 26 xv 208 yv 8 pic 26 endif "
 				"xv 240 yv 28 string \"{}/{}\" "
-				"xv 296 yv 12 num 2 21 "
+				"xv 296 yv 12 num 3 21 "
 				"xv 200 yv 42 string \"SC\" "
 				"xv 228 yv 42 picn ping "),
 			total[0], teamsize,
@@ -379,12 +382,12 @@ void TeamsScoreboardMessage(gentity_t *ent, gentity_t *killer) {
 		fmt::format_to(std::back_inserter(string),
 			FMT_STRING("if 25 xv -32 yv 8 pic 25 endif "
 				"xv 0 yv 28 string \"{}/{}/{}\" "
-				"xv 58 yv 12 num 2 19 "
+				"xv 58 yv 12 num 3 19 "
 				"xv -40 yv 42 string \"SC\" "
 				"xv -12 yv 42 picn ping "
 				"if 26 xv 208 yv 8 pic 26 endif "
 				"xv 240 yv 28 string \"{}/{}/{}\" "
-				"xv 296 yv 12 num 2 21 "
+				"xv 296 yv 12 num 3 21 "
 				"xv 200 yv 42 string \"SC\" "
 				"xv 228 yv 42 picn ping "),
 			total_living[0], total[0], teamsize,
@@ -394,7 +397,7 @@ void TeamsScoreboardMessage(gentity_t *ent, gentity_t *killer) {
 			FMT_STRING("if 25 xv -32 yv 8 pic 25 endif "
 				"xv -123 yv 28 cstring \"{}/{}\" "
 				"xv 41 yv 12 num 3 19 "
-				"xv -40 yv 42 string \"SC\" "
+				"xv -40 yv 42 string \"sc\" "
 				"xv -12 yv 42 picn ping "
 				"if 26 xv 208 yv 8 pic 26 endif "
 				"xv 117 yv 28 cstring \"{}/{}\" "
@@ -423,10 +426,10 @@ void TeamsScoreboardMessage(gentity_t *ent, gentity_t *killer) {
 				cl->ping > 999 ? 999 : cl->ping,
 				cl_ent->client->pers.inventory[IT_FLAG_BLUE] ? "sbfctf2" : "\"\"");
 
-			if (level.match_state == MatchState::MATCH_WARMUP_READYUP && (cl->resp.ready || cl->sess.is_a_bot))
+			if (level.match_state == MATCH_WARMUP_READYUP && (cl->resp.ready || cl->sess.is_a_bot))
 				fmt::format_to(std::back_inserter(string),
 					FMT_STRING("xv -56 yv {} picn {} "), ty - 2, "wheel/p_compass_selected");
-			else if (GTF(GTF_ROUNDS) && level.match_state == MatchState::MATCH_IN_PROGRESS && !cl->eliminated)
+			else if (GTF(GTF_ROUNDS) && level.match_state == MATCH_IN_PROGRESS && !cl->eliminated)
 				fmt::format_to(std::back_inserter(string),
 					FMT_STRING("xv -50 yv {} picn {} "), ty, "sbfctf1");
 
@@ -450,10 +453,10 @@ void TeamsScoreboardMessage(gentity_t *ent, gentity_t *killer) {
 				cl->ping > 999 ? 999 : cl->ping,
 				cl_ent->client->pers.inventory[IT_FLAG_RED] ? "sbfctf1" : "\"\"");
 
-			if (level.match_state == MatchState::MATCH_WARMUP_READYUP && (cl->resp.ready || cl->sess.is_a_bot))
+			if (level.match_state == MATCH_WARMUP_READYUP && (cl->resp.ready || cl->sess.is_a_bot))
 				fmt::format_to(std::back_inserter(string),
 					FMT_STRING("xv 182 yv {} picn {} "), ty - 2, "wheel/p_compass_selected");
-			else if (GTF(GTF_ROUNDS) && level.match_state == MatchState::MATCH_IN_PROGRESS && !cl->eliminated)
+			else if (GTF(GTF_ROUNDS) && level.match_state == MATCH_IN_PROGRESS && !cl->eliminated)
 				fmt::format_to(std::back_inserter(string),
 					FMT_STRING("xv 190 yv {} picn {} "), ty, "sbfctf2");
 
@@ -476,7 +479,7 @@ void TeamsScoreboardMessage(gentity_t *ent, gentity_t *killer) {
 		for (i = 0; i < game.maxclients; i++) {
 			cl_ent = g_entities + 1 + i;
 			cl = &game.clients[i];
-			if (!cl_ent->inUse ||
+			if (!cl_ent->inuse ||
 				cl_ent->solid != SOLID_NOT ||
 				ClientIsPlaying(cl_ent->client))
 				continue;
@@ -528,22 +531,22 @@ static void DuelScoreboardMessage(gentity_t *ent, gentity_t *killer) {
 
 	string.clear();
 
-	fmt::format_to(std::back_inserter(string), FMT_STRING("xv 0 yv -40 cstring2 \"{} on {}\" "), level.gametype_name, level.levelName);
+	fmt::format_to(std::back_inserter(string), FMT_STRING("xv 0 yv -40 cstring2 \"{} on {}\" "), level.gametype_name, level.level_name);
 	fmt::format_to(std::back_inserter(string), FMT_STRING("xv 0 yv -30 cstring2 \"Score Limit: {}\" "), GT_ScoreLimit());
 
-	if (level.intermissionTime) {
-		if (level.matchStartTime) {
-			int	t = (level.intermissionTime - level.matchStartTime - 1_sec).milliseconds();
-			fmt::format_to(std::back_inserter(string), FMT_STRING("xv 0 yv -50 cstring2 \"Total Match Time: {}\" "), TimeString(t, true, false));
+	if (level.intermission_time) {
+		if (level.match_start_time) {
+			int	t = (level.intermission_time - level.match_start_time - 1_sec).milliseconds();
+			fmt::format_to(std::back_inserter(string), FMT_STRING("xv 0 yv -50 cstring2 \"Total Match Time: {}\" "), G_TimeStringMs(t, false));
 		}
 		if (level.intermission_victor_msg[0])
 			fmt::format_to(std::back_inserter(string), FMT_STRING("xv 0 yv -10 cstring2 \"{}\" "), level.intermission_victor_msg);
 
 		fmt::format_to(std::back_inserter(string), FMT_STRING("ifgef {} yb -48 xv 0 loc_cstring2 0 \"$m_eou_press_button\" endif "), (level.intermission_server_frame + (5_sec).frames()));
-	} else if (level.match_state == MatchState::MATCH_IN_PROGRESS) {
+	} else if (level.match_state == MATCH_IN_PROGRESS) {
 		if (ent->client && ClientIsPlaying(ent->client) && ent->client->resp.score && level.num_playing_clients > 1) {
 			fmt::format_to(std::back_inserter(string), FMT_STRING("xv 0 yv -10 cstring2 \"{} place with a score of {}\" "),
-				PlaceString(ent->client->resp.rank + 1), ent->client->resp.score);
+				G_PlaceString(ent->client->resp.rank + 1), ent->client->resp.score);
 		}
 		//fmt::format_to(std::back_inserter(string), FMT_STRING("xv 0 yb -48 cstring2 \"{}\" "), "Use inventory bind to toggle menu.");
 	}
@@ -571,7 +574,7 @@ static void DuelScoreboardMessage(gentity_t *ent, gentity_t *killer) {
 			cl_ent = g_entities + 1 + level.sorted_clients[i];
 			if (!cl_ent)
 				continue;
-			if (!cl_ent->inUse)
+			if (!cl_ent->inuse)
 				continue;
 
 			//gi.Com_PrintFmt("i={} i2={} num_playing_clients={} sorted_clients={}\n", i, i2, level.num_playing_clients, level.sorted_clients[i]);
@@ -581,14 +584,14 @@ static void DuelScoreboardMessage(gentity_t *ent, gentity_t *killer) {
 
 			fmt::format_to(std::back_inserter(entry), FMT_STRING("xv {} yv {} picn {} "), x, y, "/tags/default");
 
-			s = G_Fmt("/players/{}_i", cl->sess.skin).data();
-			img_index = cl->sess.skin_icon_index;
+			s = G_Fmt("/players/{}_i", cl->pers.skin).data();
+			img_index = cl->pers.skin_icon_index;
 
 			if (img_index)
 				fmt::format_to(std::back_inserter(entry), FMT_STRING("xv {} yv {} picn {} "), x, y, s);
 
 			// player ready marker
-			if (level.match_state == MatchState::MATCH_WARMUP_READYUP && (cl->sess.is_a_bot || cl->resp.ready))
+			if (level.match_state == matchst_t::MATCH_WARMUP_READYUP && (cl->sess.is_a_bot || cl->resp.ready))
 				fmt::format_to(std::back_inserter(entry), FMT_STRING("xv {} yv {} picn {} "), x + 16, y + 16, "wheel/p_compass_selected");
 
 			if (string.length() + entry.length() > MAX_STRING_CHARS)
@@ -600,7 +603,7 @@ static void DuelScoreboardMessage(gentity_t *ent, gentity_t *killer) {
 
 			fmt::format_to(std::back_inserter(entry),
 				FMT_STRING("client {} {} {} {} {} {} "),
-				x, y, level.sorted_clients[i], cl->resp.score, cl->ping, GT(GT_RACE) ? cl->resp.score : 0);	// (level.time - cl->sess.teamJoinTime).minutes<int>());
+				x, y, level.sorted_clients[i], cl->resp.score, cl->ping, 0);	// (level.time - cl->sess.team_join_time).minutes<int>());
 
 			if (string.length() + entry.length() > MAX_STRING_CHARS)
 				break;
@@ -628,7 +631,7 @@ static void DuelScoreboardMessage(gentity_t *ent, gentity_t *killer) {
 				if (!cl_ent)
 					continue;
 
-				if (!cl_ent->inUse)
+				if (!cl_ent->inuse)
 					continue;
 
 				if (!cl)
@@ -640,7 +643,7 @@ static void DuelScoreboardMessage(gentity_t *ent, gentity_t *killer) {
 				if (ClientIsPlaying(cl))
 					continue;
 
-				if (!cl->sess.versusQueued)
+				if (!cl->sess.duel_queued)
 					continue;
 
 				if (!k) {
@@ -681,7 +684,7 @@ static void DuelScoreboardMessage(gentity_t *ent, gentity_t *killer) {
 				if (!cl_ent)
 					continue;
 
-				if (!cl_ent->inUse)
+				if (!cl_ent->inuse)
 					continue;
 
 				if (!cl)
@@ -693,7 +696,7 @@ static void DuelScoreboardMessage(gentity_t *ent, gentity_t *killer) {
 				if (ClientIsPlaying(cl))
 					continue;
 
-				if (cl->sess.versusQueued)
+				if (cl->sess.duel_queued)
 					continue;
 
 				if (!k) {
@@ -719,7 +722,7 @@ static void DuelScoreboardMessage(gentity_t *ent, gentity_t *killer) {
 		}
 	}
 
-	if (level.intermissionTime)
+	if (level.intermission_time)
 		fmt::format_to(std::back_inserter(string), FMT_STRING("ifgef {} yb -48 xv 0 loc_cstring2 0 \"$m_eou_press_button\" endif "), (level.intermission_server_frame + (5_sec).frames()));
 	else
 		fmt::format_to(std::back_inserter(string), FMT_STRING("xv 0 yb -48 cstring2 \"{}\" "), "Show inventory to toggle menu.");
@@ -729,32 +732,32 @@ static void DuelScoreboardMessage(gentity_t *ent, gentity_t *killer) {
 }
 
 static inline void ScoreboardNotice(gentity_t *ent, std::string string) {
-	fmt::format_to(std::back_inserter(string), FMT_STRING("xv 0 yv -40 cstring2 \"{} on {}\" "), level.gametype_name, level.levelName);
+	fmt::format_to(std::back_inserter(string), FMT_STRING("xv 0 yv -40 cstring2 \"{} on {}\" "), level.gametype_name, level.level_name);
 	fmt::format_to(std::back_inserter(string), FMT_STRING("xv 0 yv -30 cstring2 \"Score Limit: {}\" "), GT_ScoreLimit());
 
-	if (level.intermissionTime) {
+	if (level.intermission_time) {
 		//fmt::format_to(std::back_inserter(string), FMT_STRING("xv 0 yv -50 cstring2 \"{} - {}\" "), level.gamemod_name, level.gametype_name);
-		//fmt::format_to(std::back_inserter(string), FMT_STRING("xv 0 yv -40 cstring2 \"[{}] {}\" "), level.mapname, level.levelName);
-		if (level.matchStartTime) {
-			int	t = (level.intermissionTime - level.matchStartTime - 1_sec).milliseconds();
-			fmt::format_to(std::back_inserter(string), FMT_STRING("xv 0 yv -50 cstring2 \"Total Match Time: {}\" "), TimeString(t, true, false));
+		//fmt::format_to(std::back_inserter(string), FMT_STRING("xv 0 yv -40 cstring2 \"[{}] {}\" "), level.mapname, level.level_name);
+		if (level.match_start_time) {
+			int	t = (level.intermission_time - level.match_start_time - 1_sec).milliseconds();
+			fmt::format_to(std::back_inserter(string), FMT_STRING("xv 0 yv -50 cstring2 \"Total Match Time: {}\" "), G_TimeStringMs(t, false));
 		}
 		if (level.intermission_victor_msg[0])
 			fmt::format_to(std::back_inserter(string), FMT_STRING("xv 0 yv -10 cstring2 \"{}\" "), level.intermission_victor_msg);
 
 		fmt::format_to(std::back_inserter(string), FMT_STRING("ifgef {} yb -48 xv 0 loc_cstring2 0 \"$m_eou_press_button\" endif "), (level.intermission_server_frame + (5_sec).frames()));
-	} else if (level.match_state == MatchState::MATCH_IN_PROGRESS) {
+	} else if (level.match_state == MATCH_IN_PROGRESS) {
 		if (ent->client && ClientIsPlaying(ent->client) && ent->client->resp.score && level.num_playing_clients > 1) {
 			fmt::format_to(std::back_inserter(string), FMT_STRING("xv 0 yv -10 cstring2 \"{} place with a score of {}\" "),
-				PlaceString(ent->client->resp.rank + 1), ent->client->resp.score);
+				G_PlaceString(ent->client->resp.rank + 1), ent->client->resp.score);
 		}
-		//if (fraglimit->integer && notGTF(GTF_ROUNDS))
+		//if (fraglimit->integer && !(GTF(GTF_ROUNDS)))
 		//	fmt::format_to(std::back_inserter(string), FMT_STRING("xv -20 yv -10 loc_string2 1 $g_score_frags \"{}\" "), fraglimit->integer);
 		/*
 		else if (GT(GT_HORDE) && level.round_number > 0)
 			fmt::format_to(std::back_inserter(string), FMT_STRING("xv -20 yv -10 loc_string2 1 Wave: \"{}\" "), level.round_number);
 			*/
-		if (timelimit->value && !level.intermissionTime) {
+		if (timelimit->value && !level.intermission_time) {
 			//fmt::format_to(std::back_inserter(string), FMT_STRING("xv 340 yv -10 time_limit {} "), gi.ServerFrame() + ((gtime_t::from_min(timelimit->value) - level.time)).milliseconds() / gi.frame_time_ms);
 #if 0
 		//fmt::format_to(std::back_inserter(string), FMT_STRING("xv 340 yv -10 loc_string2 1 {} "), gi.ServerFrame() + level.time.milliseconds() / gi.frame_time_ms);
@@ -768,7 +771,7 @@ static inline void ScoreboardNotice(gentity_t *ent, std::string string) {
 #endif
 		}
 
-		//fmt::format_to(std::back_inserter(string), FMT_STRING("xv 0 yb -48 cstring2 \"{}\" "), "Use inventory bind to toggle menu.");
+		fmt::format_to(std::back_inserter(string), FMT_STRING("xv 0 yb -48 cstring2 \"{}\" "), "Use inventory bind to toggle menu.");
 	}
 }
 
@@ -783,7 +786,7 @@ void DeathmatchScoreboardMessage(gentity_t *ent, gentity_t *killer) {
 		TeamsScoreboardMessage(ent, ent->enemy);
 		return;
 	}
-	if (GTF(GTF_1V1)) {
+	if (GT(GT_DUEL)) {
 		DuelScoreboardMessage(ent, ent->enemy);
 		return;
 	}
@@ -818,14 +821,14 @@ void DeathmatchScoreboardMessage(gentity_t *ent, gentity_t *killer) {
 			fmt::format_to(std::back_inserter(entry), FMT_STRING("xv {} yv {} picn {} "), x, y, "/tags/bloody");
 
 		// player skin icon
-		const char *s = G_Fmt("/players/{}_i", cl->sess.skin).data();
-		int32_t		img_index = cl->sess.skin_icon_index;
+		const char *s = G_Fmt("/players/{}_i", cl->pers.skin).data();
+		int32_t		img_index = cl->pers.skin_icon_index;
 
 		if (img_index)
 			fmt::format_to(std::back_inserter(entry), FMT_STRING("xv {} yv {} picn {} "), x, y, s);
 
 		// player ready marker
-		if (level.match_state == MatchState::MATCH_WARMUP_READYUP && (cl->sess.is_a_bot || cl->resp.ready)) {
+		if (level.match_state == matchst_t::MATCH_WARMUP_READYUP && (cl->sess.is_a_bot || cl->resp.ready)) {
 			fmt::format_to(std::back_inserter(entry), FMT_STRING("xv {} yv {} picn {} "), x + 16, y + 16, "wheel/p_compass_selected");
 		}
 
@@ -838,7 +841,7 @@ void DeathmatchScoreboardMessage(gentity_t *ent, gentity_t *killer) {
 
 		fmt::format_to(std::back_inserter(entry),
 			FMT_STRING("client {} {} {} {} {} {} "),
-			x, y, level.sorted_clients[i], cl->resp.score, cl->ping, GT(GT_RACE) ? cl->resp.score : 0);
+			x, y, level.sorted_clients[i], cl->resp.score, cl->ping, (int32_t)(level.time - cl->resp.entertime).minutes());
 
 		if (string.length() + entry.length() > MAX_STRING_CHARS)
 			break;
@@ -848,33 +851,33 @@ void DeathmatchScoreboardMessage(gentity_t *ent, gentity_t *killer) {
 		entry.clear();
 	}
 
-	fmt::format_to(std::back_inserter(string), FMT_STRING("xv 0 yv -40 cstring2 \"{} on {}\" "), level.gametype_name, level.levelName);
+	fmt::format_to(std::back_inserter(string), FMT_STRING("xv 0 yv -40 cstring2 \"{} on {}\" "), level.gametype_name, level.level_name);
 	fmt::format_to(std::back_inserter(string), FMT_STRING("xv 0 yv -30 cstring2 \"Score Limit: {}\" "), GT_ScoreLimit());
 
-	if (level.intermissionTime) {
+	if (level.intermission_time) {
 		//fmt::format_to(std::back_inserter(string), FMT_STRING("xv 0 yv -50 cstring2 \"{} - {}\" "), level.gamemod_name, level.gametype_name);
-		//fmt::format_to(std::back_inserter(string), FMT_STRING("xv 0 yv -40 cstring2 \"[{}] {}\" "), level.mapname, level.levelName);
-		if (level.matchStartTime) {
-			int	t = (level.intermissionTime - level.matchStartTime - 1_sec).milliseconds();
-			fmt::format_to(std::back_inserter(string), FMT_STRING("xv 0 yv -50 cstring2 \"Total Match Time: {}\" "), TimeString(t, true, false));
+		//fmt::format_to(std::back_inserter(string), FMT_STRING("xv 0 yv -40 cstring2 \"[{}] {}\" "), level.mapname, level.level_name);
+		if (level.match_start_time) {
+			int	t = (level.intermission_time - level.match_start_time - 1_sec).milliseconds();
+			fmt::format_to(std::back_inserter(string), FMT_STRING("xv 0 yv -50 cstring2 \"Total Match Time: {}\" "), G_TimeStringMs(t, false));
 		}
 		if (level.intermission_victor_msg[0])
 			fmt::format_to(std::back_inserter(string), FMT_STRING("xv 0 yv -10 cstring2 \"{}\" "), level.intermission_victor_msg);
 
 		fmt::format_to(std::back_inserter(string), FMT_STRING("ifgef {} yb -48 xv 0 loc_cstring2 0 \"$m_eou_press_button\" endif "), (level.intermission_server_frame + (5_sec).frames()));
-	} else if (level.match_state == MatchState::MATCH_IN_PROGRESS) {
-		const char *score = GT(GT_RACE) ? TimeString(ent->client->resp.score, true, false) : G_Fmt("{}", ent->client->resp.score).data();
+	} else if (level.match_state == MATCH_IN_PROGRESS) {
+		const char *score = G_Fmt("{}", ent->client->resp.score).data();
 		if (ent->client && ClientIsPlaying(ent->client) && ent->client->resp.score && level.num_playing_clients > 1) {
 			fmt::format_to(std::back_inserter(string), FMT_STRING("xv 0 yv -10 cstring2 \"{} place with a score of {}\" "),
-				PlaceString(ent->client->resp.rank + 1), score);
+				G_PlaceString(ent->client->resp.rank + 1), score);
 		}
-		//if (fraglimit->integer && notGTF(GTF_ROUNDS))
+		//if (fraglimit->integer && !(GTF(GTF_ROUNDS)))
 		//	fmt::format_to(std::back_inserter(string), FMT_STRING("xv -20 yv -10 loc_string2 1 $g_score_frags \"{}\" "), fraglimit->integer);
 		/*
 		else if (GT(GT_HORDE) && level.round_number > 0)
 			fmt::format_to(std::back_inserter(string), FMT_STRING("xv -20 yv -10 loc_string2 1 Wave: \"{}\" "), level.round_number);
 			*/
-		if (timelimit->value && !level.intermissionTime) {
+		if (timelimit->value && !level.intermission_time) {
 			//fmt::format_to(std::back_inserter(string), FMT_STRING("xv 340 yv -10 time_limit {} "), gi.ServerFrame() + ((gtime_t::from_min(timelimit->value) - level.time)).milliseconds() / gi.frame_time_ms);
 #if 0
 		//fmt::format_to(std::back_inserter(string), FMT_STRING("xv 340 yv -10 loc_string2 1 {} "), gi.ServerFrame() + level.time.milliseconds() / gi.frame_time_ms);
@@ -888,7 +891,7 @@ void DeathmatchScoreboardMessage(gentity_t *ent, gentity_t *killer) {
 #endif
 		}
 
-		//fmt::format_to(std::back_inserter(string), FMT_STRING("xv 0 yb -48 cstring2 \"{}\" "), "Use inventory bind to toggle menu.");
+		fmt::format_to(std::back_inserter(string), FMT_STRING("xv 0 yb -48 cstring2 \"{}\" "), "Use inventory bind to toggle menu.");
 	}
 
 	gi.WriteByte(svc_layout);
@@ -904,10 +907,10 @@ Note that it isn't that hard to overflow the 1400 byte message limit!
 ==================
 */
 void MultiplayerScoreboard(gentity_t *ent) {
-	gentity_t *e = ent->client->followTarget ? ent->client->followTarget : ent;
+	gentity_t *e = ent->client->follow_target ? ent->client->follow_target : ent;
 	DeathmatchScoreboardMessage(e, e->enemy);
 	gi.unicast(ent, true);
-	ent->client->menuTime = level.time + 3_sec;
+	ent->client->menutime = level.time + 3_sec;
 }
 
 /*
@@ -918,19 +921,19 @@ Display the scoreboard
 ==================
 */
 void Cmd_Score_f(gentity_t *ent) {
-	if (level.intermissionTime)
+	if (level.intermission_time)
 		return;
 
 	if (Vote_Menu_Active(ent)) {
-		ent->client->showInventory = false;
-		ent->client->showHelp = false;
-		gentity_t *e = ent->client->followTarget ? ent->client->followTarget : ent;
+		ent->client->showinventory = false;
+		ent->client->showhelp = false;
+		gentity_t *e = ent->client->follow_target ? ent->client->follow_target : ent;
 		ent->client->ps.stats[STAT_SHOW_STATUSBAR] = !ClientIsPlaying(e->client) ? 0 : 1;
 		return;
 	}
 
-	ent->client->showInventory = false;
-	ent->client->showHelp = false;
+	ent->client->showinventory = false;
+	ent->client->showhelp = false;
 
 	globals.server_flags &= ~SERVER_FLAG_SLOW_TIME;
 
@@ -940,11 +943,11 @@ void Cmd_Score_f(gentity_t *ent) {
 	if (!deathmatch->integer && !coop->integer)
 		return;
 	
-	if (ent->client->showScores) {
-		ent->client->showScores = false;
+	if (ent->client->showscores) {
+		ent->client->showscores = false;
 		ent->client->follow_update = true;
 
-		gentity_t *e = ent->client->followTarget ? ent->client->followTarget : ent;
+		gentity_t *e = ent->client->follow_target ? ent->client->follow_target : ent;
 		ent->client->ps.stats[STAT_SHOW_STATUSBAR] = !ClientIsPlaying(e->client) ? 0 : 1;
 		return;
 	}
@@ -952,7 +955,7 @@ void Cmd_Score_f(gentity_t *ent) {
 	ent->client->ps.stats[STAT_SHOW_STATUSBAR] = 0;
 
 	//globals.server_flags |= SERVER_FLAG_SLOW_TIME;
-	ent->client->showScores = true;
+	ent->client->showscores = true;
 	MultiplayerScoreboard(ent);
 }
 
@@ -990,9 +993,9 @@ static void DrawHelpComputer(gentity_t *ent) {
 	helpString += G_Fmt(
 		"xv 32 yv 8 picn help "		   // background
 		"xv 0 yv 25 cstring2 \"{}\" ",  // level name
-		level.levelName);
+		level.level_name);
 
-	if (level.isN64) {
+	if (level.is_n64) {
 		helpString += G_Fmt("xv 0 yv 54 loc_cstring 1 \"{{}}\" \"{}\" ",  // help 1
 			game.helpmessage1);
 	} else {
@@ -1022,9 +1025,9 @@ static void DrawHelpComputer(gentity_t *ent) {
 		"xv 55 yv 172 loc_string2 1 \"{{}}: {}/{}\" \"$g_pc_kills\" "
 		"xv 265 yv 172 loc_rstring2 1 \"{{}}: {}/{}\" \"$g_pc_secrets\" ",
 		sk,
-		level.foundGoals, level.totalGoals,
-		level.killedMonsters, level.totalMonsters,
-		level.foundSecrets, level.totalSecrets);
+		level.found_goals, level.total_goals,
+		level.killed_monsters, level.total_monsters,
+		level.found_secrets, level.total_secrets);
 
 	gi.WriteByte(svc_layout);
 	gi.WriteString(helpString.c_str());
@@ -1045,21 +1048,21 @@ void Cmd_Help_f(gentity_t *ent) {
 		return;
 	}
 
-	if (level.intermissionTime)
+	if (level.intermission_time)
 		return;
 
-	ent->client->showInventory = false;
-	ent->client->showScores = false;
+	ent->client->showinventory = false;
+	ent->client->showscores = false;
 
-	if (ent->client->showHelp &&
+	if (ent->client->showhelp &&
 		(ent->client->pers.game_help1changed == game.help1changed ||
 			ent->client->pers.game_help2changed == game.help2changed)) {
-		ent->client->showHelp = false;
+		ent->client->showhelp = false;
 		globals.server_flags &= ~SERVER_FLAG_SLOW_TIME;
 		return;
 	}
 
-	ent->client->showHelp = true;
+	ent->client->showhelp = true;
 	ent->client->pers.helpchanged = 0;
 	globals.server_flags |= SERVER_FLAG_SLOW_TIME;
 	DrawHelpComputer(ent);
@@ -1071,14 +1074,14 @@ void Cmd_Help_f(gentity_t *ent) {
 // even if we're spectating
 void G_SetCoopStats(gentity_t *ent) {
 
-	if (CooperativeModeOn() && g_coop_enable_lives->integer)
+	if (InCoopStyle() && g_coop_enable_lives->integer)
 		ent->client->ps.stats[STAT_LIVES] = ent->client->pers.lives + 1;
 	else
 		ent->client->ps.stats[STAT_LIVES] = 0;
 	
-	if (level.match_state == MatchState::MATCH_IN_PROGRESS) {
+	if (level.match_state == MATCH_IN_PROGRESS) {
 		if (GT(GT_HORDE))
-			ent->client->ps.stats[STAT_MONSTER_COUNT] = level.totalMonsters - level.killedMonsters;
+			ent->client->ps.stats[STAT_MONSTER_COUNT] = level.total_monsters - level.killed_monsters;
 		else
 			ent->client->ps.stats[STAT_MONSTER_COUNT] = 0;
 
@@ -1100,11 +1103,10 @@ struct powerup_info_t {
 	gtime_t gclient_t:: *time_ptr = nullptr;
 	int32_t gclient_t:: *count_ptr = nullptr;
 } powerup_table[] = {
-	{ IT_POWERUP_SPAWN_PROTECTION, &gclient_t::pu_time_spawn_protection },
 	{ IT_POWERUP_QUAD, &gclient_t::pu_time_quad },
 	{ IT_POWERUP_HASTE, &gclient_t::pu_time_haste },
 	{ IT_POWERUP_DOUBLE, &gclient_t::pu_time_double },
-	{ IT_POWERUP_BATTLESUIT, &gclient_t::pu_time_battlesuit },
+	{ IT_POWERUP_PROTECTION, &gclient_t::pu_time_protection },
 	{ IT_POWERUP_INVISIBILITY, &gclient_t::pu_time_invisibility },
 	{ IT_POWERUP_REGEN, &gclient_t::pu_time_regeneration },
 	{ IT_POWERUP_ENVIROSUIT, &gclient_t::pu_time_enviro },
@@ -1121,9 +1123,9 @@ static void SetCrosshairIDView(gentity_t *ent) {
 	float	 bd = 0, d;
 
 	// only check every few frames
-	if (level.time - ent->client->resp.lastIDTime < 250_ms)
+	if (level.time - ent->client->resp.lastidtime < 250_ms)
 		return;
-	ent->client->resp.lastIDTime = level.time;
+	ent->client->resp.lastidtime = level.time;
 
 	ent->client->ps.stats[STAT_CROSSHAIR_ID_VIEW] = 0;
 	ent->client->ps.stats[STAT_CROSSHAIR_ID_VIEW_COLOR] = 0;
@@ -1131,7 +1133,7 @@ static void SetCrosshairIDView(gentity_t *ent) {
 	if (!g_dm_crosshair_id->integer)
 		return;
 
-	AngleVectors(ent->client->vAngle, forward, nullptr, nullptr);
+	AngleVectors(ent->client->v_angle, forward, nullptr, nullptr);
 	forward *= 1024;
 	forward = ent->s.origin + forward;
 	tr = gi.traceline(ent->s.origin, forward, ent, CONTENTS_MIST | MASK_WATER | MASK_SOLID);
@@ -1155,11 +1157,11 @@ static void SetCrosshairIDView(gentity_t *ent) {
 		return;
 	}
 
-	AngleVectors(ent->client->vAngle, forward, nullptr, nullptr);
+	AngleVectors(ent->client->v_angle, forward, nullptr, nullptr);
 	best = nullptr;
 	for (uint32_t i = 1; i <= game.maxclients; i++) {
 		who = g_entities + i;
-		if (!who->inUse || who->solid == SOLID_NOT)
+		if (!who->inuse || who->solid == SOLID_NOT)
 			continue;
 		dir = who->s.origin - ent->s.origin;
 		dir.normalize();
@@ -1169,7 +1171,7 @@ static void SetCrosshairIDView(gentity_t *ent) {
 		if (Teams() && ent->client->sess.team == who->client->sess.team)
 			continue;
 
-		if (d > bd && LocCanSee(ent, who)) {
+		if (d > bd && loc_CanSee(ent, who)) {
 			bd = d;
 			best = who;
 		}
@@ -1189,7 +1191,7 @@ static void CTF_SetStats(gentity_t *ent, bool blink) {
 	int			p1, p2;
 	gentity_t	*e;
 
-	if (notGTF(GTF_CTF)) return;
+	if (!(GTF(GTF_CTF))) return;
 
 	// figure out what icon to display for team logos
 	// three states:
@@ -1197,14 +1199,14 @@ static void CTF_SetStats(gentity_t *ent, bool blink) {
 	//   flag taken
 	//   flag dropped
 	p1 = ii_teams_red_default;
-	e = G_FindByString<&gentity_t::className>(nullptr, ITEM_CTF_FLAG_RED);
+	e = G_FindByString<&gentity_t::classname>(nullptr, ITEM_CTF_FLAG_RED);
 	if (e != nullptr) {
 		if (e->solid == SOLID_NOT) {
 			// not at base
 			// check if on player
 			p1 = ii_ctf_red_dropped; // default to dropped
 			for (i = 1; i <= game.maxclients; i++)
-				if (g_entities[i].inUse &&
+				if (g_entities[i].inuse &&
 					g_entities[i].client->pers.inventory[IT_FLAG_RED]) {
 					// enemy has it
 					p1 = ii_ctf_red_taken;
@@ -1213,12 +1215,12 @@ static void CTF_SetStats(gentity_t *ent, bool blink) {
 
 			// [Paril-KEX] make sure there is a dropped version on the map somewhere
 			if (p1 == ii_ctf_red_dropped) {
-				e = G_FindByString<&gentity_t::className>(e, ITEM_CTF_FLAG_RED);
+				e = G_FindByString<&gentity_t::classname>(e, ITEM_CTF_FLAG_RED);
 
 				if (e == nullptr) {
 					CTF_ResetTeamFlag(TEAM_RED);
 					gi.LocBroadcast_Print(PRINT_HIGH, "$g_flag_returned",
-					Teams_TeamName(TEAM_RED));
+						Teams_TeamName(TEAM_RED));
 					gi.sound(ent, CHAN_RELIABLE | CHAN_NO_PHS_ADD | CHAN_AUX, gi.soundindex("ctf/flagret.wav"), 1, ATTN_NONE, 0);
 				}
 			}
@@ -1226,14 +1228,14 @@ static void CTF_SetStats(gentity_t *ent, bool blink) {
 			p1 = ii_ctf_red_dropped; // must be dropped
 	}
 	p2 = ii_teams_blue_default;
-	e = G_FindByString<&gentity_t::className>(nullptr, ITEM_CTF_FLAG_BLUE);
+	e = G_FindByString<&gentity_t::classname>(nullptr, ITEM_CTF_FLAG_BLUE);
 	if (e != nullptr) {
 		if (e->solid == SOLID_NOT) {
 			// not at base
 			// check if on player
 			p2 = ii_ctf_blue_dropped; // default to dropped
 			for (i = 1; i <= game.maxclients; i++)
-				if (g_entities[i].inUse &&
+				if (g_entities[i].inuse &&
 					g_entities[i].client->pers.inventory[IT_FLAG_BLUE]) {
 					// enemy has it
 					p2 = ii_ctf_blue_taken;
@@ -1242,7 +1244,7 @@ static void CTF_SetStats(gentity_t *ent, bool blink) {
 
 			// [Paril-KEX] make sure there is a dropped version on the map somewhere
 			if (p2 == ii_ctf_blue_dropped) {
-				e = G_FindByString<&gentity_t::className>(e, ITEM_CTF_FLAG_BLUE);
+				e = G_FindByString<&gentity_t::classname>(e, ITEM_CTF_FLAG_BLUE);
 
 				if (e == nullptr) {
 					CTF_ResetTeamFlag(TEAM_BLUE);
@@ -1270,7 +1272,7 @@ static void CTF_SetStats(gentity_t *ent, bool blink) {
 			ent->client->ps.stats[STAT_MINISCORE_SECOND_PIC] = 0;
 	}
 
-	if (level.match_state == MatchState::MATCH_IN_PROGRESS) {
+	if (level.match_state >= MATCH_IN_PROGRESS || level.intermission_time) {
 		ent->client->ps.stats[STAT_MINISCORE_FIRST_SCORE] = level.team_scores[TEAM_RED];
 		ent->client->ps.stats[STAT_MINISCORE_SECOND_SCORE] = level.team_scores[TEAM_BLUE];
 	}
@@ -1288,7 +1290,7 @@ static void CTF_SetStats(gentity_t *ent, bool blink) {
 }
 
 
-static void SetMiniScoreStats(gentity_t *ent) {
+void SetMiniScoreStats(gentity_t *ent) {
 	bool teams = Teams() && notGT(GT_RR);
 	int16_t	pos1_num = -1, pos2_num = -1;
 	int16_t own_num = -1;
@@ -1301,8 +1303,8 @@ static void SetMiniScoreStats(gentity_t *ent) {
 		int16_t	other_num = -1;
 		int16_t	other_other_num = -1;
 
-		if (ent->client->sess.team == TEAM_FREE || ent->client->followTarget) {
-			own_num = ent->client->followTarget ? ent->client->followTarget->client - game.clients : ent->client - game.clients;
+		if (ent->client->sess.team == TEAM_FREE || ent->client->follow_target) {
+			own_num = ent->client->follow_target ? ent->client->follow_target->client - game.clients : ent->client - game.clients;
 			own_rank = game.clients[own_num].resp.rank;
 			own_rank &= ~RANK_TIED_FLAG;
 		}
@@ -1362,7 +1364,7 @@ static void SetMiniScoreStats(gentity_t *ent) {
 			pos2_num = other_other_num;
 		}
 
-		if (GTF(GTF_1V1))
+		if (GT(GT_DUEL))
 			ent->client->ps.stats[STAT_DUEL_HEADER] = ii_duel_header;
 
 	} else {
@@ -1371,7 +1373,7 @@ static void SetMiniScoreStats(gentity_t *ent) {
 		ent->client->ps.stats[STAT_TEAM_BLUE_HEADER] = ii_teams_header_blue;
 
 		// if during intermission, we must blink the team header of the winning team
-		if (level.intermissionTime && blink) {
+		if (level.intermission_time && blink) {
 			// blink half second
 			// note that level.total[12] is set when we go to intermission
 			if (level.team_scores[TEAM_RED] > level.team_scores[TEAM_BLUE])
@@ -1390,7 +1392,7 @@ static void SetMiniScoreStats(gentity_t *ent) {
 		CTF_SetStats(ent, blink);
 	} else {
 		if (teams) {
-			if (level.match_state == MatchState::MATCH_IN_PROGRESS) {
+			if (level.match_state >= MATCH_IN_PROGRESS || level.intermission_time) {
 				ent->client->ps.stats[STAT_MINISCORE_FIRST_PIC] = ii_teams_red_default;
 				ent->client->ps.stats[STAT_MINISCORE_FIRST_SCORE] = level.team_scores[TEAM_RED];
 				ent->client->ps.stats[STAT_MINISCORE_SECOND_PIC] = ii_teams_blue_default;
@@ -1409,9 +1411,9 @@ static void SetMiniScoreStats(gentity_t *ent) {
 			int16_t pic1 = 0, pic2 = 0;
 
 			ent->client->ps.stats[STAT_MINISCORE_FIRST_SCORE] = -999;
-			if (level.match_state == MatchState::MATCH_IN_PROGRESS) {
+			if (level.match_state == MATCH_IN_PROGRESS) {
 				if (pos1_num >= 0) {
-					pic1 = game.clients[pos1_num].sess.skin_icon_index;
+					pic1 = game.clients[pos1_num].pers.skin_icon_index;
 					ent->client->ps.stats[STAT_MINISCORE_FIRST_SCORE] = game.clients[pos1_num].resp.score;
 				}
 				ent->client->ps.stats[STAT_MINISCORE_FIRST_PIC] = pic1;
@@ -1419,9 +1421,9 @@ static void SetMiniScoreStats(gentity_t *ent) {
 				ent->client->ps.stats[STAT_MINISCORE_FIRST_PIC] = 0;
 
 			ent->client->ps.stats[STAT_MINISCORE_SECOND_SCORE] = -999;
-			if (level.match_state == MatchState::MATCH_IN_PROGRESS) {
+			if (level.match_state == MATCH_IN_PROGRESS) {
 				if (pos2_num >= 0) {
-					pic2 = game.clients[pos2_num].sess.skin_icon_index;
+					pic2 = game.clients[pos2_num].pers.skin_icon_index;
 					ent->client->ps.stats[STAT_MINISCORE_SECOND_SCORE] = game.clients[pos2_num].resp.score;
 				}
 				ent->client->ps.stats[STAT_MINISCORE_SECOND_PIC] = pic2;
@@ -1433,7 +1435,7 @@ static void SetMiniScoreStats(gentity_t *ent) {
 	// highlight miniscores position/team
 	ent->client->ps.stats[STAT_MINISCORE_FIRST_POS] = 0;
 	ent->client->ps.stats[STAT_MINISCORE_SECOND_POS] = 0;
-	if (level.match_state == MatchState::MATCH_IN_PROGRESS) {
+	if (level.match_state == MATCH_IN_PROGRESS) {
 		if (teams) {
 			if (ent->client->sess.team == TEAM_RED)
 				ent->client->ps.stats[STAT_MINISCORE_FIRST_POS] = ii_highlight;
@@ -1459,16 +1461,16 @@ void G_SetStats(gentity_t *ent) {
 	gitem_t *item;
 	item_id_t		index;
 	int				cells = 0;
-	item_id_t		powerArmorType;
+	item_id_t		power_armor_type;
 	unsigned int	invIndex;
 	bool			minhud = g_instagib->integer || g_nadefest->integer;
-	int32_t			img_index = ent->client->sess.skin_icon_index;
+	int32_t			img_index = ent->client->pers.skin_icon_index;
 
 	//
 	// health
 	//
 	if (ent->s.renderfx & RF_USE_DISGUISE)
-		ent->client->ps.stats[STAT_HEALTH_ICON] = level.disguiseIcon;
+		ent->client->ps.stats[STAT_HEALTH_ICON] = level.disguise_icon;
 	else {
 		switch (ent->client->sess.team) {
 		case TEAM_RED:
@@ -1478,13 +1480,13 @@ void G_SetStats(gentity_t *ent) {
 			ent->client->ps.stats[STAT_HEALTH_ICON] = ii_teams_blue_default;
 			break;
 		default:
-			ent->client->ps.stats[STAT_HEALTH_ICON] = level.picHealth;
+			ent->client->ps.stats[STAT_HEALTH_ICON] = level.pic_health;
 			break;
 		}
 	}
 	ent->client->ps.stats[STAT_HEALTH] = ent->health;
 
-	//ent->client->ps.stats[STAT_SHOW_STATUSBAR] = ent->client->showScores ? 0 : ent->client->followTarget ? 1 : 0;
+	//ent->client->ps.stats[STAT_SHOW_STATUSBAR] = ent->client->showscores ? 0 : ent->client->follow_target ? 1 : 0;
 	if (!minhud) {
 		//
 		// weapons
@@ -1500,7 +1502,7 @@ void G_SetStats(gentity_t *ent) {
 		ent->client->ps.stats[STAT_WEAPONS_OWNED_1] = (weaponbits & 0xFFFF);
 		ent->client->ps.stats[STAT_WEAPONS_OWNED_2] = (weaponbits >> 16);
 
-		ent->client->ps.stats[STAT_ACTIVE_WHEEL_WEAPON] = (ent->client->newWeapon ? ent->client->newWeapon->weapon_wheel_index :
+		ent->client->ps.stats[STAT_ACTIVE_WHEEL_WEAPON] = (ent->client->newweapon ? ent->client->newweapon->weapon_wheel_index :
 			ent->client->pers.weapon ? ent->client->pers.weapon->weapon_wheel_index :
 			-1);
 		ent->client->ps.stats[STAT_ACTIVE_WEAPON] = ent->client->pers.weapon ? ent->client->pers.weapon->weapon_wheel_index : -1;
@@ -1523,22 +1525,20 @@ void G_SetStats(gentity_t *ent) {
 		memset(&ent->client->ps.stats[STAT_AMMO_INFO_START], 0, sizeof(uint16_t) * NUM_AMMO_STATS);
 		for (unsigned int ammoIndex = AMMO_BULLETS; ammoIndex < AMMO_MAX; ++ammoIndex) {
 			gitem_t *ammo = GetItemByAmmo((ammo_t)ammoIndex);
-			if (ammo) {
-				uint16_t val = InfiniteAmmoOn(ammo) ? AMMO_VALUE_INFINITE : clamp(ent->client->pers.inventory[ammo->id], 0, AMMO_VALUE_INFINITE - 1);
-				G_SetAmmoStat((uint16_t *)&ent->client->ps.stats[STAT_AMMO_INFO_START], ammo->ammo_wheel_index, val);
-			}
+			uint16_t val = InfiniteAmmoOn(ammo) ? AMMO_VALUE_INFINITE : clamp(ent->client->pers.inventory[ammo->id], 0, AMMO_VALUE_INFINITE - 1);
+			G_SetAmmoStat((uint16_t *)&ent->client->ps.stats[STAT_AMMO_INFO_START], ammo->ammo_wheel_index, val);
 		}
 
 		//
 		// armor
 		//
-		powerArmorType = PowerArmorType(ent);
-		if (powerArmorType)
+		power_armor_type = PowerArmorType(ent);
+		if (power_armor_type)
 			cells = ent->client->pers.inventory[IT_AMMO_CELLS];
 
 		index = ArmorIndex(ent);
-		if (powerArmorType && (!index || (level.time.milliseconds() % 3000) < 1500)) { // flash between power armor and other armor icon
-			ent->client->ps.stats[STAT_ARMOR_ICON] = powerArmorType == IT_POWER_SHIELD ? gi.imageindex("i_powershield") : gi.imageindex("i_powerscreen");
+		if (power_armor_type && (!index || (level.time.milliseconds() % 3000) < 1500)) { // flash between power armor and other armor icon
+			ent->client->ps.stats[STAT_ARMOR_ICON] = power_armor_type == IT_POWER_SHIELD ? gi.imageindex("i_powershield") : gi.imageindex("i_powerscreen");
 			ent->client->ps.stats[STAT_ARMOR] = cells;
 		} else if (index) {
 			item = GetItemByIndex(index);
@@ -1561,33 +1561,32 @@ void G_SetStats(gentity_t *ent) {
 		memset(&ent->client->ps.stats[STAT_POWERUP_INFO_START], 0, sizeof(uint16_t) * NUM_POWERUP_STATS);
 		for (unsigned int powerupIndex = POWERUP_SCREEN; powerupIndex < POWERUP_MAX; ++powerupIndex) {
 			gitem_t *powerup = GetItemByPowerup((powerup_t)powerupIndex);
-			if (powerup) {
-				uint16_t val;
+			uint16_t val;
 
-				switch (powerup->id) {
-				case IT_POWER_SCREEN:
-				case IT_POWER_SHIELD:
-					if (!ent->client->pers.inventory[powerup->id])
-						val = 0;
-					else if (ent->flags & FL_POWER_ARMOR)
-						val = 2;
-					else
-						val = 1;
-					break;
-				case IT_FLASHLIGHT:
-					if (!ent->client->pers.inventory[powerup->id])
-						val = 0;
-					else if (ent->flags & FL_FLASHLIGHT)
-						val = 2;
-					else
-						val = 1;
-					break;
-				default:
-					val = clamp(ent->client->pers.inventory[powerup->id], 0, 3);
-					break;
-				}
-				G_SetPowerupStat((uint16_t *)&ent->client->ps.stats[STAT_POWERUP_INFO_START], powerup->powerup_wheel_index, val);
+			switch (powerup->id) {
+			case IT_POWER_SCREEN:
+			case IT_POWER_SHIELD:
+				if (!ent->client->pers.inventory[powerup->id])
+					val = 0;
+				else if (ent->flags & FL_POWER_ARMOR)
+					val = 2;
+				else
+					val = 1;
+				break;
+			case IT_FLASHLIGHT:
+				if (!ent->client->pers.inventory[powerup->id])
+					val = 0;
+				else if (ent->flags & FL_FLASHLIGHT)
+					val = 2;
+				else
+					val = 1;
+				break;
+			default:
+				val = clamp(ent->client->pers.inventory[powerup->id], 0, 3);
+				break;
 			}
+
+			G_SetPowerupStat((uint16_t *)&ent->client->ps.stats[STAT_POWERUP_INFO_START], powerup->powerup_wheel_index, val);
 		}
 
 		ent->client->ps.stats[STAT_POWERUP_ICON] = 0;
@@ -1596,17 +1595,17 @@ void G_SetStats(gentity_t *ent) {
 		//
 		// timers
 		//
-		if (ent->client->ownedSphere) {
-			if (ent->client->ownedSphere->spawnflags == SF_SPHERE_DEFENDER) // defender
+		if (ent->client->owned_sphere) {
+			if (ent->client->owned_sphere->spawnflags == SF_SPHERE_DEFENDER) // defender
 				ent->client->ps.stats[STAT_POWERUP_ICON] = gi.imageindex("p_defender");
-			else if (ent->client->ownedSphere->spawnflags == SF_SPHERE_HUNTER) // hunter
+			else if (ent->client->owned_sphere->spawnflags == SF_SPHERE_HUNTER) // hunter
 				ent->client->ps.stats[STAT_POWERUP_ICON] = gi.imageindex("p_hunter");
-			else if (ent->client->ownedSphere->spawnflags == SF_SPHERE_VENGEANCE) // vengeance
+			else if (ent->client->owned_sphere->spawnflags == SF_SPHERE_VENGEANCE) // vengeance
 				ent->client->ps.stats[STAT_POWERUP_ICON] = gi.imageindex("p_vengeance");
 			else // error case
 				ent->client->ps.stats[STAT_POWERUP_ICON] = gi.imageindex("i_fixme");
 
-			ent->client->ps.stats[STAT_POWERUP_TIME] = ceil(ent->client->ownedSphere->wait - level.time.seconds());
+			ent->client->ps.stats[STAT_POWERUP_TIME] = ceil(ent->client->owned_sphere->wait - level.time.seconds());
 		} else {
 			powerup_info_t *best_powerup = nullptr;
 
@@ -1654,7 +1653,7 @@ void G_SetStats(gentity_t *ent) {
 		if (ent->client->pers.selected_item == IT_NULL)
 			ent->client->ps.stats[STAT_SELECTED_ICON] = 0;
 		else {
-			ent->client->ps.stats[STAT_SELECTED_ICON] = gi.imageindex(itemList[ent->client->pers.selected_item].icon);
+			ent->client->ps.stats[STAT_SELECTED_ICON] = gi.imageindex(itemlist[ent->client->pers.selected_item].icon);
 
 			if (ent->client->pers.selected_item_time < level.time)
 				ent->client->ps.stats[STAT_SELECTED_ITEM_NAME] = 0;
@@ -1667,31 +1666,31 @@ void G_SetStats(gentity_t *ent) {
 	ent->client->ps.stats[STAT_LAYOUTS] = 0;
 
 	if (deathmatch->integer) {
-		if (ent->client->pers.health <= 0 || level.intermissionTime || ent->client->showScores)
+		if (ent->client->pers.health <= 0 || level.intermission_time || ent->client->showscores)
 			ent->client->ps.stats[STAT_LAYOUTS] |= LAYOUTS_LAYOUT;
-		if (ent->client->showInventory && ent->client->pers.health > 0)
+		if (ent->client->showinventory && ent->client->pers.health > 0)
 			ent->client->ps.stats[STAT_LAYOUTS] |= LAYOUTS_INVENTORY;
 	} else {
-		if (ent->client->showScores || ent->client->showHelp || ent->client->showEOU)
+		if (ent->client->showscores || ent->client->showhelp || ent->client->showeou)
 			ent->client->ps.stats[STAT_LAYOUTS] |= LAYOUTS_LAYOUT;
-		if (ent->client->showInventory && ent->client->pers.health > 0)
+		if (ent->client->showinventory && ent->client->pers.health > 0)
 			ent->client->ps.stats[STAT_LAYOUTS] |= LAYOUTS_INVENTORY;
 
-		if (ent->client->showHelp)
+		if (ent->client->showhelp)
 			ent->client->ps.stats[STAT_LAYOUTS] |= LAYOUTS_HELP;
 	}
 
-	if (level.intermissionTime || ent->client->awaiting_respawn) {
-		if (ent->client->awaiting_respawn || (level.intermissionEOU || level.isN64 || (deathmatch->integer && (ent->client->showScores || level.intermissionTime))))
+	if (level.intermission_time || ent->client->awaiting_respawn) {
+		if (ent->client->awaiting_respawn || (level.intermission_eou || level.is_n64 || (deathmatch->integer && (ent->client->showscores || level.intermission_time))))
 			ent->client->ps.stats[STAT_LAYOUTS] |= LAYOUTS_HIDE_HUD;
 
 		// N64 always merges into one screen on level ends
-		if (level.intermissionEOU || level.isN64 || (deathmatch->integer && level.intermissionTime))
+		if (level.intermission_eou || level.is_n64 || (deathmatch->integer && level.intermission_time))
 			ent->client->ps.stats[STAT_LAYOUTS] |= LAYOUTS_INTERMISSION;
 	}
 
 	if (deathmatch->integer) {
-		if (ClientIsPlaying(ent->client) || !ent->client->followTarget)
+		if (ClientIsPlaying(ent->client) || !ent->client->follow_target)
 			ent->client->ps.stats[STAT_LAYOUTS] &= ~LAYOUTS_HIDE_CROSSHAIR;
 		else
 			ent->client->ps.stats[STAT_LAYOUTS] |= LAYOUTS_HIDE_CROSSHAIR;
@@ -1716,7 +1715,7 @@ void G_SetStats(gentity_t *ent) {
 		std::array<item_id_t, IT_TOTAL> keys_held;
 		size_t num_keys_held = 0;
 
-		for (auto &item : itemList) {
+		for (auto &item : itemlist) {
 			if (!(item.flags & IF_KEY))
 				continue;
 			else if (!ent->client->pers.inventory[item.id])
@@ -1751,8 +1750,8 @@ void G_SetStats(gentity_t *ent) {
 
 		if (!level.health_bar_entities[i])
 			*health_byte = 0;
-		else if (level.health_bar_entities[i]->timeStamp) {
-			if (level.health_bar_entities[i]->timeStamp < level.time) {
+		else if (level.health_bar_entities[i]->timestamp) {
+			if (level.health_bar_entities[i]->timestamp < level.time) {
 				level.health_bar_entities[i] = nullptr;
 				*health_byte = 0;
 				continue;
@@ -1761,15 +1760,15 @@ void G_SetStats(gentity_t *ent) {
 			*health_byte = 0b10000000;
 		} else {
 			// enemy dead
-			if (!level.health_bar_entities[i]->enemy->inUse || level.health_bar_entities[i]->enemy->health <= 0) {
+			if (!level.health_bar_entities[i]->enemy->inuse || level.health_bar_entities[i]->enemy->health <= 0) {
 				// hack for Makron
-				if (level.health_bar_entities[i]->enemy->monsterInfo.aiflags & AI_DOUBLE_TROUBLE) {
+				if (level.health_bar_entities[i]->enemy->monsterinfo.aiflags & AI_DOUBLE_TROUBLE) {
 					*health_byte = 0b10000000;
 					continue;
 				}
 
 				if (level.health_bar_entities[i]->delay) {
-					level.health_bar_entities[i]->timeStamp = level.time + gtime_t::from_sec(level.health_bar_entities[i]->delay);
+					level.health_bar_entities[i]->timestamp = level.time + gtime_t::from_sec(level.health_bar_entities[i]->delay);
 					*health_byte = 0b10000000;
 				} else {
 					level.health_bar_entities[i] = nullptr;
@@ -1801,13 +1800,12 @@ void G_SetStats(gentity_t *ent) {
 	// ghosting
 	if (ent->client->resp.ghost) {
 		ent->client->resp.ghost->score = ent->client->resp.score;
-		Q_strlcpy(ent->client->resp.ghost->netName, ent->client->sess.netName, sizeof(ent->client->resp.ghost->netName));
-		Q_strlcpy(ent->client->resp.ghost->socialID, ent->client->sess.socialID, sizeof(ent->client->resp.ghost->socialID));
+		Q_strlcpy(ent->client->resp.ghost->netname, ent->client->resp.netname, sizeof(ent->client->resp.ghost->netname));
 		ent->client->resp.ghost->number = ent->s.number;
 	}
 
 	// set crosshair ID
-	if (ent->client->sess.pc.show_id && !CooperativeModeOn())
+	if (ent->client->sess.pc.show_id && !InCoopStyle())
 		SetCrosshairIDView(ent);
 	else {
 		ent->client->ps.stats[STAT_CROSSHAIR_ID_VIEW] = 0;
@@ -1815,7 +1813,7 @@ void G_SetStats(gentity_t *ent) {
 	}
 
 	if (GT(GT_CTF)) {
-		//ent->client->ps.stats[STAT_MATCH_STATE] = level.match_state > MatchState::MATCH_NONE ? CONFIG_MATCH_STATE : 0;
+		//ent->client->ps.stats[STAT_MATCH_STATE] = level.match_state > matchst_t::MATCH_NONE ? CONFIG_MATCH_STATE : 0;
 		//ent->client->ps.stats[STAT_TEAMPLAY_INFO] = level.warnactive ? CONFIG_TEAMINFO : 0;
 	}
 
@@ -1830,7 +1828,7 @@ void G_SetStats(gentity_t *ent) {
 		// Don't update any more than once/second
 		static int lasttime = 0;
 		//int	t = timelimit->value ? (gtime_t::from_min(timelimit->value) + level.overtime - level.time).seconds<int>() : level.time.seconds<int>();
-		gtime_t clock = timelimit->value ? (level.matchStartTime + gtime_t::from_min(timelimit->value) + level.overtime - level.time) : level.time - level.matchStartTime;
+		gtime_t clock = timelimit->value ? (level.match_time + gtime_t::from_min(timelimit->value) + level.overtime - level.time) : level.time - level.match_time;
 		int	t = clock.milliseconds();
 		int ft = floor(t * 1000);
 		
@@ -1840,68 +1838,54 @@ void G_SetStats(gentity_t *ent) {
 			ent->client->last_match_timer_update = ft;
 
 			switch (level.match_state) {
-			case MatchState::MATCH_WARMUP_DELAYED:
-				if (level.warmup_notice_time + 4_sec > level.time) {
+			case matchst_t::MATCH_WARMUP_DELAYED:
+				if (level.warmup_notice_time + 5_sec > level.time) {
 					s1 = G_Fmt("{} v{}", GAMEMOD_TITLE, GAMEMOD_VERSION).data();
-				} else if (level.warmup_notice_time + 8_sec > level.time) {
-					s1 = G_Fmt("Ruleset: {}", rs_long_name[(int)game.ruleset]).data();
 				} else {
 					s1 = "";
 				}
 				break;
-			case MatchState::MATCH_NONE:
+			case matchst_t::MATCH_NONE:
 				s1 = "";
 				break;
-			case MatchState::MATCH_WARMUP_DEFAULT:
-			case MatchState::MATCH_WARMUP_READYUP:
-				if (GT(GT_RACE)) {
-					gtime_t t2 = (level.time - ent->client->pers.last_spawn_time);
-					s1 = G_Fmt("WARMUP ({})", TimeString(t2.milliseconds(), true, false)).data();
-				} else
-					s1 = "WARMUP";
+			case matchst_t::MATCH_WARMUP_DEFAULT:
+			case matchst_t::MATCH_WARMUP_READYUP:
+				s1 = "WARMUP";
 				break;
-			case MatchState::MATCH_COUNTDOWN:
+			case matchst_t::MATCH_COUNTDOWN:
 				s1 = "COUNTDOWN";
 				break;
 			default: {
-				if (level.timeoutActive > 0_ms) {
-					int t2 = (level.timeoutActive).milliseconds();
-					s1 = G_Fmt("TIMEOUT! ({})", TimeString(t2, false, false)).data();
+				if (level.timeout_in_place > 0_ms) {
+					int t2 = (level.timeout_in_place).milliseconds();
+					s1 = G_Fmt("TIMEOUT! ({})", G_TimeString(t2, false)).data();
 				} else if (t < 0 && t >= -4) {
 					s1 = "OVERTIME!";
 				} else if (GTF(GTF_ROUNDS)) {
-					if (level.round_state == RoundState::ROUND_COUNTDOWN) {
+					if (level.round_state == roundst_t::ROUND_COUNTDOWN) {
 						s1 = "COUNTDOWN";
-					} else if (level.round_state == RoundState::ROUND_IN_PROGRESS) {
+					} else if (level.round_state == roundst_t::ROUND_IN_PROGRESS) {
 						int t2 = (level.round_state_timer - level.time).milliseconds();
-						s1 = G_Fmt("{} ({})", TimeString(t, false, false), TimeString(t2, false, false)).data();
+						s1 = G_Fmt("{} ({})", G_TimeString(t, false), G_TimeString(t2, false)).data();
 					} else {
 						s1 = "";
 					}
 				} else {
-					if (GT(GT_RACE)) {
-						gtime_t t2 = (level.time - ent->client->pers.last_spawn_time);
-						s1 = G_Fmt("{} ({})", TimeString(t, false, false), TimeString(t2.milliseconds(), true, false)).data();
-					} else {
-						if (level.intermissionQueued || (t < 1000 && t > -1000))
-							s1 = "";
-						else
-							s1 = TimeString(t, false, false);
-					}
+					s1 = G_TimeString(t, false);
 				}
 				break;
 			}
 			}
-			if (level.match_state == MatchState::MATCH_WARMUP_DEFAULT || level.match_state == MatchState::MATCH_WARMUP_READYUP) {
-				if (static_cast<uint8_t>(level.warmup_requisite) && level.warmup_notice_time + 3_sec > level.time) {
+			if (level.match_state == matchst_t::MATCH_WARMUP_DEFAULT || level.match_state == matchst_t::MATCH_WARMUP_READYUP) {
+				if (level.warmup_requisite && level.warmup_notice_time + 3_sec > level.time) {
 					switch (level.warmup_requisite) {
-					case WarmupState::WARMUP_REQ_MORE_PLAYERS:
+					case warmupreq_t::WARMUP_REQ_MORE_PLAYERS:
 						s2 = G_Fmt(": More players needed ({} players min.)", minplayers->integer).data();
 						break;
-					case WarmupState::WARMUP_REQ_BALANCE:
+					case warmupreq_t::WARMUP_REQ_BALANCE:
 						s2 = ": Teams are imbalanced.";
 						break;
-					case WarmupState::WARMUP_REQ_READYUP:
+					case warmupreq_t::WARMUP_REQ_READYUP:
 						s2 = ": Players must ready up.";
 						break;
 					}
@@ -1917,10 +1901,10 @@ void G_SetStats(gentity_t *ent) {
 		ent->client->ps.stats[STAT_MATCH_STATE] = 0;
 	}
 	
-	if (ent->client->pers.medalTime + 3_sec > level.time) {
-		ent->client->ps.stats[STAT_FOLLOWING] = 0;	// CONFIG_TEAMINFO;
+	if (ent->client->pers.medal_time + 3_sec > level.time) {
+		ent->client->ps.stats[STAT_CHASE] = 0;	// CONFIG_TEAMINFO;
 	} else {
-		ent->client->ps.stats[STAT_FOLLOWING] = 0;
+		ent->client->ps.stats[STAT_CHASE] = 0;
 	}
 
 }
@@ -1932,7 +1916,7 @@ G_CheckChaseStats
 */
 void G_CheckChaseStats(gentity_t *ent) {
 	for (auto player : active_clients()) {
-		if (player->client->followTarget != ent)
+		if (player->client->follow_target != ent)
 			continue;
 		player->client->ps.stats = ent->client->ps.stats;
 		G_SetSpectatorStats(player);
@@ -1947,22 +1931,22 @@ G_SetSpectatorStats
 void G_SetSpectatorStats(gentity_t *ent) {
 	gclient_t *cl = ent->client;
 
-	if (!cl->followTarget)
+	if (!cl->follow_target || level.intermission_time)
 		G_SetStats(ent);
+
+	cl->ps.stats[STAT_SPECTATOR] = 1;
 
 	// layouts are independant in spectator
 	cl->ps.stats[STAT_LAYOUTS] = 0;
-	if (cl->pers.health <= 0 || level.intermissionTime || cl->showScores)
+	if (cl->pers.health <= 0 || level.intermission_time || cl->showscores)
 		cl->ps.stats[STAT_LAYOUTS] |= LAYOUTS_LAYOUT;
-	if (cl->showInventory && cl->pers.health > 0)
+	if (cl->showinventory && cl->pers.health > 0)
 		cl->ps.stats[STAT_LAYOUTS] |= LAYOUTS_INVENTORY;
 
-	if (cl->followTarget && cl->followTarget->inUse) {
-		cl->ps.stats[STAT_FOLLOWING] = CONFIG_CHASE_PLAYER_NAME +
-			(cl->followTarget - g_entities) - 1;
-		cl->ps.stats[STAT_SPECTATOR] = 0;
+	if (cl->follow_target && cl->follow_target->inuse) {
+		cl->ps.stats[STAT_CHASE] = CONFIG_CHASE_PLAYER_NAME +
+			(cl->follow_target - g_entities) - 1;
 	} else {
-		cl->ps.stats[STAT_FOLLOWING] = 0;
-		cl->ps.stats[STAT_SPECTATOR] = 1;
+		cl->ps.stats[STAT_CHASE] = 0;
 	}
 }

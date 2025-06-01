@@ -39,13 +39,13 @@ include CMakeFiles\rules.ninja
 #############################################
 # Logical path to working directory; prefix for absolute paths.
 
-cmake_ninja_workdir = C$:\Program$ Files$ (x86)\Steam\steamapps\common\Quake$ 2\rerelease\mymod\src\vcpkg_installed\x64-windows-static\vcpkg\blds\detect_compiler\x64-windows-rel\
+cmake_ninja_workdir = C$:\Program$ Files$ (x86)\Steam\steamapps\common\Quake$ 2\rerelease\muffmode\src\vcpkg_installed\x64-windows-static\vcpkg\blds\detect_compiler\x64-windows-rel\
 
 #############################################
 # Utility command for edit_cache
 
 build CMakeFiles\edit_cache.util: CUSTOM_COMMAND
-  COMMAND = cmd.exe /C "cd /D "C:\Program Files (x86)\Steam\steamapps\common\Quake 2\rerelease\mymod\src\vcpkg_installed\x64-windows-static\vcpkg\blds\detect_compiler\x64-windows-rel" && C:\Users\djdac\AppData\Local\vcpkg\downloads\tools\cmake-3.27.1-windows\cmake-3.27.1-windows-i386\bin\cmake-gui.exe -S"C:\Program Files\Microsoft Visual Studio\2022\Community\VC\vcpkg\scripts\detect_compiler" -B"C:\Program Files (x86)\Steam\steamapps\common\Quake 2\rerelease\mymod\src\vcpkg_installed\x64-windows-static\vcpkg\blds\detect_compiler\x64-windows-rel""
+  COMMAND = cmd.exe /C "cd /D "C:\Program Files (x86)\Steam\steamapps\common\Quake 2\rerelease\muffmode\src\vcpkg_installed\x64-windows-static\vcpkg\blds\detect_compiler\x64-windows-rel" && C:\Users\djdac\AppData\Local\vcpkg\downloads\tools\cmake-3.27.1-windows\cmake-3.27.1-windows-i386\bin\cmake-gui.exe -S"C:\Program Files\Microsoft Visual Studio\2022\Community\VC\vcpkg\scripts\detect_compiler" -B"C:\Program Files (x86)\Steam\steamapps\common\Quake 2\rerelease\muffmode\src\vcpkg_installed\x64-windows-static\vcpkg\blds\detect_compiler\x64-windows-rel""
   DESC = Running CMake cache editor...
   pool = console
   restat = 1
@@ -57,7 +57,7 @@ build edit_cache: phony CMakeFiles\edit_cache.util
 # Utility command for rebuild_cache
 
 build CMakeFiles\rebuild_cache.util: CUSTOM_COMMAND
-  COMMAND = cmd.exe /C "cd /D "C:\Program Files (x86)\Steam\steamapps\common\Quake 2\rerelease\mymod\src\vcpkg_installed\x64-windows-static\vcpkg\blds\detect_compiler\x64-windows-rel" && C:\Users\djdac\AppData\Local\vcpkg\downloads\tools\cmake-3.27.1-windows\cmake-3.27.1-windows-i386\bin\cmake.exe --regenerate-during-build -S"C:\Program Files\Microsoft Visual Studio\2022\Community\VC\vcpkg\scripts\detect_compiler" -B"C:\Program Files (x86)\Steam\steamapps\common\Quake 2\rerelease\mymod\src\vcpkg_installed\x64-windows-static\vcpkg\blds\detect_compiler\x64-windows-rel""
+  COMMAND = cmd.exe /C "cd /D "C:\Program Files (x86)\Steam\steamapps\common\Quake 2\rerelease\muffmode\src\vcpkg_installed\x64-windows-static\vcpkg\blds\detect_compiler\x64-windows-rel" && C:\Users\djdac\AppData\Local\vcpkg\downloads\tools\cmake-3.27.1-windows\cmake-3.27.1-windows-i386\bin\cmake.exe --regenerate-during-build -S"C:\Program Files\Microsoft Visual Studio\2022\Community\VC\vcpkg\scripts\detect_compiler" -B"C:\Program Files (x86)\Steam\steamapps\common\Quake 2\rerelease\muffmode\src\vcpkg_installed\x64-windows-static\vcpkg\blds\detect_compiler\x64-windows-rel""
   DESC = Running CMake to regenerate build system...
   pool = console
   restat = 1
@@ -73,7 +73,7 @@ build rebuild_cache: phony CMakeFiles\rebuild_cache.util
 # =============================================================================
 
 #############################################
-# Folder: C:/Program Files (x86)/Steam/steamapps/common/Quake 2/rerelease/mymod/src/vcpkg_installed/x64-windows-static/vcpkg/blds/detect_compiler/x64-windows-rel
+# Folder: C:/Program Files (x86)/Steam/steamapps/common/Quake 2/rerelease/muffmode/src/vcpkg_installed/x64-windows-static/vcpkg/blds/detect_compiler/x64-windows-rel
 
 build all: phony
 

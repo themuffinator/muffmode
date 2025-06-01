@@ -81,8 +81,8 @@ static void UpdateFollowActorDebug(const gentity_t *localPlayer) {
 			}
 		} else {
 			if (gi.Bot_FollowActor(escortBot, escortActor) != GoalReturnCode::Error) {
-				gi.Draw_Bounds(escortActor->absMin, escortActor->absMax, rgba_yellow, gi.frame_time_s, false);
-				gi.Draw_Bounds(escortBot->absMin, escortBot->absMax, rgba_cyan, gi.frame_time_s, false);
+				gi.Draw_Bounds(escortActor->absmin, escortActor->absmax, rgba_yellow, gi.frame_time_s, false);
+				gi.Draw_Bounds(escortBot->absmin, escortBot->absmax, rgba_cyan, gi.frame_time_s, false);
 			} else {
 				gi.Com_Print("Follow_Actor: Bot Or Actor Removed...\n");
 				gi.cvar_set("bot_debug_follow_actor", "0");
@@ -117,9 +117,9 @@ static void UpdateMoveToPointDebug(const gentity_t *localPlayer) {
 		if (bot_debug_move_to_point->integer == 1) {
 			if (localPlayer->client->buttons & BUTTON_ATTACK) {
 				vec3_t localPlayerForward, right, up;
-				AngleVectors(localPlayer->client->vAngle, localPlayerForward, right, up);
+				AngleVectors(localPlayer->client->v_angle, localPlayerForward, right, up);
 
-				const vec3_t localPlayerViewPos = (localPlayer->s.origin + vec3_t{ 0.0f, 0.0f, (float)localPlayer->viewHeight });
+				const vec3_t localPlayerViewPos = (localPlayer->s.origin + vec3_t{ 0.0f, 0.0f, (float)localPlayer->viewheight });
 				const vec3_t end = (localPlayerViewPos + (localPlayerForward * 8192.0f));
 				const contents_t mask = (MASK_PROJECTILE & ~CONTENTS_DEADMONSTER);
 
@@ -144,7 +144,7 @@ static void UpdateMoveToPointDebug(const gentity_t *localPlayer) {
 				gi.Com_Print("Move_To_Point: Bot Reached Goal Position!\n");
 			} else {
 				gi.Draw_Point(moveToPointPos, 8.0f, rgba_yellow, gi.frame_time_s, false);
-				gi.Draw_Bounds(moveToPointBot->absMin, moveToPointBot->absMax, rgba_cyan, gi.frame_time_s, false);
+				gi.Draw_Bounds(moveToPointBot->absmin, moveToPointBot->absmax, rgba_cyan, gi.frame_time_s, false);
 			}
 		}
 	} else {

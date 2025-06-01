@@ -54,9 +54,8 @@ unset(_cmake_expected_targets)
 add_library(fmt::fmt STATIC IMPORTED)
 
 set_target_properties(fmt::fmt PROPERTIES
-  INTERFACE_COMPILE_DEFINITIONS "FMT_LOCALE"
-  INTERFACE_COMPILE_FEATURES "cxx_variadic_templates"
-  INTERFACE_INCLUDE_DIRECTORIES "C:/Program Files (x86)/Steam/steamapps/common/Quake 2/rerelease/mymod/src/vcpkg_installed/x64-windows-static/vcpkg/blds/fmt/src/2b3b374f0b-8ea71ee8ea.clean/include"
+  INTERFACE_COMPILE_FEATURES "cxx_std_11"
+  INTERFACE_INCLUDE_DIRECTORIES "C:/Program Files (x86)/Steam/steamapps/common/Quake 2/rerelease/muffmode/src/vcpkg_installed/x64-windows-static/vcpkg/blds/fmt/src/10.1.1-281bbdd8af.clean/include"
 )
 
 # Create imported target fmt::fmt-header-only
@@ -64,15 +63,15 @@ add_library(fmt::fmt-header-only INTERFACE IMPORTED)
 
 set_target_properties(fmt::fmt-header-only PROPERTIES
   INTERFACE_COMPILE_DEFINITIONS "FMT_HEADER_ONLY=1"
-  INTERFACE_COMPILE_FEATURES "cxx_variadic_templates"
-  INTERFACE_INCLUDE_DIRECTORIES "C:/Program Files (x86)/Steam/steamapps/common/Quake 2/rerelease/mymod/src/vcpkg_installed/x64-windows-static/vcpkg/blds/fmt/src/2b3b374f0b-8ea71ee8ea.clean/include"
+  INTERFACE_COMPILE_FEATURES "cxx_std_11"
+  INTERFACE_INCLUDE_DIRECTORIES "C:/Program Files (x86)/Steam/steamapps/common/Quake 2/rerelease/muffmode/src/vcpkg_installed/x64-windows-static/vcpkg/blds/fmt/src/10.1.1-281bbdd8af.clean/include"
 )
 
 # Import target "fmt::fmt" for configuration "Debug"
 set_property(TARGET fmt::fmt APPEND PROPERTY IMPORTED_CONFIGURATIONS DEBUG)
 set_target_properties(fmt::fmt PROPERTIES
   IMPORTED_LINK_INTERFACE_LANGUAGES_DEBUG "CXX"
-  IMPORTED_LOCATION_DEBUG "C:/Program Files (x86)/Steam/steamapps/common/Quake 2/rerelease/mymod/src/vcpkg_installed/x64-windows-static/vcpkg/blds/fmt/x64-windows-static-dbg/fmtd.lib"
+  IMPORTED_LOCATION_DEBUG "C:/Program Files (x86)/Steam/steamapps/common/Quake 2/rerelease/muffmode/src/vcpkg_installed/x64-windows-static/vcpkg/blds/fmt/x64-windows-static-dbg/fmtd.lib"
   )
 
 # This file does not depend on other imported targets which have

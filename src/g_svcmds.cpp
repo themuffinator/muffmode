@@ -225,7 +225,7 @@ static void SVCmd_WriteIP_f(void) {
 
 	std::string name;
 	if (!*game->string)
-		name = GAMEVERSION + "/listip.cfg";
+		name = std::string(GAMEVERSION) + "/listip.cfg";
 	else
 		name = std::string(game->string) + "/listip.cfg";
 

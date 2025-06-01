@@ -29,7 +29,7 @@ rule CUSTOM_COMMAND
 # Rule for re-running cmake.
 
 rule RERUN_CMAKE
-  command = C:\Users\djdac\AppData\Local\vcpkg\downloads\tools\cmake-3.27.1-windows\cmake-3.27.1-windows-i386\bin\cmake.exe --regenerate-during-build -S"C:\Program Files\Microsoft Visual Studio\2022\Community\VC\vcpkg\scripts\detect_compiler" -B"C:\Program Files (x86)\Steam\steamapps\common\Quake 2\rerelease\mymod\src\vcpkg_installed\x64-windows-static\vcpkg\blds\detect_compiler\x64-windows-static-rel"
+  command = C:\Users\djdac\AppData\Local\vcpkg\downloads\tools\cmake-3.27.1-windows\cmake-3.27.1-windows-i386\bin\cmake.exe --regenerate-during-build -S"C:\Program Files\Microsoft Visual Studio\2022\Community\VC\vcpkg\scripts\detect_compiler" -B"C:\Program Files (x86)\Steam\steamapps\common\Quake 2\rerelease\muffmode\src\vcpkg_installed\x64-windows-static\vcpkg\blds\detect_compiler\x64-windows-static-rel"
   description = Re-running CMake...
   generator = 1
 

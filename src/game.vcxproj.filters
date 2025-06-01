@@ -274,10 +274,6 @@
     <ClCompile Include="p_menu.cpp" />
     <ClCompile Include="g_menu.cpp" />
     <ClCompile Include="g_ctf.cpp" />
-    <ClCompile Include="g_match_logging.cpp" />
-    <ClCompile Include="g_maps.cpp" />
-    <ClCompile Include="g_match_state.cpp" />
-    <ClCompile Include="g_client_cfg.cpp" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="bots">

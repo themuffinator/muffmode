@@ -88,7 +88,7 @@ mframe_t gunner_frames_fidget[] = {
 MMOVE_T(gunner_move_fidget) = { FRAME_stand31, FRAME_stand70, gunner_frames_fidget, gunner_stand };
 
 static void gunner_fidget(gentity_t *self) {
-	if (self->monsterInfo.aiflags & AI_STAND_GROUND)
+	if (self->monsterinfo.aiflags & AI_STAND_GROUND)
 		return;
 	else if (self->enemy)
 		return;
@@ -172,7 +172,7 @@ MMOVE_T(gunner_move_run) = { FRAME_run01, FRAME_run08, gunner_frames_run, nullpt
 
 MONSTERINFO_RUN(gunner_run) (gentity_t *self) -> void {
 	monster_done_dodge(self);
-	if (self->monsterInfo.aiflags & AI_STAND_GROUND)
+	if (self->monsterinfo.aiflags & AI_STAND_GROUND)
 		M_SetAnimation(self, &gunner_move_stand);
 	else
 		M_SetAnimation(self, &gunner_move_run);
@@ -242,8 +242,8 @@ extern const mmove_t gunner_move_jump2;
 static PAIN(gunner_pain) (gentity_t *self, gentity_t *other, float kick, int damage, const mod_t &mod) -> void {
 	monster_done_dodge(self);
 
-	if (self->monsterInfo.active_move == &gunner_move_jump ||
-		self->monsterInfo.active_move == &gunner_move_jump2)
+	if (self->monsterinfo.active_move == &gunner_move_jump ||
+		self->monsterinfo.active_move == &gunner_move_jump2)
 		return;
 
 	if (level.time < self->pain_debounce_time)
@@ -266,10 +266,10 @@ static PAIN(gunner_pain) (gentity_t *self, gentity_t *other, float kick, int dam
 	else
 		M_SetAnimation(self, &gunner_move_pain1);
 
-	self->monsterInfo.aiflags &= ~AI_MANUAL_STEERING;
+	self->monsterinfo.aiflags &= ~AI_MANUAL_STEERING;
 
 	// PMM - clear duck flag
-	if (self->monsterInfo.aiflags & AI_DUCKED)
+	if (self->monsterinfo.aiflags & AI_DUCKED)
 		monster_duck_up(self);
 }
 
@@ -288,7 +288,7 @@ static void gunner_dead(gentity_t *self) {
 
 static void gunner_shrink(gentity_t *self) {
 	self->maxs[2] = -4;
-	self->svFlags |= SVF_DEADMONSTER;
+	self->svflags |= SVF_DEADMONSTER;
 	gi.linkentity(self);
 }
 
@@ -324,17 +324,17 @@ static DIE(gunner_die) (gentity_t *self, gentity_t *inflictor, gentity_t *attack
 			{ "models/monsters/gunner/gibs/head.md2", GIB_SKINNED | GIB_HEAD }
 			});
 
-		self->deadFlag = true;
+		self->deadflag = true;
 		return;
 	}
 
-	if (self->deadFlag)
+	if (self->deadflag)
 		return;
 
 	// regular death
 	gi.sound(self, CHAN_VOICE, sound_death, 1, ATTN_NORM, 0);
-	self->deadFlag = true;
-	self->takeDamage = true;
+	self->deadflag = true;
+	self->takedamage = true;
 	M_SetAnimation(self, &gunner_move_death);
 }
 
@@ -364,7 +364,7 @@ void GunnerFire(gentity_t *self) {
 	vec3_t					 aim;
 	monster_muzzleflash_id_t flash_number;
 
-	if (!self->enemy || !self->enemy->inUse)
+	if (!self->enemy || !self->enemy->inuse)
 		return;
 
 	flash_number = static_cast<monster_muzzleflash_id_t>(MZ2_GUNNER_MACHINEGUN_1 + (self->s.frame - FRAME_attak216));
@@ -389,8 +389,8 @@ static bool gunner_grenade_check(gentity_t *self) {
 	vec3_t target;
 
 	// check for flag telling us that we're blindfiring
-	if (self->monsterInfo.aiflags & AI_MANUAL_STEERING)
-		target = self->monsterInfo.blind_fire_target;
+	if (self->monsterinfo.aiflags & AI_MANUAL_STEERING)
+		target = self->monsterinfo.blind_fire_target;
 	else
 		target = self->enemy->s.origin;
 
@@ -416,10 +416,10 @@ void GunnerGrenade(gentity_t *self) {
 	vec3_t					target;
 	bool					blindfire = false;
 
-	if (!self->enemy || !self->enemy->inUse)
+	if (!self->enemy || !self->enemy->inuse)
 		return;
 
-	if (self->monsterInfo.aiflags & AI_MANUAL_STEERING)
+	if (self->monsterinfo.aiflags & AI_MANUAL_STEERING)
 		blindfire = true;
 
 	if (self->s.frame == FRAME_attak105 || self->s.frame == FRAME_attak309) {
@@ -433,7 +433,7 @@ void GunnerGrenade(gentity_t *self) {
 		flash_number = MZ2_GUNNER_GRENADE_3;
 	} else // (self->s.frame == FRAME_attak114)
 	{
-		self->monsterInfo.aiflags &= ~AI_MANUAL_STEERING;
+		self->monsterinfo.aiflags &= ~AI_MANUAL_STEERING;
 		spread = 0.10f;
 		flash_number = MZ2_GUNNER_GRENADE_4;
 	}
@@ -444,10 +444,10 @@ void GunnerGrenade(gentity_t *self) {
 	// if we're shooting blind and we still can't see our enemy
 	if ((blindfire) && (!visible(self, self->enemy))) {
 		// and we have a valid blind_fire_target
-		if (!self->monsterInfo.blind_fire_target)
+		if (!self->monsterinfo.blind_fire_target)
 			return;
 
-		target = self->monsterInfo.blind_fire_target;
+		target = self->monsterinfo.blind_fire_target;
 	} else
 		target = self->enemy->s.origin;
 
@@ -521,8 +521,8 @@ MMOVE_T(gunner_move_endfire_chain) = { FRAME_attak224, FRAME_attak230, gunner_fr
 void gunner_blind_check(gentity_t *self) {
 	vec3_t aim;
 
-	if (self->monsterInfo.aiflags & AI_MANUAL_STEERING) {
-		aim = self->monsterInfo.blind_fire_target - self->s.origin;
+	if (self->monsterinfo.aiflags & AI_MANUAL_STEERING) {
+		aim = self->monsterinfo.blind_fire_target - self->s.origin;
 		self->ideal_yaw = vectoyaw(aim);
 	}
 }
@@ -586,14 +586,14 @@ MONSTERINFO_ATTACK(gunner_attack) (gentity_t *self) -> void {
 
 	monster_done_dodge(self);
 
-	if (self->monsterInfo.attack_state == AS_BLIND) {
-		if (self->timeStamp > level.time)
+	if (self->monsterinfo.attack_state == AS_BLIND) {
+		if (self->timestamp > level.time)
 			return;
 
 		// setup shot probabilities
-		if (self->monsterInfo.blind_fire_delay < 1_sec)
+		if (self->monsterinfo.blind_fire_delay < 1_sec)
 			chance = 1.0f;
-		else if (self->monsterInfo.blind_fire_delay < 7.5_sec)
+		else if (self->monsterinfo.blind_fire_delay < 7.5_sec)
 			chance = 0.4f;
 		else
 			chance = 0.1f;
@@ -601,10 +601,10 @@ MONSTERINFO_ATTACK(gunner_attack) (gentity_t *self) -> void {
 		r = frandom();
 
 		// minimum of 4.1 seconds, plus 0-3, after the shots are done
-		self->monsterInfo.blind_fire_delay += 4.1_sec + random_time(3_sec);
+		self->monsterinfo.blind_fire_delay += 4.1_sec + random_time(3_sec);
 
 		// don't shoot at the origin
-		if (!self->monsterInfo.blind_fire_target)
+		if (!self->monsterinfo.blind_fire_target)
 			return;
 
 		// don't shoot if the dice say not to
@@ -612,29 +612,29 @@ MONSTERINFO_ATTACK(gunner_attack) (gentity_t *self) -> void {
 			return;
 
 		// turn on manual steering to signal both manual steering and blindfire
-		self->monsterInfo.aiflags |= AI_MANUAL_STEERING;
+		self->monsterinfo.aiflags |= AI_MANUAL_STEERING;
 
 		if (gunner_grenade_check(self)) {
 			// if the check passes, go for the attack
 			M_SetAnimation(self, brandom() ? &gunner_move_attack_grenade2 : &gunner_move_attack_grenade);
-			self->monsterInfo.attack_finished = level.time + random_time(2_sec);
+			self->monsterinfo.attack_finished = level.time + random_time(2_sec);
 		} else
 			// turn off blindfire flag
-			self->monsterInfo.aiflags &= ~AI_MANUAL_STEERING;
+			self->monsterinfo.aiflags &= ~AI_MANUAL_STEERING;
 
-		self->timeStamp = level.time + random_time(2_sec, 3_sec);
+		self->timestamp = level.time + random_time(2_sec, 3_sec);
 
 		return;
 	}
 
 	// PGM - gunner needs to use his chaingun if he's being attacked by a tesla.
-	if (self->bad_area || self->timeStamp > level.time ||
+	if (self->bad_area || self->timestamp > level.time ||
 		(range_to(self, self->enemy) <= RANGE_NEAR * 0.35f && M_CheckClearShot(self, monster_flash_offset[MZ2_GUNNER_MACHINEGUN_1]))) {
 		M_SetAnimation(self, &gunner_move_attack_chain);
 	} else {
-		if (self->timeStamp <= level.time && frandom() <= 0.5f && gunner_grenade_check(self)) {
+		if (self->timestamp <= level.time && frandom() <= 0.5f && gunner_grenade_check(self)) {
 			M_SetAnimation(self, brandom() ? &gunner_move_attack_grenade2 : &gunner_move_attack_grenade);
-			self->timeStamp = level.time + random_time(2_sec, 3_sec);
+			self->timestamp = level.time + random_time(2_sec, 3_sec);
 		} else if (M_CheckClearShot(self, monster_flash_offset[MZ2_GUNNER_MACHINEGUN_1]))
 			M_SetAnimation(self, &gunner_move_attack_chain);
 	}
@@ -671,13 +671,13 @@ static void gunner_jump2_now(gentity_t *self) {
 }
 
 static void gunner_jump_wait_land(gentity_t *self) {
-	if (self->groundEntity == nullptr) {
-		self->monsterInfo.nextframe = self->s.frame;
+	if (self->groundentity == nullptr) {
+		self->monsterinfo.nextframe = self->s.frame;
 
 		if (monster_jump_finished(self))
-			self->monsterInfo.nextframe = self->s.frame + 1;
+			self->monsterinfo.nextframe = self->s.frame + 1;
 	} else
-		self->monsterInfo.nextframe = self->s.frame + 1;
+		self->monsterinfo.nextframe = self->s.frame + 1;
 }
 
 mframe_t gunner_frames_jump[] = {
@@ -735,17 +735,17 @@ MONSTERINFO_BLOCKED(gunner_blocked) (gentity_t *self, float dist) -> bool {
 
 // PMM - new duck code
 MONSTERINFO_DUCK(gunner_duck) (gentity_t *self, gtime_t eta) -> bool {
-	if ((self->monsterInfo.active_move == &gunner_move_jump2) ||
-		(self->monsterInfo.active_move == &gunner_move_jump)) {
+	if ((self->monsterinfo.active_move == &gunner_move_jump2) ||
+		(self->monsterinfo.active_move == &gunner_move_jump)) {
 		return false;
 	}
 
-	if ((self->monsterInfo.active_move == &gunner_move_attack_chain) ||
-		(self->monsterInfo.active_move == &gunner_move_fire_chain) ||
-		(self->monsterInfo.active_move == &gunner_move_attack_grenade) ||
-		(self->monsterInfo.active_move == &gunner_move_attack_grenade2)) {
+	if ((self->monsterinfo.active_move == &gunner_move_attack_chain) ||
+		(self->monsterinfo.active_move == &gunner_move_fire_chain) ||
+		(self->monsterinfo.active_move == &gunner_move_attack_grenade) ||
+		(self->monsterinfo.active_move == &gunner_move_attack_grenade2)) {
 		// if we're shooting don't dodge
-		self->monsterInfo.unduck(self);
+		self->monsterinfo.unduck(self);
 		return false;
 	}
 
@@ -758,20 +758,20 @@ MONSTERINFO_DUCK(gunner_duck) (gentity_t *self, gtime_t eta) -> bool {
 }
 
 MONSTERINFO_SIDESTEP(gunner_sidestep) (gentity_t *self) -> bool {
-	if ((self->monsterInfo.active_move == &gunner_move_jump2) ||
-		(self->monsterInfo.active_move == &gunner_move_jump) ||
-		(self->monsterInfo.active_move == &gunner_move_pain1))
+	if ((self->monsterinfo.active_move == &gunner_move_jump2) ||
+		(self->monsterinfo.active_move == &gunner_move_jump) ||
+		(self->monsterinfo.active_move == &gunner_move_pain1))
 		return false;
 
-	if ((self->monsterInfo.active_move == &gunner_move_attack_chain) ||
-		(self->monsterInfo.active_move == &gunner_move_fire_chain) ||
-		(self->monsterInfo.active_move == &gunner_move_attack_grenade) ||
-		(self->monsterInfo.active_move == &gunner_move_attack_grenade2)) {
+	if ((self->monsterinfo.active_move == &gunner_move_attack_chain) ||
+		(self->monsterinfo.active_move == &gunner_move_fire_chain) ||
+		(self->monsterinfo.active_move == &gunner_move_attack_grenade) ||
+		(self->monsterinfo.active_move == &gunner_move_attack_grenade2)) {
 		// if we're shooting, don't dodge
 		return false;
 	}
 
-	if (self->monsterInfo.active_move != &gunner_move_run)
+	if (self->monsterinfo.active_move != &gunner_move_run)
 		M_SetAnimation(self, &gunner_move_run);
 
 	return true;
@@ -784,7 +784,7 @@ model="models/monsters/gunner/tris.md2"
 */
 void SP_monster_gunner(gentity_t *self) {
 	if (!M_AllowSpawn(self)) {
-		FreeEntity(self);
+		G_FreeEntity(self);
 		return;
 	}
 
@@ -799,7 +799,7 @@ void SP_monster_gunner(gentity_t *self) {
 	gi.soundindex("gunner/gunatck2.wav");
 	gi.soundindex("gunner/gunatck3.wav");
 
-	self->moveType = MOVETYPE_STEP;
+	self->movetype = MOVETYPE_STEP;
 	self->solid = SOLID_BBOX;
 	self->s.modelindex = gi.modelindex("models/monsters/gunner/tris.md2");
 
@@ -813,35 +813,35 @@ void SP_monster_gunner(gentity_t *self) {
 	self->maxs = { 16, 16, 36 };
 
 	self->health = 175 * st.health_multiplier;
-	self->gibHealth = -70;
+	self->gib_health = -70;
 	self->mass = 200;
 
 	self->pain = gunner_pain;
 	self->die = gunner_die;
 
-	self->monsterInfo.stand = gunner_stand;
-	self->monsterInfo.walk = gunner_walk;
-	self->monsterInfo.run = gunner_run;
-	self->monsterInfo.dodge = M_MonsterDodge;
-	self->monsterInfo.duck = gunner_duck;
-	self->monsterInfo.unduck = monster_duck_up;
-	self->monsterInfo.sidestep = gunner_sidestep;
-	self->monsterInfo.blocked = gunner_blocked;
-	self->monsterInfo.attack = gunner_attack;
-	self->monsterInfo.melee = nullptr;
-	self->monsterInfo.sight = gunner_sight;
-	self->monsterInfo.search = gunner_search;
-	self->monsterInfo.setskin = gunner_setskin;
+	self->monsterinfo.stand = gunner_stand;
+	self->monsterinfo.walk = gunner_walk;
+	self->monsterinfo.run = gunner_run;
+	self->monsterinfo.dodge = M_MonsterDodge;
+	self->monsterinfo.duck = gunner_duck;
+	self->monsterinfo.unduck = monster_duck_up;
+	self->monsterinfo.sidestep = gunner_sidestep;
+	self->monsterinfo.blocked = gunner_blocked;
+	self->monsterinfo.attack = gunner_attack;
+	self->monsterinfo.melee = nullptr;
+	self->monsterinfo.sight = gunner_sight;
+	self->monsterinfo.search = gunner_search;
+	self->monsterinfo.setskin = gunner_setskin;
 
 	gi.linkentity(self);
 
 	M_SetAnimation(self, &gunner_move_stand);
-	self->monsterInfo.scale = MODEL_SCALE;
+	self->monsterinfo.scale = MODEL_SCALE;
 
-	self->monsterInfo.blindfire = true;
-	self->monsterInfo.can_jump = !self->spawnflags.has(SPAWNFLAG_GUNNER_NOJUMPING);
-	self->monsterInfo.drop_height = 192;
-	self->monsterInfo.jump_height = 40;
+	self->monsterinfo.blindfire = true;
+	self->monsterinfo.can_jump = !self->spawnflags.has(SPAWNFLAG_GUNNER_NOJUMPING);
+	self->monsterinfo.drop_height = 192;
+	self->monsterinfo.jump_height = 40;
 
 	walkmonster_start(self);
 }

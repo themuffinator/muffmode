@@ -3,13 +3,13 @@
   "spdxVersion": "SPDX-2.2",
   "dataLicense": "CC0-1.0",
   "SPDXID": "SPDXRef-DOCUMENT",
-  "documentNamespace": "https://spdx.org/spdxdocs/jsoncpp-x64-windows-static-1.9.4-f7c95cbd-1ff1-4d33-bf0c-b1e96d0202ad",
-  "name": "jsoncpp:x64-windows-static@1.9.4 cb59fdc823d95f8a2e7258cee5bf18c764278584cb79ca4006a5345bff47b865",
+  "documentNamespace": "https://spdx.org/spdxdocs/jsoncpp-x64-windows-static-1.9.5#2-888a3c6e-4eb1-44ae-8d5b-db20fd06ff3e",
+  "name": "jsoncpp:x64-windows-static@1.9.5#2 8d5f028119b3128fe9a85913e04d60de21db68e5ddd8322c9ed6ad65aee8afca",
   "creationInfo": {
     "creators": [
-      "Tool: vcpkg-ac02a9f660977426b8ec6392919fbb1d51b10998"
+      "Tool: vcpkg-1c9ec1978a6b0c2b39c9e9554a96e3e275f7556e"
     ],
-    "created": "2023-12-31T11:36:28Z"
+    "created": "2025-06-01T10:46:18Z"
   },
   "relationships": [
     {
@@ -47,10 +47,10 @@
     {
       "name": "jsoncpp",
       "SPDXID": "SPDXRef-port",
-      "versionInfo": "1.9.4",
-      "downloadLocation": "git+https://github.com/microsoft/vcpkg@cb9fceddf47584c7fda24180c7fd87f5e83728a5",
+      "versionInfo": "1.9.5#2",
+      "downloadLocation": "git+https://github.com/microsoft/vcpkg@203c873c5425a71cb8a0d0ada6e5263a3bd13ff4",
       "homepage": "https://github.com/open-source-parsers/jsoncpp",
-      "licenseConcluded": "NOASSERTION",
+      "licenseConcluded": "MIT",
       "licenseDeclared": "NOASSERTION",
       "copyrightText": "NOASSERTION",
       "description": "jsoncpp is an implementation of a JSON reader and writer in C++. JSON (JavaScript Object Notation) is a lightweight data-interchange format that it is easy to parse and redeable for human.",
@@ -59,9 +59,9 @@
     {
       "name": "jsoncpp:x64-windows-static",
       "SPDXID": "SPDXRef-binary",
-      "versionInfo": "cb59fdc823d95f8a2e7258cee5bf18c764278584cb79ca4006a5345bff47b865",
+      "versionInfo": "8d5f028119b3128fe9a85913e04d60de21db68e5ddd8322c9ed6ad65aee8afca",
       "downloadLocation": "NONE",
-      "licenseConcluded": "NOASSERTION",
+      "licenseConcluded": "MIT",
       "licenseDeclared": "NOASSERTION",
       "copyrightText": "NOASSERTION",
       "comment": "This is a binary package built by vcpkg."
@@ -69,38 +69,38 @@
     {
       "SPDXID": "SPDXRef-resource-1",
       "name": "open-source-parsers/jsoncpp",
-      "downloadLocation": "git+https://github.com/open-source-parsers/jsoncpp@9059f5cad030ba11d37818847443a53918c327b1",
+      "downloadLocation": "git+https://github.com/open-source-parsers/jsoncpp@1.9.5",
       "licenseConcluded": "NOASSERTION",
       "licenseDeclared": "NOASSERTION",
       "copyrightText": "NOASSERTION",
       "checksums": [
         {
           "algorithm": "SHA512",
-          "checksumValue": "8062c83cad9dc453f1eb4886e63e054570e0f29dcd6594330d3b3628ba994915e26e08690cd28118805a766be200ac99ad4fbc131db3af895122a8d1bd87ef31"
+          "checksumValue": "1d06e044759b1e1a4cc4960189dd7e001a0a4389d7239a6d59295af995a553518e4e0337b4b4b817e70da5d9731a4c98655af90791b6287870b5ff8d73ad8873"
         }
       ]
     }
   ],
   "files": [
     {
-      "fileName": "./C:/Users/djdac/AppData/Local/vcpkg/registries/git-trees/cb9fceddf47584c7fda24180c7fd87f5e83728a5/CONTROL",
+      "fileName": "./C:/Users/djdac/AppData/Local/vcpkg/registries/git-trees/203c873c5425a71cb8a0d0ada6e5263a3bd13ff4/portfile.cmake",
       "SPDXID": "SPDXRef-file-0",
       "checksums": [
         {
           "algorithm": "SHA256",
-          "checksumValue": "2f0c13dd82cf78d83305faa36487063b3a3d3dfcf5484136ddec7523af48371d"
+          "checksumValue": "14818af3f1c8c16805bfa7dad73d8638b654711f13606c5e2b9e730261caf0b9"
         }
       ],
       "licenseConcluded": "NOASSERTION",
       "copyrightText": "NOASSERTION"
     },
     {
-      "fileName": "./C:/Users/djdac/AppData/Local/vcpkg/registries/git-trees/cb9fceddf47584c7fda24180c7fd87f5e83728a5/portfile.cmake",
+      "fileName": "./C:/Users/djdac/AppData/Local/vcpkg/registries/git-trees/203c873c5425a71cb8a0d0ada6e5263a3bd13ff4/vcpkg.json",
       "SPDXID": "SPDXRef-file-1",
       "checksums": [
         {
           "algorithm": "SHA256",
-          "checksumValue": "32256fa3e82c0da26c1386583c2bcd4ef8228f75d626f9137d6aaaf196080241"
+          "checksumValue": "0ca12a1988eed8b449334cf4f087b66651ab3b2f82c6fe4df45530a4a19f2175"
         }
       ],
       "licenseConcluded": "NOASSERTION",

@@ -22,7 +22,7 @@ msvc_deps_prefix = Note: including file:
 
 rule CXX_COMPILER__fmt_unscanned_Release
   deps = msvc
-  command = ${LAUNCHER}${CODE_CHECK}C:\PROGRA~1\MICROS~4\2022\COMMUN~1\VC\Tools\MSVC\1438~1.331\bin\Hostx64\x64\cl.exe   /TP $DEFINES $INCLUDES $FLAGS /showIncludes /Fo$out /Fd$TARGET_COMPILE_PDB /FS -c $in
+  command = ${LAUNCHER}${CODE_CHECK}C:\PROGRA~1\MICROS~4\2022\COMMUN~1\VC\Tools\MSVC\1439~1.335\bin\Hostx64\x64\cl.exe   /TP $DEFINES $INCLUDES $FLAGS /showIncludes /Fo$out /Fd$TARGET_COMPILE_PDB /FS -c $in
   description = Building CXX object $out
 
 
@@ -30,7 +30,7 @@ rule CXX_COMPILER__fmt_unscanned_Release
 # Rule for linking CXX static library.
 
 rule CXX_STATIC_LIBRARY_LINKER__fmt_Release
-  command = cmd.exe /C "$PRE_LINK && C:\PROGRA~1\MICROS~4\2022\COMMUN~1\VC\Tools\MSVC\1438~1.331\bin\Hostx64\x64\lib.exe  $LINK_FLAGS /out:$TARGET_FILE $in  && $POST_BUILD"
+  command = cmd.exe /C "$PRE_LINK && C:\PROGRA~1\MICROS~4\2022\COMMUN~1\VC\Tools\MSVC\1439~1.335\bin\Hostx64\x64\lib.exe  $LINK_FLAGS /out:$TARGET_FILE $in  && $POST_BUILD"
   description = Linking CXX static library $TARGET_FILE
   restat = $RESTAT
 
@@ -47,7 +47,7 @@ rule CUSTOM_COMMAND
 # Rule for re-running cmake.
 
 rule RERUN_CMAKE
-  command = C:\Users\djdac\AppData\Local\vcpkg\downloads\tools\cmake-3.27.1-windows\cmake-3.27.1-windows-i386\bin\cmake.exe --regenerate-during-build -S"C:\Program Files (x86)\Steam\steamapps\common\Quake 2\rerelease\mymod\src\vcpkg_installed\x64-windows-static\vcpkg\blds\fmt\src\2b3b374f0b-8ea71ee8ea.clean" -B"C:\Program Files (x86)\Steam\steamapps\common\Quake 2\rerelease\mymod\src\vcpkg_installed\x64-windows-static\vcpkg\blds\fmt\x64-windows-static-rel"
+  command = C:\Users\djdac\AppData\Local\vcpkg\downloads\tools\cmake-3.27.1-windows\cmake-3.27.1-windows-i386\bin\cmake.exe --regenerate-during-build -S"C:\Program Files (x86)\Steam\steamapps\common\Quake 2\rerelease\muffmode\src\vcpkg_installed\x64-windows-static\vcpkg\blds\fmt\src\10.1.1-281bbdd8af.clean" -B"C:\Program Files (x86)\Steam\steamapps\common\Quake 2\rerelease\muffmode\src\vcpkg_installed\x64-windows-static\vcpkg\blds\fmt\x64-windows-static-rel"
   description = Re-running CMake...
   generator = 1
 

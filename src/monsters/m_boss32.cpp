@@ -176,7 +176,7 @@ MONSTERINFO_WALK(makron_walk) (gentity_t *self) -> void {
 }
 
 MONSTERINFO_RUN(makron_run) (gentity_t *self) -> void {
-	if (self->monsterInfo.aiflags & AI_STAND_GROUND)
+	if (self->monsterinfo.aiflags & AI_STAND_GROUND)
 		M_SetAnimation(self, &makron_move_stand);
 	else
 		M_SetAnimation(self, &makron_move_run);
@@ -239,7 +239,7 @@ static THINK(makron_torso_think) (gentity_t *self) -> void {
 	if (++self->s.frame >= 365)
 		self->s.frame = 346;
 
-	self->nextThink = level.time + 10_hz;
+	self->nextthink = level.time + 10_hz;
 
 	if (self->s.angles[PITCH] > 0)
 		self->s.angles[PITCH] = max(0.f, self->s.angles[PITCH] - 15);
@@ -250,9 +250,9 @@ static void makron_torso(gentity_t *ent) {
 	ent->s.modelindex = gi.modelindex("models/monsters/boss3/rider/tris.md2");
 	ent->s.skinnum = 1;
 	ent->think = makron_torso_think;
-	ent->nextThink = level.time + 10_hz;
+	ent->nextthink = level.time + 10_hz;
 	ent->s.sound = gi.soundindex("makron/spine.wav");
-	ent->moveType = MOVETYPE_TOSS;
+	ent->movetype = MOVETYPE_TOSS;
 	ent->s.effects = EF_GIB;
 	vec3_t forward, up;
 	AngleVectors(ent->s.angles, forward, nullptr, up);
@@ -260,7 +260,7 @@ static void makron_torso(gentity_t *ent) {
 	ent->velocity += (forward * -120);
 	ent->s.origin += (forward * -10);
 	ent->s.angles[PITCH] = 90;
-	ent->aVelocity = {};
+	ent->avelocity = {};
 	gi.linkentity(ent);
 }
 
@@ -399,7 +399,7 @@ void makronBFG(gentity_t *self) {
 	start = M_ProjectFlashSource(self, monster_flash_offset[MZ2_MAKRON_BFG], forward, right);
 
 	vec = self->enemy->s.origin;
-	vec[2] += self->enemy->viewHeight;
+	vec[2] += self->enemy->viewheight;
 	dir = vec - start;
 	dir.normalize();
 	gi.sound(self, CHAN_VOICE, sound_attack_bfg, 1, ATTN_NORM, 0);
@@ -470,7 +470,7 @@ MMOVE_T(makron_move_attack5) = { FRAME_attak501, FRAME_attak516, makron_frames_a
 
 void MakronSaveloc(gentity_t *self) {
 	self->pos1 = self->enemy->s.origin; // save for aiming the shot
-	self->pos1[2] += self->enemy->viewHeight;
+	self->pos1[2] += self->enemy->viewheight;
 };
 
 void MakronRailgun(gentity_t *self) {
@@ -501,7 +501,7 @@ void MakronHyperblaster(gentity_t *self) {
 
 	if (self->enemy) {
 		vec = self->enemy->s.origin;
-		vec[2] += self->enemy->viewHeight;
+		vec[2] += self->enemy->viewheight;
 		vec -= start;
 		vec = vectoangles(vec);
 		dir[0] = vec[0];
@@ -520,7 +520,7 @@ void MakronHyperblaster(gentity_t *self) {
 }
 
 static PAIN(makron_pain) (gentity_t *self, gentity_t *other, float kick, int damage, const mod_t &mod) -> void {
-	if (self->monsterInfo.active_move == &makron_move_sight)
+	if (self->monsterinfo.active_move == &makron_move_sight)
 		return;
 
 	if (level.time < self->pain_debounce_time)
@@ -595,8 +595,8 @@ MONSTERINFO_ATTACK(makron_attack) (gentity_t *self) -> void {
 void makron_dead(gentity_t *self) {
 	self->mins = { -60, -60, 0 };
 	self->maxs = { 60, 60, 24 };
-	self->moveType = MOVETYPE_TOSS;
-	self->svFlags |= SVF_DEADMONSTER;
+	self->movetype = MOVETYPE_TOSS;
+	self->svflags |= SVF_DEADMONSTER;
 	gi.linkentity(self);
 	monster_dead(self);
 }
@@ -612,18 +612,18 @@ static DIE(makron_die) (gentity_t *self, gentity_t *inflictor, gentity_t *attack
 			{ 4, "models/objects/gibs/sm_metal/tris.md2", GIB_METALLIC },
 			{ "models/objects/gibs/gear/tris.md2", GIB_METALLIC | GIB_HEAD }
 			});
-		self->deadFlag = true;
+		self->deadflag = true;
 		return;
 	}
 
-	if (self->deadFlag)
+	if (self->deadflag)
 		return;
 
 	// regular death
 	gi.sound(self, CHAN_VOICE, sound_death, 1, ATTN_NONE, 0);
-	self->deadFlag = true;
-	self->takeDamage = true;
-	self->svFlags |= SVF_DEADMONSTER;
+	self->deadflag = true;
+	self->takedamage = true;
+	self->svflags |= SVF_DEADMONSTER;
 
 	M_SetAnimation(self, &makron_move_death2);
 
@@ -665,43 +665,43 @@ void MakronPrecache() {
  */
 void SP_monster_makron(gentity_t *self) {
 	if (!M_AllowSpawn(self)) {
-		FreeEntity(self);
+		G_FreeEntity(self);
 		return;
 	}
 
 	MakronPrecache();
 
-	self->moveType = MOVETYPE_STEP;
+	self->movetype = MOVETYPE_STEP;
 	self->solid = SOLID_BBOX;
 	self->s.modelindex = gi.modelindex("models/monsters/boss3/rider/tris.md2");
 	self->mins = { -30, -30, 0 };
 	self->maxs = { 30, 30, 90 };
 
 	self->health = 3000 * st.health_multiplier;
-	self->gibHealth = -2000;
+	self->gib_health = -2000;
 	self->mass = 500;
 
 	self->pain = makron_pain;
 	self->die = makron_die;
-	self->monsterInfo.stand = makron_stand;
-	self->monsterInfo.walk = makron_walk;
-	self->monsterInfo.run = makron_run;
-	self->monsterInfo.dodge = nullptr;
-	self->monsterInfo.attack = makron_attack;
-	self->monsterInfo.melee = nullptr;
-	self->monsterInfo.sight = makron_sight;
-	self->monsterInfo.checkattack = Makron_CheckAttack;
-	self->monsterInfo.setskin = makron_setskin;
+	self->monsterinfo.stand = makron_stand;
+	self->monsterinfo.walk = makron_walk;
+	self->monsterinfo.run = makron_run;
+	self->monsterinfo.dodge = nullptr;
+	self->monsterinfo.attack = makron_attack;
+	self->monsterinfo.melee = nullptr;
+	self->monsterinfo.sight = makron_sight;
+	self->monsterinfo.checkattack = Makron_CheckAttack;
+	self->monsterinfo.setskin = makron_setskin;
 
 	gi.linkentity(self);
 
 	//	M_SetAnimation(self, &makron_move_stand);
 	M_SetAnimation(self, &makron_move_sight);
-	self->monsterInfo.scale = MODEL_SCALE;
+	self->monsterinfo.scale = MODEL_SCALE;
 
 	walkmonster_start(self);
 
-	self->monsterInfo.aiflags |= AI_IGNORE_SHOTS;
+	self->monsterinfo.aiflags |= AI_IGNORE_SHOTS;
 }
 
 /*
@@ -718,7 +718,7 @@ static THINK(MakronSpawn) (gentity_t *self) -> void {
 	self->think(self);
 
 	// jump at player
-	if (self->enemy && self->enemy->inUse && self->enemy->health > 0)
+	if (self->enemy && self->enemy->inuse && self->enemy->health > 0)
 		player = self->enemy;
 	else
 		player = AI_GetSightClient(self);
@@ -731,11 +731,11 @@ static THINK(MakronSpawn) (gentity_t *self) -> void {
 	vec.normalize();
 	self->velocity = vec * 400;
 	self->velocity[2] = 200;
-	self->groundEntity = nullptr;
+	self->groundentity = nullptr;
 	self->enemy = player;
 	FoundTarget(self);
-	self->monsterInfo.sight(self, self->enemy);
-	self->s.frame = self->monsterInfo.nextframe = FRAME_active01; // FIXME: why????
+	self->monsterinfo.sight(self, self->enemy);
+	self->s.frame = self->monsterinfo.nextframe = FRAME_active01; // FIXME: why????
 }
 
 /*
@@ -746,8 +746,8 @@ Jorg is just about dead, so set up to launch Makron out
 =================
 */
 void MakronToss(gentity_t *self) {
-	gentity_t *ent = Spawn();
-	ent->className = "monster_makron";
+	gentity_t *ent = G_Spawn();
+	ent->classname = "monster_makron";
 	ent->target = self->target;
 	ent->s.origin = self->s.origin;
 	ent->enemy = self->enemy;

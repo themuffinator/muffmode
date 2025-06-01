@@ -11,7 +11,7 @@ void P_Menu_Dirty() {
 	for (auto player : active_clients())
 		if (player->client->menu) {
 			player->client->menudirty = true;
-			player->client->menuTime = level.time;
+			player->client->menutime = level.time;
 		}
 }
 
@@ -57,7 +57,7 @@ menu_hnd_t *P_Menu_Open(gentity_t *ent, const menu_t *entries, int cur, int num,
 	else
 		hnd->cur = i;
 
-	ent->client->showScores = true;
+	ent->client->showscores = true;
 	ent->client->inmenu = true;
 	ent->client->menu = hnd;
 	ent->client->ps.stats[STAT_SHOW_STATUSBAR] = 0;
@@ -83,9 +83,9 @@ void P_Menu_Close(gentity_t *ent) {
 		gi.TagFree(hnd->arg);
 	gi.TagFree(hnd);
 	ent->client->menu = nullptr;
-	ent->client->showScores = false;
+	ent->client->showscores = false;
 	
-	gentity_t *e = ent->client->followTarget ? ent->client->followTarget : ent;
+	gentity_t *e = ent->client->follow_target ? ent->client->follow_target : ent;
 	ent->client->ps.stats[STAT_SHOW_STATUSBAR] = !ClientIsPlaying(e->client) ? 0 : 1;
 }
 
@@ -171,15 +171,15 @@ void P_Menu_Update(gentity_t *ent) {
 		return;
 	}
 
-	if (level.time - ent->client->menuTime >= 1_sec) {
+	if (level.time - ent->client->menutime >= 1_sec) {
 		// been a second or more since last update, update now
 		P_Menu_Do_Update(ent);
 		gi.unicast(ent, true);
-		ent->client->menuTime = level.time + 1_sec;
+		ent->client->menutime = level.time + 1_sec;
 		ent->client->menudirty = false;
 	}
 
-	ent->client->menuTime = level.time;
+	ent->client->menutime = level.time;
 	ent->client->menudirty = true;
 	gi.local_sound(ent, CHAN_AUTO, gi.soundindex("misc/menu2.wav"), 1, ATTN_NONE, 0);
 }
@@ -261,7 +261,7 @@ void P_Menu_Select(gentity_t *ent) {
 	}
 
 	// no selecting during intermission
-	if (level.intermissionQueued || level.intermissionTime)
+	if (level.intermission_queued || level.intermission_time)
 		return;
 
 	hnd = ent->client->menu;

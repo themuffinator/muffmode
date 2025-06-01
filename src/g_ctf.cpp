@@ -40,8 +40,16 @@ void CTF_ScoreBonuses(gentity_t *targ, gentity_t *inflictor, gentity_t *attacker
 	const char	*c;
 	vec3_t		v1, v2;
 
-	if (notGTF(GTF_CTF))
+	if (!(GTF(GTF_CTF)))
 		return;
+
+	if (targ->client && attacker->client) {
+		if (attacker->client->resp.ghost)
+			if (attacker != targ)
+				attacker->client->resp.ghost->kills++;
+		if (targ->client->resp.ghost)
+			targ->client->resp.ghost->deaths++;
+	}
 
 	// no bonus for fragging yourself
 	if (!targ->client || !attacker->client || targ == attacker)
@@ -70,7 +78,7 @@ void CTF_ScoreBonuses(gentity_t *targ, gentity_t *inflictor, gentity_t *attacker
 		// the target had the flag, clear the hurt carrier
 		// field on the other team
 		for (auto ec : active_clients()) {
-			if (ec->inUse && ec->client->sess.team == otherteam)
+			if (ec->inuse && ec->client->sess.team == otherteam)
 				ec->client->resp.ctf_lasthurtcarrier = 0_ms;
 		}
 		return;
@@ -83,9 +91,10 @@ void CTF_ScoreBonuses(gentity_t *targ, gentity_t *inflictor, gentity_t *attacker
 		// fragged a guy who hurt our flag carrier
 		G_AdjustPlayerScore(attacker->client, CTF_CARRIER_DANGER_PROTECT_BONUS, false, 0);
 		gi.LocBroadcast_Print(PRINT_MEDIUM, "$g_bonus_flag_defense",
-			attacker->client->sess.netName,
+			attacker->client->resp.netname,
 			Teams_TeamName(attacker->client->sess.team));
-		PushAward(attacker, PlayerMedal::MEDAL_DEFENCE);
+		if (attacker->client->resp.ghost)
+			attacker->client->resp.ghost->carrierdef++;
 		return;
 	}
 
@@ -106,7 +115,7 @@ void CTF_ScoreBonuses(gentity_t *targ, gentity_t *inflictor, gentity_t *attacker
 	}
 
 	flag = nullptr;
-	while ((flag = G_FindByString<&gentity_t::className>(flag, c)) != nullptr) {
+	while ((flag = G_FindByString<&gentity_t::classname>(flag, c)) != nullptr) {
 		if (!(flag->spawnflags & SPAWNFLAG_ITEM_DROPPED))
 			break;
 	}
@@ -130,19 +139,20 @@ void CTF_ScoreBonuses(gentity_t *targ, gentity_t *inflictor, gentity_t *attacker
 
 	if ((v1.length() < CTF_TARGET_PROTECT_RADIUS ||
 		v2.length() < CTF_TARGET_PROTECT_RADIUS ||
-		LocCanSee(flag, targ) || LocCanSee(flag, attacker)) &&
+		loc_CanSee(flag, targ) || loc_CanSee(flag, attacker)) &&
 		attacker->client->sess.team != targ->client->sess.team) {
 		// we defended the base flag
 		G_AdjustPlayerScore(attacker->client, CTF_FLAG_DEFENSE_BONUS, false, 0);
 		if (flag->solid == SOLID_NOT)
 			gi.LocBroadcast_Print(PRINT_MEDIUM, "$g_bonus_defend_base",
-				attacker->client->sess.netName,
+				attacker->client->resp.netname,
 				Teams_TeamName(attacker->client->sess.team));
 		else
 			gi.LocBroadcast_Print(PRINT_MEDIUM, "$g_bonus_defend_flag",
-				attacker->client->sess.netName,
+				attacker->client->resp.netname,
 				Teams_TeamName(attacker->client->sess.team));
-		PushAward(attacker, PlayerMedal::MEDAL_DEFENCE);
+		if (attacker->client->resp.ghost)
+			attacker->client->resp.ghost->basedef++;
 		return;
 	}
 
@@ -152,11 +162,13 @@ void CTF_ScoreBonuses(gentity_t *targ, gentity_t *inflictor, gentity_t *attacker
 
 		if (v1.length() < CTF_ATTACKER_PROTECT_RADIUS ||
 			v2.length() < CTF_ATTACKER_PROTECT_RADIUS ||
-			LocCanSee(carrier, targ) || LocCanSee(carrier, attacker)) {
+			loc_CanSee(carrier, targ) || loc_CanSee(carrier, attacker)) {
 			G_AdjustPlayerScore(attacker->client, CTF_CARRIER_PROTECT_BONUS, false, 0);
 			gi.LocBroadcast_Print(PRINT_MEDIUM, "$g_bonus_defend_carrier",
-				attacker->client->sess.netName,
+				attacker->client->resp.netname,
 				Teams_TeamName(attacker->client->sess.team));
+			if (attacker->client->resp.ghost)
+				attacker->client->resp.ghost->carrierdef++;
 			return;
 		}
 	}
@@ -168,7 +180,7 @@ CTF_CheckHurtCarrier
 ============
 */
 void CTF_CheckHurtCarrier(gentity_t *targ, gentity_t *attacker) {
-	if (notGTF(GTF_CTF))
+	if (!(GTF(GTF_CTF)))
 		return;
 
 	if (!targ->client || !attacker->client)
@@ -187,18 +199,18 @@ CTF_ResetTeamFlag
 ============
 */
 void CTF_ResetTeamFlag(team_t team) {
-	if (notGTF(GTF_CTF))
+	if (!(GTF(GTF_CTF)))
 		return;
 
 	gentity_t *ent;
 	const char *c = team == TEAM_RED ? ITEM_CTF_FLAG_RED : ITEM_CTF_FLAG_BLUE;
 
 	ent = nullptr;
-	while ((ent = G_FindByString<&gentity_t::className>(ent, c)) != nullptr) {
+	while ((ent = G_FindByString<&gentity_t::classname>(ent, c)) != nullptr) {
 		if (ent->spawnflags.has(SPAWNFLAG_ITEM_DROPPED))
-			FreeEntity(ent);
+			G_FreeEntity(ent);
 		else {
-			ent->svFlags &= ~SVF_NOCLIENT;
+			ent->svflags &= ~SVF_NOCLIENT;
 			ent->solid = SOLID_TRIGGER;
 			gi.linkentity(ent);
 			ent->s.event = EV_ITEM_RESPAWN;
@@ -212,7 +224,7 @@ CTF_ResetFlags
 ============
 */
 void CTF_ResetFlags() {
-	if (notGTF(GTF_CTF))
+	if (!(GTF(GTF_CTF)))
 		return;
 
 	CTF_ResetTeamFlag(TEAM_RED);
@@ -225,7 +237,7 @@ CTF_PickupFlag
 ============
 */
 bool CTF_PickupFlag(gentity_t *ent, gentity_t *other) {
-	if (notGTF(GTF_CTF))
+	if (!(GTF(GTF_CTF)))
 		return false;
 
 	team_t		team;
@@ -238,7 +250,7 @@ bool CTF_PickupFlag(gentity_t *ent, gentity_t *other) {
 		team = TEAM_BLUE;
 	else {
 		gi.LocClient_Print(other, PRINT_HIGH, "Don't know what team the flag is on, removing.\n");
-		FreeEntity(ent);
+		G_FreeEntity(ent);
 		return false;
 	}
 
@@ -260,10 +272,10 @@ bool CTF_PickupFlag(gentity_t *ent, gentity_t *other) {
 			if (other->client->pers.inventory[enemy_flag_item]) {
 				if (other->client->pers.team_state.flag_pickup_time) {
 					gi.LocBroadcast_Print(PRINT_HIGH, "{} TEAM CAPTURED the flag! ({} captured in {})\n",
-						Teams_TeamName(team), other->client->sess.netName, TimeString((level.time - other->client->pers.team_state.flag_pickup_time).milliseconds(), true, false));
+						Teams_TeamName(team), other->client->resp.netname, G_TimeStringMs((level.time - other->client->pers.team_state.flag_pickup_time).milliseconds(), false));
 				} else {
 					gi.LocBroadcast_Print(PRINT_HIGH, "{} TEAM CAPTURED the flag! (captured by {})\n",
-						Teams_TeamName(team), other->client->sess.netName);
+						Teams_TeamName(team), other->client->resp.netname);
 				}
 				other->client->pers.inventory[enemy_flag_item] = 0;
 
@@ -275,7 +287,8 @@ bool CTF_PickupFlag(gentity_t *ent, gentity_t *other) {
 
 				// other gets capture bonus
 				G_AdjustPlayerScore(other->client, CTF_CAPTURE_BONUS, false, 0);
-				PushAward(other, PlayerMedal::MEDAL_CAPTURES);
+				if (other->client->resp.ghost)
+					other->client->resp.ghost->caps++;
 
 				// Ok, let's do the player loop, hand out the bonuses
 				for (auto ec : active_clients()) {
@@ -286,14 +299,12 @@ bool CTF_PickupFlag(gentity_t *ent, gentity_t *other) {
 							G_AdjustPlayerScore(ec->client, CTF_TEAM_BONUS, false, 0);
 						// award extra points for capture assists
 						if (ec->client->resp.ctf_lastreturnedflag && ec->client->resp.ctf_lastreturnedflag + CTF_RETURN_FLAG_ASSIST_TIMEOUT > level.time) {
-							gi.LocBroadcast_Print(PRINT_HIGH, "$g_bonus_assist_return", ec->client->sess.netName);
+							gi.LocBroadcast_Print(PRINT_HIGH, "$g_bonus_assist_return", ec->client->resp.netname);
 							G_AdjustPlayerScore(ec->client, CTF_RETURN_FLAG_ASSIST_BONUS, false, 0);
-							PushAward(ec, PlayerMedal::MEDAL_ASSIST);
 						}
 						if (ec->client->resp.ctf_lastfraggedcarrier && ec->client->resp.ctf_lastfraggedcarrier + CTF_FRAG_CARRIER_ASSIST_TIMEOUT > level.time) {
-							gi.LocBroadcast_Print(PRINT_HIGH, "$g_bonus_assist_frag_carrier", ec->client->sess.netName);
+							gi.LocBroadcast_Print(PRINT_HIGH, "$g_bonus_assist_frag_carrier", ec->client->resp.netname);
 							G_AdjustPlayerScore(ec->client, CTF_FRAG_CARRIER_ASSIST_BONUS, false, 0);
-							PushAward(ec, PlayerMedal::MEDAL_ASSIST);
 						}
 					}
 				}
@@ -311,7 +322,7 @@ bool CTF_PickupFlag(gentity_t *ent, gentity_t *other) {
 		}
 		// hey, its not home.  return it by teleporting it back
 		gi.LocBroadcast_Print(PRINT_HIGH, "$g_returned_flag",
-			other->client->sess.netName, Teams_TeamName(team));
+			other->client->resp.netname, Teams_TeamName(team));
 		G_AdjustPlayerScore(other->client, CTF_RECOVERY_BONUS, false, 0);
 		other->client->resp.ctf_lastreturnedflag = level.time;
 		gi.sound(ent, CHAN_RELIABLE | CHAN_NO_PHS_ADD | CHAN_AUX, gi.soundindex("ctf/flagret.wav"), 1, ATTN_NONE, 0);
@@ -334,7 +345,7 @@ bool CTF_PickupFlag(gentity_t *ent, gentity_t *other) {
 		other->client->pers.team_state.flag_pickup_time = level.time;
 	}
 	gi.LocBroadcast_Print(PRINT_HIGH, "$g_got_flag",
-		other->client->sess.netName, Teams_TeamName(team));
+		other->client->resp.netname, Teams_TeamName(team));
 	G_AdjustPlayerScore(other->client, CTF_FLAG_BONUS, false, 0);
 	if (!level.strike_flag_touch) {
 		G_AdjustTeamScore(other->client->sess.team, 1);
@@ -350,7 +361,7 @@ bool CTF_PickupFlag(gentity_t *ent, gentity_t *other) {
 	// if it's dropped, it will be removed by the pickup caller
 	if (!(ent->spawnflags & SPAWNFLAG_ITEM_DROPPED)) {
 		ent->flags |= FL_RESPAWN;
-		ent->svFlags |= SVF_NOCLIENT;
+		ent->svflags |= SVF_NOCLIENT;
 		ent->solid = SOLID_NOT;
 	}
 	return true;
@@ -361,16 +372,16 @@ bool CTF_PickupFlag(gentity_t *ent, gentity_t *other) {
 CTF_DropFlagTouch
 ============
 */
-static TOUCH(CTF_DropFlagTouch) (gentity_t *ent, gentity_t *other, const trace_t &tr, bool otherTouchingSelf) -> void {
-	if (notGTF(GTF_CTF))
+static TOUCH(CTF_DropFlagTouch) (gentity_t *ent, gentity_t *other, const trace_t &tr, bool other_touching_self) -> void {
+	if (!(GTF(GTF_CTF)))
 		return;
 
 	// owner (who dropped us) can't touch for two secs
 	if (other == ent->owner &&
-		ent->nextThink - level.time > CTF_AUTO_FLAG_RETURN_TIMEOUT - 2_sec)
+		ent->nextthink - level.time > CTF_AUTO_FLAG_RETURN_TIMEOUT - 2_sec)
 		return;
 
-	Touch_Item(ent, other, tr, otherTouchingSelf);
+	Touch_Item(ent, other, tr, other_touching_self);
 }
 
 /*
@@ -379,7 +390,7 @@ CTF_DropFlagThink
 ============
 */
 static THINK(CTF_DropFlagThink) (gentity_t *ent) -> void {
-	if (notGTF(GTF_CTF))
+	if (!(GTF(GTF_CTF)))
 		return;
 
 	// auto return the flag
@@ -405,7 +416,7 @@ Called from PlayerDie, to drop the flag from a dying player
 ============
 */
 void CTF_DeadDropFlag(gentity_t *self) {
-	if (notGTF(GTF_CTF))
+	if (!(GTF(GTF_CTF)))
 		return;
 
 	gentity_t *dropped = nullptr;
@@ -414,19 +425,19 @@ void CTF_DeadDropFlag(gentity_t *self) {
 		dropped = Drop_Item(self, GetItemByIndex(IT_FLAG_RED));
 		self->client->pers.inventory[IT_FLAG_RED] = 0;
 		gi.LocBroadcast_Print(PRINT_HIGH, "$g_lost_flag",
-			self->client->sess.netName, Teams_TeamName(TEAM_RED));
+			self->client->resp.netname, Teams_TeamName(TEAM_RED));
 	} else if (self->client->pers.inventory[IT_FLAG_BLUE]) {
 		dropped = Drop_Item(self, GetItemByIndex(IT_FLAG_BLUE));
 		self->client->pers.inventory[IT_FLAG_BLUE] = 0;
 		gi.LocBroadcast_Print(PRINT_HIGH, "$g_lost_flag",
-			self->client->sess.netName, Teams_TeamName(TEAM_BLUE));
+			self->client->resp.netname, Teams_TeamName(TEAM_BLUE));
 	}
 
 	self->client->pers.team_state.flag_pickup_time = 0_ms;
 
 	if (dropped) {
 		dropped->think = CTF_DropFlagThink;
-		dropped->nextThink = level.time + CTF_AUTO_FLAG_RETURN_TIMEOUT;
+		dropped->nextthink = level.time + CTF_AUTO_FLAG_RETURN_TIMEOUT;
 		dropped->touch = CTF_DropFlagTouch;
 	}
 }
@@ -437,7 +448,7 @@ CTF_DropFlag
 ============
 */
 void CTF_DropFlag(gentity_t *ent, gitem_t *item) {
-	if (notGTF(GTF_CTF))
+	if (!(GTF(GTF_CTF)))
 		return;
 
 	ent->client->pers.team_state.flag_pickup_time = 0_ms;
@@ -454,12 +465,12 @@ CTF_FlagThink
 ============
 */
 static THINK(CTF_FlagThink) (gentity_t *ent) -> void {
-	if (notGTF(GTF_CTF))
+	if (!(GTF(GTF_CTF)))
 		return;
 
 	if (ent->solid != SOLID_NOT)
 		ent->s.frame = 173 + (((ent->s.frame - 173) + 1) % 16);
-	ent->nextThink = level.time + 10_hz;
+	ent->nextthink = level.time + 10_hz;
 }
 
 /*
@@ -468,7 +479,7 @@ CTF_FlagSetup
 ============
 */
 THINK(CTF_FlagSetup) (gentity_t *ent) -> void {
-	if (notGTF(GTF_CTF))
+	if (!(GTF(GTF_CTF)))
 		return;
 
 	trace_t tr;
@@ -482,7 +493,7 @@ THINK(CTF_FlagSetup) (gentity_t *ent) -> void {
 	else
 		gi.setmodel(ent, ent->item->world_model);
 	ent->solid = SOLID_TRIGGER;
-	ent->moveType = MOVETYPE_TOSS;
+	ent->movetype = MOVETYPE_TOSS;
 	ent->touch = Touch_Item;
 	ent->s.frame = 173;
 
@@ -491,7 +502,7 @@ THINK(CTF_FlagSetup) (gentity_t *ent) -> void {
 	tr = gi.trace(ent->s.origin, ent->mins, ent->maxs, dest, ent, MASK_SOLID);
 	if (tr.startsolid) {
 		gi.Com_PrintFmt("{}: {} startsolid\n", __FUNCTION__, *ent);
-		FreeEntity(ent);
+		G_FreeEntity(ent);
 		return;
 	}
 
@@ -499,7 +510,7 @@ THINK(CTF_FlagSetup) (gentity_t *ent) -> void {
 
 	gi.linkentity(ent);
 
-	ent->nextThink = level.time + 10_hz;
+	ent->nextthink = level.time + 10_hz;
 	ent->think = CTF_FlagThink;
 }
 
@@ -509,7 +520,7 @@ CTF_ClientEffects
 ============
 */
 void CTF_ClientEffects(gentity_t *player) {
-	if (notGTF(GTF_CTF))
+	if (!(GTF(GTF_CTF)))
 		return;
 
 	player->s.effects &= ~(EF_FLAG_RED | EF_FLAG_BLUE);

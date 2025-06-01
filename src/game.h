@@ -178,7 +178,7 @@ CVARS (console variables)
 enum cvar_flags_t : uint32_t {
 	CVAR_NOFLAGS = 0,
 	CVAR_ARCHIVE = bit_v<0>,	 // set to cause it to be saved to config
-	CVAR_USERINFO = bit_v<1>,	 // added to userInfo  when changed
+	CVAR_USERINFO = bit_v<1>,	 // added to userinfo  when changed
 	CVAR_SERVERINFO = bit_v<2>,  // added to serverinfo when changed
 	CVAR_NOSET = bit_v<3>,		 // don't allow change from console at all,
 	// but can be set from the command line
@@ -369,7 +369,7 @@ enum pmflags_t : uint16_t {
 	PMF_ON_GROUND = bit_v<2>,
 	PMF_TIME_WATERJUMP = bit_v<3>, // pm_time is waterjump
 	PMF_TIME_LAND = bit_v<4>,		// pm_time is time before rejump
-	PMF_TIME_KNOCKBACK = bit_v<5>, // pm_time is non-moving time
+	PMF_TIME_TELEPORT = bit_v<5>, // pm_time is non-moving time
 	PMF_NO_POSITIONAL_PREDICTION = bit_v<6>,	// temporarily disables positional prediction (used for grappling hook)
 	PMF_ON_LADDER = bit_v<7>,    // signal to game that we are on a ladder
 	PMF_NO_ANGULAR_PREDICTION = bit_v<8>, // temporary disables angular prediction
@@ -394,7 +394,7 @@ struct pmove_state_t {
 	int16_t					gravity;
 	gvec3_t					delta_angles; // add to command angles to get view direction
 	// changed by spawns, rotating objects, and teleporters
-	int8_t					viewHeight; // view height, added to origin[2] + viewoffset[2], for crouching
+	int8_t					viewheight; // view height, added to origin[2] + viewoffset[2], for crouching
 
 //muffmode
 	bool					haste;
@@ -464,7 +464,7 @@ struct pmove_t {
 
 	gvec3_t mins, maxs; // bounding box size
 
-	gentity_t *groundEntity;
+	gentity_t *groundentity;
 	cplane_t      groundplane;
 	contents_t    watertype;
 	water_level_t waterlevel;
@@ -513,7 +513,7 @@ enum effects_t : uint64_t {
 	EF_ANIM_ALLFAST = bit_v<13>,  // automatically cycle through all frames at 10hz
 	EF_FLIES = bit_v<14>,
 	EF_QUAD = bit_v<15>,
-	EF_DOUBLE = bit_v<16>,
+	EF_PENT = bit_v<16>,
 	EF_TELEPORTER = bit_v<17>,  // particle fountain
 	EF_FLAG_RED = bit_v<18>,
 	EF_FLAG_BLUE = bit_v<19>,
@@ -524,7 +524,7 @@ enum effects_t : uint64_t {
 	EF_PLASMA = bit_v<24>,
 	EF_TRAP = bit_v<25>,
 	EF_TRACKER = bit_v<26>,
-	EF_PENT = bit_v<27>,
+	EF_DOUBLE = bit_v<27>,
 	EF_SPHERETRANS = bit_v<28>,
 	EF_TAGTRAIL = bit_v<29>,
 	EF_HALF_DAMAGE = bit_v<30>,
@@ -1315,7 +1315,7 @@ union player_skinnum_t {
 	struct {
 		uint8_t     client_num; // client index
 		uint8_t     vwep_index; // vwep index
-		int8_t      viewHeight; // viewHeight
+		int8_t      viewheight; // viewheight
 		uint8_t     team_index : 4; // team #; note that teams are 1-indexed here, with 0 meaning no team
 		// (spectators in CTF would be 0, for instance)
 		uint8_t     poi_icon : 4;   // poi icon; 0 default friendly, 1 dead, others unused
@@ -1383,7 +1383,7 @@ struct player_state_t {
 	int32_t gunrate; // [Paril-KEX] tickrate of gun animations; 0 and 10 are equivalent
 
 	std::array<float, 4> screen_blend; // rgba full screen effect
-	std::array<float, 4> damageBlend; // [Paril-KEX] rgba damage blend effect
+	std::array<float, 4> damage_blend; // [Paril-KEX] rgba damage blend effect
 
 	float fov; // horizontal field of view
 
@@ -1495,7 +1495,7 @@ static constexpr svc_fog_data_t::bits_t BITS_HEIGHTFOG = (svc_fog_data_t::BIT_HE
 	svc_fog_data_t::BIT_HEIGHTFOG_START_B | svc_fog_data_t::BIT_HEIGHTFOG_START_DIST | svc_fog_data_t::BIT_HEIGHTFOG_END_R | svc_fog_data_t::BIT_HEIGHTFOG_END_G |
 	svc_fog_data_t::BIT_HEIGHTFOG_END_B | svc_fog_data_t::BIT_HEIGHTFOG_END_DIST);
 
-// entity->svFlags
+// entity->svflags
 enum svflags_t : uint32_t {
 	SVF_NONE = 0,          // no serverflags
 	SVF_NOCLIENT = bit_v<0>,   // don't send entity to clients, even if it has effects
@@ -1705,7 +1705,7 @@ struct g_entity_t {
 	int32_t                     team;
 	int32_t                     lobby_usernum;
 	int32_t                     respawntime;
-	int32_t                     viewHeight;
+	int32_t                     viewheight;
 	int32_t                     last_attackertime;
 	water_level_t               waterlevel;
 	gvec3_t                     viewangles;
@@ -1715,7 +1715,7 @@ struct g_entity_t {
 	gvec3_t                     end_origin;
 	gentity_t *enemy;
 	gentity_t *ground_entity;
-	const char *className;
+	const char *classname;
 	const char *targetname;
 	char                        netname[MAX_NETNAME];
 	int32_t                     inventory[MAX_ITEMS] = { 0 };
@@ -1736,18 +1736,18 @@ struct entity_shared_t
 
 	g_entity_t sv;        // read only info about this entity for the server
 
-	bool     inUse;
+	bool     inuse;
 
 	// world linkage data
 	bool     linked;
 	int32_t	 linkcount;
 	int32_t  areanum, areanum2;
 
-	svflags_t  svFlags;
+	svflags_t  svflags;
 	vec3_t	   mins, maxs;
-	vec3_t	   absMin, absMax, size;
+	vec3_t	   absmin, absmax, size;
 	solid_t	   solid;
-	contents_t clipMask;
+	contents_t clipmask;
 	gentity_t *owner;
 };
 
@@ -1764,19 +1764,19 @@ struct entity_shared_t
     CHECK_INTEGRITY(gentity_t, entity_shared_t, s);            \
     CHECK_INTEGRITY(gentity_t, entity_shared_t, client);       \
     CHECK_INTEGRITY(gentity_t, entity_shared_t, sv);           \
-    CHECK_INTEGRITY(gentity_t, entity_shared_t, inUse);        \
+    CHECK_INTEGRITY(gentity_t, entity_shared_t, inuse);        \
     CHECK_INTEGRITY(gentity_t, entity_shared_t, linked);       \
     CHECK_INTEGRITY(gentity_t, entity_shared_t, linkcount);    \
     CHECK_INTEGRITY(gentity_t, entity_shared_t, areanum);      \
     CHECK_INTEGRITY(gentity_t, entity_shared_t, areanum2);     \
-    CHECK_INTEGRITY(gentity_t, entity_shared_t, svFlags);      \
+    CHECK_INTEGRITY(gentity_t, entity_shared_t, svflags);      \
     CHECK_INTEGRITY(gentity_t, entity_shared_t, mins);         \
     CHECK_INTEGRITY(gentity_t, entity_shared_t, maxs);         \
-    CHECK_INTEGRITY(gentity_t, entity_shared_t, absMin);       \
-    CHECK_INTEGRITY(gentity_t, entity_shared_t, absMax);       \
+    CHECK_INTEGRITY(gentity_t, entity_shared_t, absmin);       \
+    CHECK_INTEGRITY(gentity_t, entity_shared_t, absmax);       \
     CHECK_INTEGRITY(gentity_t, entity_shared_t, size);         \
     CHECK_INTEGRITY(gentity_t, entity_shared_t, solid);        \
-    CHECK_INTEGRITY(gentity_t, entity_shared_t, clipMask);     \
+    CHECK_INTEGRITY(gentity_t, entity_shared_t, clipmask);     \
     CHECK_INTEGRITY(gentity_t, entity_shared_t, owner)
 
 //===============================================================
@@ -1870,7 +1870,7 @@ struct game_import_t {
 	void (*linkentity)(gentity_t *ent);
 	void (*unlinkentity)(gentity_t *ent); // call before removing an interactive entity
 
-	// return a list of entities that touch the input absMin/absMax.
+	// return a list of entities that touch the input absmin/absmax.
 	// if maxcount is 0, it will return a count but not attempt to fill "list".
 	// if maxcount > 0, once it reaches maxcount, it will keep going but not fill
 	// any more of list (the return count will cap at maxcount).
@@ -2028,10 +2028,10 @@ struct game_export_t {
 	// coop slot re-use. Return nullptr if none is available. You can not
 	// return a slot that is currently in use by another client; that must
 	// throw a fatal error.
-	gentity_t *(*ClientChooseSlot) (const char *userInfo, const char *socialID, bool isBot, gentity_t **ignore, size_t num_ignore, bool cinematic);
-	bool (*ClientConnect)(gentity_t *ent, char *userInfo, const char *socialID, bool isBot);
+	gentity_t *(*ClientChooseSlot) (const char *userinfo, const char *social_id, bool is_bot, gentity_t **ignore, size_t num_ignore, bool cinematic);
+	bool (*ClientConnect)(gentity_t *ent, char *userinfo, const char *social_id, bool is_bot);
 	void (*ClientBegin)(gentity_t *ent);
-	void (*ClientUserinfoChanged)(gentity_t *ent, const char *userInfo);
+	void (*ClientUserinfoChanged)(gentity_t *ent, const char *userinfo);
 	void (*ClientDisconnect)(gentity_t *ent);
 	void (*ClientCommand)(gentity_t *ent);
 	void (*ClientThink)(gentity_t *ent, usercmd_t *cmd);
@@ -2071,7 +2071,7 @@ struct game_export_t {
 	void    (*Bot_SetWeapon)(gentity_t *botEntity, const int weaponIndex, const bool instantSwitch);
 	void    (*Bot_TriggerEntity)(gentity_t *botEntity, gentity_t *entity);
 	void    (*Bot_UseItem)(gentity_t *botEntity, const int32_t itemID);
-	int32_t(*Bot_GetItemID)(const char *className);
+	int32_t(*Bot_GetItemID)(const char *classname);
 	void    (*Entity_ForceLookAtPoint)(gentity_t *entity, gvec3_cref_t point);
 	bool    (*Bot_PickedUpItem)(gentity_t *botEntity, gentity_t *itemEntity);
 
@@ -2209,7 +2209,7 @@ struct cgame_export_t {
 	uint32_t(*GetOwnedWeaponWheelWeapons) (const player_state_t *ps);
 
 	// [Paril-KEX] fetch ammo count for given ammo id
-	int16_t(*GetWeaponWheelAmmoCount)(const player_state_t *ps, int32_t ammoID);
+	int16_t(*GetWeaponWheelAmmoCount)(const player_state_t *ps, int32_t ammo_id);
 
 	// [Paril-KEX] fetch powerup count for given powerup id
 	int16_t(*GetPowerupWheelCount)(const player_state_t *ps, int32_t powerup_id);

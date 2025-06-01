@@ -257,7 +257,7 @@ size_t Q_strlcat(char *dst, const char *src, size_t siz)
     size_t n = siz;
     size_t dlen;
 
-    /* FindEntity the end of dst and adjust bytes left but don't go past end */
+    /* Find the end of dst and adjust bytes left but don't go past end */
     while(*d != '\0' && n-- != 0)
         d++;
     dlen = d - dst;

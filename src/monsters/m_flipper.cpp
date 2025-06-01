@@ -295,35 +295,35 @@ static DIE(flipper_die) (gentity_t *self, gentity_t *inflictor, gentity_t *attac
 			{ 2, "models/objects/gibs/sm_meat/tris.md2" },
 			{ "models/objects/gibs/head2/tris.md2", GIB_HEAD }
 			});
-		self->deadFlag = true;
+		self->deadflag = true;
 		return;
 	}
 
-	if (self->deadFlag)
+	if (self->deadflag)
 		return;
 
 	// regular death
 	gi.sound(self, CHAN_VOICE, sound_death, 1, ATTN_NORM, 0);
-	self->deadFlag = true;
-	self->takeDamage = true;
-	self->svFlags |= SVF_DEADMONSTER;
+	self->deadflag = true;
+	self->takedamage = true;
+	self->svflags |= SVF_DEADMONSTER;
 	M_SetAnimation(self, &flipper_move_death);
 }
 
 static void flipper_set_fly_parameters(gentity_t *self) {
-	self->monsterInfo.fly_thrusters = false;
-	self->monsterInfo.fly_acceleration = 30.f;
-	self->monsterInfo.fly_speed = 110.f;
+	self->monsterinfo.fly_thrusters = false;
+	self->monsterinfo.fly_acceleration = 30.f;
+	self->monsterinfo.fly_speed = 110.f;
 	// only melee, so get in close
-	self->monsterInfo.fly_min_distance = 10.f;
-	self->monsterInfo.fly_max_distance = 10.f;
+	self->monsterinfo.fly_min_distance = 10.f;
+	self->monsterinfo.fly_max_distance = 10.f;
 }
 
 /*QUAKED monster_flipper (1 .5 0) (-16 -16 -24) (16 16 32) AMBUSH TRIGGER_SPAWN SIGHT x x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
  */
 void SP_monster_flipper(gentity_t *self) {
 	if (!M_AllowSpawn(self)) {
-		FreeEntity(self);
+		G_FreeEntity(self);
 		return;
 	}
 
@@ -336,32 +336,32 @@ void SP_monster_flipper(gentity_t *self) {
 	sound_search.assign("flipper/flpsrch1.wav");
 	sound_sight.assign("flipper/flpsght1.wav");
 
-	self->moveType = MOVETYPE_STEP;
+	self->movetype = MOVETYPE_STEP;
 	self->solid = SOLID_BBOX;
 	self->s.modelindex = gi.modelindex("models/monsters/flipper/tris.md2");
 	self->mins = { -16, -16, -8 };
 	self->maxs = { 16, 16, 20 };
 
 	self->health = 50 * st.health_multiplier;
-	self->gibHealth = -30;
+	self->gib_health = -30;
 	self->mass = 100;
 
 	self->pain = flipper_pain;
 	self->die = flipper_die;
 
-	self->monsterInfo.stand = flipper_stand;
-	self->monsterInfo.walk = flipper_walk;
-	self->monsterInfo.run = flipper_start_run;
-	self->monsterInfo.melee = flipper_melee;
-	self->monsterInfo.sight = flipper_sight;
-	self->monsterInfo.setskin = flipper_setskin;
+	self->monsterinfo.stand = flipper_stand;
+	self->monsterinfo.walk = flipper_walk;
+	self->monsterinfo.run = flipper_start_run;
+	self->monsterinfo.melee = flipper_melee;
+	self->monsterinfo.sight = flipper_sight;
+	self->monsterinfo.setskin = flipper_setskin;
 
 	gi.linkentity(self);
 
 	M_SetAnimation(self, &flipper_move_stand);
-	self->monsterInfo.scale = MODEL_SCALE;
+	self->monsterinfo.scale = MODEL_SCALE;
 
-	self->monsterInfo.aiflags |= AI_ALTERNATE_FLY;
+	self->monsterinfo.aiflags |= AI_ALTERNATE_FLY;
 	flipper_set_fly_parameters(self);
 
 	swimmonster_start(self);

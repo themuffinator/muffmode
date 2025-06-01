@@ -69,7 +69,7 @@ MONSTERINFO_STAND(actor_stand) (gentity_t *self) -> void {
 
 	// randomize on startup
 	if (level.time < 1_sec)
-		self->s.frame = irandom(self->monsterInfo.active_move->firstframe, self->monsterInfo.active_move->lastframe + 1);
+		self->s.frame = irandom(self->monsterinfo.active_move->firstframe, self->monsterinfo.active_move->lastframe + 1);
 }
 
 mframe_t actor_frames_walk[] = {
@@ -107,7 +107,7 @@ MONSTERINFO_RUN(actor_run) (gentity_t *self) -> void {
 		return;
 	}
 
-	if (self->monsterInfo.aiflags & AI_STAND_GROUND) {
+	if (self->monsterinfo.aiflags & AI_STAND_GROUND) {
 		actor_stand(self);
 		return;
 	}
@@ -231,9 +231,9 @@ static void actorMachineGun(gentity_t *self) {
 	if (self->enemy) {
 		if (self->enemy->health > 0) {
 			target = self->enemy->s.origin + (self->enemy->velocity * -0.2f);
-			target[2] += self->enemy->viewHeight;
+			target[2] += self->enemy->viewheight;
 		} else {
-			target = self->enemy->absMin;
+			target = self->enemy->absmin;
 			target[2] += (self->enemy->size[2] / 2) + 1;
 		}
 		forward = target - start;
@@ -247,9 +247,9 @@ static void actorMachineGun(gentity_t *self) {
 static void actor_dead(gentity_t *self) {
 	self->mins = { -16, -16, -24 };
 	self->maxs = { 16, 16, -8 };
-	self->moveType = MOVETYPE_TOSS;
-	self->svFlags |= SVF_DEADMONSTER;
-	self->nextThink = 0_ms;
+	self->movetype = MOVETYPE_TOSS;
+	self->svflags |= SVF_DEADMONSTER;
+	self->nextthink = 0_ms;
 	gi.linkentity(self);
 }
 
@@ -290,17 +290,17 @@ static DIE(actor_die) (gentity_t *self, gentity_t *inflictor, gentity_t *attacke
 			{ 4, "models/objects/gibs/sm_meat/tris.md2" },
 			{ "models/objects/gibs/head2/tris.md2", GIB_HEAD }
 			});
-		self->deadFlag = true;
+		self->deadflag = true;
 		return;
 	}
 
-	if (self->deadFlag)
+	if (self->deadflag)
 		return;
 
 	// regular death
 	//	gi.sound (self, CHAN_VOICE, actor.sound_die, 1, ATTN_NORM, 0);
-	self->deadFlag = true;
-	self->takeDamage = true;
+	self->deadflag = true;
+	self->takedamage = true;
 
 	if (brandom())
 		M_SetAnimation(self, &actor_move_death1);
@@ -311,10 +311,10 @@ static DIE(actor_die) (gentity_t *self, gentity_t *inflictor, gentity_t *attacke
 static void actor_fire(gentity_t *self) {
 	actorMachineGun(self);
 
-	if (level.time >= self->monsterInfo.fire_wait)
-		self->monsterInfo.aiflags &= ~AI_HOLD_FRAME;
+	if (level.time >= self->monsterinfo.fire_wait)
+		self->monsterinfo.aiflags &= ~AI_HOLD_FRAME;
 	else
-		self->monsterInfo.aiflags |= AI_HOLD_FRAME;
+		self->monsterinfo.aiflags |= AI_HOLD_FRAME;
 }
 
 mframe_t actor_frames_attack[] = {
@@ -327,24 +327,24 @@ MMOVE_T(actor_move_attack) = { FRAME_attak01, FRAME_attak04, actor_frames_attack
 
 MONSTERINFO_ATTACK(actor_attack) (gentity_t *self) -> void {
 	M_SetAnimation(self, &actor_move_attack);
-	self->monsterInfo.fire_wait = level.time + random_time(1_sec, 2.6_sec);
+	self->monsterinfo.fire_wait = level.time + random_time(1_sec, 2.6_sec);
 }
 
 static USE(actor_use) (gentity_t *self, gentity_t *other, gentity_t *activator) -> void {
 	vec3_t v;
 
-	self->goalentity = self->movetarget = PickTarget(self->target);
-	if ((!self->movetarget) || (strcmp(self->movetarget->className, "target_actor") != 0)) {
+	self->goalentity = self->movetarget = G_PickTarget(self->target);
+	if ((!self->movetarget) || (strcmp(self->movetarget->classname, "target_actor") != 0)) {
 		gi.Com_PrintFmt("{}: bad target {}\n", *self, self->target);
 		self->target = nullptr;
-		self->monsterInfo.pausetime = HOLD_FOREVER;
-		self->monsterInfo.stand(self);
+		self->monsterinfo.pausetime = HOLD_FOREVER;
+		self->monsterinfo.stand(self);
 		return;
 	}
 
 	v = self->goalentity->s.origin - self->s.origin;
 	self->ideal_yaw = self->s.angles[YAW] = vectoyaw(v);
-	self->monsterInfo.walk(self);
+	self->monsterinfo.walk(self);
 	self->target = nullptr;
 }
 
@@ -353,23 +353,23 @@ static USE(actor_use) (gentity_t *self, gentity_t *other, gentity_t *activator) 
 
 void SP_misc_actor(gentity_t *self) {
 	if (!M_AllowSpawn(self)) {
-		FreeEntity(self);
+		G_FreeEntity(self);
 		return;
 	}
 
 	if (!self->targetname) {
 		gi.Com_PrintFmt("{}: no targetname\n", *self);
-		FreeEntity(self);
+		G_FreeEntity(self);
 		return;
 	}
 
 	if (!self->target) {
 		gi.Com_PrintFmt("{}: no target\n", *self);
-		FreeEntity(self);
+		G_FreeEntity(self);
 		return;
 	}
 
-	self->moveType = MOVETYPE_STEP;
+	self->movetype = MOVETYPE_STEP;
 	self->solid = SOLID_BBOX;
 	self->s.modelindex = gi.modelindex("players/male/tris.md2");
 	self->mins = { -16, -16, -24 };
@@ -382,20 +382,20 @@ void SP_misc_actor(gentity_t *self) {
 	self->pain = actor_pain;
 	self->die = actor_die;
 
-	self->monsterInfo.stand = actor_stand;
-	self->monsterInfo.walk = actor_walk;
-	self->monsterInfo.run = actor_run;
-	self->monsterInfo.attack = actor_attack;
-	self->monsterInfo.melee = nullptr;
-	self->monsterInfo.sight = nullptr;
-	self->monsterInfo.setskin = actor_setskin;
+	self->monsterinfo.stand = actor_stand;
+	self->monsterinfo.walk = actor_walk;
+	self->monsterinfo.run = actor_run;
+	self->monsterinfo.attack = actor_attack;
+	self->monsterinfo.melee = nullptr;
+	self->monsterinfo.sight = nullptr;
+	self->monsterinfo.setskin = actor_setskin;
 
-	self->monsterInfo.aiflags |= AI_GOOD_GUY;
+	self->monsterinfo.aiflags |= AI_GOOD_GUY;
 
 	gi.linkentity(self);
 
 	M_SetAnimation(self, &actor_move_stand);
-	self->monsterInfo.scale = MODEL_SCALE;
+	self->monsterinfo.scale = MODEL_SCALE;
 
 	walkmonster_start(self);
 
@@ -424,7 +424,7 @@ constexpr spawnflags_t SPAWNFLAG_TARGET_ACTOR_ATTACK = 4_spawnflag;
 constexpr spawnflags_t SPAWNFLAG_TARGET_ACTOR_HOLD = 16_spawnflag;
 constexpr spawnflags_t SPAWNFLAG_TARGET_ACTOR_BRUTAL = 32_spawnflag;
 
-static TOUCH(target_actor_touch) (gentity_t *self, gentity_t *other, const trace_t &tr, bool otherTouchingSelf) -> void {
+static TOUCH(target_actor_touch) (gentity_t *self, gentity_t *other, const trace_t &tr, bool other_touching_self) -> void {
 	vec3_t v;
 
 	if (other->movetarget != self)
@@ -443,8 +443,8 @@ static TOUCH(target_actor_touch) (gentity_t *self, gentity_t *other, const trace
 		other->velocity[0] = self->movedir[0] * self->speed;
 		other->velocity[1] = self->movedir[1] * self->speed;
 
-		if (other->groundEntity) {
-			other->groundEntity = nullptr;
+		if (other->groundentity) {
+			other->groundentity = nullptr;
 			other->velocity[2] = self->movedir[2];
 			gi.sound(other, CHAN_VOICE, gi.soundindex("player/male/jump1.wav"), 1, ATTN_NORM, 0);
 		}
@@ -454,13 +454,13 @@ static TOUCH(target_actor_touch) (gentity_t *self, gentity_t *other, const trace
 	{
 	} else if (self->spawnflags.has(SPAWNFLAG_TARGET_ACTOR_ATTACK)) // attack
 	{
-		other->enemy = PickTarget(self->pathtarget);
+		other->enemy = G_PickTarget(self->pathtarget);
 		if (other->enemy) {
 			other->goalentity = other->enemy;
 			if (self->spawnflags.has(SPAWNFLAG_TARGET_ACTOR_BRUTAL))
-				other->monsterInfo.aiflags |= AI_BRUTAL;
+				other->monsterinfo.aiflags |= AI_BRUTAL;
 			if (self->spawnflags.has(SPAWNFLAG_TARGET_ACTOR_HOLD)) {
-				other->monsterInfo.aiflags |= AI_STAND_GROUND;
+				other->monsterinfo.aiflags |= AI_STAND_GROUND;
 				actor_stand(other);
 			} else {
 				actor_run(other);
@@ -473,18 +473,18 @@ static TOUCH(target_actor_touch) (gentity_t *self, gentity_t *other, const trace
 
 		savetarget = self->target;
 		self->target = self->pathtarget;
-		UseTargets(self, other);
+		G_UseTargets(self, other);
 		self->target = savetarget;
 	}
 
-	other->movetarget = PickTarget(self->target);
+	other->movetarget = G_PickTarget(self->target);
 
 	if (!other->goalentity)
 		other->goalentity = other->movetarget;
 
 	if (!other->movetarget && !other->enemy) {
-		other->monsterInfo.pausetime = HOLD_FOREVER;
-		other->monsterInfo.stand(other);
+		other->monsterinfo.pausetime = HOLD_FOREVER;
+		other->monsterinfo.stand(other);
 	} else if (other->movetarget == other->goalentity) {
 		v = other->movetarget->s.origin - other->s.origin;
 		other->ideal_yaw = vectoyaw(v);
@@ -499,7 +499,7 @@ void SP_target_actor(gentity_t *self) {
 	self->touch = target_actor_touch;
 	self->mins = { -8, -8, -8 };
 	self->maxs = { 8, 8, 8 };
-	self->svFlags = SVF_NOCLIENT;
+	self->svflags = SVF_NOCLIENT;
 
 	if (self->spawnflags.has(SPAWNFLAG_TARGET_ACTOR_JUMP)) {
 		if (!self->speed)
@@ -508,7 +508,7 @@ void SP_target_actor(gentity_t *self) {
 			st.height = 200;
 		if (self->s.angles[YAW] == 0)
 			self->s.angles[YAW] = 360;
-		SetMoveDir(self->s.angles, self->movedir);
+		G_SetMovedir(self->s.angles, self->movedir);
 		self->movedir[2] = (float)st.height;
 	}
 

@@ -38,9 +38,9 @@ static void insane_moan(gentity_t *self) {
 		return;
 
 	// Paril: don't moan every second
-	if (self->monsterInfo.attack_finished < level.time) {
+	if (self->monsterinfo.attack_finished < level.time) {
 		gi.sound(self, CHAN_VOICE, sound_moan, 1, ATTN_IDLE, 0);
-		self->monsterInfo.attack_finished = level.time + random_time(1_sec, 3_sec);
+		self->monsterinfo.attack_finished = level.time + random_time(1_sec, 3_sec);
 	}
 }
 
@@ -49,9 +49,9 @@ static void insane_scream(gentity_t *self) {
 		return;
 
 	// Paril: don't moan every second
-	if (self->monsterInfo.attack_finished < level.time) {
+	if (self->monsterinfo.attack_finished < level.time) {
 		gi.sound(self, CHAN_VOICE, random_element(sound_scream), 1, ATTN_IDLE, 0);
-		self->monsterInfo.attack_finished = level.time + random_time(1_sec, 3_sec);
+		self->monsterinfo.attack_finished = level.time + random_time(1_sec, 3_sec);
 	}
 }
 
@@ -68,7 +68,7 @@ void insane_onground(gentity_t *self);
 // may fix later
 static void insane_shrink(gentity_t *self) {
 	self->maxs[2] = 0;
-	self->svFlags |= SVF_DEADMONSTER;
+	self->svflags |= SVF_DEADMONSTER;
 	gi.linkentity(self);
 }
 
@@ -527,7 +527,7 @@ MONSTERINFO_STAND(insane_stand) (gentity_t *self) -> void {
 	if (self->spawnflags.has(SPAWNFLAG_INSANE_CRUCIFIED)) // If crucified
 	{
 		M_SetAnimation(self, &insane_move_cross);
-		self->monsterInfo.aiflags |= AI_STAND_GROUND;
+		self->monsterinfo.aiflags |= AI_STAND_GROUND;
 	}
 	// If Hold_Ground and Crawl are set
 	else if (self->spawnflags.has_all(SPAWNFLAG_INSANE_CRAWL | SPAWNFLAG_INSANE_STAND_GROUND)) {
@@ -545,7 +545,7 @@ void insane_dead(gentity_t *self) {
 	} else {
 		self->mins = { -16, -16, -24 };
 		self->maxs = { 16, 16, -8 };
-		self->moveType = MOVETYPE_TOSS;
+		self->movetype = MOVETYPE_TOSS;
 	}
 	monster_dead(self);
 }
@@ -558,17 +558,17 @@ static DIE(insane_die) (gentity_t *self, gentity_t *inflictor, gentity_t *attack
 			{ 4, "models/objects/gibs/sm_meat/tris.md2" },
 			{ "models/objects/gibs/head2/tris.md2", GIB_HEAD }
 			});
-		self->deadFlag = true;
+		self->deadflag = true;
 		return;
 	}
 
-	if (self->deadFlag)
+	if (self->deadflag)
 		return;
 
 	gi.sound(self, CHAN_VOICE, gi.soundindex(G_Fmt("player/male/death{}.wav", irandom(1, 5)).data()), 1, ATTN_IDLE, 0);
 
-	self->deadFlag = true;
-	self->takeDamage = true;
+	self->deadflag = true;
+	self->takedamage = true;
 
 	if (self->spawnflags.has(SPAWNFLAG_INSANE_CRUCIFIED)) {
 		insane_dead(self);
@@ -584,7 +584,7 @@ static DIE(insane_die) (gentity_t *self, gentity_t *inflictor, gentity_t *attack
  */
 void SP_misc_insane(gentity_t *self) {
 	if (!M_AllowSpawn(self)) {
-		FreeEntity(self);
+		G_FreeEntity(self);
 		return;
 	}
 
@@ -602,7 +602,7 @@ void SP_misc_insane(gentity_t *self) {
 		sound_scream[7].assign("insane/insane10.wav");
 	}
 
-	self->moveType = MOVETYPE_STEP;
+	self->movetype = MOVETYPE_STEP;
 	self->solid = SOLID_BBOX;
 	self->s.modelindex = gi.modelindex("models/monsters/insane/tris.md2");
 
@@ -610,29 +610,29 @@ void SP_misc_insane(gentity_t *self) {
 	self->maxs = { 16, 16, 32 };
 
 	self->health = 100 * st.health_multiplier;
-	self->gibHealth = -50;
+	self->gib_health = -50;
 	self->mass = 300;
 
 	self->pain = insane_pain;
 	self->die = insane_die;
 
-	self->monsterInfo.stand = insane_stand;
-	self->monsterInfo.walk = insane_walk;
-	self->monsterInfo.run = insane_run;
-	self->monsterInfo.dodge = nullptr;
-	self->monsterInfo.attack = nullptr;
-	self->monsterInfo.melee = nullptr;
-	self->monsterInfo.sight = nullptr;
-	self->monsterInfo.aiflags |= AI_GOOD_GUY;
+	self->monsterinfo.stand = insane_stand;
+	self->monsterinfo.walk = insane_walk;
+	self->monsterinfo.run = insane_run;
+	self->monsterinfo.dodge = nullptr;
+	self->monsterinfo.attack = nullptr;
+	self->monsterinfo.melee = nullptr;
+	self->monsterinfo.sight = nullptr;
+	self->monsterinfo.aiflags |= AI_GOOD_GUY;
 
 	gi.linkentity(self);
 
 	if (self->spawnflags.has(SPAWNFLAG_INSANE_STAND_GROUND)) // Stand Ground
-		self->monsterInfo.aiflags |= AI_STAND_GROUND;
+		self->monsterinfo.aiflags |= AI_STAND_GROUND;
 
 	M_SetAnimation(self, &insane_move_stand_normal);
 
-	self->monsterInfo.scale = MODEL_SCALE;
+	self->monsterinfo.scale = MODEL_SCALE;
 
 	if (self->spawnflags.has(SPAWNFLAG_INSANE_CRUCIFIED)) { // Crucified ?
 		self->flags |= FL_NO_KNOCKBACK | FL_STATIONARY;

@@ -457,12 +457,12 @@ static const std::initializer_list<spawn_t> spawns = {
 
 static void SpawnEnt_MapFixes(gentity_t *ent) {
 	if (!Q_strcasecmp(level.mapname, "bunk1")) {
-		if (!Q_strcasecmp(ent->className, "func_button") && !Q_strcasecmp(ent->model, "*36")) {
+		if (!Q_strcasecmp(ent->classname, "func_button") && !Q_strcasecmp(ent->model, "*36")) {
 			ent->wait = -1;
 		}
 		return;
 	}
-	if (!Q_strcasecmp(ent->className, "item_health_mega")) {
+	if (!Q_strcasecmp(ent->classname, "item_health_mega")) {
 		if (!Q_strcasecmp(level.mapname, "q2dm1")) {
 			if (ent->s.origin == vec3_t{ 480, 1376, 912 }) {
 				ent->s.angles = { 0, -45, 0 };
@@ -494,10 +494,12 @@ Finds the spawn function for the entity and calls it
 ===============
 */
 void ED_CallSpawn(gentity_t *ent) {
+	gitem_t	*item;
+	int		 i;
 
-	if (!ent->className) {
-		gi.Com_PrintFmt("{}: nullptr className\n", __FUNCTION__);
-		FreeEntity(ent);
+	if (!ent->classname) {
+		gi.Com_PrintFmt("{}: nullptr classname\n", __FUNCTION__);
+		G_FreeEntity(ent);
 		return;
 	}
 
@@ -511,57 +513,55 @@ void ED_CallSpawn(gentity_t *ent) {
 #if 0
 	if (GT(GT_HORDE)) {
 		// remove monsters from map, we will spawn them in during wave starts
-		if (!strnicmp(ent->className, "monster_", 8)) {
-			FreeEntity(ent);
+		if (!strnicmp(ent->classname, "monster_", 8)) {
+			G_FreeEntity(ent);
 			return;
 		}
 	}
 #endif
 	// FIXME - PMM classnames hack
-	if (!strcmp(ent->className, "weapon_nailgun"))
-		ent->className = GetItemByIndex(IT_WEAPON_ETF_RIFLE)->className;
-	else if (!strcmp(ent->className, "ammo_nails"))
-		ent->className = GetItemByIndex(IT_AMMO_FLECHETTES)->className;
-	else if (!strcmp(ent->className, "weapon_heatbeam"))
-		ent->className = GetItemByIndex(IT_WEAPON_PLASMABEAM)->className;
-	else if (!strcmp(ent->className, "item_haste"))
-		ent->className = GetItemByIndex(IT_POWERUP_HASTE)->className;
-	else if (RS(RS_Q3A) && !strcmp(ent->className, "weapon_supershotgun"))
-		ent->className = GetItemByIndex(IT_WEAPON_SHOTGUN)->className;
-	else if (!strcmp(ent->className, "info_player_team1"))
-		ent->className = "info_player_team_red";
-	else if (!strcmp(ent->className, "info_player_team2"))
-		ent->className = "info_player_team_blue";
-	else if (!strcmp(ent->className, "item_flag_team1"))
-		ent->className = ITEM_CTF_FLAG_RED;
-	else if (!strcmp(ent->className, "item_flag_team2"))
-		ent->className = ITEM_CTF_FLAG_BLUE;
+	if (!strcmp(ent->classname, "weapon_nailgun"))
+		ent->classname = GetItemByIndex(IT_WEAPON_ETF_RIFLE)->classname;
+	else if (!strcmp(ent->classname, "ammo_nails"))
+		ent->classname = GetItemByIndex(IT_AMMO_FLECHETTES)->classname;
+	else if (!strcmp(ent->classname, "weapon_heatbeam"))
+		ent->classname = GetItemByIndex(IT_WEAPON_PLASMABEAM)->classname;
+	else if (!strcmp(ent->classname, "item_haste"))
+		ent->classname = GetItemByIndex(IT_POWERUP_HASTE)->classname;
+	else if (RS(RS_Q3A) && !strcmp(ent->classname, "weapon_supershotgun"))
+		ent->classname = GetItemByIndex(IT_WEAPON_SHOTGUN)->classname;
+	else if (!strcmp(ent->classname, "info_player_team1"))
+		ent->classname = "info_player_team_red";
+	else if (!strcmp(ent->classname, "info_player_team2"))
+		ent->classname = "info_player_team_blue";
+	else if (!strcmp(ent->classname, "item_flag_team1"))
+		ent->classname = ITEM_CTF_FLAG_RED;
+	else if (!strcmp(ent->classname, "item_flag_team2"))
+		ent->classname = ITEM_CTF_FLAG_BLUE;
 
 	if (RS(RS_Q1)) {
-		if (!strcmp(ent->className, "weapon_machinegun"))
-			ent->className = GetItemByIndex(IT_WEAPON_ETF_RIFLE)->className;
-		else if (!strcmp(ent->className, "weapon_chaingun"))
-			ent->className = GetItemByIndex(IT_WEAPON_PLASMABEAM)->className;
-		else if (!strcmp(ent->className, "weapon_railgun"))
-			ent->className = GetItemByIndex(IT_WEAPON_HYPERBLASTER)->className;
-		else if (!strcmp(ent->className, "ammo_slugs"))
-			ent->className = GetItemByIndex(IT_AMMO_CELLS)->className;
-		else if (!strcmp(ent->className, "ammo_bullets"))
-			ent->className = GetItemByIndex(IT_AMMO_FLECHETTES)->className;
-		else if (!strcmp(ent->className, "ammo_grenades"))
-			ent->className = GetItemByIndex(IT_AMMO_ROCKETS_SMALL)->className;
+		if (!strcmp(ent->classname, "weapon_machinegun"))
+			ent->classname = GetItemByIndex(IT_WEAPON_ETF_RIFLE)->classname;
+		else if (!strcmp(ent->classname, "weapon_chaingun"))
+			ent->classname = GetItemByIndex(IT_WEAPON_PLASMABEAM)->classname;
+		else if (!strcmp(ent->classname, "weapon_railgun"))
+			ent->classname = GetItemByIndex(IT_WEAPON_HYPERBLASTER)->classname;
+		else if (!strcmp(ent->classname, "ammo_slugs"))
+			ent->classname = GetItemByIndex(IT_AMMO_CELLS)->classname;
+		else if (!strcmp(ent->classname, "ammo_bullets"))
+			ent->classname = GetItemByIndex(IT_AMMO_FLECHETTES)->classname;
+		else if (!strcmp(ent->classname, "ammo_grenades"))
+			ent->classname = GetItemByIndex(IT_AMMO_ROCKETS_SMALL)->classname;
 	}
 	// pmm
 
 	SpawnEnt_MapFixes(ent);
 
 	// check item spawn functions
-	gitem_t	*item;
-	int		 i;
-	for (i = IT_NULL + 1, item = itemList; i < IT_TOTAL; i++, item++) {
-		if (!item->className)
+	for (i = 0, item = itemlist; i < IT_TOTAL; i++, item++) {
+		if (!item->classname)
 			continue;
-		if (!strcmp(item->className, ent->className)) {
+		if (!strcmp(item->classname, ent->classname)) {
 			// found it
 			// before spawning, pick random item replacement
 			if (g_dm_random_items->integer) {
@@ -570,7 +570,7 @@ void ED_CallSpawn(gentity_t *ent) {
 
 				if (new_item) {
 					item = GetItemByIndex(new_item);
-					ent->className = item->className;
+					ent->classname = item->classname;
 				}
 			}
 
@@ -581,27 +581,29 @@ void ED_CallSpawn(gentity_t *ent) {
 
 	// check normal spawn functions
 	for (auto &s : spawns) {
-		if (!strcmp(s.name, ent->className)) { // found it
+		if (!strcmp(s.name, ent->classname)) { // found it
 			s.spawn(ent);
+			//gi.Com_PrintFmt("{}: found {}\n", __FUNCTION__, *ent);
 
-			if (strcmp(ent->className, s.name) == 0)
-				ent->className = s.name;
+			// Paril: swap classname with stored constant if we didn't change it
+			if (strcmp(ent->classname, s.name) == 0)
+				ent->classname = s.name;
 			return;
 		}
 	}
 
-	if (!strcmp(ent->className, "item_ball")) {
+	if (!strcmp(ent->classname, "item_ball")) {
 		if (GT(GT_BALL)) {
 			ent->s.effects |= EF_COLOR_SHELL;
 			ent->s.renderfx |= RF_SHELL_RED | RF_SHELL_GREEN;
 		} else {
-			FreeEntity(ent);
+			G_FreeEntity(ent);
 		}
 		return;
 	}
 
 	gi.Com_PrintFmt("{}: {} doesn't have a spawn function.\n", __FUNCTION__, *ent);
-	FreeEntity(ent);
+	G_FreeEntity(ent);
 }
 
 /*
@@ -742,7 +744,7 @@ static int32_t ED_LoadColor(const char *value) {
 	{ n, AUTO_LOADER_FUNC(x) }
 
 static const std::initializer_list<field_t> entity_fields = {
-	FIELD_AUTO(className),
+	FIELD_AUTO(classname),
 	FIELD_AUTO(model),
 	FIELD_AUTO(spawnflags),
 	FIELD_AUTO(speed),
@@ -787,7 +789,7 @@ static const std::initializer_list<field_t> entity_fields = {
 	FIELD_AUTO_NAMED("alpha", s.alpha), // [Paril-KEX]
 	FIELD_AUTO_NAMED("scale", s.scale), // [Paril-KEX]
 	{ "mangle" }, // editor field
-	FIELD_AUTO_NAMED("dead_frame", monsterInfo.start_frame), // [Paril-KEX]
+	FIELD_AUTO_NAMED("dead_frame", monsterinfo.start_frame), // [Paril-KEX]
 	FIELD_AUTO_NAMED("frame", s.frame),
 	FIELD_AUTO_NAMED("effects", s.effects),
 	FIELD_AUTO_NAMED("renderfx", s.renderfx),
@@ -837,16 +839,16 @@ static const std::initializer_list<field_t> entity_fields = {
 	FIELD_AUTO_NAMED("bmodel_anim_alt_nowrap", bmodel_anim.alt_nowrap),
 
 	// [Paril-KEX] customizable power armor stuff
-	FIELD_AUTO_NAMED("powerArmorPower", monsterInfo.powerArmorPower),
-	{ "powerArmorType", [](gentity_t *s, const char *v) {
+	FIELD_AUTO_NAMED("power_armor_power", monsterinfo.power_armor_power),
+	{ "power_armor_type", [](gentity_t *s, const char *v) {
 			int32_t type = atoi(v);
 
 			if (type == 0)
-				s->monsterInfo.powerArmorType = IT_NULL;
+				s->monsterinfo.power_armor_type = IT_NULL;
 			else if (type == 1)
-				s->monsterInfo.powerArmorType = IT_POWER_SCREEN;
+				s->monsterinfo.power_armor_type = IT_POWER_SCREEN;
 			else
-				s->monsterInfo.powerArmorType = IT_POWER_SHIELD;
+				s->monsterinfo.power_armor_type = IT_POWER_SHIELD;
 		}
 	},
 
@@ -864,10 +866,11 @@ static const std::initializer_list<field_t> entity_fields = {
 	FIELD_AUTO(powerups_off),
 	FIELD_AUTO(bfg_on),
 	FIELD_AUTO(bfg_off),
-	FIELD_AUTO(spawnpad),
+	FIELD_AUTO(plasmabeam_on),
+	FIELD_AUTO(plasmabeam_off),
 //-muff
 
-	FIELD_AUTO_NAMED("monster_slots", monsterInfo.monster_slots)
+	FIELD_AUTO_NAMED("monster_slots", monsterinfo.monster_slots)
 };
 
 #undef AUTO_LOADER_FUNC
@@ -926,7 +929,6 @@ static const std::initializer_list<temp_field_t> temp_fields = {
 	FIELD_AUTO(start_items),
 	FIELD_AUTO(no_grapple),
 	FIELD_AUTO(no_dm_spawnpads),
-	FIELD_AUTO(no_dm_telepads),
 	FIELD_AUTO(health_multiplier),
 
 	FIELD_AUTO(reinforcements),
@@ -961,7 +963,6 @@ static constexpr const char *gt_spawn_string[GT_NUM_GAMETYPES] = {
 	"rr",
 	"lms",
 	"horde",
-	"race",
 	"ball"
 };
 
@@ -1073,7 +1074,7 @@ G_FindTeams
 Chain together all entities with a matching team field.
 
 All but the first will have the FL_TEAMSLAVE flag set.
-All but the last will have the teamChain field set to the next one
+All but the last will have the teamchain field set to the next one
 ================
 */
 
@@ -1086,33 +1087,33 @@ static void G_FixTeams() {
 
 	c = 0;
 	for (i = 1, e = g_entities + i; i < globals.num_entities; i++, e++) {
-		if (!e->inUse)
+		if (!e->inuse)
 			continue;
 		if (!e->team)
 			continue;
-		if (!strcmp(e->className, "func_train") && e->spawnflags.has(SPAWNFLAG_TRAIN_MOVE_TEAMCHAIN)) {
+		if (!strcmp(e->classname, "func_train") && e->spawnflags.has(SPAWNFLAG_TRAIN_MOVE_TEAMCHAIN)) {
 			if (e->flags & FL_TEAMSLAVE) {
 				chain = e;
-				e->teamMaster = e;
-				e->teamChain = nullptr;
+				e->teammaster = e;
+				e->teamchain = nullptr;
 				e->flags &= ~FL_TEAMSLAVE;
 				e->flags |= FL_TEAMMASTER;
 				c++;
 				for (j = 1, e2 = g_entities + j; j < globals.num_entities; j++, e2++) {
 					if (e2 == e)
 						continue;
-					if (!e2->inUse)
+					if (!e2->inuse)
 						continue;
 					if (!e2->team)
 						continue;
 					if (!strcmp(e->team, e2->team)) {
-						chain->teamChain = e2;
-						e2->teamMaster = e;
-						e2->teamChain = nullptr;
+						chain->teamchain = e2;
+						e2->teammaster = e;
+						e2->teamchain = nullptr;
 						chain = e2;
 						e2->flags |= FL_TEAMSLAVE;
 						e2->flags &= ~FL_TEAMMASTER;
-						e2->moveType = MOVETYPE_PUSH;
+						e2->movetype = MOVETYPE_PUSH;
 						e2->speed = e->speed;
 					}
 				}
@@ -1132,19 +1133,19 @@ static void G_FindTeams() {
 	c1 = 0;
 	c2 = 0;
 	for (i = 1, e1 = g_entities + i; i < globals.num_entities; i++, e1++) {
-		if (!e1->inUse)
+		if (!e1->inuse)
 			continue;
 		if (!e1->team)
 			continue;
 		if (e1->flags & FL_TEAMSLAVE)
 			continue;
 		chain = e1;
-		e1->teamMaster = e1;
+		e1->teammaster = e1;
 		e1->flags |= FL_TEAMMASTER;
 		c1++;
 		c2++;
 		for (j = i + 1, e2 = e1 + 1; j < globals.num_entities; j++, e2++) {
-			if (!e2->inUse)
+			if (!e2->inuse)
 				continue;
 			if (!e2->team)
 				continue;
@@ -1152,8 +1153,8 @@ static void G_FindTeams() {
 				continue;
 			if (!strcmp(e1->team, e2->team)) {
 				c2++;
-				chain->teamChain = e2;
-				e2->teamMaster = e1;
+				chain->teamchain = e2;
+				e2->teammaster = e1;
 				chain = e2;
 				e2->flags |= FL_TEAMSLAVE;
 			}
@@ -1183,8 +1184,8 @@ static inline bool G_InhibitEntity(gentity_t *ent) {
 		return true;
 	if (ent->notfree && !Teams())
 		return true;
-	
-	if (ent->notq2 && RS(RS_Q2))
+
+	if (ent->notq2 && (RS(RS_Q2RE) || RS(RS_MM)))
 		return true;
 	if (ent->notq3a && RS(RS_Q3A))
 		return true;
@@ -1196,25 +1197,15 @@ static inline bool G_InhibitEntity(gentity_t *ent) {
 	if (ent->powerups_off && !g_no_powerups->integer)
 		return true;
 
-	if (ent->bfg_on && g_no_bfg->integer)
+	if (ent->bfg_on && g_mapspawn_no_bfg->integer)
 		return true;
-	if (ent->bfg_off && !g_no_bfg->integer)
+	if (ent->bfg_off && !g_mapspawn_no_bfg->integer)
 		return true;
 
-	if (ent->spawnpad && ent->spawnpad[0]) {
-		if (!strcmp(ent->spawnpad, "pu")) {
-			if (g_no_powerups->integer)
-				return true;
-		}
-		if (!strcmp(ent->spawnpad, "ar")) {
-			if (g_no_armor->integer)
-				return true;
-		}
-		if (!strcmp(ent->spawnpad, "ht")) {
-			if (g_no_health->integer || g_vampiric_damage->integer)
-				return true;
-		}
-	}
+	if (ent->plasmabeam_on && g_mapspawn_no_plasmabeam->integer)
+		return true;
+	if (ent->plasmabeam_off && !g_mapspawn_no_plasmabeam->integer)
+		return true;
 
 	if (ent->ruleset) {
 		const char *s = strstr(ent->ruleset, rs_short_name[game.ruleset]);
@@ -1228,7 +1219,7 @@ static inline bool G_InhibitEntity(gentity_t *ent) {
 	}
 
 	// dm-only
-	if (deathmatch->integer && notGT(GT_RACE))
+	if (deathmatch->integer)
 		return ent->spawnflags.has(SPAWNFLAG_NOT_DEATHMATCH);
 
 	// coop flags
@@ -1237,7 +1228,7 @@ static inline bool G_InhibitEntity(gentity_t *ent) {
 	else if (!coop->integer && ent->spawnflags.has(SPAWNFLAG_COOP_ONLY))
 		return true;
 
-	if (g_quadhog->integer && !strcmp(ent->className, "item_quad"))
+	if (g_quadhog->integer && !strcmp(ent->classname, "item_quad"))
 		return true;
 
 	// skill
@@ -1348,7 +1339,7 @@ void GT_PrecacheAssets() {
 		ii_teams_blue_tiny = gi.imageindex("sbfctf2");
 	}
 
-	if (GTF(GTF_1V1))
+	if (GT(GT_DUEL))
 		ii_duel_header = gi.imageindex("/tags/default");
 
 	if (GTF(GTF_CTF)) {
@@ -1372,9 +1363,9 @@ static void PrecacheAssets() {
 		gi.soundindex("misc/pc_up.wav");
 	}
 
-	level.picPing = gi.imageindex("loc_ping");
+	level.pic_ping = gi.imageindex("loc_ping");
 
-	level.picHealth = gi.imageindex("i_health");
+	level.pic_health = gi.imageindex("i_health");
 	gi.imageindex("field_3");
 
 	gi.soundindex("items/pkup.wav");   // bonus item pickup
@@ -1399,8 +1390,6 @@ static void PrecacheAssets() {
 	ii_highlight = gi.imageindex("i_ctfj");
 
 	GT_PrecacheAssets();
-
-	gi.soundindex("misc/talk1.wav");
 }
 
 #define	MAX_READ	0x10000		// read in blocks of 64k
@@ -1486,7 +1475,7 @@ static void PrecacheForRandomRespawn() {
 	int		 i;
 	int		 itflags;
 
-	it = itemList;
+	it = itemlist;
 	for (i = 0; i < IT_TOTAL; i++, it++) {
 		itflags = it->flags;
 
@@ -1503,62 +1492,62 @@ static void G_LocateSpawnSpots(void) {
 	const char *s = nullptr;
 	size_t		sl = 0;
 
-	level.spawnSpots[SPAWN_SPOT_INTERMISSION] = nullptr;
-	level.numSpawnSpotsFree = 0;
-	level.numSpawnSpotsTeam = 0;
+	level.spawn_spots[SPAWN_SPOT_INTERMISSION] = nullptr;
+	level.num_spawn_spots_free = 0;
+	level.num_spawn_spots_team = 0;
 
 	// locate all spawn spots
 	n = 0;
 	for (ent = g_entities; ent < &g_entities[globals.num_entities]; ent++) {
 
-		if (!ent->inUse || !ent->className)
+		if (!ent->inuse || !ent->classname)
 			continue;
 
 		s = "info_player_";
 		sl = strlen(s);
 
-		if (Q_strncasecmp(ent->className, s, sl))
+		if (Q_strncasecmp(ent->classname, s, sl))
 			continue;
 
 		// intermission/ffa spots
-		if (!Q_strncasecmp(ent->className, s, sl)) {
-			if (!Q_strcasecmp(ent->className + sl, "intermission")) {
-				if (level.spawnSpots[SPAWN_SPOT_INTERMISSION] == NULL) {
-					level.spawnSpots[SPAWN_SPOT_INTERMISSION] = ent; // put in the last slot
+		if (!Q_strncasecmp(ent->classname, s, sl)) {
+			if (!Q_strcasecmp(ent->classname + sl, "intermission")) {
+				if (level.spawn_spots[SPAWN_SPOT_INTERMISSION] == NULL) {
+					level.spawn_spots[SPAWN_SPOT_INTERMISSION] = ent; // put in the last slot
 					ent->fteam = TEAM_FREE;
 
 					// if it has a target, look towards it
 					if (ent->target) {
-						gentity_t *target = PickTarget(ent->target);
+						gentity_t *target = G_PickTarget(ent->target);
 
 						if (target) {
-							vec3_t	dir = (target->s.origin - level.intermissionOrigin).normalized();
+							vec3_t	dir = (target->s.origin - level.intermission_origin).normalized();
 							AngleVectors(dir);
-							level.intermissionAngle = dir;
+							level.intermission_angles = dir;
 							return;
 						}
 					}
-					level.intermissionAngle = ent->s.angles;
+					level.intermission_angles = ent->s.angles;
 				}
 				continue;
 			}
-			if (!Q_strcasecmp(ent->className + sl, "deathmatch")) {
-				level.spawnSpots[n] = ent; n++;
-				level.numSpawnSpotsFree++;
+			if (!Q_strcasecmp(ent->classname + sl, "deathmatch")) {
+				level.spawn_spots[n] = ent; n++;
+				level.num_spawn_spots_free++;
 				ent->fteam = TEAM_FREE;
 				ent->count = 1; // means its not initial spawn point
 				continue;
 			}
-			if (!Q_strcasecmp(ent->className + sl, "team_red")) {
-				level.spawnSpots[n] = ent; n++;
-				level.numSpawnSpotsTeam++;
+			if (!Q_strcasecmp(ent->classname + sl, "team_red")) {
+				level.spawn_spots[n] = ent; n++;
+				level.num_spawn_spots_team++;
 				ent->fteam = TEAM_RED;
 				ent->count = 1; // means its not initial spawn point
 				continue;
 			}
-			if (!Q_strcasecmp(ent->className + sl, "team_blue")) {
-				level.spawnSpots[n] = ent; n++;
-				level.numSpawnSpotsTeam++;
+			if (!Q_strcasecmp(ent->classname + sl, "team_blue")) {
+				level.spawn_spots[n] = ent; n++;
+				level.num_spawn_spots_team++;
 				ent->fteam = TEAM_BLUE;
 				ent->count = 1; // means its not initial spawn point
 				continue;
@@ -1567,7 +1556,7 @@ static void G_LocateSpawnSpots(void) {
 		}
 	}
 
-	level.numSpawnSpots = n;
+	level.num_spawn_spots = n;
 }
 
 static void ParseWorldEntityString(const char *mapname, bool try_q3) {
@@ -1653,12 +1642,12 @@ static void ParseWorldEntities() {
 		if (!ent)
 			ent = g_entities;
 		else
-			ent = Spawn();
+			ent = G_Spawn();
 		entities = ED_ParseEntity(entities, ent);
 
 		// nasty hacks time!
 		if (!strcmp(level.mapname, "bunk1")) {
-			if (!strcmp(ent->className, "func_button") && !Q_strcasecmp(ent->model, "*36")) {
+			if (!strcmp(ent->classname, "func_button") && !Q_strcasecmp(ent->model, "*36")) {
 				ent->wait = -1;
 			}
 		}
@@ -1666,7 +1655,7 @@ static void ParseWorldEntities() {
 		// remove things (except the world) from different skill levels or deathmatch
 		if (ent != g_entities) {
 			if (G_InhibitEntity(ent)) {
-				FreeEntity(ent);
+				G_FreeEntity(ent);
 				inhibit++;
 				continue;
 			}
@@ -1696,7 +1685,7 @@ void ClearWorldEntities() {
 	for (size_t i = MAX_CLIENTS; i < game.maxentities; i++) {
 		ent = &g_entities[i];
 
-		if (!ent || !ent->inUse || ent->client)
+		if (!ent || !ent->inuse || ent->client)
 			continue;
 
 		memset(&g_entities[i], 0, sizeof(g_entities[i]));
@@ -1804,10 +1793,10 @@ void SpawnEntities(const char *mapname, const char *entities, const char *spawnp
 	if (!game.autosaved)
 		Q_strlcpy(game.spawnpoint, spawnpoint, sizeof(game.spawnpoint));
 
-	level.isN64 = strncmp(level.mapname, "q64/", 4) == 0;
+	level.is_n64 = strncmp(level.mapname, "q64/", 4) == 0;
 
-	level.coopScalePlayers = 0;
-	level.coopHealthScaling = clamp(g_coop_health_scaling->value, 0.f, 1.f);
+	level.coop_scale_players = 0;
+	level.coop_health_scaling = clamp(g_coop_health_scaling->value, 0.f, 1.f);
 
 	// set client fields on player entities
 	for (size_t i = 0; i < game.maxclients; i++) {
@@ -1838,12 +1827,12 @@ void SpawnEntities(const char *mapname, const char *entities, const char *spawnp
 		if (!ent)
 			ent = g_entities;
 		else
-			ent = Spawn();
+			ent = G_Spawn();
 		entities = ED_ParseEntity(entities, ent);
 
 		// nasty hacks time!
 		if (!strcmp(level.mapname, "bunk1")) {
-			if (!strcmp(ent->className, "func_button") && !Q_strcasecmp(ent->model, "*36")) {
+			if (!strcmp(ent->classname, "func_button") && !Q_strcasecmp(ent->model, "*36")) {
 				ent->wait = -1;
 			}
 		}
@@ -1851,7 +1840,7 @@ void SpawnEntities(const char *mapname, const char *entities, const char *spawnp
 		// remove things (except the world) from different skill levels or deathmatch
 		if (ent != g_entities) {
 			if (G_InhibitEntity(ent)) {
-				FreeEntity(ent);
+				G_FreeEntity(ent);
 				inhibit++;
 				continue;
 			}
@@ -1900,8 +1889,7 @@ void SpawnEntities(const char *mapname, const char *entities, const char *spawnp
 
 	G_LocateSpawnSpots();
 
-	//SetIntermissionPoint();
-	FindIntermissionPoint();
+	SetIntermissionPoint();
 
 	setup_shadow_lights();
 
@@ -1955,7 +1943,7 @@ static void G_InitStatusbar() {
 
 	// ---- gamemode-specific stuff ----
 
-	if (CooperativeModeOn()) {
+	if (InCoopStyle()) {
 		int32_t			y;
 		const int32_t	text_adj = 26;
 
@@ -1974,7 +1962,7 @@ static void G_InitStatusbar() {
 			chars = num > 99 ? 3 : num > 9 ? 2 : 1;
 			sb.ifstat(STAT_ROUND_NUMBER).xr(-32 - (16 * chars)).yt(y += 10).num(3, STAT_ROUND_NUMBER).xr(0).yt(y += text_adj).loc_rstring("Wave").endifstat();
 
-			num = level.totalMonsters - level.killedMonsters;
+			num = level.total_monsters - level.killed_monsters;
 			chars = num > 99 ? 3 : num > 9 ? 2 : 1;
 			sb.ifstat(STAT_MONSTER_COUNT).xr(-32 - (16 * chars)).yt(y += 10).num(3, STAT_MONSTER_COUNT).xr(0).yt(y += text_adj).loc_rstring("Monsters").endifstat();
 		}
@@ -2014,11 +2002,11 @@ static void G_InitStatusbar() {
 		// match state/timer
 		sb.ifstat(STAT_MATCH_STATE).xv(0).yb(-78).stat_string(STAT_MATCH_STATE).endifstat();
 
-		// follow cam
-		sb.ifstat(STAT_FOLLOWING).xv(0).yb(-68).string2("FOLLOWING").xv(80).stat_string(STAT_FOLLOWING).endifstat();
-		
+		// chase cam
+		sb.ifstat(STAT_CHASE).xv(0).yb(-68).string("FOLLOWING").xv(80).stat_string(STAT_CHASE).endifstat();
+
 		// spectator
-		sb.ifstat(STAT_SPECTATOR).xv(0).yb(-68).string2("SPECTATOR MODE").endifstat();
+		sb.ifstat(STAT_SPECTATOR).xv(0).yb(-58).string2("SPECTATOR MODE").endifstat();
 
 		// mini scores...
 		// red/first
@@ -2038,6 +2026,163 @@ static void G_InitStatusbar() {
 	gi.configstring(CS_STATUSBAR, sb.sb.str().c_str());
 }
 
+void GT_SetLongName(void) {
+	const char *s;
+	if (deathmatch->integer) {
+		if (GT(GT_CTF)) {
+			if (g_instagib->integer) {
+				s = "Insta-CTF";
+			} else if (g_vampiric_damage->integer) {
+				s = "Vampiric CTF";
+			} else if (g_frenzy->integer) {
+				s = "Frenzy CTF";
+			} else if (g_nadefest->integer) {
+				s = "NadeFest CTF";
+			} else if (g_quadhog->integer) {
+				s = "Quad Hog CTF";
+			} else {
+				s = gt_long_name[GT_CTF];
+			}
+		} else if (GT(GT_FREEZE)) {
+			if (g_instagib->integer) {
+				s = "Insta-Freeze";
+			} else if (g_vampiric_damage->integer) {
+				s = "Vampiric Freeze";
+			} else if (g_frenzy->integer) {
+				s = "Frenzy Freeze";
+			} else if (g_nadefest->integer) {
+				s = "NadeFest Freeze";
+			} else if (g_quadhog->integer) {
+				s = "Quad Hog Freeze";
+			} else {
+				s = gt_long_name[GT_FREEZE];
+			}
+		} else if (GT(GT_CA)) {
+			if (g_instagib->integer) {
+				s = "Insta-CA";
+			} else if (g_vampiric_damage->integer) {
+				s = "Vampiric CA";
+			} else if (g_frenzy->integer) {
+				s = "Frenzy CA";
+			} else if (g_nadefest->integer) {
+				s = "NadeFest CA";
+			} else if (g_quadhog->integer) {
+				s = "Quad Hog CA";
+			} else {
+				s = gt_long_name[GT_CA];
+			}
+		} else if (GT(GT_RR)) {
+			if (g_instagib->integer) {
+				s = "Insta-RR";
+			} else if (g_vampiric_damage->integer) {
+				s = "Vampiric RR";
+			} else if (g_frenzy->integer) {
+				s = "Frenzy RR";
+			} else if (g_nadefest->integer) {
+				s = "NadeFest RR";
+			} else if (g_quadhog->integer) {
+				s = "Quad Hog RR";
+			} else {
+				s = gt_long_name[GT_RR];
+			}
+		} else if (GT(GT_STRIKE)) {
+			if (g_instagib->integer) {
+				s = "Insta-Strike";
+			} else if (g_vampiric_damage->integer) {
+				s = "Vampiric Strike";
+			} else if (g_frenzy->integer) {
+				s = "Frenzy Strike";
+			} else if (g_nadefest->integer) {
+				s = "NadeFest Strike";
+			} else if (g_quadhog->integer) {
+				s = "Quad Hog Strike";
+			} else {
+				s = gt_long_name[GT_STRIKE];
+			}
+		} else if (GT(GT_TDM)) {
+			if (g_instagib->integer) {
+				s = "Insta-TDM";
+			} else if (g_vampiric_damage->integer) {
+				s = "Vampiric TDM";
+			} else if (g_frenzy->integer) {
+				s = "Frenzy TDM";
+			} else if (g_nadefest->integer) {
+				s = "NadeFest TDM";
+			} else if (g_quadhog->integer) {
+				s = "Quad Hog TDM";
+			} else {
+				s = gt_long_name[GT_TDM];
+			}
+		} else if (GT(GT_DUEL)) {
+			if (g_instagib->integer) {
+				s = "Insta-Duel";
+			} else if (g_vampiric_damage->integer) {
+				s = "Vampiric Duel";
+			} else if (g_frenzy->integer) {
+				s = "Frenzy Duel";
+			} else if (g_nadefest->integer) {
+				s = "NadeFest Duel";
+			} else if (g_quadhog->integer) {
+				s = "Quad Hog Duel";
+			} else {
+				s = gt_long_name[GT_DUEL];
+			}
+		} else if (GT(GT_HORDE)) {
+			if (g_instagib->integer) {
+				s = "Insta-Horde";
+			} else if (g_vampiric_damage->integer) {
+				s = "Vampiric Horde";
+			} else if (g_frenzy->integer) {
+				s = "Frenzy Horde";
+			} else if (g_nadefest->integer) {
+				s = "NadeFest Horde";
+			} else if (g_quadhog->integer) {
+				s = "Quad Hog Horde";
+			} else {
+				s = gt_long_name[GT_HORDE];
+			}
+		} else if (GT(GT_BALL)) {
+			if (g_instagib->integer) {
+				s = "Insta-ProBall";
+			} else if (g_vampiric_damage->integer) {
+				s = "Vampiric ProBall";
+			} else if (g_frenzy->integer) {
+				s = "Frenzy ProBall";
+			} else if (g_nadefest->integer) {
+				s = "NadeFest ProBall";
+			} else if (g_quadhog->integer) {
+				s = "Quad Hog ProBall";
+			} else {
+				s = gt_long_name[GT_BALL];
+			}
+		} else if (deathmatch->integer) {
+			if (g_instagib->integer) {
+				s = "InstaGib";
+			} else if (g_vampiric_damage->integer) {
+				s = "Vampiric FFA";
+			} else if (g_frenzy->integer) {
+				s = "Frenzy FFA";
+			} else if (g_nadefest->integer) {
+				s = "NadeFest";
+			} else if (g_quadhog->integer) {
+				s = "Quad Hog";
+			} else {
+				s = gt_long_name[GT_FFA];
+			}
+		} else {
+			s = "Unknown Gametype";
+		}
+	} else {
+		if (coop->integer) {
+			s = "Co-op";
+		} else {
+			s = "Single Player";
+		}
+	}
+	if (s)
+		Q_strlcpy(level.gametype_name, s, sizeof(level.gametype_name));
+}
+
 /*QUAKED worldspawn (0 0 0) ?
 
 Only used for the world.
@@ -2054,15 +2199,14 @@ Only used for the world.
 "start_items"		give players these items on spawn
 "no_grapple"		disables grappling hook
 "no_dm_spawnpads"	disables spawn pads in deathmatch
-"no_dm_telepads"	disables teleporter pads
-"ruleset"			overrides gameplay ruleset (q1/q2/q3a)
+"ruleset"			overrides gameplay ruleset (q2re/mm/q3a)
 */
 void SP_worldspawn(gentity_t *ent) {
 	Q_strlcpy(level.gamemod_name, G_Fmt("{} v{}", GAMEMOD_TITLE, GAMEMOD_VERSION).data(), sizeof(level.gamemod_name));
 
-	ent->moveType = MOVETYPE_PUSH;
+	ent->movetype = MOVETYPE_PUSH;
 	ent->solid = SOLID_BSP;
-	ent->inUse = true; // since the world doesn't use Spawn()
+	ent->inuse = true; // since the world doesn't use G_Spawn()
 	ent->s.modelindex = MODELINDEX_WORLD;
 	ent->gravity = 1.0f;
 
@@ -2087,25 +2231,25 @@ void SP_worldspawn(gentity_t *ent) {
 	// set configstrings for items
 	SetItemNames();
 
-	if (st.nextmap && st.nextmap[0])
+	if (st.nextmap)
 		Q_strlcpy(level.nextmap, st.nextmap, sizeof(level.nextmap));
 
 	// make some data visible to the server
 
 	if (ent->message && ent->message[0]) {
 		gi.configstring(CS_NAME, ent->message);
-		Q_strlcpy(level.levelName, ent->message, sizeof(level.levelName));
+		Q_strlcpy(level.level_name, ent->message, sizeof(level.level_name));
 	} else
-		Q_strlcpy(level.levelName, level.mapname, sizeof(level.levelName));
+		Q_strlcpy(level.level_name, level.mapname, sizeof(level.level_name));
 
 	if (st.author && st.author[0])
 		Q_strlcpy(level.author, st.author, sizeof(level.author));
 	if (st.author2 && st.author2[0])
 		Q_strlcpy(level.author2, st.author2, sizeof(level.author2));
 
-	if (st.ruleset && st.ruleset[0] && g_level_ruleset->integer) {
+	if (st.ruleset && st.ruleset[0]) {
 		game.ruleset = RS_IndexFromString(st.ruleset);
-		//gi.Com_PrintFmt("st={} game={}\n", st.ruleset, rs_long_name[(int)game.ruleset]);
+		gi.Com_PrintFmt("st={} game={}\n", st.ruleset, rs_long_name[(int)game.ruleset]);
 		if (!game.ruleset)
 			game.ruleset = (ruleset_t)clamp(g_ruleset->integer, 1, (int)RS_NUM_RULESETS);
 	} else
@@ -2127,15 +2271,15 @@ void SP_worldspawn(gentity_t *ent) {
 		gi.configstring(CS_CDTRACK, G_Fmt("{}", ent->sounds).data());
 	}
 
-	if (level.isN64)
+	if (level.is_n64)
 		gi.configstring(CS_CD_LOOP_COUNT, "0");
 	else if (st.was_key_specified("loop_count"))
 		gi.configstring(CS_CD_LOOP_COUNT, G_Fmt("{}", st.loop_count).data());
 	else
 		gi.configstring(CS_CD_LOOP_COUNT, "");
 
-	if (st.instantitems > 0 || level.isN64)
-		level.instantItems = true;
+	if (st.instantitems > 0 || level.is_n64)
+		level.instantitems = true;
 
 	// [Paril-KEX]
 	if (!deathmatch->integer)
@@ -2157,15 +2301,12 @@ void SP_worldspawn(gentity_t *ent) {
 	if (st.no_grapple)
 		level.no_grapple = true;
 
-	if (deathmatch->integer && (st.no_dm_spawnpads || level.isN64))
+	if (st.no_dm_spawnpads)
 		level.no_dm_spawnpads = true;
-
-	if (deathmatch->integer && st.no_dm_telepads)
-		level.no_dm_telepads = true;
 
 	gi.configstring(CS_MAXCLIENTS, G_Fmt("{}", game.maxclients).data());
 
-	if (level.isN64 && !deathmatch->integer) {
+	if (level.is_n64 && !deathmatch->integer) {
 		gi.configstring(CONFIG_N64_PHYSICS, "1");
 		pm_config.n64_physics = true;
 	}
@@ -2192,51 +2333,36 @@ void SP_worldspawn(gentity_t *ent) {
 
 	snd_fry.assign("player/fry.wav"); // standing in lava / slime
 
+	PrecacheItem(GetItemByIndex(IT_COMPASS));
+
+	if (!g_instagib->integer && !g_nadefest->integer && notGT(GT_BALL))
+		PrecacheItem(GetItemByIndex(IT_WEAPON_BLASTER));
+
+	if (GT(GT_BALL))
+		PrecacheItem(GetItemByIndex(IT_BALL));
+
+	if ((!strcmp(g_allow_grapple->string, "auto")) ?
+		(GTF(GTF_CTF) ? !level.no_grapple : 0) :
+		g_allow_grapple->integer) {
+		PrecacheItem(GetItemByIndex(IT_WEAPON_GRAPPLE));
+	}
+
 	if (g_dm_random_items->integer) {
 		for (item_id_t i = static_cast<item_id_t>(IT_NULL + 1); i < IT_TOTAL; i = static_cast<item_id_t>(i + 1))
 			PrecacheItem(GetItemByIndex(i));
-	} else {
-
-		PrecacheItem(GetItemByIndex(IT_COMPASS));
-
-		if (!g_instagib->integer && !g_nadefest->integer && notGT(GT_BALL)) {
-			switch (game.ruleset) {
-			case ruleset_t::RS_Q1:
-				PrecacheItem(&itemList[IT_WEAPON_CHAINFIST]);
-				PrecacheItem(&itemList[IT_WEAPON_SHOTGUN]);
-				PrecacheItem(&itemList[IT_PACK]);
-				break;
-			case ruleset_t::RS_Q2:
-				PrecacheItem(&itemList[IT_WEAPON_BLASTER]);
-				break;
-			case ruleset_t::RS_Q3A:
-				PrecacheItem(&itemList[IT_WEAPON_CHAINFIST]);
-				PrecacheItem(&itemList[IT_WEAPON_MACHINEGUN]);
-				break;
-			}
-		}
-
-		if (GT(GT_BALL))
-			PrecacheItem(&itemList[IT_BALL]);
-
-		if ((!strcmp(g_allow_grapple->string, "auto")) ?
-			(GTF(GTF_CTF) ? !level.no_grapple : 0) :
-			g_allow_grapple->integer) {
-			PrecacheItem(&itemList[IT_WEAPON_GRAPPLE]);
-		}
 	}
 
 	PrecachePlayerSounds();
 
 	// sexed models
-	for (auto &item : itemList)
+	for (auto &item : itemlist)
 		item.vwep_index = 0;
 
-	for (auto &item : itemList) {
+	for (auto &item : itemlist) {
 		if (!item.vwep_model)
 			continue;
 
-		for (auto &check : itemList) {
+		for (auto &check : itemlist) {
 			if (check.vwep_model && !Q_strcasecmp(item.vwep_model, check.vwep_model) && check.vwep_index) {
 				item.vwep_index = check.vwep_index;
 				break;
@@ -2248,11 +2374,13 @@ void SP_worldspawn(gentity_t *ent) {
 
 		item.vwep_index = gi.modelindex(item.vwep_model);
 
-		if (!level.viewWeaponOffset)
-			level.viewWeaponOffset = item.vwep_index;
+		if (!level.vwep_offset)
+			level.vwep_offset = item.vwep_index;
 	}
 
 	PrecacheAssets();
+
+	GT_SetLongName();
 
 	//
 	// Setup light animation tables. 'a' is total darkness, 'z' is doublebright.
@@ -2308,10 +2436,8 @@ void SP_worldspawn(gentity_t *ent) {
 	// 63 testing
 	gi.configstring(CS_LIGHTS + 63, "a");
 
-	GT_SetLongName();
-
 	// coop respawn strings
-	if (CooperativeModeOn()) {
+	if (InCoopStyle()) {
 		gi.configstring(CONFIG_COOP_RESPAWN_STRING + 0, "$g_coop_respawn_in_combat");
 		gi.configstring(CONFIG_COOP_RESPAWN_STRING + 1, "$g_coop_respawn_bad_area");
 		gi.configstring(CONFIG_COOP_RESPAWN_STRING + 2, "$g_coop_respawn_blocked");

@@ -32,9 +32,9 @@ static cached_soundindex sound_death_hit;
 void MakronToss(gentity_t *self);
 
 static void jorg_attack1_end_sound(gentity_t *self) {
-	if (self->monsterInfo.weapon_sound) {
+	if (self->monsterinfo.weapon_sound) {
 		gi.sound(self, CHAN_WEAPON, sound_attack1_end, 1, ATTN_NORM, 0);
-		self->monsterInfo.weapon_sound = 0;
+		self->monsterinfo.weapon_sound = 0;
 	}
 }
 
@@ -187,7 +187,7 @@ MONSTERINFO_WALK(jorg_walk) (gentity_t *self) -> void {
 }
 
 MONSTERINFO_RUN(jorg_run) (gentity_t *self) -> void {
-	if (self->monsterInfo.aiflags & AI_STAND_GROUND)
+	if (self->monsterinfo.aiflags & AI_STAND_GROUND)
 		M_SetAnimation(self, &jorg_move_stand);
 	else
 		M_SetAnimation(self, &jorg_move_run);
@@ -430,7 +430,7 @@ void jorgBFG(gentity_t *self) {
 	start = M_ProjectFlashSource(self, monster_flash_offset[MZ2_JORG_BFG_1], forward, right);
 
 	vec = self->enemy->s.origin;
-	vec[2] += self->enemy->viewHeight;
+	vec[2] += self->enemy->viewheight;
 	dir = vec - start;
 	dir.normalize();
 	gi.sound(self, CHAN_WEAPON, sound_bfg_fire, 1, ATTN_NORM, 0);
@@ -461,7 +461,7 @@ void jorg_firebullet(gentity_t *self) {
 MONSTERINFO_ATTACK(jorg_attack) (gentity_t *self) -> void {
 	if (frandom() <= 0.75f) {
 		gi.sound(self, CHAN_WEAPON, sound_attack1, 1, ATTN_NORM, 0);
-		self->monsterInfo.weapon_sound = gi.soundindex("boss3/w_loop.wav");
+		self->monsterinfo.weapon_sound = gi.soundindex("boss3/w_loop.wav");
 		M_SetAnimation(self, &jorg_move_start_attack1);
 	} else {
 		gi.sound(self, CHAN_VOICE, sound_attack2, 1, ATTN_NORM, 0);
@@ -497,8 +497,8 @@ void jorg_dead(gentity_t *self) {
 static DIE(jorg_die) (gentity_t *self, gentity_t *inflictor, gentity_t *attacker, int damage, const vec3_t &point, const mod_t &mod) -> void {
 	gi.sound(self, CHAN_VOICE, sound_death, 1, ATTN_NORM, 0);
 	jorg_attack1_end_sound(self);
-	self->deadFlag = true;
-	self->takeDamage = false;
+	self->deadflag = true;
+	self->takedamage = false;
 	self->count = 0;
 	M_SetAnimation(self, &jorg_move_death);
 }
@@ -514,7 +514,7 @@ void MakronPrecache();
  */
 void SP_monster_jorg(gentity_t *self) {
 	if (!M_AllowSpawn(self)) {
-		FreeEntity(self);
+		G_FreeEntity(self);
 		return;
 	}
 
@@ -538,7 +538,7 @@ void SP_monster_jorg(gentity_t *self) {
 
 	MakronPrecache();
 
-	self->moveType = MOVETYPE_STEP;
+	self->movetype = MOVETYPE_STEP;
 	self->solid = SOLID_BBOX;
 	self->s.modelindex = gi.modelindex("models/monsters/boss3/jorg/tris.md2");
 	self->s.modelindex2 = gi.modelindex("models/monsters/boss3/rider/tris.md2");
@@ -556,29 +556,29 @@ void SP_monster_jorg(gentity_t *self) {
 	self->maxs = { 80, 80, 140 };
 
 	self->health = 8000 * st.health_multiplier;
-	self->gibHealth = -2000;
+	self->gib_health = -2000;
 	self->mass = 1000;
 
 	self->pain = jorg_pain;
 	self->die = jorg_die;
-	self->monsterInfo.stand = jorg_stand;
-	self->monsterInfo.walk = jorg_walk;
-	self->monsterInfo.run = jorg_run;
-	self->monsterInfo.dodge = nullptr;
-	self->monsterInfo.attack = jorg_attack;
-	self->monsterInfo.search = jorg_search;
-	self->monsterInfo.melee = nullptr;
-	self->monsterInfo.sight = nullptr;
-	self->monsterInfo.checkattack = Jorg_CheckAttack;
-	self->monsterInfo.setskin = jorg_setskin;
+	self->monsterinfo.stand = jorg_stand;
+	self->monsterinfo.walk = jorg_walk;
+	self->monsterinfo.run = jorg_run;
+	self->monsterinfo.dodge = nullptr;
+	self->monsterinfo.attack = jorg_attack;
+	self->monsterinfo.search = jorg_search;
+	self->monsterinfo.melee = nullptr;
+	self->monsterinfo.sight = nullptr;
+	self->monsterinfo.checkattack = Jorg_CheckAttack;
+	self->monsterinfo.setskin = jorg_setskin;
 	gi.linkentity(self);
 
 	M_SetAnimation(self, &jorg_move_stand);
-	self->monsterInfo.scale = MODEL_SCALE;
+	self->monsterinfo.scale = MODEL_SCALE;
 
 	walkmonster_start(self);
 	// PMM
-	self->monsterInfo.aiflags |= AI_IGNORE_SHOTS;
+	self->monsterinfo.aiflags |= AI_IGNORE_SHOTS;
 	// pmm
-	self->monsterInfo.aiflags |= AI_DOUBLE_TROUBLE;
+	self->monsterinfo.aiflags |= AI_DOUBLE_TROUBLE;
 }

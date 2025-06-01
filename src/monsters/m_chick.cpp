@@ -76,7 +76,7 @@ mframe_t chick_frames_fidget[] = {
 MMOVE_T(chick_move_fidget) = { FRAME_stand201, FRAME_stand230, chick_frames_fidget, chick_stand };
 
 static void chick_fidget(gentity_t *self) {
-	if (self->monsterInfo.aiflags & AI_STAND_GROUND)
+	if (self->monsterinfo.aiflags & AI_STAND_GROUND)
 		return;
 	else if (self->enemy)
 		return;
@@ -173,13 +173,13 @@ MONSTERINFO_WALK(chick_walk) (gentity_t *self) -> void {
 MONSTERINFO_RUN(chick_run) (gentity_t *self) -> void {
 	monster_done_dodge(self);
 
-	if (self->monsterInfo.aiflags & AI_STAND_GROUND) {
+	if (self->monsterinfo.aiflags & AI_STAND_GROUND) {
 		M_SetAnimation(self, &chick_move_stand);
 		return;
 	}
 
-	if (self->monsterInfo.active_move == &chick_move_walk ||
-		self->monsterInfo.active_move == &chick_move_start_run) {
+	if (self->monsterinfo.active_move == &chick_move_walk ||
+		self->monsterinfo.active_move == &chick_move_start_run) {
 		M_SetAnimation(self, &chick_move_run);
 	} else {
 		M_SetAnimation(self, &chick_move_start_run);
@@ -251,7 +251,7 @@ static PAIN(chick_pain) (gentity_t *self, gentity_t *other, float kick, int dama
 		return; // no pain anims in nightmare
 
 	// PMM - clear this from blindfire
-	self->monsterInfo.aiflags &= ~AI_MANUAL_STEERING;
+	self->monsterinfo.aiflags &= ~AI_MANUAL_STEERING;
 
 	if (damage <= 10)
 		M_SetAnimation(self, &chick_move_pain1);
@@ -261,7 +261,7 @@ static PAIN(chick_pain) (gentity_t *self, gentity_t *other, float kick, int dama
 		M_SetAnimation(self, &chick_move_pain3);
 
 	// PMM - clear duck flag
-	if (self->monsterInfo.aiflags & AI_DUCKED)
+	if (self->monsterinfo.aiflags & AI_DUCKED)
 		monster_duck_up(self);
 }
 
@@ -280,7 +280,7 @@ static void chick_dead(gentity_t *self) {
 
 static void chick_shrink(gentity_t *self) {
 	self->maxs[2] = 12;
-	self->svFlags |= SVF_DEADMONSTER;
+	self->svflags |= SVF_DEADMONSTER;
 	gi.linkentity(self);
 }
 
@@ -345,17 +345,17 @@ static DIE(chick_die) (gentity_t *self, gentity_t *inflictor, gentity_t *attacke
 			{ "models/monsters/bitch/gibs/chest.md2", GIB_SKINNED },
 			{ "models/monsters/bitch/gibs/head.md2", GIB_HEAD | GIB_SKINNED }
 			});
-		self->deadFlag = true;
+		self->deadflag = true;
 
 		return;
 	}
 
-	if (self->deadFlag)
+	if (self->deadflag)
 		return;
 
 	// regular death
-	self->deadFlag = true;
-	self->takeDamage = true;
+	self->deadflag = true;
+	self->takedamage = true;
 
 	n = brandom();
 
@@ -397,12 +397,12 @@ static void ChickRocket(gentity_t *self) {
 	vec3_t target;
 	bool   blindfire = false;
 
-	if (self->monsterInfo.aiflags & AI_MANUAL_STEERING)
+	if (self->monsterinfo.aiflags & AI_MANUAL_STEERING)
 		blindfire = true;
 	else
 		blindfire = false;
 
-	if (!self->enemy || !self->enemy->inUse)
+	if (!self->enemy || !self->enemy->inuse)
 		return;
 
 	AngleVectors(self->s.angles, forward, right, nullptr);
@@ -415,7 +415,7 @@ static void ChickRocket(gentity_t *self) {
 		rocketSpeed = 650;
 
 	if (blindfire)
-		target = self->monsterInfo.blind_fire_target;
+		target = self->monsterinfo.blind_fire_target;
 	else
 		target = self->enemy->s.origin;
 
@@ -425,13 +425,13 @@ static void ChickRocket(gentity_t *self) {
 	}
 
 	// don't shoot at feet if they're above where i'm shooting from.
-	else if (frandom() < 0.33f || (start[2] < self->enemy->absMin[2])) {
+	else if (frandom() < 0.33f || (start[2] < self->enemy->absmin[2])) {
 		vec = target;
-		vec[2] += self->enemy->viewHeight;
+		vec[2] += self->enemy->viewheight;
 		dir = vec - start;
 	} else {
 		vec = target;
-		vec[2] = self->enemy->absMin[2] + 1;
+		vec[2] = self->enemy->absmin[2] + 1;
 		dir = vec - start;
 	}
 
@@ -493,8 +493,8 @@ static void ChickRocket(gentity_t *self) {
 static void Chick_PreAttack1(gentity_t *self) {
 	gi.sound(self, CHAN_VOICE, sound_missile_prelaunch, 1, ATTN_NORM, 0);
 
-	if (self->monsterInfo.aiflags & AI_MANUAL_STEERING) {
-		vec3_t aim = self->monsterInfo.blind_fire_target - self->s.origin;
+	if (self->monsterinfo.aiflags & AI_MANUAL_STEERING) {
+		vec3_t aim = self->monsterinfo.blind_fire_target - self->s.origin;
 		self->ideal_yaw = vectoyaw(aim);
 	}
 }
@@ -548,8 +548,8 @@ mframe_t chick_frames_end_attack1[] = {
 MMOVE_T(chick_move_end_attack1) = { FRAME_attak128, FRAME_attak132, chick_frames_end_attack1, chick_run };
 
 void chick_rerocket(gentity_t *self) {
-	if (self->monsterInfo.aiflags & AI_MANUAL_STEERING) {
-		self->monsterInfo.aiflags &= ~AI_MANUAL_STEERING;
+	if (self->monsterinfo.aiflags & AI_MANUAL_STEERING) {
+		self->monsterinfo.aiflags &= ~AI_MANUAL_STEERING;
 		M_SetAnimation(self, &chick_move_end_attack1);
 		return;
 	}
@@ -634,11 +634,11 @@ MONSTERINFO_ATTACK(chick_attack) (gentity_t *self) -> void {
 	monster_done_dodge(self);
 
 	// PMM
-	if (self->monsterInfo.attack_state == AS_BLIND) {
+	if (self->monsterinfo.attack_state == AS_BLIND) {
 		// setup shot probabilities
-		if (self->monsterInfo.blind_fire_delay < 1.0_sec)
+		if (self->monsterinfo.blind_fire_delay < 1.0_sec)
 			chance = 1.0;
-		else if (self->monsterInfo.blind_fire_delay < 7.5_sec)
+		else if (self->monsterinfo.blind_fire_delay < 7.5_sec)
 			chance = 0.4f;
 		else
 			chance = 0.1f;
@@ -646,10 +646,10 @@ MONSTERINFO_ATTACK(chick_attack) (gentity_t *self) -> void {
 		r = frandom();
 
 		// minimum of 5.5 seconds, plus 0-1, after the shots are done
-		self->monsterInfo.blind_fire_delay += random_time(5.5_sec, 6.5_sec);
+		self->monsterinfo.blind_fire_delay += random_time(5.5_sec, 6.5_sec);
 
 		// don't shoot at the origin
-		if (!self->monsterInfo.blind_fire_target)
+		if (!self->monsterinfo.blind_fire_target)
 			return;
 
 		// don't shoot if the dice say not to
@@ -657,9 +657,9 @@ MONSTERINFO_ATTACK(chick_attack) (gentity_t *self) -> void {
 			return;
 
 		// turn on manual steering to signal both manual steering and blindfire
-		self->monsterInfo.aiflags |= AI_MANUAL_STEERING;
+		self->monsterinfo.aiflags |= AI_MANUAL_STEERING;
 		M_SetAnimation(self, &chick_move_start_attack1);
-		self->monsterInfo.attack_finished = level.time + random_time(2_sec);
+		self->monsterinfo.attack_finished = level.time + random_time(2_sec);
 		return;
 	}
 	// pmm
@@ -679,10 +679,10 @@ MONSTERINFO_BLOCKED(chick_blocked) (gentity_t *self, float dist) -> bool {
 }
 
 MONSTERINFO_DUCK(chick_duck) (gentity_t *self, gtime_t eta) -> bool {
-	if ((self->monsterInfo.active_move == &chick_move_start_attack1) ||
-		(self->monsterInfo.active_move == &chick_move_attack1)) {
+	if ((self->monsterinfo.active_move == &chick_move_start_attack1) ||
+		(self->monsterinfo.active_move == &chick_move_attack1)) {
 		// if we're shooting don't dodge
-		self->monsterInfo.unduck(self);
+		self->monsterinfo.unduck(self);
 		return false;
 	}
 
@@ -692,14 +692,14 @@ MONSTERINFO_DUCK(chick_duck) (gentity_t *self, gtime_t eta) -> bool {
 }
 
 MONSTERINFO_SIDESTEP(chick_sidestep) (gentity_t *self) -> bool {
-	if ((self->monsterInfo.active_move == &chick_move_start_attack1) ||
-		(self->monsterInfo.active_move == &chick_move_attack1) ||
-		(self->monsterInfo.active_move == &chick_move_pain3)) {
+	if ((self->monsterinfo.active_move == &chick_move_start_attack1) ||
+		(self->monsterinfo.active_move == &chick_move_attack1) ||
+		(self->monsterinfo.active_move == &chick_move_pain3)) {
 		// if we're shooting, don't dodge
 		return false;
 	}
 
-	if (self->monsterInfo.active_move != &chick_move_run)
+	if (self->monsterinfo.active_move != &chick_move_run)
 		M_SetAnimation(self, &chick_move_run);
 
 	return true;
@@ -709,7 +709,7 @@ MONSTERINFO_SIDESTEP(chick_sidestep) (gentity_t *self) -> bool {
  */
 void SP_monster_chick(gentity_t *self) {
 	if (!M_AllowSpawn(self)) {
-		FreeEntity(self);
+		G_FreeEntity(self);
 		return;
 	}
 
@@ -729,7 +729,7 @@ void SP_monster_chick(gentity_t *self) {
 	sound_sight.assign("chick/chksght1.wav");
 	sound_search.assign("chick/chksrch1.wav");
 
-	self->moveType = MOVETYPE_STEP;
+	self->movetype = MOVETYPE_STEP;
 	self->solid = SOLID_BBOX;
 	self->s.modelindex = gi.modelindex("models/monsters/bitch/tris.md2");
 
@@ -743,31 +743,31 @@ void SP_monster_chick(gentity_t *self) {
 	self->maxs = { 16, 16, 56 };
 
 	self->health = 175 * st.health_multiplier;
-	self->gibHealth = -70;
+	self->gib_health = -70;
 	self->mass = 200;
 
 	self->pain = chick_pain;
 	self->die = chick_die;
 
-	self->monsterInfo.stand = chick_stand;
-	self->monsterInfo.walk = chick_walk;
-	self->monsterInfo.run = chick_run;
-	self->monsterInfo.dodge = M_MonsterDodge;
-	self->monsterInfo.duck = chick_duck;
-	self->monsterInfo.unduck = monster_duck_up;
-	self->monsterInfo.sidestep = chick_sidestep;
-	self->monsterInfo.blocked = chick_blocked;
-	self->monsterInfo.attack = chick_attack;
-	self->monsterInfo.melee = chick_melee;
-	self->monsterInfo.sight = chick_sight;
-	self->monsterInfo.setskin = chick_setpain;
+	self->monsterinfo.stand = chick_stand;
+	self->monsterinfo.walk = chick_walk;
+	self->monsterinfo.run = chick_run;
+	self->monsterinfo.dodge = M_MonsterDodge;
+	self->monsterinfo.duck = chick_duck;
+	self->monsterinfo.unduck = monster_duck_up;
+	self->monsterinfo.sidestep = chick_sidestep;
+	self->monsterinfo.blocked = chick_blocked;
+	self->monsterinfo.attack = chick_attack;
+	self->monsterinfo.melee = chick_melee;
+	self->monsterinfo.sight = chick_sight;
+	self->monsterinfo.setskin = chick_setpain;
 
 	gi.linkentity(self);
 
 	M_SetAnimation(self, &chick_move_stand);
-	self->monsterInfo.scale = MODEL_SCALE;
+	self->monsterinfo.scale = MODEL_SCALE;
 
-	self->monsterInfo.blindfire = true;
+	self->monsterinfo.blindfire = true;
 	walkmonster_start(self);
 }
 

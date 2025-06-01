@@ -50,7 +50,7 @@ static void shambler_lightning_update(gentity_t *self) {
 	gentity_t *lightning = self->beam;
 
 	if (self->s.frame >= FRAME_magic01 + q_countof(lightning_left_hand)) {
-		FreeEntity(lightning);
+		G_FreeEntity(lightning);
 		self->beam = nullptr;
 		return;
 	}
@@ -65,7 +65,7 @@ static void shambler_lightning_update(gentity_t *self) {
 static void shambler_windup(gentity_t *self) {
 	gi.sound(self, CHAN_WEAPON, sound_windup, 1, ATTN_NORM, 0);
 
-	gentity_t *lightning = self->beam = Spawn();
+	gentity_t *lightning = self->beam = G_Spawn();
 	lightning->s.modelindex = gi.modelindex("models/proj/lightning/tris.md2");
 	lightning->s.renderfx |= RF_BEAM;
 	lightning->owner = self;
@@ -154,11 +154,11 @@ MMOVE_T(shambler_move_run) = { FRAME_run01, FRAME_run06, shambler_frames_run, nu
 
 MONSTERINFO_RUN(shambler_run) (gentity_t *self) -> void {
 	if (self->enemy && self->enemy->client)
-		self->monsterInfo.aiflags |= AI_BRUTAL;
+		self->monsterinfo.aiflags |= AI_BRUTAL;
 	else
-		self->monsterInfo.aiflags &= ~AI_BRUTAL;
+		self->monsterinfo.aiflags &= ~AI_BRUTAL;
 
-	if (self->monsterInfo.aiflags & AI_STAND_GROUND) {
+	if (self->monsterinfo.aiflags & AI_STAND_GROUND) {
 		M_SetAnimation(self, &shambler_move_stand);
 		return;
 	}
@@ -183,10 +183,10 @@ mframe_t shambler_frames_pain[] = {
 MMOVE_T(shambler_move_pain) = { FRAME_pain01, FRAME_pain06, shambler_frames_pain, shambler_run };
 
 static PAIN(shambler_pain) (gentity_t *self, gentity_t *other, float kick, int damage, const mod_t &mod) -> void {
-	if (level.time < self->timeStamp)
+	if (level.time < self->timestamp)
 		return;
 
-	self->timeStamp = level.time + 1_ms;
+	self->timestamp = level.time + 1_ms;
 	gi.sound(self, CHAN_AUTO, sound_pain, 1, ATTN_NORM, 0);
 
 	if (mod.id != MOD_CHAINFIST && damage <= 30 && frandom() > 0.2f)
@@ -228,8 +228,8 @@ MONSTERINFO_SETSKIN(shambler_setskin) (gentity_t *self) -> void {
 
 static void ShamblerSaveLoc(gentity_t *self) {
 	self->pos1 = self->enemy->s.origin; // save for aiming the shot
-	self->pos1[2] += self->enemy->viewHeight;
-	self->monsterInfo.nextframe = FRAME_magic09;
+	self->pos1[2] += self->enemy->viewheight;
+	self->monsterinfo.nextframe = FRAME_magic09;
 
 	gi.sound(self, CHAN_WEAPON, sound_boom, 1, ATTN_NORM, 0);
 	shambler_lightning_update(self);
@@ -330,8 +330,8 @@ static void sham_smash10(gentity_t *self) {
 	if (hit)
 		gi.sound(self, CHAN_WEAPON, sound_smack, 1, ATTN_NORM, 0);
 
-	// SpawnMeatSpray(self.origin + vForward * 16, crandom() * 100 * v_right);
-	// SpawnMeatSpray(self.origin + vForward * 16, crandom() * 100 * v_right);
+	// SpawnMeatSpray(self.origin + v_forward * 16, crandom() * 100 * v_right);
+	// SpawnMeatSpray(self.origin + v_forward * 16, crandom() * 100 * v_right);
 };
 
 static void ShamClaw(gentity_t *self) {
@@ -432,7 +432,7 @@ static void shambler_dead(gentity_t *self) {
 
 static void shambler_shrink(gentity_t *self) {
 	self->maxs[2] = 0;
-	self->svFlags |= SVF_DEADMONSTER;
+	self->svflags |= SVF_DEADMONSTER;
 	gi.linkentity(self);
 }
 
@@ -453,12 +453,12 @@ MMOVE_T(shambler_move_death) = { FRAME_death01, FRAME_death11, shambler_frames_d
 
 static DIE(shambler_die) (gentity_t *self, gentity_t *inflictor, gentity_t *attacker, int damage, const vec3_t &point, const mod_t &mod) -> void {
 	if (self->beam) {
-		FreeEntity(self->beam);
+		G_FreeEntity(self->beam);
 		self->beam = nullptr;
 	}
 
 	if (self->beam2) {
-		FreeEntity(self->beam2);
+		G_FreeEntity(self->beam2);
 		self->beam2 = nullptr;
 	}
 
@@ -471,31 +471,31 @@ static DIE(shambler_die) (gentity_t *self, gentity_t *inflictor, gentity_t *atta
 			{ "models/objects/gibs/chest/tris.md2" },
 			{ "models/objects/gibs/head2/tris.md2", GIB_HEAD }
 			});
-		self->deadFlag = true;
+		self->deadflag = true;
 		return;
 	}
 
-	if (self->deadFlag)
+	if (self->deadflag)
 		return;
 
 	// regular death
 	gi.sound(self, CHAN_VOICE, sound_die, 1, ATTN_NORM, 0);
-	self->deadFlag = true;
-	self->takeDamage = true;
+	self->deadflag = true;
+	self->takedamage = true;
 
 	M_SetAnimation(self, &shambler_move_death);
 }
 
 void SP_monster_shambler(gentity_t *self) {
 	if (!M_AllowSpawn(self)) {
-		FreeEntity(self);
+		G_FreeEntity(self);
 		return;
 	}
 
 	self->s.modelindex = gi.modelindex("models/monsters/shambler/tris.md2");
 	self->mins = { -32, -32, -24 };
 	self->maxs = { 32, 32, 64 };
-	self->moveType = MOVETYPE_STEP;
+	self->movetype = MOVETYPE_STEP;
 	self->solid = SOLID_BBOX;
 
 	gi.modelindex("models/proj/lightning/tris.md2");
@@ -510,30 +510,30 @@ void SP_monster_shambler(gentity_t *self) {
 	sound_boom.assign("shambler/sboom.wav");
 
 	self->health = 600 * st.health_multiplier;
-	self->gibHealth = -60;
+	self->gib_health = -60;
 
 	self->mass = 500;
 
 	self->pain = shambler_pain;
 	self->die = shambler_die;
-	self->monsterInfo.stand = shambler_stand;
-	self->monsterInfo.walk = shambler_walk;
-	self->monsterInfo.run = shambler_run;
-	self->monsterInfo.dodge = nullptr;
-	self->monsterInfo.attack = shambler_attack;
-	self->monsterInfo.melee = shambler_melee;
-	self->monsterInfo.sight = shambler_sight;
-	self->monsterInfo.idle = shambler_idle;
-	self->monsterInfo.blocked = nullptr;
-	self->monsterInfo.setskin = shambler_setskin;
+	self->monsterinfo.stand = shambler_stand;
+	self->monsterinfo.walk = shambler_walk;
+	self->monsterinfo.run = shambler_run;
+	self->monsterinfo.dodge = nullptr;
+	self->monsterinfo.attack = shambler_attack;
+	self->monsterinfo.melee = shambler_melee;
+	self->monsterinfo.sight = shambler_sight;
+	self->monsterinfo.idle = shambler_idle;
+	self->monsterinfo.blocked = nullptr;
+	self->monsterinfo.setskin = shambler_setskin;
 
 	gi.linkentity(self);
 
 	if (self->spawnflags.has(SPAWNFLAG_SHAMBLER_PRECISE))
-		self->monsterInfo.aiflags |= AI_IGNORE_SHOTS;
+		self->monsterinfo.aiflags |= AI_IGNORE_SHOTS;
 
 	M_SetAnimation(self, &shambler_move_stand);
-	self->monsterInfo.scale = MODEL_SCALE;
+	self->monsterinfo.scale = MODEL_SCALE;
 
 	walkmonster_start(self);
 }

@@ -105,7 +105,7 @@ mframe_t guncmdr_frames_fidget[] = {
 MMOVE_T(guncmdr_move_fidget) = { FRAME_c_stand201, FRAME_c_stand254, guncmdr_frames_fidget, guncmdr_stand };
 
 static void guncmdr_fidget(gentity_t *self) {
-	if (self->monsterInfo.aiflags & AI_STAND_GROUND)
+	if (self->monsterinfo.aiflags & AI_STAND_GROUND)
 		return;
 	else if (self->enemy)
 		return;
@@ -211,7 +211,7 @@ MMOVE_T(guncmdr_move_run) = { FRAME_c_run101, FRAME_c_run106, guncmdr_frames_run
 
 MONSTERINFO_RUN(guncmdr_run) (gentity_t *self) -> void {
 	monster_done_dodge(self);
-	if (self->monsterInfo.aiflags & AI_STAND_GROUND)
+	if (self->monsterinfo.aiflags & AI_STAND_GROUND)
 		M_SetAnimation(self, &guncmdr_move_stand);
 	else
 		M_SetAnimation(self, &guncmdr_move_run);
@@ -344,7 +344,7 @@ void guncmdr_dead(gentity_t *self) {
 
 static void guncmdr_shrink(gentity_t *self) {
 	self->maxs[2] = -4 * self->s.scale;
-	self->svFlags |= SVF_DEADMONSTER;
+	self->svflags |= SVF_DEADMONSTER;
 	gi.linkentity(self);
 }
 
@@ -439,14 +439,14 @@ bool guncmdr_sidestep(gentity_t *self);
 static PAIN(guncmdr_pain) (gentity_t *self, gentity_t *other, float kick, int damage, const mod_t &mod) -> void {
 	monster_done_dodge(self);
 
-	if (self->monsterInfo.active_move == &guncmdr_move_jump ||
-		self->monsterInfo.active_move == &guncmdr_move_jump2 ||
-		self->monsterInfo.active_move == &guncmdr_move_duck_attack)
+	if (self->monsterinfo.active_move == &guncmdr_move_jump ||
+		self->monsterinfo.active_move == &guncmdr_move_jump2 ||
+		self->monsterinfo.active_move == &guncmdr_move_duck_attack)
 		return;
 
 	if (level.time < self->pain_debounce_time) {
 		if (frandom() < 0.3)
-			self->monsterInfo.dodge(self, other, FRAME_TIME_S, nullptr, false);
+			self->monsterinfo.dodge(self, other, FRAME_TIME_S, nullptr, false);
 
 		return;
 	}
@@ -460,7 +460,7 @@ static PAIN(guncmdr_pain) (gentity_t *self, gentity_t *other, float kick, int da
 
 	if (!M_ShouldReactToPain(self, mod)) {
 		if (frandom() < 0.3)
-			self->monsterInfo.dodge(self, other, FRAME_TIME_S, nullptr, false);
+			self->monsterinfo.dodge(self, other, FRAME_TIME_S, nullptr, false);
 
 		return; // no pain anims in nightmare
 	}
@@ -499,10 +499,10 @@ static PAIN(guncmdr_pain) (gentity_t *self, gentity_t *other, float kick, int da
 		self->pain_debounce_time += 1.5_sec;
 	}
 
-	self->monsterInfo.aiflags &= ~AI_MANUAL_STEERING;
+	self->monsterinfo.aiflags &= ~AI_MANUAL_STEERING;
 
 	// PMM - clear duck flag
-	if (self->monsterInfo.aiflags & AI_DUCKED)
+	if (self->monsterinfo.aiflags & AI_DUCKED)
 		monster_duck_up(self);
 }
 
@@ -658,7 +658,7 @@ static DIE(guncmdr_die) (gentity_t *self, gentity_t *inflictor, gentity_t *attac
 	if (M_CheckGib(self, mod)) {
 		gi.sound(self, CHAN_VOICE, gi.soundindex("misc/udeath.wav"), 1, ATTN_NORM, 0);
 
-		const char *head_gib = (self->monsterInfo.active_move != &guncmdr_move_death5) ? "models/objects/gibs/sm_meat/tris.md2" : "models/monsters/gunner/gibs/head.md2";
+		const char *head_gib = (self->monsterinfo.active_move != &guncmdr_move_death5) ? "models/objects/gibs/sm_meat/tris.md2" : "models/monsters/gunner/gibs/head.md2";
 
 		self->s.skinnum /= 2;
 
@@ -672,23 +672,23 @@ static DIE(guncmdr_die) (gentity_t *self, gentity_t *inflictor, gentity_t *attac
 			{ "models/monsters/gunner/gibs/foot.md2", GIB_SKINNED },
 			{ head_gib, GIB_SKINNED | GIB_HEAD }
 			});
-		self->deadFlag = true;
+		self->deadflag = true;
 		return;
 	}
 
-	if (self->deadFlag)
+	if (self->deadflag)
 		return;
 
 	// regular death
 	gi.sound(self, CHAN_VOICE, sound_death, 1, ATTN_NORM, 0);
-	self->deadFlag = true;
-	self->takeDamage = true;
+	self->deadflag = true;
+	self->takedamage = true;
 
 	// these animations cleanly transitions to death, so just keep going
-	if (self->monsterInfo.active_move == &guncmdr_move_pain5 &&
+	if (self->monsterinfo.active_move == &guncmdr_move_pain5 &&
 		self->s.frame < FRAME_c_pain508)
 		return;
-	else if (self->monsterInfo.active_move == &guncmdr_move_pain6 &&
+	else if (self->monsterinfo.active_move == &guncmdr_move_pain6 &&
 		self->s.frame < FRAME_c_pain607)
 		return;
 
@@ -700,7 +700,7 @@ static DIE(guncmdr_die) (gentity_t *self, gentity_t *inflictor, gentity_t *attac
 	dif.normalize();
 
 	// off with da head
-	if (fabsf((self->s.origin[2] + self->viewHeight) - point[2]) <= 4 &&
+	if (fabsf((self->s.origin[2] + self->viewheight) - point[2]) <= 4 &&
 		self->velocity.z < 65.f) {
 		M_SetAnimation(self, &guncmdr_move_death5);
 
@@ -712,13 +712,13 @@ static DIE(guncmdr_die) (gentity_t *self, gentity_t *inflictor, gentity_t *attac
 			vec3_t headDir = (self->s.origin - inflictor->s.origin);
 			head->velocity = headDir / headDir.length() * 100.0f;
 			head->velocity[2] = 200.0f;
-			head->aVelocity *= 0.15f;
+			head->avelocity *= 0.15f;
 			gi.linkentity(head);
 		}
 	}
 	// damage came from behind; use backwards death
 	else if (dif.dot(forward) < -0.40f) {
-		int r = irandom(0, self->monsterInfo.active_move == &guncmdr_move_pain6 ? 2 : 3);
+		int r = irandom(0, self->monsterinfo.active_move == &guncmdr_move_pain6 ? 2 : 3);
 
 		if (r == 0)
 			M_SetAnimation(self, &guncmdr_move_death3);
@@ -727,7 +727,7 @@ static DIE(guncmdr_die) (gentity_t *self, gentity_t *inflictor, gentity_t *attac
 		else if (r == 2)
 			M_SetAnimation(self, &guncmdr_move_pain6);
 	} else {
-		int r = irandom(0, self->monsterInfo.active_move == &guncmdr_move_pain5 ? 1 : 2);
+		int r = irandom(0, self->monsterinfo.active_move == &guncmdr_move_pain5 ? 1 : 2);
 
 		if (r == 0)
 			M_SetAnimation(self, &guncmdr_move_death4);
@@ -746,7 +746,7 @@ static void GunnerCmdrFire(gentity_t *self) {
 	vec3_t					 aim;
 	monster_muzzleflash_id_t flash_number;
 
-	if (!self->enemy || !self->enemy->inUse)
+	if (!self->enemy || !self->enemy->inuse)
 		return;
 
 	if (self->s.frame >= FRAME_c_attack401 && self->s.frame <= FRAME_c_attack505)
@@ -834,10 +834,10 @@ static void GunnerCmdrGrenade(gentity_t *self) {
 	vec3_t					target;
 	bool					blindfire = false;
 
-	if (!self->enemy || !self->enemy->inUse)
+	if (!self->enemy || !self->enemy->inuse)
 		return;
 
-	if (self->monsterInfo.aiflags & AI_MANUAL_STEERING)
+	if (self->monsterinfo.aiflags & AI_MANUAL_STEERING)
 		blindfire = true;
 
 	if (self->s.frame == FRAME_c_attack205) {
@@ -872,10 +872,10 @@ static void GunnerCmdrGrenade(gentity_t *self) {
 	// if we're shooting blind and we still can't see our enemy
 	if ((blindfire) && (!visible(self, self->enemy))) {
 		// and we have a valid blind_fire_target
-		if (!self->monsterInfo.blind_fire_target)
+		if (!self->monsterinfo.blind_fire_target)
 			return;
 
-		target = self->monsterInfo.blind_fire_target;
+		target = self->monsterinfo.blind_fire_target;
 	} else
 		target = self->enemy->s.origin;
 
@@ -900,7 +900,7 @@ static void GunnerCmdrGrenade(gentity_t *self) {
 		else if (pitch < -0.5f)
 			pitch = -0.5f;
 
-		if ((self->enemy->absMin.z - self->absMax.z) > 16.f && flash_number >= MZ2_GUNCMDR_GRENADE_MORTAR_1 && flash_number <= MZ2_GUNCMDR_GRENADE_MORTAR_3)
+		if ((self->enemy->absmin.z - self->absmax.z) > 16.f && flash_number >= MZ2_GUNCMDR_GRENADE_MORTAR_1 && flash_number <= MZ2_GUNCMDR_GRENADE_MORTAR_3)
 			pitch += 0.5f;
 	}
 
@@ -970,7 +970,7 @@ MMOVE_T(guncmdr_move_attack_mortar) = { FRAME_c_attack201, FRAME_c_attack221, gu
 
 static void guncmdr_grenade_mortar_resume(gentity_t *self) {
 	M_SetAnimation(self, &guncmdr_move_attack_mortar);
-	self->monsterInfo.attack_state = AS_STRAIGHT;
+	self->monsterinfo.attack_state = AS_STRAIGHT;
 	self->s.frame = self->count;
 }
 
@@ -1012,7 +1012,7 @@ MMOVE_T(guncmdr_move_attack_grenade_back) = { FRAME_c_attack302, FRAME_c_attack3
 
 static void guncmdr_grenade_back_dodge_resume(gentity_t *self) {
 	M_SetAnimation(self, &guncmdr_move_attack_grenade_back);
-	self->monsterInfo.attack_state = AS_STRAIGHT;
+	self->monsterinfo.attack_state = AS_STRAIGHT;
 	self->s.frame = self->count;
 }
 
@@ -1035,8 +1035,8 @@ mframe_t guncmdr_frames_attack_grenade_back_dodge_left[] = {
 MMOVE_T(guncmdr_move_attack_grenade_back_dodge_left) = { FRAME_c_attack701, FRAME_c_attack705, guncmdr_frames_attack_grenade_back_dodge_left, guncmdr_grenade_back_dodge_resume };
 
 static void guncmdr_kick_finished(gentity_t *self) {
-	self->monsterInfo.melee_debounce_time = level.time + 3_sec;
-	self->monsterInfo.attack(self);
+	self->monsterinfo.melee_debounce_time = level.time + 3_sec;
+	self->monsterinfo.attack(self);
 }
 
 static void guncmdr_kick(gentity_t *self) {
@@ -1078,28 +1078,28 @@ MONSTERINFO_ATTACK(guncmdr_attack) (gentity_t *self) -> void {
 
 	// always use chaingun on tesla
 	// kick close enemies
-	if (!self->bad_area && d < RANGE_MELEE && self->monsterInfo.melee_debounce_time < level.time)
+	if (!self->bad_area && d < RANGE_MELEE && self->monsterinfo.melee_debounce_time < level.time)
 		M_SetAnimation(self, &guncmdr_move_attack_kick);
 	else if (self->bad_area || ((d <= RANGE_GRENADE || brandom()) && M_CheckClearShot(self, monster_flash_offset[MZ2_GUNCMDR_CHAINGUN_1])))
 		M_SetAnimation(self, &guncmdr_move_attack_chain);
 	else if ((d >= RANGE_GRENADE_MORTAR ||
-		fabs(self->absMin.z - self->enemy->absMax.z) > 64.f // enemy is far below or above us, always try mortar
+		fabs(self->absmin.z - self->enemy->absmax.z) > 64.f // enemy is far below or above us, always try mortar
 		) && M_CheckClearShot(self, monster_flash_offset[MZ2_GUNCMDR_GRENADE_MORTAR_1]) &&
 		M_CalculatePitchToFire(self, self->enemy->s.origin, M_ProjectFlashSource(self, monster_flash_offset[MZ2_GUNCMDR_GRENADE_MORTAR_1], forward, right),
 			aim = (self->enemy->s.origin - self->s.origin).normalized(), MORTAR_SPEED, 2.5f, true)
 		) {
 		M_SetAnimation(self, &guncmdr_move_attack_mortar);
 		monster_duck_down(self);
-	} else if (M_CheckClearShot(self, monster_flash_offset[MZ2_GUNCMDR_GRENADE_FRONT_1]) && !(self->monsterInfo.aiflags & AI_STAND_GROUND) &&
+	} else if (M_CheckClearShot(self, monster_flash_offset[MZ2_GUNCMDR_GRENADE_FRONT_1]) && !(self->monsterinfo.aiflags & AI_STAND_GROUND) &&
 		M_CalculatePitchToFire(self, self->enemy->s.origin, M_ProjectFlashSource(self, monster_flash_offset[MZ2_GUNCMDR_GRENADE_FRONT_1], forward, right),
 			aim = (self->enemy->s.origin - self->s.origin).normalized(), GRENADE_SPEED, 2.5f, false))
 		M_SetAnimation(self, &guncmdr_move_attack_grenade_back);
-	else if (self->monsterInfo.aiflags & AI_STAND_GROUND)
+	else if (self->monsterinfo.aiflags & AI_STAND_GROUND)
 		M_SetAnimation(self, &guncmdr_move_attack_chain);
 }
 
 void guncmdr_fire_chain(gentity_t *self) {
-	if (!(self->monsterInfo.aiflags & AI_STAND_GROUND) && self->enemy && range_to(self, self->enemy) > RANGE_CHAINGUN_RUN && ai_check_move(self, 8.0f))
+	if (!(self->monsterinfo.aiflags & AI_STAND_GROUND) && self->enemy && range_to(self, self->enemy) > RANGE_CHAINGUN_RUN && ai_check_move(self, 8.0f))
 		M_SetAnimation(self, &guncmdr_move_fire_chain_run);
 	else
 		M_SetAnimation(self, &guncmdr_move_fire_chain);
@@ -1107,12 +1107,12 @@ void guncmdr_fire_chain(gentity_t *self) {
 
 void guncmdr_refire_chain(gentity_t *self) {
 	monster_done_dodge(self);
-	self->monsterInfo.attack_state = AS_STRAIGHT;
+	self->monsterinfo.attack_state = AS_STRAIGHT;
 
 	if (self->enemy->health > 0)
 		if (visible(self, self->enemy))
 			if (frandom() <= 0.5f) {
-				if (!(self->monsterInfo.aiflags & AI_STAND_GROUND) && self->enemy && range_to(self, self->enemy) > RANGE_CHAINGUN_RUN && ai_check_move(self, 8.0f))
+				if (!(self->monsterinfo.aiflags & AI_STAND_GROUND) && self->enemy && range_to(self, self->enemy) > RANGE_CHAINGUN_RUN && ai_check_move(self, 8.0f))
 					M_SetAnimation(self, &guncmdr_move_fire_chain_run, false);
 				else
 					M_SetAnimation(self, &guncmdr_move_fire_chain, false);
@@ -1138,13 +1138,13 @@ static void guncmdr_jump2_now(gentity_t *self) {
 }
 
 static void guncmdr_jump_wait_land(gentity_t *self) {
-	if (self->groundEntity == nullptr) {
-		self->monsterInfo.nextframe = self->s.frame;
+	if (self->groundentity == nullptr) {
+		self->monsterinfo.nextframe = self->s.frame;
 
 		if (monster_jump_finished(self))
-			self->monsterInfo.nextframe = self->s.frame + 1;
+			self->monsterinfo.nextframe = self->s.frame + 1;
 	} else
-		self->monsterInfo.nextframe = self->s.frame + 1;
+		self->monsterinfo.nextframe = self->s.frame + 1;
 }
 
 mframe_t guncmdr_frames_jump[] = {
@@ -1232,18 +1232,18 @@ mframe_t guncmdr_frames_duck_attack[] = {
 MMOVE_T(guncmdr_move_duck_attack) = { FRAME_c_attack901, FRAME_c_attack919, guncmdr_frames_duck_attack, guncmdr_run };
 
 MONSTERINFO_DUCK(guncmdr_duck) (gentity_t *self, gtime_t eta) -> bool {
-	if ((self->monsterInfo.active_move == &guncmdr_move_jump2) ||
-		(self->monsterInfo.active_move == &guncmdr_move_jump)) {
+	if ((self->monsterinfo.active_move == &guncmdr_move_jump2) ||
+		(self->monsterinfo.active_move == &guncmdr_move_jump)) {
 		return false;
 	}
 
-	if ((self->monsterInfo.active_move == &guncmdr_move_fire_chain_dodge_left) ||
-		(self->monsterInfo.active_move == &guncmdr_move_fire_chain_dodge_right) ||
-		(self->monsterInfo.active_move == &guncmdr_move_attack_grenade_back_dodge_left) ||
-		(self->monsterInfo.active_move == &guncmdr_move_attack_grenade_back_dodge_right) ||
-		(self->monsterInfo.active_move == &guncmdr_move_attack_mortar_dodge)) {
+	if ((self->monsterinfo.active_move == &guncmdr_move_fire_chain_dodge_left) ||
+		(self->monsterinfo.active_move == &guncmdr_move_fire_chain_dodge_right) ||
+		(self->monsterinfo.active_move == &guncmdr_move_attack_grenade_back_dodge_left) ||
+		(self->monsterinfo.active_move == &guncmdr_move_attack_grenade_back_dodge_right) ||
+		(self->monsterinfo.active_move == &guncmdr_move_attack_mortar_dodge)) {
 		// if we're dodging, don't duck
-		self->monsterInfo.unduck(self);
+		self->monsterinfo.unduck(self);
 		return false;
 	}
 
@@ -1254,28 +1254,28 @@ MONSTERINFO_DUCK(guncmdr_duck) (gentity_t *self, gtime_t eta) -> bool {
 
 MONSTERINFO_SIDESTEP(guncmdr_sidestep) (gentity_t *self) -> bool {
 	// use special dodge during the main firing anim
-	if (self->monsterInfo.active_move == &guncmdr_move_fire_chain ||
-		self->monsterInfo.active_move == &guncmdr_move_fire_chain_run) {
-		M_SetAnimation(self, !self->monsterInfo.lefty ? &guncmdr_move_fire_chain_dodge_right : &guncmdr_move_fire_chain_dodge_left, false);
+	if (self->monsterinfo.active_move == &guncmdr_move_fire_chain ||
+		self->monsterinfo.active_move == &guncmdr_move_fire_chain_run) {
+		M_SetAnimation(self, !self->monsterinfo.lefty ? &guncmdr_move_fire_chain_dodge_right : &guncmdr_move_fire_chain_dodge_left, false);
 		return true;
 	}
 
 	// for backwards mortar, back up where we are in the animation and do a quick dodge
-	if (self->monsterInfo.active_move == &guncmdr_move_attack_grenade_back) {
+	if (self->monsterinfo.active_move == &guncmdr_move_attack_grenade_back) {
 		self->count = self->s.frame;
-		M_SetAnimation(self, !self->monsterInfo.lefty ? &guncmdr_move_attack_grenade_back_dodge_right : &guncmdr_move_attack_grenade_back_dodge_left, false);
+		M_SetAnimation(self, !self->monsterinfo.lefty ? &guncmdr_move_attack_grenade_back_dodge_right : &guncmdr_move_attack_grenade_back_dodge_left, false);
 		return true;
 	}
 
 	// use crouch-move for mortar dodge
-	if (self->monsterInfo.active_move == &guncmdr_move_attack_mortar) {
+	if (self->monsterinfo.active_move == &guncmdr_move_attack_mortar) {
 		self->count = self->s.frame;
 		M_SetAnimation(self, &guncmdr_move_attack_mortar_dodge, false);
 		return true;
 	}
 
 	// regular sidestep during run
-	if (self->monsterInfo.active_move == &guncmdr_move_run) {
+	if (self->monsterinfo.active_move == &guncmdr_move_run) {
 		M_SetAnimation(self, &guncmdr_move_run, true);
 		return true;
 	}
@@ -1302,7 +1302,7 @@ model="models/monsters/guncmdr/tris.md2"
 */
 void SP_monster_guncmdr(gentity_t *self) {
 	if (!M_AllowSpawn(self)) {
-		FreeEntity(self);
+		G_FreeEntity(self);
 		return;
 	}
 
@@ -1317,7 +1317,7 @@ void SP_monster_guncmdr(gentity_t *self) {
 	gi.soundindex("guncmdr/gcdratck2.wav");
 	gi.soundindex("guncmdr/gcdratck3.wav");
 
-	self->moveType = MOVETYPE_STEP;
+	self->movetype = MOVETYPE_STEP;
 	self->solid = SOLID_BBOX;
 	self->s.modelindex = gi.modelindex("models/monsters/gunner/tris.md2");
 
@@ -1333,39 +1333,39 @@ void SP_monster_guncmdr(gentity_t *self) {
 	self->s.skinnum = 2;
 
 	self->health = 325 * st.health_multiplier;
-	self->gibHealth = -175;
+	self->gib_health = -175;
 	self->mass = 255;
 
 	self->pain = guncmdr_pain;
 	self->die = guncmdr_die;
 
-	self->monsterInfo.stand = guncmdr_stand;
-	self->monsterInfo.walk = guncmdr_walk;
-	self->monsterInfo.run = guncmdr_run;
-	self->monsterInfo.dodge = M_MonsterDodge;
-	self->monsterInfo.duck = guncmdr_duck;
-	self->monsterInfo.unduck = monster_duck_up;
-	self->monsterInfo.sidestep = guncmdr_sidestep;
-	self->monsterInfo.blocked = guncmdr_blocked;
-	self->monsterInfo.attack = guncmdr_attack;
-	self->monsterInfo.melee = nullptr;
-	self->monsterInfo.sight = guncmdr_sight;
-	self->monsterInfo.search = guncmdr_search;
-	self->monsterInfo.setskin = guncmdr_setskin;
+	self->monsterinfo.stand = guncmdr_stand;
+	self->monsterinfo.walk = guncmdr_walk;
+	self->monsterinfo.run = guncmdr_run;
+	self->monsterinfo.dodge = M_MonsterDodge;
+	self->monsterinfo.duck = guncmdr_duck;
+	self->monsterinfo.unduck = monster_duck_up;
+	self->monsterinfo.sidestep = guncmdr_sidestep;
+	self->monsterinfo.blocked = guncmdr_blocked;
+	self->monsterinfo.attack = guncmdr_attack;
+	self->monsterinfo.melee = nullptr;
+	self->monsterinfo.sight = guncmdr_sight;
+	self->monsterinfo.search = guncmdr_search;
+	self->monsterinfo.setskin = guncmdr_setskin;
 
 	gi.linkentity(self);
 
 	M_SetAnimation(self, &guncmdr_move_stand);
-	self->monsterInfo.scale = MODEL_SCALE;
+	self->monsterinfo.scale = MODEL_SCALE;
 
-	if (!st.was_key_specified("powerArmorPower"))
-		self->monsterInfo.powerArmorPower = 200;
-	if (!st.was_key_specified("powerArmorType"))
-		self->monsterInfo.powerArmorType = IT_POWER_SHIELD;
+	if (!st.was_key_specified("power_armor_power"))
+		self->monsterinfo.power_armor_power = 200;
+	if (!st.was_key_specified("power_armor_type"))
+		self->monsterinfo.power_armor_type = IT_POWER_SHIELD;
 
-	self->monsterInfo.can_jump = !self->spawnflags.has(SPAWNFLAG_GUNCMDR_NOJUMPING);
-	self->monsterInfo.drop_height = 192;
-	self->monsterInfo.jump_height = 40;
+	self->monsterinfo.can_jump = !self->spawnflags.has(SPAWNFLAG_GUNCMDR_NOJUMPING);
+	self->monsterinfo.drop_height = 192;
+	self->monsterinfo.jump_height = 40;
 
 	walkmonster_start(self);
 }

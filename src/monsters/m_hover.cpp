@@ -250,8 +250,8 @@ static void hover_gib(gentity_t *self) {
 }
 
 static THINK(hover_deadthink) (gentity_t *self) -> void {
-	if (!self->groundEntity && level.time < self->timeStamp) {
-		self->nextThink = level.time + FRAME_TIME_S;
+	if (!self->groundentity && level.time < self->timestamp) {
+		self->nextthink = level.time + FRAME_TIME_S;
 		return;
 	}
 
@@ -259,7 +259,7 @@ static THINK(hover_deadthink) (gentity_t *self) -> void {
 }
 
 static void hover_dying(gentity_t *self) {
-	if (self->groundEntity) {
+	if (self->groundentity) {
 		hover_deadthink(self);
 		return;
 	}
@@ -329,14 +329,14 @@ void hover_reattack(gentity_t *self) {
 	if (self->enemy->health > 0)
 		if (visible(self, self->enemy))
 			if (frandom() <= 0.6f) {
-				if (self->monsterInfo.attack_state == AS_STRAIGHT) {
+				if (self->monsterinfo.attack_state == AS_STRAIGHT) {
 					M_SetAnimation(self, &hover_move_attack1);
 					return;
-				} else if (self->monsterInfo.attack_state == AS_SLIDING) {
+				} else if (self->monsterinfo.attack_state == AS_SLIDING) {
 					M_SetAnimation(self, &hover_move_attack2);
 					return;
 				} else
-					gi.Com_PrintFmt("hover_reattack: unexpected state {}\n", (int32_t)self->monsterInfo.attack_state);
+					gi.Com_PrintFmt("hover_reattack: unexpected state {}\n", (int32_t)self->monsterinfo.attack_state);
 			}
 	M_SetAnimation(self, &hover_move_end_attack);
 }
@@ -347,7 +347,7 @@ void hover_fire_blaster(gentity_t *self) {
 	vec3_t	  end;
 	vec3_t	  dir;
 
-	if (!self->enemy || !self->enemy->inUse)
+	if (!self->enemy || !self->enemy->inuse)
 		return;
 
 	AngleVectors(self->s.angles, forward, right, nullptr);
@@ -355,7 +355,7 @@ void hover_fire_blaster(gentity_t *self) {
 	start = M_ProjectFlashSource(self, o, forward, right);
 
 	end = self->enemy->s.origin;
-	end[2] += self->enemy->viewHeight;
+	end[2] += self->enemy->viewheight;
 	dir = end - start;
 	dir.normalize();
 
@@ -371,7 +371,7 @@ MONSTERINFO_STAND(hover_stand) (gentity_t *self) -> void {
 }
 
 MONSTERINFO_RUN(hover_run) (gentity_t *self) -> void {
-	if (self->monsterInfo.aiflags & AI_STAND_GROUND)
+	if (self->monsterinfo.aiflags & AI_STAND_GROUND)
 		M_SetAnimation(self, &hover_move_stand);
 	else
 		M_SetAnimation(self, &hover_move_run);
@@ -393,13 +393,13 @@ void hover_attack(gentity_t *self) {
 
 	if (frandom() > chance) {
 		M_SetAnimation(self, &hover_move_attack1);
-		self->monsterInfo.attack_state = AS_STRAIGHT;
+		self->monsterinfo.attack_state = AS_STRAIGHT;
 	} else // circle strafe
 	{
 		if (frandom() <= 0.5f) // switch directions
-			self->monsterInfo.lefty = !self->monsterInfo.lefty;
+			self->monsterinfo.lefty = !self->monsterinfo.lefty;
 		M_SetAnimation(self, &hover_move_attack2);
-		self->monsterInfo.attack_state = AS_SLIDING;
+		self->monsterinfo.attack_state = AS_SLIDING;
 	}
 }
 
@@ -454,23 +454,23 @@ MONSTERINFO_SETSKIN(hover_setskin) (gentity_t *self) -> void {
 void hover_dead(gentity_t *self) {
 	self->mins = { -16, -16, -24 };
 	self->maxs = { 16, 16, -8 };
-	self->moveType = MOVETYPE_TOSS;
+	self->movetype = MOVETYPE_TOSS;
 	self->think = hover_deadthink;
-	self->nextThink = level.time + FRAME_TIME_S;
-	self->timeStamp = level.time + 15_sec;
+	self->nextthink = level.time + FRAME_TIME_S;
+	self->timestamp = level.time + 15_sec;
 	gi.linkentity(self);
 }
 
 static DIE(hover_die) (gentity_t *self, gentity_t *inflictor, gentity_t *attacker, int damage, const vec3_t &point, const mod_t &mod) -> void {
 	self->s.effects = EF_NONE;
-	self->monsterInfo.powerArmorType = IT_NULL;
+	self->monsterinfo.power_armor_type = IT_NULL;
 
 	if (M_CheckGib(self, mod)) {
 		hover_gib(self);
 		return;
 	}
 
-	if (self->deadFlag)
+	if (self->deadflag)
 		return;
 
 	// regular death
@@ -486,19 +486,19 @@ static DIE(hover_die) (gentity_t *self, gentity_t *inflictor, gentity_t *attacke
 		else
 			gi.sound(self, CHAN_VOICE, daed_sound_death2, 1, ATTN_NORM, 0);
 	}
-	self->deadFlag = true;
-	self->takeDamage = true;
+	self->deadflag = true;
+	self->takedamage = true;
 	M_SetAnimation(self, &hover_move_death1);
 }
 
 static void hover_set_fly_parameters(gentity_t *self) {
-	self->monsterInfo.fly_thrusters = false;
-	self->monsterInfo.fly_acceleration = 20.f;
-	self->monsterInfo.fly_speed = 120.f;
+	self->monsterinfo.fly_thrusters = false;
+	self->monsterinfo.fly_acceleration = 20.f;
+	self->monsterinfo.fly_speed = 120.f;
 	// Icarus prefers to keep its distance, but flies slower than the flyer.
 	// he never pins because of this.
-	self->monsterInfo.fly_min_distance = 150.f;
-	self->monsterInfo.fly_max_distance = 350.f;
+	self->monsterinfo.fly_min_distance = 150.f;
+	self->monsterinfo.fly_max_distance = 350.f;
 }
 
 /*QUAKED monster_hover (1 .5 0) (-16 -16 -24) (16 16 32) AMBUSH TRIGGER_SPAWN SIGHT x x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
@@ -509,11 +509,11 @@ This is the improved icarus monster.
 */
 void SP_monster_hover(gentity_t *self) {
 	if (!M_AllowSpawn(self)) {
-		FreeEntity(self);
+		G_FreeEntity(self);
 		return;
 	}
 
-	self->moveType = MOVETYPE_STEP;
+	self->movetype = MOVETYPE_STEP;
 	self->solid = SOLID_BBOX;
 	self->s.modelindex = gi.modelindex("models/monsters/hover/tris.md2");
 
@@ -526,30 +526,30 @@ void SP_monster_hover(gentity_t *self) {
 	self->maxs = { 24, 24, 32 };
 
 	self->health = 240 * st.health_multiplier;
-	self->gibHealth = -100;
+	self->gib_health = -100;
 	self->mass = 150;
 
 	self->pain = hover_pain;
 	self->die = hover_die;
 
-	self->monsterInfo.stand = hover_stand;
-	self->monsterInfo.walk = hover_walk;
-	self->monsterInfo.run = hover_run;
-	self->monsterInfo.attack = hover_start_attack;
-	self->monsterInfo.sight = hover_sight;
-	self->monsterInfo.search = hover_search;
-	self->monsterInfo.setskin = hover_setskin;
+	self->monsterinfo.stand = hover_stand;
+	self->monsterinfo.walk = hover_walk;
+	self->monsterinfo.run = hover_run;
+	self->monsterinfo.attack = hover_start_attack;
+	self->monsterinfo.sight = hover_sight;
+	self->monsterinfo.search = hover_search;
+	self->monsterinfo.setskin = hover_setskin;
 
-	if (strcmp(self->className, "monster_daedalus") == 0) {
+	if (strcmp(self->classname, "monster_daedalus") == 0) {
 		self->health = 450 * st.health_multiplier;
 		self->mass = 225;
 		self->yaw_speed = 23;
-		if (!st.was_key_specified("powerArmorType"))
-			self->monsterInfo.powerArmorType = IT_POWER_SCREEN;
-		if (!st.was_key_specified("powerArmorPower"))
-			self->monsterInfo.powerArmorPower = 100;
+		if (!st.was_key_specified("power_armor_type"))
+			self->monsterinfo.power_armor_type = IT_POWER_SCREEN;
+		if (!st.was_key_specified("power_armor_power"))
+			self->monsterinfo.power_armor_power = 100;
 
-		self->monsterInfo.engine_sound = gi.soundindex("daedalus/daedidle1.wav");
+		self->monsterinfo.engine_sound = gi.soundindex("daedalus/daedidle1.wav");
 		daed_sound_pain1.assign("daedalus/daedpain1.wav");
 		daed_sound_pain2.assign("daedalus/daedpain2.wav");
 		daed_sound_death1.assign("daedalus/daeddeth1.wav");
@@ -569,19 +569,19 @@ void SP_monster_hover(gentity_t *self) {
 		sound_search2.assign("hover/hovsrch2.wav");
 		gi.soundindex("hover/hovatck1.wav");
 
-		self->monsterInfo.engine_sound = gi.soundindex("hover/hovidle1.wav");
+		self->monsterinfo.engine_sound = gi.soundindex("hover/hovidle1.wav");
 	}
 
 	gi.linkentity(self);
 
 	M_SetAnimation(self, &hover_move_stand);
-	self->monsterInfo.scale = MODEL_SCALE;
+	self->monsterinfo.scale = MODEL_SCALE;
 
 	flymonster_start(self);
 
-	if (strcmp(self->className, "monster_daedalus") == 0)
+	if (strcmp(self->classname, "monster_daedalus") == 0)
 		self->s.skinnum = 2;
 
-	self->monsterInfo.aiflags |= AI_ALTERNATE_FLY;
+	self->monsterinfo.aiflags |= AI_ALTERNATE_FLY;
 	hover_set_fly_parameters(self);
 }

@@ -170,7 +170,7 @@ MONSTERINFO_WALK(supertank_walk) (gentity_t *self) -> void {
 }
 
 MONSTERINFO_RUN(supertank_run) (gentity_t *self) -> void {
-	if (self->monsterInfo.aiflags & AI_STAND_GROUND)
+	if (self->monsterinfo.aiflags & AI_STAND_GROUND)
 		M_SetAnimation(self, &supertank_move_stand);
 	else
 		M_SetAnimation(self, &supertank_move_run);
@@ -209,7 +209,7 @@ static void BossLoop(gentity_t *self) {
 	else
 		self->spawnflags &= ~SPAWNFLAG_SUPERTANK_LONG_DEATH;
 
-	self->monsterInfo.nextframe = FRAME_death_19;
+	self->monsterinfo.nextframe = FRAME_death_19;
 }
 
 static void supertankGrenade(gentity_t *self) {
@@ -217,7 +217,7 @@ static void supertankGrenade(gentity_t *self) {
 	vec3_t					 start;
 	monster_muzzleflash_id_t flash_number;
 
-	if (!self->enemy || !self->enemy->inUse)
+	if (!self->enemy || !self->enemy->inuse)
 		return;
 
 	if (self->s.frame == FRAME_attak4_1)
@@ -339,7 +339,7 @@ MMOVE_T(supertank_move_end_attack1) = { FRAME_attak1_7, FRAME_attak1_20, superta
 
 void supertank_reattack1(gentity_t *self) {
 	if (visible(self, self->enemy)) {
-		if (self->timeStamp >= level.time || frandom() < 0.3f)
+		if (self->timestamp >= level.time || frandom() < 0.3f)
 			M_SetAnimation(self, &supertank_move_attack1);
 		else
 			M_SetAnimation(self, &supertank_move_end_attack1);
@@ -396,7 +396,7 @@ void supertankRocket(gentity_t *self) {
 	vec3_t					 vec;
 	monster_muzzleflash_id_t flash_number;
 
-	if (!self->enemy || !self->enemy->inUse)
+	if (!self->enemy || !self->enemy->inuse)
 		return;
 
 	if (self->s.frame == FRAME_attak2_8)
@@ -411,7 +411,7 @@ void supertankRocket(gentity_t *self) {
 
 	if (self->spawnflags.has(SPAWNFLAG_SUPERTANK_POWERSHIELD)) {
 		vec = self->enemy->s.origin;
-		vec[2] += self->enemy->viewHeight;
+		vec[2] += self->enemy->viewheight;
 		dir = vec - start;
 		dir.normalize();
 		monster_fire_heat(self, start, dir, 40, 500, flash_number, 0.075f);
@@ -427,7 +427,7 @@ void supertankMachineGun(gentity_t *self) {
 	vec3_t					 forward, right;
 	monster_muzzleflash_id_t flash_number;
 
-	if (!self->enemy || !self->enemy->inUse)
+	if (!self->enemy || !self->enemy->inuse)
 		return;
 
 	flash_number = static_cast<monster_muzzleflash_id_t>(MZ2_SUPERTANK_MACHINEGUN_1 + (self->s.frame - FRAME_attak1_1));
@@ -463,7 +463,7 @@ MONSTERINFO_ATTACK(supertank_attack) (gentity_t *self) -> void {
 			M_SetAnimation(self, &supertank_move_attack4);
 		else {
 			M_SetAnimation(self, &supertank_move_attack1);
-			self->timeStamp = level.time + random_time(1500_ms, 2700_ms);
+			self->timestamp = level.time + random_time(1500_ms, 2700_ms);
 		}
 	} else if (rocket_good) {
 		// prefer grenade if the enemy is above us
@@ -505,8 +505,8 @@ static void supertank_gib(gentity_t *self) {
 void supertank_dead(gentity_t *self) {
 	// no blowy on deady
 	if (self->spawnflags.has(SPAWNFLAG_MONSTER_DEAD)) {
-		self->deadFlag = false;
-		self->takeDamage = true;
+		self->deadflag = false;
+		self->takedamage = true;
 		return;
 	}
 
@@ -518,16 +518,16 @@ static DIE(supertank_die) (gentity_t *self, gentity_t *inflictor, gentity_t *att
 		// check for gib
 		if (M_CheckGib(self, mod)) {
 			supertank_gib(self);
-			self->deadFlag = true;
+			self->deadflag = true;
 			return;
 		}
 
-		if (self->deadFlag)
+		if (self->deadflag)
 			return;
 	} else {
 		gi.sound(self, CHAN_VOICE, sound_death, 1, ATTN_NORM, 0);
-		self->deadFlag = true;
-		self->takeDamage = false;
+		self->deadflag = true;
+		self->takedamage = false;
 	}
 
 	M_SetAnimation(self, &supertank_move_death);
@@ -548,7 +548,7 @@ MONSTERINFO_BLOCKED(supertank_blocked) (gentity_t *self, float dist) -> bool {
 */
 void SP_monster_supertank(gentity_t *self) {
 	if (!M_AllowSpawn(self)) {
-		FreeEntity(self);
+		G_FreeEntity(self);
 		return;
 	}
 
@@ -565,7 +565,7 @@ void SP_monster_supertank(gentity_t *self) {
 	gi.soundindex("infantry/infatck1.wav");
 	gi.soundindex("tank/rocket.wav");
 
-	self->moveType = MOVETYPE_STEP;
+	self->movetype = MOVETYPE_STEP;
 	self->solid = SOLID_BBOX;
 	self->s.modelindex = gi.modelindex("models/monsters/boss1/tris.md2");
 
@@ -582,40 +582,40 @@ void SP_monster_supertank(gentity_t *self) {
 	self->maxs = { 64, 64, 112 };
 
 	self->health = 1500 * st.health_multiplier;
-	self->gibHealth = -500;
+	self->gib_health = -500;
 	self->mass = 800;
 
 	self->pain = supertank_pain;
 	self->die = supertank_die;
-	self->monsterInfo.stand = supertank_stand;
-	self->monsterInfo.walk = supertank_walk;
-	self->monsterInfo.run = supertank_run;
-	self->monsterInfo.dodge = nullptr;
-	self->monsterInfo.attack = supertank_attack;
-	self->monsterInfo.search = supertank_search;
-	self->monsterInfo.melee = nullptr;
-	self->monsterInfo.sight = nullptr;
-	self->monsterInfo.blocked = supertank_blocked;
-	self->monsterInfo.setskin = supertank_setskin;
+	self->monsterinfo.stand = supertank_stand;
+	self->monsterinfo.walk = supertank_walk;
+	self->monsterinfo.run = supertank_run;
+	self->monsterinfo.dodge = nullptr;
+	self->monsterinfo.attack = supertank_attack;
+	self->monsterinfo.search = supertank_search;
+	self->monsterinfo.melee = nullptr;
+	self->monsterinfo.sight = nullptr;
+	self->monsterinfo.blocked = supertank_blocked;
+	self->monsterinfo.setskin = supertank_setskin;
 
 	gi.linkentity(self);
 
 	M_SetAnimation(self, &supertank_move_stand);
-	self->monsterInfo.scale = MODEL_SCALE;
+	self->monsterinfo.scale = MODEL_SCALE;
 
 	if (self->spawnflags.has(SPAWNFLAG_SUPERTANK_POWERSHIELD)) {
-		if (!st.was_key_specified("powerArmorType"))
-			self->monsterInfo.powerArmorType = IT_POWER_SHIELD;
-		if (!st.was_key_specified("powerArmorPower"))
-			self->monsterInfo.powerArmorPower = 400;
+		if (!st.was_key_specified("power_armor_type"))
+			self->monsterinfo.power_armor_type = IT_POWER_SHIELD;
+		if (!st.was_key_specified("power_armor_power"))
+			self->monsterinfo.power_armor_power = 400;
 	}
 
 	walkmonster_start(self);
 
-	self->monsterInfo.aiflags |= AI_IGNORE_SHOTS;
+	self->monsterinfo.aiflags |= AI_IGNORE_SHOTS;
 
 	// TODO
-	if (level.isN64) {
+	if (level.is_n64) {
 		self->spawnflags |= SPAWNFLAG_SUPERTANK_LONG_DEATH;
 		self->count = 10;
 	}

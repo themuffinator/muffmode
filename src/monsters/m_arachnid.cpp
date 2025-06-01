@@ -92,7 +92,7 @@ mframe_t arachnid_frames_run[] = {
 MMOVE_T(arachnid_move_run) = { FRAME_walk1, FRAME_walk10, arachnid_frames_run, nullptr };
 
 MONSTERINFO_RUN(arachnid_run) (gentity_t *self) -> void {
-	if (self->monsterInfo.aiflags & AI_STAND_GROUND) {
+	if (self->monsterinfo.aiflags & AI_STAND_GROUND) {
 		M_SetAnimation(self, &arachnid_move_stand);
 		return;
 	}
@@ -144,12 +144,12 @@ static PAIN(arachnid_pain) (gentity_t *self, gentity_t *other, float kick, int d
 static cached_soundindex sound_charge;
 
 void arachnid_charge_rail(gentity_t *self) {
-	if (!self->enemy || !self->enemy->inUse)
+	if (!self->enemy || !self->enemy->inuse)
 		return;
 
 	gi.sound(self, CHAN_WEAPON, sound_charge, 1.f, ATTN_NORM, 0.f);
 	self->pos1 = self->enemy->s.origin;
-	self->pos1[2] += self->enemy->viewHeight;
+	self->pos1[2] += self->enemy->viewheight;
 }
 
 static void arachnid_rail(gentity_t *self) {
@@ -227,7 +227,7 @@ static void arachnid_melee_charge(gentity_t *self) {
 
 static void arachnid_melee_hit(gentity_t *self) {
 	if (!fire_hit(self, { MELEE_DISTANCE, 0, 0 }, 15, 50))
-		self->monsterInfo.melee_debounce_time = level.time + 1000_ms;
+		self->monsterinfo.melee_debounce_time = level.time + 1000_ms;
 }
 
 mframe_t arachnid_frames_melee[] = {
@@ -247,10 +247,10 @@ mframe_t arachnid_frames_melee[] = {
 MMOVE_T(arachnid_melee) = { FRAME_melee_atk1, FRAME_melee_atk12, arachnid_frames_melee, arachnid_run };
 
 MONSTERINFO_ATTACK(arachnid_attack) (gentity_t *self) -> void {
-	if (!self->enemy || !self->enemy->inUse)
+	if (!self->enemy || !self->enemy->inuse)
 		return;
 
-	if (self->monsterInfo.melee_debounce_time < level.time && range_to(self, self->enemy) < MELEE_DISTANCE)
+	if (self->monsterinfo.melee_debounce_time < level.time && range_to(self, self->enemy) < MELEE_DISTANCE)
 		M_SetAnimation(self, &arachnid_melee);
 	else if ((self->enemy->s.origin[2] - self->s.origin[2]) > 150.f)
 		M_SetAnimation(self, &arachnid_attack_up1);
@@ -265,9 +265,9 @@ MONSTERINFO_ATTACK(arachnid_attack) (gentity_t *self) -> void {
 static void arachnid_dead(gentity_t *self) {
 	self->mins = { -16, -16, -24 };
 	self->maxs = { 16, 16, -8 };
-	self->moveType = MOVETYPE_TOSS;
-	self->svFlags |= SVF_DEADMONSTER;
-	self->nextThink = 0_ms;
+	self->movetype = MOVETYPE_TOSS;
+	self->svflags |= SVF_DEADMONSTER;
+	self->nextthink = 0_ms;
 	gi.linkentity(self);
 }
 
@@ -304,17 +304,17 @@ static DIE(arachnid_die) (gentity_t *self, gentity_t *inflictor, gentity_t *atta
 			{ 4, "models/objects/gibs/sm_meat/tris.md2" },
 			{ "models/objects/gibs/head2/tris.md2", GIB_HEAD }
 			});
-		self->deadFlag = true;
+		self->deadflag = true;
 		return;
 	}
 
-	if (self->deadFlag)
+	if (self->deadflag)
 		return;
 
 	// regular death
 	gi.sound(self, CHAN_VOICE, sound_death, 1, ATTN_NORM, 0);
-	self->deadFlag = true;
-	self->takeDamage = true;
+	self->deadflag = true;
+	self->takedamage = true;
 
 	M_SetAnimation(self, &arachnid_move_death);
 }
@@ -327,7 +327,7 @@ static DIE(arachnid_die) (gentity_t *self, gentity_t *inflictor, gentity_t *atta
  */
 void SP_monster_arachnid(gentity_t *self) {
 	if (!M_AllowSpawn(self)) {
-		FreeEntity(self);
+		G_FreeEntity(self);
 		return;
 	}
 
@@ -342,23 +342,23 @@ void SP_monster_arachnid(gentity_t *self) {
 	self->s.modelindex = gi.modelindex("models/monsters/arachnid/tris.md2");
 	self->mins = { -48, -48, -20 };
 	self->maxs = { 48, 48, 48 };
-	self->moveType = MOVETYPE_STEP;
+	self->movetype = MOVETYPE_STEP;
 	self->solid = SOLID_BBOX;
 
 	self->health = 1000 * st.health_multiplier;
-	self->gibHealth = -200;
+	self->gib_health = -200;
 
-	self->monsterInfo.scale = MODEL_SCALE;
+	self->monsterinfo.scale = MODEL_SCALE;
 
 	self->mass = 450;
 
 	self->pain = arachnid_pain;
 	self->die = arachnid_die;
-	self->monsterInfo.stand = arachnid_stand;
-	self->monsterInfo.walk = arachnid_walk;
-	self->monsterInfo.run = arachnid_run;
-	self->monsterInfo.attack = arachnid_attack;
-	self->monsterInfo.sight = arachnid_sight;
+	self->monsterinfo.stand = arachnid_stand;
+	self->monsterinfo.walk = arachnid_walk;
+	self->monsterinfo.run = arachnid_run;
+	self->monsterinfo.attack = arachnid_attack;
+	self->monsterinfo.sight = arachnid_sight;
 
 	gi.linkentity(self);
 

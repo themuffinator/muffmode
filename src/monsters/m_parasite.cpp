@@ -150,7 +150,7 @@ mframe_t parasite_frames_start_run[] = {
 MMOVE_T(parasite_move_start_run) = { FRAME_run01, FRAME_run02, parasite_frames_start_run, parasite_run };
 
 MONSTERINFO_RUN(parasite_start_run) (gentity_t *self) -> void {
-	if (self->monsterInfo.aiflags & AI_STAND_GROUND)
+	if (self->monsterinfo.aiflags & AI_STAND_GROUND)
 		M_SetAnimation(self, &parasite_move_stand);
 	else
 		M_SetAnimation(self, &parasite_move_start_run);
@@ -162,7 +162,7 @@ void parasite_run(gentity_t *self) {
 	if (self->proboscus && self->proboscus->style != 2)
 		proboscis_retract(self->proboscus);
 
-	if (self->monsterInfo.aiflags & AI_STAND_GROUND)
+	if (self->monsterinfo.aiflags & AI_STAND_GROUND)
 		M_SetAnimation(self, &parasite_move_stand);
 	else
 		M_SetAnimation(self, &parasite_move_run);
@@ -196,8 +196,8 @@ void parasite_walk(gentity_t *self) {
 // hard reset on proboscis; like we never existed
 static THINK(proboscis_reset) (gentity_t *self) -> void {
 	self->owner->proboscus = nullptr;
-	FreeEntity(self->proboscus);
-	FreeEntity(self);
+	G_FreeEntity(self->proboscus);
+	G_FreeEntity(self);
 }
 
 static DIE(proboscis_die) (gentity_t *self, gentity_t *inflictor, gentity_t *attacker, int damage, const vec3_t &point, const mod_t &mod) -> void {
@@ -210,21 +210,21 @@ extern const mmove_t parasite_move_fire_proboscis;
 static void parasite_break_wait(gentity_t *self) {
 	// prob exploded?
 	if (self->proboscus && self->proboscus->style != 3)
-		self->monsterInfo.nextframe = FRAME_break19;
+		self->monsterinfo.nextframe = FRAME_break19;
 	else if (brandom()) {
 		// don't get hurt
 		parasite_reel_in(self);
-		self->monsterInfo.nextframe = FRAME_break31;
+		self->monsterinfo.nextframe = FRAME_break31;
 	}
 }
 
 static void proboscis_retract(gentity_t *self) {
 	// start retract animation
-	if (self->owner->monsterInfo.active_move == &parasite_move_fire_proboscis)
-		self->owner->monsterInfo.nextframe = FRAME_drain12;
+	if (self->owner->monsterinfo.active_move == &parasite_move_fire_proboscis)
+		self->owner->monsterinfo.nextframe = FRAME_drain12;
 
 	// mark as retracting
-	self->moveType = MOVETYPE_NONE;
+	self->movetype = MOVETYPE_NONE;
 	self->solid = SOLID_NOT;
 	// come back real hard
 	if (self->style != 2)
@@ -299,22 +299,22 @@ constexpr mframe_t parasite_frames_break[] = {
 };
 MMOVE_T(parasite_move_break) = { FRAME_break01, FRAME_break32, parasite_frames_break, parasite_start_run };
 
-static TOUCH(proboscis_touch) (gentity_t *self, gentity_t *other, const trace_t &tr, bool otherTouchingSelf) -> void {
+static TOUCH(proboscis_touch) (gentity_t *self, gentity_t *other, const trace_t &tr, bool other_touching_self) -> void {
 	// owner isn't trying to probe any more, don't touch anything
-	if (self->owner->monsterInfo.active_move != &parasite_move_fire_proboscis)
+	if (self->owner->monsterinfo.active_move != &parasite_move_fire_proboscis)
 		return;
 
 	vec3_t p;
 
 	// hit what we want to succ
-	if ((other->svFlags & SVF_PLAYER) || other == self->owner->enemy) {
+	if ((other->svflags & SVF_PLAYER) || other == self->owner->enemy) {
 		if (tr.startsolid)
 			p = tr.endpos;
 		else
 			p = tr.endpos - ((self->s.origin - tr.endpos).normalized() * 12);
 
-		self->owner->monsterInfo.nextframe = FRAME_drain06;
-		self->moveType = MOVETYPE_NONE;
+		self->owner->monsterinfo.nextframe = FRAME_drain06;
+		self->movetype = MOVETYPE_NONE;
 		self->solid = SOLID_NOT;
 		self->style = 1;
 		// stick to this guy
@@ -326,25 +326,25 @@ static TOUCH(proboscis_touch) (gentity_t *self, gentity_t *other, const trace_t 
 		p = tr.endpos + tr.plane.normal;
 		// hit monster, don't suck but do small damage
 		// and retract immediately
-		if (other->svFlags & (SVF_MONSTER | SVF_DEADMONSTER))
+		if (other->svflags & (SVF_MONSTER | SVF_DEADMONSTER))
 			proboscis_retract(self);
 		else {
 			// hit wall; stick to it and do break animation
-			self->owner->monsterInfo.active_move = &parasite_move_break;
-			self->moveType = MOVETYPE_NONE;
+			self->owner->monsterinfo.active_move = &parasite_move_break;
+			self->movetype = MOVETYPE_NONE;
 			self->solid = SOLID_NOT;
 			self->style = 1;
 			self->owner->s.angles[YAW] = self->s.angles[YAW];
 		}
 	}
 
-	if (other->takeDamage)
-		Damage(other, self, self->owner, tr.plane.normal, tr.endpos, tr.plane.normal, 5, 0, DAMAGE_NONE, MOD_UNKNOWN);
+	if (other->takedamage)
+		T_Damage(other, self, self->owner, tr.plane.normal, tr.endpos, tr.plane.normal, 5, 0, DAMAGE_NONE, MOD_UNKNOWN);
 
 	gi.positioned_sound(tr.endpos, self->owner, CHAN_AUTO, sound_impact, 1, ATTN_NORM, 0);
 
 	self->s.origin = p;
-	self->nextThink = level.time + FRAME_TIME_S; // start doing stuff on next frame
+	self->nextthink = level.time + FRAME_TIME_S; // start doing stuff on next frame
 	gi.linkentity(self);
 }
 
@@ -404,7 +404,7 @@ static vec3_t parasite_get_proboscis_start(gentity_t *self) {
 }
 
 static THINK(proboscis_think) (gentity_t *self) -> void {
-	self->nextThink = level.time + FRAME_TIME_S; // start doing stuff on next frame
+	self->nextthink = level.time + FRAME_TIME_S; // start doing stuff on next frame
 
 	// retracting; keep pulling until we hit the parasite
 	if (self->style == 2) {
@@ -430,7 +430,7 @@ static THINK(proboscis_think) (gentity_t *self) -> void {
 	else if (self->style == 1) {
 		if (!self->enemy) {
 			// stuck in wall
-		} else if (!self->enemy->inUse || self->enemy->health <= 0 || !self->enemy->takeDamage) {
+		} else if (!self->enemy->inuse || self->enemy->health <= 0 || !self->enemy->takedamage) {
 			// target gone, retract early
 			proboscis_retract(self);
 		} else {
@@ -450,11 +450,11 @@ static THINK(proboscis_think) (gentity_t *self) -> void {
 				self->s.origin = self->s.old_origin;
 			} else {
 				// succ & drain
-				if (self->timeStamp <= level.time) {
-					Damage(self->enemy, self, self->owner, tr.plane.normal, tr.endpos, tr.plane.normal, 2, 0, DAMAGE_NONE, MOD_UNKNOWN);
+				if (self->timestamp <= level.time) {
+					T_Damage(self->enemy, self, self->owner, tr.plane.normal, tr.endpos, tr.plane.normal, 2, 0, DAMAGE_NONE, MOD_UNKNOWN);
 					self->owner->health = min(self->owner->max_health, self->owner->health + 2);
-					self->owner->monsterInfo.setskin(self->owner);
-					self->timeStamp = level.time + 10_hz;
+					self->owner->monsterinfo.setskin(self->owner);
+					self->timestamp = level.time + 10_hz;
 				}
 			}
 
@@ -464,7 +464,7 @@ static THINK(proboscis_think) (gentity_t *self) -> void {
 	// flying
 	else if (self->style == 0) {
 		// owner gone away?
-		if (!self->owner->enemy || !self->owner->enemy->inUse || self->owner->enemy->health <= 0) {
+		if (!self->owner->enemy || !self->owner->enemy->inuse || self->owner->enemy->health <= 0) {
 			proboscis_retract(self);
 			return;
 		}
@@ -495,26 +495,26 @@ PRETHINK(proboscis_segment_draw) (gentity_t *self) -> void {
 }
 
 static void fire_proboscis(gentity_t *self, vec3_t start, vec3_t dir, float speed) {
-	gentity_t *tip = Spawn();
+	gentity_t *tip = G_Spawn();
 	tip->s.angles = vectoangles(dir);
 	tip->s.modelindex = gi.modelindex("models/monsters/parasite/tip/tris.md2");
-	tip->moveType = MOVETYPE_FLYMISSILE;
+	tip->movetype = MOVETYPE_FLYMISSILE;
 	tip->owner = self;
 	self->proboscus = tip;
-	tip->clipMask = MASK_PROJECTILE & ~CONTENTS_DEADMONSTER;
+	tip->clipmask = MASK_PROJECTILE & ~CONTENTS_DEADMONSTER;
 	tip->s.origin = tip->s.old_origin = start;
 	tip->speed = speed;
 	tip->velocity = dir * speed;
 	tip->solid = SOLID_BBOX;
-	tip->takeDamage = true;
+	tip->takedamage = true;
 	tip->flags |= FL_NO_DAMAGE_EFFECTS | FL_NO_KNOCKBACK;
 	tip->die = proboscis_die;
 	tip->touch = proboscis_touch;
 	tip->think = proboscis_think;
-	tip->nextThink = level.time + FRAME_TIME_S; // start doing stuff on next frame
-	tip->svFlags |= SVF_PROJECTILE;
+	tip->nextthink = level.time + FRAME_TIME_S; // start doing stuff on next frame
+	tip->svflags |= SVF_PROJECTILE;
 
-	gentity_t *segment = Spawn();
+	gentity_t *segment = G_Spawn();
 	segment->s.modelindex = gi.modelindex("models/monsters/parasite/segment/tris.md2");
 	segment->s.renderfx = RF_BEAM;
 	segment->postthink = proboscis_segment_draw;
@@ -522,7 +522,7 @@ static void fire_proboscis(gentity_t *self, vec3_t start, vec3_t dir, float spee
 	tip->proboscus = segment;
 	segment->owner = tip;
 
-	trace_t tr = gi.traceline(tip->s.origin, tip->s.origin + (tip->velocity * gi.frame_time_s), self, tip->clipMask);
+	trace_t tr = gi.traceline(tip->s.origin, tip->s.origin + (tip->velocity * gi.frame_time_s), self, tip->clipmask);
 	if (tr.startsolid) {
 		tr.plane.normal = -dir;
 		tr.endpos = start;
@@ -552,23 +552,23 @@ static void parasite_fire_proboscis(gentity_t *self) {
 static void parasite_proboscis_wait(gentity_t *self) {
 	// loop frames while we wait
 	if (self->s.frame == FRAME_drain04)
-		self->monsterInfo.nextframe = FRAME_drain05;
+		self->monsterinfo.nextframe = FRAME_drain05;
 	else
-		self->monsterInfo.nextframe = FRAME_drain04;
+		self->monsterinfo.nextframe = FRAME_drain04;
 }
 
 static void parasite_proboscis_pull_wait(gentity_t *self) {
 	// prob exploded?
 	if (!self->proboscus || self->proboscus->style == 3) {
-		self->monsterInfo.nextframe = FRAME_drain14;
+		self->monsterinfo.nextframe = FRAME_drain14;
 		return;
 	}
 
 	// being pulled in, so wait until we get destroyed
 	if (self->s.frame == FRAME_drain12)
-		self->monsterInfo.nextframe = FRAME_drain13;
+		self->monsterinfo.nextframe = FRAME_drain13;
 	else
-		self->monsterInfo.nextframe = FRAME_drain12;
+		self->monsterinfo.nextframe = FRAME_drain12;
 
 	if (self->proboscus->style != 2)
 		proboscis_retract(self->proboscus);
@@ -623,13 +623,13 @@ static void parasite_jump_up(gentity_t *self) {
 }
 
 static void parasite_jump_wait_land(gentity_t *self) {
-	if (self->groundEntity == nullptr) {
-		self->monsterInfo.nextframe = self->s.frame;
+	if (self->groundentity == nullptr) {
+		self->monsterinfo.nextframe = self->s.frame;
 
 		if (monster_jump_finished(self))
-			self->monsterInfo.nextframe = self->s.frame + 1;
+			self->monsterinfo.nextframe = self->s.frame + 1;
 	} else
-		self->monsterInfo.nextframe = self->s.frame + 1;
+		self->monsterinfo.nextframe = self->s.frame + 1;
 }
 
 mframe_t parasite_frames_jump_up[] = {
@@ -698,7 +698,7 @@ static void parasite_dead(gentity_t *self) {
 
 static void parasite_shrink(gentity_t *self) {
 	self->maxs[2] = 0;
-	self->svFlags |= SVF_DEADMONSTER;
+	self->svflags |= SVF_DEADMONSTER;
 	gi.linkentity(self);
 }
 
@@ -732,17 +732,17 @@ static DIE(parasite_die) (gentity_t *self, gentity_t *inflictor, gentity_t *atta
 			{ "models/monsters/parasite/gibs/head.md2", GIB_SKINNED | GIB_HEAD }
 			});
 
-		self->deadFlag = true;
+		self->deadflag = true;
 		return;
 	}
 
-	if (self->deadFlag)
+	if (self->deadflag)
 		return;
 
 	// regular death
 	gi.sound(self, CHAN_VOICE, sound_die, 1, ATTN_NORM, 0);
-	self->deadFlag = true;
-	self->takeDamage = true;
+	self->deadflag = true;
+	self->takedamage = true;
 	M_SetAnimation(self, &parasite_move_death);
 }
 
@@ -755,7 +755,7 @@ End Death Stuff
 mframe_t parasite_frames_pain1[] = {
 	{ ai_move, 0, nullptr, FRAME_stand01 },
 	{ ai_move },
-	{ ai_move, 0, [](gentity_t *self) { self->monsterInfo.nextframe = FRAME_pain105; } },
+	{ ai_move, 0, [](gentity_t *self) { self->monsterinfo.nextframe = FRAME_pain105; } },
 	{ ai_move, 0, monster_footstep },
 	{ ai_move },
 	{ ai_move },
@@ -800,7 +800,7 @@ constexpr spawnflags_t SPAWNFLAG_PARASITE_NOJUMPING = 8_spawnflag;
  */
 void SP_monster_parasite(gentity_t *self) {
 	if (!M_AllowSpawn(self)) {
-		FreeEntity(self);
+		G_FreeEntity(self);
 		return;
 	}
 
@@ -828,33 +828,33 @@ void SP_monster_parasite(gentity_t *self) {
 
 	self->mins = { -16, -16, -24 };
 	self->maxs = { 16, 16, 24 };
-	self->moveType = MOVETYPE_STEP;
+	self->movetype = MOVETYPE_STEP;
 	self->solid = SOLID_BBOX;
 
 	self->health = 175 * st.health_multiplier;
-	self->gibHealth = -50;
+	self->gib_health = -50;
 	self->mass = 250;
 
 	self->pain = parasite_pain;
 	self->die = parasite_die;
 
-	self->monsterInfo.stand = parasite_stand;
-	self->monsterInfo.walk = parasite_start_walk;
-	self->monsterInfo.run = parasite_start_run;
-	self->monsterInfo.attack = parasite_attack;
-	self->monsterInfo.sight = parasite_sight;
-	self->monsterInfo.idle = parasite_idle;
-	self->monsterInfo.blocked = parasite_blocked;
-	self->monsterInfo.setskin = parasite_setskin;
+	self->monsterinfo.stand = parasite_stand;
+	self->monsterinfo.walk = parasite_start_walk;
+	self->monsterinfo.run = parasite_start_run;
+	self->monsterinfo.attack = parasite_attack;
+	self->monsterinfo.sight = parasite_sight;
+	self->monsterinfo.idle = parasite_idle;
+	self->monsterinfo.blocked = parasite_blocked;
+	self->monsterinfo.setskin = parasite_setskin;
 
 	gi.linkentity(self);
 
 	M_SetAnimation(self, &parasite_move_stand);
-	self->monsterInfo.scale = MODEL_SCALE;
+	self->monsterinfo.scale = MODEL_SCALE;
 	self->yaw_speed = 30;
-	self->monsterInfo.can_jump = !self->spawnflags.has(SPAWNFLAG_PARASITE_NOJUMPING);
-	self->monsterInfo.drop_height = 256;
-	self->monsterInfo.jump_height = 68;
+	self->monsterinfo.can_jump = !self->spawnflags.has(SPAWNFLAG_PARASITE_NOJUMPING);
+	self->monsterinfo.drop_height = 256;
+	self->monsterinfo.jump_height = 68;
 
 	walkmonster_start(self);
 }

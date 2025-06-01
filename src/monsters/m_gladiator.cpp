@@ -91,7 +91,7 @@ mframe_t gladiator_frames_run[] = {
 MMOVE_T(gladiator_move_run) = { FRAME_run1, FRAME_run6, gladiator_frames_run, nullptr };
 
 MONSTERINFO_RUN(gladiator_run) (gentity_t *self) -> void {
-	if (self->monsterInfo.aiflags & AI_STAND_GROUND)
+	if (self->monsterinfo.aiflags & AI_STAND_GROUND)
 		M_SetAnimation(self, &gladiator_move_stand);
 	else
 		M_SetAnimation(self, &gladiator_move_run);
@@ -103,7 +103,7 @@ static void GladiatorMelee(gentity_t *self) {
 		gi.sound(self, CHAN_AUTO, sound_cleaver_hit, 1, ATTN_NORM, 0);
 	else {
 		gi.sound(self, CHAN_AUTO, sound_cleaver_miss, 1, ATTN_NORM, 0);
-		self->monsterInfo.melee_debounce_time = level.time + 1.5_sec;
+		self->monsterinfo.melee_debounce_time = level.time + 1.5_sec;
 	}
 }
 
@@ -170,18 +170,18 @@ static void gladbGun(gentity_t *self) {
 	dir.normalize();
 
 	int damage = 35;
-	int splashDamage = 45;
+	int radius_damage = 45;
 
 	if (self->s.frame > FRAME_attack3) {
 		damage /= 2;
-		splashDamage /= 2;
+		radius_damage /= 2;
 	}
 
-	fire_phalanx(self, start, dir, damage, 725, splashDamage, splashDamage);
+	fire_phalanx(self, start, dir, damage, 725, radius_damage, radius_damage);
 
 	// save for aiming the shot
 	self->pos1 = self->enemy->s.origin;
-	self->pos1[2] += self->enemy->viewHeight;
+	self->pos1[2] += self->enemy->viewheight;
 }
 
 static void gladbGun_check(gentity_t *self) {
@@ -209,14 +209,14 @@ MONSTERINFO_ATTACK(gladiator_attack) (gentity_t *self) -> void {
 	// a small safe zone
 	v = self->s.origin - self->enemy->s.origin;
 	range = v.length();
-	if (range <= (MELEE_DISTANCE + 32) && self->monsterInfo.melee_debounce_time <= level.time)
+	if (range <= (MELEE_DISTANCE + 32) && self->monsterinfo.melee_debounce_time <= level.time)
 		return;
 	else if (!M_CheckClearShot(self, monster_flash_offset[MZ2_GLADIATOR_RAILGUN_1]))
 		return;
 
 	// charge up the railgun
 	self->pos1 = self->enemy->s.origin; // save for aiming the shot
-	self->pos1[2] += self->enemy->viewHeight;
+	self->pos1[2] += self->enemy->viewheight;
 
 	if (self->style == 1) {
 		gi.sound(self, CHAN_WEAPON, sound_gunb, 1, ATTN_NORM, 0);
@@ -246,7 +246,7 @@ MMOVE_T(gladiator_move_pain_air) = { FRAME_painup2, FRAME_painup6, gladiator_fra
 
 static PAIN(gladiator_pain) (gentity_t *self, gentity_t *other, float kick, int damage, const mod_t &mod) -> void {
 	if (level.time < self->pain_debounce_time) {
-		if ((self->velocity[2] > 100) && (self->monsterInfo.active_move == &gladiator_move_pain))
+		if ((self->velocity[2] > 100) && (self->monsterinfo.active_move == &gladiator_move_pain))
 			M_SetAnimation(self, &gladiator_move_pain_air);
 		return;
 	}
@@ -282,7 +282,7 @@ static void gladiator_dead(gentity_t *self) {
 
 static void gladiator_shrink(gentity_t *self) {
 	self->maxs[2] = 0;
-	self->svFlags |= SVF_DEADMONSTER;
+	self->svflags |= SVF_DEADMONSTER;
 	gi.linkentity(self);
 }
 
@@ -327,11 +327,11 @@ static DIE(gladiator_die) (gentity_t *self, gentity_t *inflictor, gentity_t *att
 			{ "models/monsters/gladiatr/gibs/chest.md2", GIB_SKINNED },
 			{ "models/monsters/gladiatr/gibs/head.md2", GIB_SKINNED | GIB_HEAD }
 			});
-		self->deadFlag = true;
+		self->deadflag = true;
 		return;
 	}
 
-	if (self->deadFlag)
+	if (self->deadflag)
 		return;
 
 	// regular death
@@ -340,8 +340,8 @@ static DIE(gladiator_die) (gentity_t *self, gentity_t *inflictor, gentity_t *att
 	if (brandom())
 		gi.sound(self, CHAN_VOICE, sound_die2, 1, ATTN_NORM, 0);
 
-	self->deadFlag = true;
-	self->takeDamage = true;
+	self->deadflag = true;
+	self->takedamage = true;
 
 	M_SetAnimation(self, &gladiator_move_death);
 }
@@ -357,7 +357,7 @@ MONSTERINFO_BLOCKED(gladiator_blocked) (gentity_t *self, float dist) -> bool {
  */
 void SP_monster_gladiator(gentity_t *self) {
 	if (!M_AllowSpawn(self)) {
-		FreeEntity(self);
+		G_FreeEntity(self);
 		return;
 	}
 
@@ -372,7 +372,7 @@ void SP_monster_gladiator(gentity_t *self) {
 	sound_search.assign("gladiator/gldsrch1.wav");
 	sound_sight.assign("gladiator/sight.wav");
 
-	self->moveType = MOVETYPE_STEP;
+	self->movetype = MOVETYPE_STEP;
 	self->solid = SOLID_BBOX;
 	self->s.modelindex = gi.modelindex("models/monsters/gladiatr/tris.md2");
 
@@ -382,32 +382,32 @@ void SP_monster_gladiator(gentity_t *self) {
 	gi.modelindex("models/monsters/gladiatr/gibs/rarm.md2");
 	gi.modelindex("models/monsters/gladiatr/gibs/thigh.md2");
 
-	if (strcmp(self->className, "monster_gladb") == 0) {
+	if (strcmp(self->classname, "monster_gladb") == 0) {
 		sound_gunb.assign("weapons/plasshot.wav");
 
 		self->health = 250 * st.health_multiplier;
 		self->mass = 350;
 
-		if (!st.was_key_specified("powerArmorType"))
-			self->monsterInfo.powerArmorType = IT_POWER_SHIELD;
-		if (!st.was_key_specified("powerArmorPower"))
-			self->monsterInfo.powerArmorPower = 250;
+		if (!st.was_key_specified("power_armor_type"))
+			self->monsterinfo.power_armor_type = IT_POWER_SHIELD;
+		if (!st.was_key_specified("power_armor_power"))
+			self->monsterinfo.power_armor_power = 250;
 
 		self->s.skinnum = 2;
 
 		self->style = 1;
 
-		self->monsterInfo.weapon_sound = gi.soundindex("weapons/phaloop.wav");
+		self->monsterinfo.weapon_sound = gi.soundindex("weapons/phaloop.wav");
 	} else {
 		sound_gun.assign("gladiator/railgun.wav");
 
 		self->health = 400 * st.health_multiplier;
 		self->mass = 400;
 
-		self->monsterInfo.weapon_sound = gi.soundindex("weapons/rg_hum.wav");
+		self->monsterinfo.weapon_sound = gi.soundindex("weapons/rg_hum.wav");
 	}
 
-	self->gibHealth = -175;
+	self->gib_health = -175;
 
 	self->mins = { -32, -32, -24 };
 	self->maxs = { 32, 32, 42 };
@@ -415,21 +415,21 @@ void SP_monster_gladiator(gentity_t *self) {
 	self->pain = gladiator_pain;
 	self->die = gladiator_die;
 
-	self->monsterInfo.stand = gladiator_stand;
-	self->monsterInfo.walk = gladiator_walk;
-	self->monsterInfo.run = gladiator_run;
-	self->monsterInfo.dodge = nullptr;
-	self->monsterInfo.attack = gladiator_attack;
-	self->monsterInfo.melee = gladiator_melee;
-	self->monsterInfo.sight = gladiator_sight;
-	self->monsterInfo.idle = gladiator_idle;
-	self->monsterInfo.search = gladiator_search;
-	self->monsterInfo.blocked = gladiator_blocked;
-	self->monsterInfo.setskin = gladiator_setskin;
+	self->monsterinfo.stand = gladiator_stand;
+	self->monsterinfo.walk = gladiator_walk;
+	self->monsterinfo.run = gladiator_run;
+	self->monsterinfo.dodge = nullptr;
+	self->monsterinfo.attack = gladiator_attack;
+	self->monsterinfo.melee = gladiator_melee;
+	self->monsterinfo.sight = gladiator_sight;
+	self->monsterinfo.idle = gladiator_idle;
+	self->monsterinfo.search = gladiator_search;
+	self->monsterinfo.blocked = gladiator_blocked;
+	self->monsterinfo.setskin = gladiator_setskin;
 
 	gi.linkentity(self);
 	M_SetAnimation(self, &gladiator_move_stand);
-	self->monsterInfo.scale = MODEL_SCALE;
+	self->monsterinfo.scale = MODEL_SCALE;
 
 	walkmonster_start(self);
 }

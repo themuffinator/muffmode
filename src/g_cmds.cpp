@@ -7,7 +7,6 @@
 #include "freeze.h"
 #endif
 /*freeze*/
-#include <sstream>
 
 enum cmd_flags_t : uint32_t {
 	CF_NONE				= 0,
@@ -23,83 +22,7 @@ struct cmds_t {
 	const		char *name;
 	void		(*func)(gentity_t *ent);
 	uint32_t	flags;
-	bool		floodExempt;
 };
-
-#include <sstream>			// for ostringstream
-#include <iomanip>			// for setw
-
-/*
-=========================
-FormatUsage
-=========================
-*/
-static std::string FormatUsage(const std::string &command,
-	const std::vector<std::string> &required = {},
-	const std::vector<std::string> &optional = {},
-	const std::string &help = {}) {
-
-	std::ostringstream oss;
-	oss << "Usage: " << command;
-
-	for (const auto &arg : required)
-		oss << " <" << arg << ">";
-
-	for (const auto &arg : optional)
-		oss << " [" << arg << "]";
-
-	if (!help.empty())
-		oss << '\n' << help << '\n';
-
-	return oss.str();
-}
-
-/*
-=========================
-PrintMapList
-=========================
-*/
-static void PrintMapList(gentity_t *ent) {
-	const char *mapList = g_map_list->string;
-	std::vector<std::string> maps;
-	std::stringstream ss(mapList);
-	std::string map;
-
-	size_t maxLen = 0;
-	while (ss >> map) {
-		maps.push_back(map);
-		if (map.length() > maxLen) maxLen = map.length();
-	}
-
-	const size_t colWidth = maxLen + 1;
-	const size_t colsPerRow = std::max<size_t>(1, 120 / colWidth);
-
-	std::string fullOutput = "Valid maps:\n";
-	std::string currentLine;
-	for (size_t i = 0; i < maps.size(); ++i) {
-		currentLine += maps[i];
-		currentLine.append(colWidth - maps[i].length(), ' ');
-
-		if ((i + 1) % colsPerRow == 0 || i + 1 == maps.size()) {
-			fullOutput += currentLine + '\n';
-			currentLine.clear();
-		}
-	}
-
-	const size_t maxPerPrint = 1024;
-	size_t start = 0;
-	while (start < fullOutput.size()) {
-		size_t end = std::min(fullOutput.size(), start + maxPerPrint);
-		if (end < fullOutput.size()) {
-			end = fullOutput.rfind('\n', end);
-			if (end == std::string::npos || end <= start)
-				end = start + maxPerPrint;
-		}
-		std::string chunk = fullOutput.substr(start, end - start);
-		gi.LocClient_Print(ent, PRINT_HIGH, "{}", chunk);
-		start = end;
-	}
-}
 
 static void Cmd_Print_State(gentity_t *ent, bool on_state) {
 	const char *s = gi.argv(0);
@@ -120,7 +43,7 @@ static inline bool CheatsOk(gentity_t *ent) {
 }
 
 static inline bool AliveOk(gentity_t *ent) {
-	if (ent->health <= 0 || ent->deadFlag) {
+	if (ent->health <= 0 || ent->deadflag) {
 		//gi.LocClient_Print(ent, PRINT_HIGH, "You must be alive to use this command.\n");
 		return false;
 	}
@@ -158,7 +81,7 @@ static void SelectNextItem(gentity_t *ent, item_flags_t itflags, bool menu = tru
 	if (menu && cl->menu) {
 		P_Menu_Next(ent);
 		return;
-	} else if (menu && cl->followTarget) {
+	} else if (menu && cl->follow_target) {
 		FollowNext(ent);
 		return;
 	}
@@ -168,7 +91,7 @@ static void SelectNextItem(gentity_t *ent, item_flags_t itflags, bool menu = tru
 		index = static_cast<item_id_t>((cl->pers.selected_item + i) % IT_TOTAL);
 		if (!cl->pers.inventory[index])
 			continue;
-		it = &itemList[index];
+		it = &itemlist[index];
 		if (!it->use)
 			continue;
 		if (!(it->flags & itflags))
@@ -203,7 +126,7 @@ static void SelectPrevItem(gentity_t *ent, item_flags_t itflags) {
 	if (cl->menu) {
 		P_Menu_Prev(ent);
 		return;
-	} else if (cl->followTarget) {
+	} else if (cl->follow_target) {
 		FollowPrev(ent);
 		return;
 	}
@@ -213,7 +136,7 @@ static void SelectPrevItem(gentity_t *ent, item_flags_t itflags) {
 		index = static_cast<item_id_t>((cl->pers.selected_item + IT_TOTAL - i) % IT_TOTAL);
 		if (!cl->pers.inventory[index])
 			continue;
-		it = &itemList[index];
+		it = &itemlist[index];
 		if (!it->use)
 			continue;
 		if (!(it->flags & itflags))
@@ -257,14 +180,14 @@ static void SpawnAndGiveItem(gentity_t *ent, item_id_t id) {
 	if (!it)
 		return;
 
-	gentity_t *it_ent = Spawn();
-	it_ent->className = it->className;
+	gentity_t *it_ent = G_Spawn();
+	it_ent->classname = it->classname;
 	SpawnItem(it_ent, it);
 
-	if (it_ent->inUse) {
+	if (it_ent->inuse) {
 		Touch_Item(it_ent, ent, null_trace, true);
-		if (it_ent->inUse)
-			FreeEntity(it_ent);
+		if (it_ent->inuse)
+			G_FreeEntity(it_ent);
 	}
 }
 
@@ -298,7 +221,7 @@ static void Cmd_Give_f(gentity_t *ent) {
 
 	if (give_all || Q_strcasecmp(name, "weapons") == 0) {
 		for (i = 0; i < IT_TOTAL; i++) {
-			it = itemList + i;
+			it = itemlist + i;
 			if (!it->pickup)
 				continue;
 			if (!(it->flags & IF_WEAPON))
@@ -314,7 +237,7 @@ static void Cmd_Give_f(gentity_t *ent) {
 			SpawnAndGiveItem(ent, IT_PACK);
 
 		for (i = 0; i < IT_TOTAL; i++) {
-			it = itemList + i;
+			it = itemlist + i;
 			if (!it->pickup)
 				continue;
 			if (!(it->flags & IF_AMMO))
@@ -328,7 +251,7 @@ static void Cmd_Give_f(gentity_t *ent) {
 	if (give_all || Q_strcasecmp(name, "armor") == 0) {
 		ent->client->pers.inventory[IT_ARMOR_JACKET] = 0;
 		ent->client->pers.inventory[IT_ARMOR_COMBAT] = 0;
-		ent->client->pers.inventory[IT_ARMOR_BODY] = armor_stats[game.ruleset][ARMOR_BODY].max_count;
+		ent->client->pers.inventory[IT_ARMOR_BODY] = GetItemByIndex(IT_ARMOR_BODY)->armor_info->max_count;
 
 		if (!give_all)
 			return;
@@ -336,14 +259,14 @@ static void Cmd_Give_f(gentity_t *ent) {
 
 	if (give_all || Q_strcasecmp(name, "keys") == 0) {
 		for (i = 0; i < IT_TOTAL; i++) {
-			it = itemList + i;
+			it = itemlist + i;
 			if (!it->pickup)
 				continue;
 			if (!(it->flags & IF_KEY))
 				continue;
 			ent->client->pers.inventory[i]++;
 		}
-		ent->client->pers.powerCubes = 0xFF;
+		ent->client->pers.power_cubes = 0xFF;
 
 		if (!give_all)
 			return;
@@ -358,7 +281,7 @@ static void Cmd_Give_f(gentity_t *ent) {
 
 	if (give_all) {
 		for (i = 0; i < IT_TOTAL; i++) {
-			it = itemList + i;
+			it = itemlist + i;
 			if (!it->pickup)
 				continue;
 			if (it->flags & (IF_ARMOR | IF_POWER_ARMOR | IF_WEAPON | IF_AMMO | IF_NOT_GIVEABLE | IF_TECH))
@@ -370,8 +293,8 @@ static void Cmd_Give_f(gentity_t *ent) {
 			ent->client->pers.inventory[i] = (it->flags & IF_KEY) ? 8 : 1;
 		}
 
-		CheckPowerArmorState(ent);
-		ent->client->pers.powerCubes = 0xFF;
+		G_CheckPowerArmor(ent);
+		ent->client->pers.power_cubes = 0xFF;
 		return;
 	}
 
@@ -398,34 +321,34 @@ static void Cmd_Give_f(gentity_t *ent) {
 		return;
 	}
 
-	it_ent = Spawn();
-	it_ent->className = it->className;
+	it_ent = G_Spawn();
+	it_ent->classname = it->classname;
 	SpawnItem(it_ent, it);
 	if (it->flags & IF_AMMO && gi.argc() == 3)
 		it_ent->count = atoi(gi.argv(2));
 
 	// since some items don't actually spawn when you say to ..
-	if (!it_ent->inUse)
+	if (!it_ent->inuse)
 		return;
 
 	Touch_Item(it_ent, ent, null_trace, true);
-	if (it_ent->inUse)
-		FreeEntity(it_ent);
+	if (it_ent->inuse)
+		G_FreeEntity(it_ent);
 }
 
 static void Cmd_SetPOI_f(gentity_t *self) {
-	level.currentPOI = self->s.origin;
-	level.validPOI = true;
+	level.current_poi = self->s.origin;
+	level.valid_poi = true;
 }
 
 static void Cmd_CheckPOI_f(gentity_t *self) {
-	if (!level.validPOI)
+	if (!level.valid_poi)
 		return;
 
-	char visible_pvs = gi.inPVS(self->s.origin, level.currentPOI, false) ? 'y' : 'n';
-	char visible_pvs_portals = gi.inPVS(self->s.origin, level.currentPOI, true) ? 'y' : 'n';
-	char visible_phs = gi.inPHS(self->s.origin, level.currentPOI, false) ? 'y' : 'n';
-	char visible_phs_portals = gi.inPHS(self->s.origin, level.currentPOI, true) ? 'y' : 'n';
+	char visible_pvs = gi.inPVS(self->s.origin, level.current_poi, false) ? 'y' : 'n';
+	char visible_pvs_portals = gi.inPVS(self->s.origin, level.current_poi, true) ? 'y' : 'n';
+	char visible_phs = gi.inPHS(self->s.origin, level.current_poi, false) ? 'y' : 'n';
+	char visible_phs_portals = gi.inPHS(self->s.origin, level.current_poi, true) ? 'y' : 'n';
 
 	gi.Com_PrintFmt("pvs {} + portals {}, phs {} + portals {}\n", visible_pvs, visible_pvs_portals, visible_phs, visible_phs_portals);
 }
@@ -433,7 +356,7 @@ static void Cmd_CheckPOI_f(gentity_t *self) {
 // [Paril-KEX]
 static void Cmd_Target_f(gentity_t *ent) {
 	ent->target = gi.argv(1);
-	UseTargets(ent, ent);
+	G_UseTargets(ent, ent);
 	ent->target = nullptr;
 }
 
@@ -473,7 +396,7 @@ Cmd_Spawn_f
 Spawn class name
 
 argv(0) spawn
-argv(1) <className>
+argv(1) <classname>
 argv(2+n) "key"...
 argv(3+n) "value"...
 =================
@@ -483,8 +406,8 @@ static void Cmd_Spawn_f(gentity_t *ent) {
 	ent->solid = SOLID_NOT;
 	gi.linkentity(ent);
 
-	gentity_t *other = Spawn();
-	other->className = gi.argv(1);
+	gentity_t *other = G_Spawn();
+	other->classname = gi.argv(1);
 
 	other->s.origin = ent->s.origin + (AngleVectors(ent->s.angles).forward * 24.f);
 	other->s.angles[YAW] = ent->s.angles[YAW];
@@ -498,14 +421,14 @@ static void Cmd_Spawn_f(gentity_t *ent) {
 
 	ED_CallSpawn(other);
 
-	if (other->inUse) {
+	if (other->inuse) {
 		vec3_t forward, end;
-		AngleVectors(ent->client->vAngle, forward, nullptr, nullptr);
+		AngleVectors(ent->client->v_angle, forward, nullptr, nullptr);
 		end = ent->s.origin;
-		end[2] += ent->viewHeight;
+		end[2] += ent->viewheight;
 		end += (forward * 8192);
 
-		trace_t tr = gi.traceline(ent->s.origin + vec3_t{ 0.f, 0.f, (float)ent->viewHeight }, end, other, MASK_SHOT | CONTENTS_MONSTERCLIP);
+		trace_t tr = gi.traceline(ent->s.origin + vec3_t{ 0.f, 0.f, (float)ent->viewheight }, end, other, MASK_SHOT | CONTENTS_MONSTERCLIP);
 		other->s.origin = tr.endpos;
 
 		for (size_t i = 0; i < 3; i++) {
@@ -523,15 +446,15 @@ static void Cmd_Spawn_f(gentity_t *ent) {
 
 			if ((other->s.origin - ent->s.origin).dot(forward) < 0) {
 				gi.Client_Print(ent, PRINT_HIGH, "Couldn't find a suitable spawn location.\n");
-				FreeEntity(other);
+				G_FreeEntity(other);
 				break;
 			}
 		}
 
-		if (other->inUse)
+		if (other->inuse)
 			gi.linkentity(other);
 
-		if ((other->svFlags & SVF_MONSTER) && other->think)
+		if ((other->svflags & SVF_MONSTER) && other->think)
 			other->think(other);
 	}
 
@@ -553,8 +476,8 @@ argv(6) roll
 =================
 */
 static void Cmd_Teleport_f(gentity_t *ent) {
-	if (gi.argc() < 4 || !Q_strcasecmp(gi.argv(1), "?")) {
-		FormatUsage(gi.argv(0), { "x", "y", "z" }, { "pitch", "yaw", "roll" }, "Instantly moves the player to the specified coordinates within the world, optionally with the specified angles");
+	if (gi.argc() < 4) {
+		gi.LocClient_Print(ent, PRINT_HIGH, "Usage: {} <x> <y> <z> <pitch> <yaw> <roll>\n", gi.argv(0));
 		return;
 	}
 
@@ -570,7 +493,7 @@ static void Cmd_Teleport_f(gentity_t *ent) {
 
 		ent->client->ps.pmove.delta_angles = (ang - ent->client->resp.cmd_angles);
 		ent->client->ps.viewangles = {};
-		ent->client->vAngle = {};
+		ent->client->v_angle = {};
 	}
 
 	gi.linkentity(ent);
@@ -582,12 +505,10 @@ TimeoutEnd
 ==================
 */
 void TimeoutEnd() {
-	level.timeoutActive = 0_ms;
-	level.timeoutOwner = nullptr;
+	level.timeout_in_place = 0_ms;
+	level.timeout_ent = nullptr;
 	gi.Broadcast_Print(PRINT_CENTER, "Timeout has ended.\n");
 	gi.positioned_sound(world->s.origin, world, CHAN_RELIABLE | CHAN_NO_PHS_ADD | CHAN_AUX, gi.soundindex("misc/tele_up.wav"), 1, ATTN_NONE, 0);
-
-	G_LogEvent("MATCH TIMEOUT ENDED");
 }
 
 /*
@@ -598,17 +519,17 @@ Ends a timeout session.
 ==================
 */
 static void Cmd_TimeIn_f(gentity_t *ent) {
-	if (!level.timeoutActive) {
+	if (!level.timeout_in_place) {
 		gi.Client_Print(ent, PRINT_HIGH, "A timeout is not currently in effect.\n");
 		return;
 	}
-	if (!ent->client->sess.admin && level.timeoutOwner != ent) {
+	if (!ent->client->sess.admin && level.timeout_ent != ent) {
 		gi.Client_Print(ent, PRINT_HIGH, "The timeout can only be ended by the timeout caller or an admin.\n");
 		return;
 	}
 
-	gi.LocBroadcast_Print(PRINT_HIGH, "{} is resuming the match.\n", ent->client->sess.netName);
-	level.timeoutActive = 3_sec;
+	gi.LocBroadcast_Print(PRINT_HIGH, "{} is resuming the match.\n", ent->client->pers.netname);
+	level.timeout_in_place = 3_sec;
 }
 
 /*
@@ -623,7 +544,7 @@ static void Cmd_TimeOut_f(gentity_t *ent) {
 		gi.Client_Print(ent, PRINT_HIGH, "Server has disabled timeouts.\n");
 		return;
 	}
-	if (level.match_state != MatchState::MATCH_IN_PROGRESS) {
+	if (level.match_state != MATCH_IN_PROGRESS) {
 		gi.Client_Print(ent, PRINT_HIGH, "Timeouts can only be issued during a match.\n");
 		return;
 	}
@@ -631,18 +552,16 @@ static void Cmd_TimeOut_f(gentity_t *ent) {
 		gi.Client_Print(ent, PRINT_HIGH, "You have already used your timeout.\n");
 		return;
 	}
-	if (level.timeoutActive > 0_ms) {
+	if (level.timeout_in_place > 0_ms) {
 		gi.Client_Print(ent, PRINT_HIGH, "A timeout is already in progress.\n");
 		return;
 	}
 
-	level.timeoutOwner = ent;
-	level.timeoutActive = gtime_t::from_sec(g_dm_timeout_length->integer);
-	gi.LocBroadcast_Print(PRINT_CENTER, "{} called a timeout!\n{} has been granted.", ent->client->sess.netName, TimeString(g_dm_timeout_length->integer * 1000, false, false));
+	level.timeout_ent = ent;
+	level.timeout_in_place = gtime_t::from_sec(g_dm_timeout_length->integer);
+	gi.LocBroadcast_Print(PRINT_CENTER, "{} called a timeout!\n{} has been granted.", ent->client->resp.netname, G_TimeString(g_dm_timeout_length->integer * 1000, false));
 	gi.positioned_sound(world->s.origin, world, CHAN_RELIABLE | CHAN_NO_PHS_ADD | CHAN_AUX, gi.soundindex("world/klaxon2.wav"), 1, ATTN_NONE, 0);
 	ent->client->pers.timeout_used = true;
-
-	G_LogEvent("MATCH TIMEOUT STARTED");
 }
 
 /*
@@ -684,7 +603,7 @@ static void Cmd_AlertAll_f(gentity_t *ent) {
 	for (size_t i = 0; i < globals.num_entities; i++) {
 		gentity_t *t = &g_entities[i];
 
-		if (!t->inUse || t->health <= 0 || !(t->svFlags & SVF_MONSTER))
+		if (!t->inuse || t->health <= 0 || !(t->svflags & SVF_MONSTER))
 			continue;
 
 		t->enemy = ent;
@@ -700,8 +619,8 @@ argv(0) noclip
 ==================
 */
 static void Cmd_NoClip_f(gentity_t *ent) {
-	ent->moveType = ent->moveType == MOVETYPE_NOCLIP ? MOVETYPE_WALK : MOVETYPE_NOCLIP;
-	Cmd_Print_State(ent, ent->moveType == MOVETYPE_NOCLIP);
+	ent->movetype = ent->movetype == MOVETYPE_NOCLIP ? MOVETYPE_WALK : MOVETYPE_NOCLIP;
+	Cmd_Print_State(ent, ent->movetype == MOVETYPE_NOCLIP);
 }
 
 /*
@@ -720,7 +639,7 @@ static void Cmd_Use_f(gentity_t *ent) {
 	if (!Q_strcasecmp(cmd, "use_index") || !Q_strcasecmp(cmd, "use_index_only")) {
 		it = GetItemByIndex((item_id_t)atoi(s));
 	} else {
-		if (!Q_strcasecmp(s, "holdable")) {
+		if (!strcmp(s, "holdable")) {
 			if (ent->client->pers.inventory[IT_AMMO_NUKE])
 				it = GetItemByIndex(IT_AMMO_NUKE);
 			else if (ent->client->pers.inventory[IT_DOPPELGANGER])
@@ -748,7 +667,7 @@ static void Cmd_Use_f(gentity_t *ent) {
 	}
 	index = it->id;
 
-	if (CombatIsDisabled() && !(it->flags & IF_WEAPON))
+	if (IsCombatDisabled() && !(it->flags & IF_WEAPON))
 		return;
 
 	// Paril: Use_Weapon handles weapon availability
@@ -778,7 +697,7 @@ static void Cmd_Drop_f(gentity_t *ent) {
 	const char	*s;
 
 	// don't drop anything when combat is disabled
-	if (CombatIsDisabled())
+	if (IsCombatDisabled())
 		return;
 
 	s = gi.args();
@@ -814,8 +733,6 @@ static void Cmd_Drop_f(gentity_t *ent) {
 			gi.Client_Print(ent, PRINT_HIGH, "Weapon and ammo dropping is not available in this mode.\n");
 			return;
 		}
-	} else if (it->flags & IF_WEAPON && deathmatch->integer && g_dm_weapons_stay->integer) {
-		gi.Client_Print(ent, PRINT_HIGH, "Weapon dropping is not available during weapons stay mode.\n");
 	}
 
 	if (t != nullptr) {
@@ -855,7 +772,7 @@ static void Cmd_Drop_f(gentity_t *ent) {
 
 	if (Teams() && g_teamplay_item_drop_notice->integer) {
 		// add drop notice to all team mates
-		//BroadcastTeamMessage(ent->client->sess.team, PRINT_CHAT, G_Fmt("[TEAM]: {} drops {}\n", ent->client->sess.netName, it->use_name).data());
+		//BroadcastTeamMessage(ent->client->sess.team, PRINT_CHAT, G_Fmt("[TEAM]: {} drops {}\n", ent->client->resp.netname, it->use_name).data());
 
 		uint32_t key = GetUnicastKey();
 
@@ -864,11 +781,11 @@ static void Cmd_Drop_f(gentity_t *ent) {
 				continue;
 			if (ClientIsPlaying(ec->client) && !OnSameTeam(ent, ec))
 				continue;
-			if (!ClientIsPlaying(ec->client) && !ec->client->followTarget)
+			if (!ClientIsPlaying(ec->client) && !ec->client->follow_target)
 				continue;
-			if (!ClientIsPlaying(ec->client) && ec->client->followTarget && !OnSameTeam(ent, ec->client->followTarget))
+			if (!ClientIsPlaying(ec->client) && ec->client->follow_target && !OnSameTeam(ent, ec->client->follow_target))
 				continue;
-			if (!ClientIsPlaying(ec->client) && ec->client->followTarget && ent == ec->client->followTarget)
+			if (!ClientIsPlaying(ec->client) && ec->client->follow_target && ent == ec->client->follow_target)
 				continue;
 			
 			gi.WriteByte(svc_poi);
@@ -881,7 +798,7 @@ static void Cmd_Drop_f(gentity_t *ent) {
 			gi.unicast(ec, false);
 			gi.local_sound(ec, CHAN_AUTO, gi.soundindex("misc/help_marker.wav"), 1.0f, ATTN_NONE, 0.0f, key);
 			
-			gi.LocClient_Print(ec, PRINT_TTS, G_Fmt("[TEAM]: {} drops {}\n", ent->client->sess.netName, it->use_name).data(), ent->client->sess.netName);
+			gi.LocClient_Print(ec, PRINT_TTS, G_Fmt("[TEAM]: {} drops {}\n", ent->client->resp.netname, it->use_name).data(), ent->client->resp.netname);
 		}
 	}
 
@@ -899,8 +816,8 @@ static void Cmd_Inven_f(gentity_t *ent) {
 
 	cl = ent->client;
 
-	cl->showScores = false;
-	cl->showHelp = false;
+	cl->showscores = false;
+	cl->showhelp = false;
 
 	globals.server_flags &= ~SERVER_FLAG_SLOW_TIME;
 
@@ -917,8 +834,8 @@ static void Cmd_Inven_f(gentity_t *ent) {
 		return;
 	}
 
-	if (cl->showInventory) {
-		cl->showInventory = false;
+	if (cl->showinventory) {
+		cl->showinventory = false;
 		return;
 	}
 
@@ -931,7 +848,7 @@ static void Cmd_Inven_f(gentity_t *ent) {
 	}
 	globals.server_flags |= SERVER_FLAG_SLOW_TIME;
 
-	cl->showInventory = true;
+	cl->showinventory = true;
 
 	gi.WriteByte(svc_inventory);
 	for (i = 0; i < IT_TOTAL; i++)
@@ -957,7 +874,7 @@ static void Cmd_InvUse_f(gentity_t *ent) {
 	if (!ClientIsPlaying(ent->client))
 		return;
 
-	if (ent->health <= 0 || ent->deadFlag)
+	if (ent->health <= 0 || ent->deadflag)
 		return;
 
 	ValidateSelectedItem(ent);
@@ -967,7 +884,7 @@ static void Cmd_InvUse_f(gentity_t *ent) {
 		return;
 	}
 
-	it = &itemList[ent->client->pers.selected_item];
+	it = &itemlist[ent->client->pers.selected_item];
 	if (!it->use) {
 		gi.LocClient_Print(ent, PRINT_HIGH, "$g_item_not_usable");
 		return;
@@ -991,10 +908,7 @@ static void Cmd_WeapPrev_f(gentity_t *ent) {
 	gitem_t		*it;
 	item_id_t	selected_weapon;
 
-	if (cl->menu) {
-		P_Menu_Prev(ent);
-		return;
-	} else if (!cl->pers.weapon)
+	if (!cl->pers.weapon)
 		return;
 
 	// don't allow weapon chains for weapprev
@@ -1009,7 +923,7 @@ static void Cmd_WeapPrev_f(gentity_t *ent) {
 		if (!cl->pers.inventory[index])
 			continue;
 
-		it = &itemList[index];
+		it = &itemlist[index];
 		if (!it->use)
 			continue;
 
@@ -1017,7 +931,7 @@ static void Cmd_WeapPrev_f(gentity_t *ent) {
 			continue;
 
 		it->use(ent, it);
-		if (cl->newWeapon == it)
+		if (cl->newweapon == it)
 			return; // successful
 	}
 }
@@ -1033,10 +947,7 @@ static void Cmd_WeapNext_f(gentity_t *ent) {
 	gitem_t		*it;
 	item_id_t	selected_weapon;
 
-	if (cl->menu) {
-		P_Menu_Next(ent);
-		return;
-	} else if (!cl->pers.weapon)
+	if (!cl->pers.weapon)
 		return;
 
 	// don't allow weapon chains for weapnext
@@ -1051,7 +962,7 @@ static void Cmd_WeapNext_f(gentity_t *ent) {
 		if (!cl->pers.inventory[index])
 			continue;
 
-		it = &itemList[index];
+		it = &itemlist[index];
 		if (!it->use)
 			continue;
 
@@ -1061,7 +972,7 @@ static void Cmd_WeapNext_f(gentity_t *ent) {
 		it->use(ent, it);
 		// PMM - prevent scrolling through ALL weapons
 
-		if (cl->newWeapon == it)
+		if (cl->newweapon == it)
 			return;
 	}
 }
@@ -1086,7 +997,7 @@ static void Cmd_WeapLast_f(gentity_t *ent) {
 	if (!cl->pers.inventory[index])
 		return;
 
-	it = &itemList[index];
+	it = &itemlist[index];
 	if (!it->use)
 		return;
 
@@ -1111,7 +1022,7 @@ static void Cmd_InvDrop_f(gentity_t *ent) {
 		return;
 	}
 
-	it = &itemList[ent->client->pers.selected_item];
+	it = &itemlist[ent->client->pers.selected_item];
 	if (!it->drop) {
 		gi.LocClient_Print(ent, PRINT_HIGH, "$g_item_not_droppable");
 		return;
@@ -1127,11 +1038,11 @@ Cmd_Forfeit_f
 =================
 */
 static void Cmd_Forfeit_f(gentity_t *ent) {
-	if (notGTF(GTF_1V1)) {
-		gi.LocClient_Print(ent, PRINT_HIGH, "Forfeit is only available during Duel or Gauntlet.\n");
+	if (notGT(GT_DUEL)) {
+		gi.LocClient_Print(ent, PRINT_HIGH, "Forfeit is only available in a duel.\n");
 		return;
 	}
-	if (level.match_state < MatchState::MATCH_IN_PROGRESS) {
+	if (level.match_state < matchst_t::MATCH_IN_PROGRESS) {
 		gi.LocClient_Print(ent, PRINT_HIGH, "Forfeit is not available during warmup.\n");
 		return;
 	}
@@ -1144,7 +1055,7 @@ static void Cmd_Forfeit_f(gentity_t *ent) {
 		return;
 	}
 
-	QueueIntermission(G_Fmt("{} forfeits the match.", ent->client->sess.netName).data(), true, false);
+	QueueIntermission(G_Fmt("{} forfeits the match.", ent->client->resp.netname).data(), true, false);
 }
 
 /*
@@ -1153,28 +1064,22 @@ Cmd_Kill_f
 =================
 */
 static void Cmd_Kill_f(gentity_t *ent) {
-	if (deathmatch->integer && notGT(GT_RACE) && (level.time - ent->client->respawn_time) < 5_sec)
+	if ((level.time - ent->client->respawn_time) < 5_sec)
 		return;
 
-	if (CombatIsDisabled())
+	if (IsCombatDisabled())
 		return;
-
-	if (GT(GT_RACE)) {
-		ClientSpawn(ent);
-		G_PostRespawn(ent);
-		return;
-	}
 
 	ent->flags &= ~FL_GODMODE;
 	ent->health = 0;
 
 	//  make sure no trackers are still hurting us.
-	if (ent->client->trackerPainTime)
+	if (ent->client->tracker_pain_time)
 		RemoveAttackingPainDaemons(ent);
 
-	if (ent->client->ownedSphere) {
-		FreeEntity(ent->client->ownedSphere);
-		ent->client->ownedSphere = nullptr;
+	if (ent->client->owned_sphere) {
+		G_FreeEntity(ent->client->owned_sphere);
+		ent->client->owned_sphere = nullptr;
 	}
 
 	// [Paril-KEX] don't allow kill to take points away in TDM
@@ -1190,23 +1095,23 @@ static void Cmd_Kill_AI_f(gentity_t *ent) {
 	// except the one we're looking at...
 	gentity_t *looked_at = nullptr;
 
-	vec3_t start = ent->s.origin + vec3_t{ 0.f, 0.f, (float)ent->viewHeight };
-	vec3_t end = start + ent->client->vForward * 1024.f;
+	vec3_t start = ent->s.origin + vec3_t{ 0.f, 0.f, (float)ent->viewheight };
+	vec3_t end = start + ent->client->v_forward * 1024.f;
 
 	looked_at = gi.traceline(start, end, ent, MASK_SHOT).ent;
 
 	const int numEntities = globals.num_entities;
 	for (int entnum = 1; entnum < numEntities; ++entnum) {
 		gentity_t *entity = &g_entities[entnum];
-		if (!entity->inUse || entity == looked_at) {
+		if (!entity->inuse || entity == looked_at) {
 			continue;
 		}
 
-		if ((entity->svFlags & SVF_MONSTER) == 0) {
+		if ((entity->svflags & SVF_MONSTER) == 0) {
 			continue;
 		}
 
-		FreeEntity(entity);
+		G_FreeEntity(entity);
 	}
 
 	gi.LocClient_Print(ent, PRINT_HIGH, "{}: All AI Are Dead...\n", __FUNCTION__);
@@ -1237,12 +1142,12 @@ Cmd_Clear_AI_Enemy_f
 static void Cmd_Clear_AI_Enemy_f(gentity_t *ent) {
 	for (size_t i = 1; i < globals.num_entities; i++) {
 		gentity_t *entity = &g_entities[i];
-		if (!entity->inUse)
+		if (!entity->inuse)
 			continue;
-		if ((entity->svFlags & SVF_MONSTER) == 0)
+		if ((entity->svflags & SVF_MONSTER) == 0)
 			continue;
 
-		entity->monsterInfo.aiflags |= AI_FORGET_ENEMY;
+		entity->monsterinfo.aiflags |= AI_FORGET_ENEMY;
 	}
 
 	gi.LocClient_Print(ent, PRINT_HIGH, "{}: Clear All AI Enemies...\n", __FUNCTION__);
@@ -1254,11 +1159,11 @@ Cmd_PutAway_f
 =================
 */
 static void Cmd_PutAway_f(gentity_t *ent) {
-	ent->client->showScores = false;
-	ent->client->showHelp = false;
-	ent->client->showInventory = false;
+	ent->client->showscores = false;
+	ent->client->showhelp = false;
+	ent->client->showinventory = false;
 
-	gentity_t *e = ent->client->followTarget ? ent->client->followTarget : ent;
+	gentity_t *e = ent->client->follow_target ? ent->client->follow_target : ent;
 	ent->client->ps.stats[STAT_SHOW_STATUSBAR] = !ClientIsPlaying(e->client) || e->client->eliminated ? 0 : 1;
 
 	globals.server_flags &= ~SERVER_FLAG_SLOW_TIME;
@@ -1273,12 +1178,7 @@ static void Cmd_PutAway_f(gentity_t *ent) {
 	}
 }
 
-/*
-=================
-ClientListSortByScore
-=================
-*/
-static int ClientListSortByScore(const void *a, const void *b) {
+static int PlayerSortByScore(const void *a, const void *b) {
 	int anum, bnum;
 
 	anum = *(const int *)a;
@@ -1296,17 +1196,93 @@ static int ClientListSortByScore(const void *a, const void *b) {
 
 /*
 =================
-ClientListSortByJoinTime
+PlayersList
 =================
 */
-static int ClientListSortByJoinTime(const void *a, const void *b) {
+static void PlayersList(gentity_t *ent, bool ranked) {
+	size_t	i, count;
+	static std::string	small, large;
+	int		index[MAX_CLIENTS_KEX] = { 0 };
+
+	small.clear();
+	large.clear();
+
+	count = 0;
+	for (auto ec : active_clients()) {
+		index[count] = ec - g_entities - 1;
+		count++;
+	}
+
+	// sort by score
+	if (ranked)
+		qsort(index, count, sizeof(index[0]), PlayerSortByScore);
+
+	// print information
+	large[0] = 0;
+
+	if (count) {
+		for (i = 0; i < count; i++) {
+			gclient_t *cl = &game.clients[index[i]];
+
+			char value[MAX_INFO_VALUE] = { 0 };
+			gi.Info_ValueForKey(cl->pers.userinfo, "name", value, sizeof(value));
+
+			fmt::format_to(std::back_inserter(small), FMT_STRING("{:9} {:32} {:32} {:02}:{:02} {:4} {:5} {}{}\n"), index[i], cl->pers.social_id, value, (level.time - cl->resp.entertime).milliseconds() / 60000,
+				((level.time - cl->resp.entertime).milliseconds() % 60000) / 1000, cl->ping,
+				cl->resp.score, cl->sess.duel_queued ? "QUEUE" : Teams_TeamName(cl->sess.team), cl->sess.admin ? " (admin)" : cl->sess.inactive ? " (inactive)" : "");
+
+			if (small.length() + large.length() > MAX_IDEAL_PACKET_SIZE - 50) { // can't print all of them in one packet
+				large += "...\n";
+				break;
+			}
+
+			large += small;
+			small.clear();
+		}
+
+		// remove the last newline
+		large.pop_back();
+	}
+
+	gi.LocClient_Print(ent, PRINT_HIGH | PRINT_NO_NOTIFY, "\nclientnum id                               name                             time  ping score team\n");
+	gi.LocClient_Print(ent, PRINT_HIGH | PRINT_NO_NOTIFY, "--------------------------------------------------------------------------------------------------------------\n");
+	gi.LocClient_Print(ent, PRINT_HIGH | PRINT_NO_NOTIFY, large.c_str());
+	gi.LocClient_Print(ent, PRINT_HIGH | PRINT_NO_NOTIFY, "\n--------------------------------------------------------------------------------------------------------------\n");
+	gi.LocClient_Print(ent, PRINT_HIGH | PRINT_NO_NOTIFY, "total players: {}\n", count);
+	gi.LocClient_Print(ent, PRINT_HIGH | PRINT_NO_NOTIFY, "\n");
+}
+
+/*
+=================
+Cmd_Players_f
+=================
+*/
+static void Cmd_Players_f(gentity_t *ent) {
+	PlayersList(ent, false);
+}
+
+/*
+=================
+Cmd_PlayersRanked_f
+=================
+*/
+static void Cmd_PlayersRanked_f(gentity_t *ent) {
+	PlayersList(ent, true);
+}
+
+/*
+=================
+PlayerSortByJoinTime
+=================
+*/
+static int PlayerSortByJoinTime(const void *a, const void *b) {
 	int anum, bnum;
 
 	anum = *(const int *)a;
 	bnum = *(const int *)b;
 
-	anum = game.clients[anum].sess.teamJoinTime.milliseconds();
-	bnum = game.clients[bnum].sess.teamJoinTime.milliseconds();
+	anum = game.clients[anum].sess.team_join_time.milliseconds();
+	bnum = game.clients[bnum].sess.team_join_time.milliseconds();
 
 	if (anum > bnum)
 		return -1;
@@ -1315,113 +1291,59 @@ static int ClientListSortByJoinTime(const void *a, const void *b) {
 	return 0;
 }
 
-const enum class ClientListSort {
-	CLIENTSORT_NONE,
-	CLIENTSORT_SCORE,
-	CLIENTSORT_TIME,
-};
-
 /*
 =================
-ClientList
+Cmd_PlayersJoinTime_f
 =================
 */
-static void ClientList(gentity_t *ent, ClientListSort sort) {
-	size_t i, count_total = 0, count_bots = 0, skill = 0;
-	int index[MAX_CLIENTS] = { 0 };
-	std::string row, chunk;
-	std::vector<std::string> messageChunks;
+static void Cmd_PlayersJoinTime_f(gentity_t *ent) {
+	size_t	i, count;
+	static std::string	small, large;
+	int		index[MAX_CLIENTS_KEX] = { 0 };
 
+	small.clear();
+	large.clear();
+
+	count = 0;
 	for (auto ec : active_clients()) {
-		index[count_total] = ec - g_entities - 1;
-		count_total++;
-		if (ec->client->sess.skillRating > 0)
-			skill += ec->client->sess.skillRating;
-		if (ec->client->sess.is_a_bot)
-			count_bots++;
+		index[count] = ec - g_entities - 1;
+		count++;
 	}
 
-	switch (sort) {
-	case ClientListSort::CLIENTSORT_SCORE:
-		qsort(index, count_total, sizeof(index[0]), ClientListSortByScore);
-		break;
-	case ClientListSort::CLIENTSORT_TIME:
-		qsort(index, count_total, sizeof(index[0]), ClientListSortByJoinTime);
-		break;
-	}
+	// sort by score
+	qsort(index, count, sizeof(index[0]), PlayerSortByJoinTime);
 
-	constexpr const char *header = "\nclientnum name                             id                                  sr   time ping score team\n";
-	constexpr const char *divider = "--------------------------------------------------------------------------------------------------------------------\n";
-	std::string fullOutput;
-	fullOutput += header;
-	fullOutput += divider;
+	// print information
+	large[0] = 0;
 
-	for (i = 0; i < count_total; i++) {
-		gclient_t *cl = &game.clients[index[i]];
+	if (count) {
+		for (i = 0; i < count; i++) {
+			gclient_t *cl = &game.clients[index[i]];
 
-		fmt::format_to(std::back_inserter(row), FMT_STRING("{:9} {:32} {:32} {:5} {:03}:{:02} {:4} {:5} {}{}{}\n"),
-			index[i],
-			cl->sess.netName,
-			cl->sess.socialID,
-			cl->sess.skillRating,
-			(level.time - cl->resp.enter_time).milliseconds() / 60000,
-			((level.time - cl->resp.enter_time).milliseconds() % 60000) / 1000,
-			cl->ping,
-			cl->resp.score,
-			cl->sess.versusQueued ? "QUEUE" : Teams_TeamName(cl->sess.team),
-			(index[i] == 0) ? " (host)" : cl->sess.admin ? " (admin)" : "",
-			cl->sess.inactive ? " (inactive)" : ""
-		);
+			char value[MAX_INFO_VALUE] = { 0 };
+			gi.Info_ValueForKey(cl->pers.userinfo, "name", value, sizeof(value));
 
-		if (fullOutput.length() + row.length() > 950) {
-			messageChunks.push_back(fullOutput);
-			fullOutput = header;
-			fullOutput += divider;
+			fmt::format_to(std::back_inserter(small), FMT_STRING("{:32} {:32}\n"), cl->sess.team_join_time.milliseconds(), value);
+
+			if (small.length() + large.length() > MAX_IDEAL_PACKET_SIZE - 50) { // can't print all of them in one packet
+				large += "...\n";
+				break;
+			}
+
+			large += small;
+			small.clear();
 		}
 
-		fullOutput += row;
-		row.clear();
+		// remove the last newline
+		large.pop_back();
 	}
 
-	if (!fullOutput.empty()) {
-		messageChunks.push_back(fullOutput);
-	}
-
-	for (const auto &msg : messageChunks) {
-		gi.LocClient_Print(ent, PRINT_HIGH | PRINT_NO_NOTIFY, "{}", msg);
-		gi.LocClient_Print(ent, PRINT_HIGH | PRINT_NO_NOTIFY, divider);
-	}
-
-	if ((count_total - count_bots) > 0)
-		gi.LocClient_Print(ent, PRINT_HIGH | PRINT_NO_NOTIFY, "total human players: {}\n", count_total - count_bots);
-	if (count_bots > 0)
-		gi.LocClient_Print(ent, PRINT_HIGH | PRINT_NO_NOTIFY, "total bot players: {}\n", count_bots);
-	if (skill > 0 && (count_total - count_bots) > 0)
-		gi.LocClient_Print(ent, PRINT_HIGH | PRINT_NO_NOTIFY, "average skill rating: {}\n", skill / (count_total - count_bots));
-
+	gi.LocClient_Print(ent, PRINT_HIGH | PRINT_NO_NOTIFY, "\nclientnum id                               name                             time  ping score team\n");
+	gi.LocClient_Print(ent, PRINT_HIGH | PRINT_NO_NOTIFY, "--------------------------------------------------------------------------------------------------------------\n");
+	gi.LocClient_Print(ent, PRINT_HIGH | PRINT_NO_NOTIFY, large.c_str());
+	gi.LocClient_Print(ent, PRINT_HIGH | PRINT_NO_NOTIFY, "\n--------------------------------------------------------------------------------------------------------------\n");
+	gi.LocClient_Print(ent, PRINT_HIGH | PRINT_NO_NOTIFY, "total players: {}\n", count);
 	gi.LocClient_Print(ent, PRINT_HIGH | PRINT_NO_NOTIFY, "\n");
-}
-
-/*
-=================
-Cmd_ClientList_f
-=================
-*/
-static void Cmd_ClientList_f(gentity_t *ent) {
-	ClientListSort sortMode = ClientListSort::CLIENTSORT_NONE;
-
-	if (gi.argc() > 1) {
-		std::string arg = gi.argv(1);
-		std::transform(arg.begin(), arg.end(), arg.begin(), ::tolower);
-
-		if (arg == "score") {
-			sortMode = ClientListSort::CLIENTSORT_SCORE;
-		} else if (arg == "time") {
-			sortMode = ClientListSort::CLIENTSORT_TIME;
-		}
-	}
-
-	ClientList(ent, sortMode);
 }
 
 bool CheckFlood(gentity_t *ent) {
@@ -1462,19 +1384,19 @@ static void Cmd_Wave_f(gentity_t *ent) {
 	int i = atoi(gi.argv(1));
 
 	// no dead or noclip waving
-	if (ent->deadFlag || ent->moveType == MOVETYPE_NOCLIP)
+	if (ent->deadflag || ent->movetype == MOVETYPE_NOCLIP)
 		return;
 
 	// can't wave when ducked
-	bool do_animate = ent->client->animPriority <= ANIM_WAVE && !(ent->client->ps.pmove.pm_flags & PMF_DUCKED);
+	bool do_animate = ent->client->anim_priority <= ANIM_WAVE && !(ent->client->ps.pmove.pm_flags & PMF_DUCKED);
 
 	if (do_animate)
-		ent->client->animPriority = ANIM_WAVE;
+		ent->client->anim_priority = ANIM_WAVE;
 
 	const char *other_notify_msg = nullptr, *other_notify_none_msg = nullptr;
 
 	vec3_t start, dir;
-	P_ProjectSource(ent, ent->client->vAngle, { 0, 0, 0 }, start, dir);
+	P_ProjectSource(ent, ent->client->v_angle, { 0, 0, 0 }, start, dir);
 
 	// see who we're aiming at
 	gentity_t *aiming_at = nullptr;
@@ -1487,7 +1409,7 @@ static void Cmd_Wave_f(gentity_t *ent) {
 		vec3_t cdir = player->s.origin - start;
 		float dist = cdir.normalize();
 
-		float dot = ent->client->vForward.dot(cdir);
+		float dot = ent->client->v_forward.dot(cdir);
 
 		if (dot < 0.97)
 			continue;
@@ -1504,7 +1426,7 @@ static void Cmd_Wave_f(gentity_t *ent) {
 		other_notify_none_msg = "$g_flipoff_none";
 		if (do_animate) {
 			ent->s.frame = FRAME_flip01 - 1;
-			ent->client->animEnd = FRAME_flip12;
+			ent->client->anim_end = FRAME_flip12;
 		}
 		break;
 	case GESTURE_SALUTE:
@@ -1512,7 +1434,7 @@ static void Cmd_Wave_f(gentity_t *ent) {
 		other_notify_none_msg = "$g_salute_none";
 		if (do_animate) {
 			ent->s.frame = FRAME_salute01 - 1;
-			ent->client->animEnd = FRAME_salute11;
+			ent->client->anim_end = FRAME_salute11;
 		}
 		break;
 	case GESTURE_TAUNT:
@@ -1520,7 +1442,7 @@ static void Cmd_Wave_f(gentity_t *ent) {
 		other_notify_none_msg = "$g_taunt_none";
 		if (do_animate) {
 			ent->s.frame = FRAME_taunt01 - 1;
-			ent->client->animEnd = FRAME_taunt17;
+			ent->client->anim_end = FRAME_taunt17;
 		}
 		break;
 	case GESTURE_WAVE:
@@ -1528,7 +1450,7 @@ static void Cmd_Wave_f(gentity_t *ent) {
 		other_notify_none_msg = "$g_wave_none";
 		if (do_animate) {
 			ent->s.frame = FRAME_wave01 - 1;
-			ent->client->animEnd = FRAME_wave11;
+			ent->client->anim_end = FRAME_wave11;
 		}
 		break;
 	case GESTURE_POINT:
@@ -1537,7 +1459,7 @@ static void Cmd_Wave_f(gentity_t *ent) {
 		other_notify_none_msg = "$g_point_none";
 		if (do_animate) {
 			ent->s.frame = FRAME_point01 - 1;
-			ent->client->animEnd = FRAME_point12;
+			ent->client->anim_end = FRAME_point12;
 		}
 		break;
 	}
@@ -1561,7 +1483,7 @@ static void Cmd_Wave_f(gentity_t *ent) {
 		if (CheckFlood(ent))
 			return;
 
-		trace_t tr = gi.traceline(start, start + (ent->client->vForward * 2048), ent, MASK_SHOT & ~CONTENTS_WINDOW);
+		trace_t tr = gi.traceline(start, start + (ent->client->v_forward * 2048), ent, MASK_SHOT & ~CONTENTS_WINDOW);
 		other_notify_msg = "$g_point_other_ping";
 
 		uint32_t key = GetUnicastKey();
@@ -1576,13 +1498,13 @@ static void Cmd_Wave_f(gentity_t *ent) {
 				gi.WriteShort(POI_PING + (ent->s.number - 1));
 				gi.WriteShort(5000);
 				gi.WritePosition(tr.endpos);
-				gi.WriteShort(level.picPing);
+				gi.WriteShort(level.pic_ping);
 				gi.WriteByte(208);
 				gi.WriteByte(POI_FLAG_NONE);
 				gi.unicast(player, false);
 
 				gi.local_sound(player, CHAN_AUTO, gi.soundindex("misc/help_marker.wav"), 1.0f, ATTN_NONE, 0.0f, key);
-				gi.LocClient_Print(player, PRINT_HIGH, other_notify_msg, ent->client->sess.netName);
+				gi.LocClient_Print(player, PRINT_HIGH, other_notify_msg, ent->client->resp.netname);
 			}
 		}
 	} else {
@@ -1590,24 +1512,24 @@ static void Cmd_Wave_f(gentity_t *ent) {
 			return;
 
 		gentity_t *targ = nullptr;
-		while ((targ = FindRadius(targ, ent->s.origin, 1024)) != nullptr) {
+		while ((targ = findradius(targ, ent->s.origin, 1024)) != nullptr) {
 			if (ent == targ) continue;
 			if (!targ->client) continue;
 			if (!gi.inPVS(ent->s.origin, targ->s.origin, false)) continue;
 
 			if (aiming_at && other_notify_msg)
-				gi.LocClient_Print(targ, PRINT_TTS, other_notify_msg, ent->client->sess.netName, aiming_at->client->sess.netName);
+				gi.LocClient_Print(targ, PRINT_TTS, other_notify_msg, ent->client->resp.netname, aiming_at->client->resp.netname);
 			else if (other_notify_none_msg)
-				gi.LocClient_Print(targ, PRINT_TTS, other_notify_none_msg, ent->client->sess.netName);
+				gi.LocClient_Print(targ, PRINT_TTS, other_notify_none_msg, ent->client->resp.netname);
 		}
 
 		if (aiming_at && other_notify_msg)
-			gi.LocClient_Print(ent, PRINT_TTS, other_notify_msg, ent->client->sess.netName, aiming_at->client->sess.netName);
+			gi.LocClient_Print(ent, PRINT_TTS, other_notify_msg, ent->client->resp.netname, aiming_at->client->resp.netname);
 		else if (other_notify_none_msg)
-			gi.LocClient_Print(ent, PRINT_TTS, other_notify_none_msg, ent->client->sess.netName);
+			gi.LocClient_Print(ent, PRINT_TTS, other_notify_none_msg, ent->client->resp.netname);
 	}
 
-	ent->client->animTime = 0_ms;
+	ent->client->anim_time = 0_ms;
 }
 
 #ifndef KEX_Q2_GAME
@@ -1629,7 +1551,7 @@ static void Cmd_Say_f(gentity_t *ent, bool arg0) {
 		return;
 
 	text.clear();
-	fmt::format_to(std::back_inserter(text), FMT_STRING("{}: "), ent->client->sess.netName);
+	fmt::format_to(std::back_inserter(text), FMT_STRING("{}: "), ent->client->resp.netname);
 
 	if (arg0) {
 		text += gi.argv(0);
@@ -1657,7 +1579,7 @@ static void Cmd_Say_f(gentity_t *ent, bool arg0) {
 
 	for (uint32_t j = 1; j <= game.maxclients; j++) {
 		other = &g_entities[j];
-		if (!other->inUse)
+		if (!other->inuse)
 			continue;
 		if (!other->client)
 			continue;
@@ -1690,11 +1612,11 @@ static void Cmd_Say_Team_f(gentity_t *who, const char *msg_in) {
 
 	for (size_t i = 0; i < game.maxclients; i++) {
 		cl_ent = g_entities + 1 + i;
-		if (!cl_ent->inUse)
+		if (!cl_ent->inuse)
 			continue;
 		if (cl_ent->client->sess.team == who->client->sess.team)
 			gi.LocClient_Print(cl_ent, PRINT_CHAT, "({}): {}\n",
-				who->client->sess.netName, msg);
+				who->client->resp.netname, msg);
 	}
 }
 #endif
@@ -1710,11 +1632,11 @@ static void Cmd_ListEntities_f(gentity_t *ent) {
 	for (size_t i = 1; i < game.maxentities; i++) {
 		gentity_t *e = &g_entities[i];
 
-		if (!e || !e->inUse)
+		if (!e || !e->inuse)
 			continue;
 		
 		if (gi.argc() > 1) {
-			if (!strstr(e->className, gi.argv(1)))
+			if (!strstr(e->classname, gi.argv(1)))
 				continue;
 		}
 		if (gi.argc() > 2) {
@@ -1756,14 +1678,14 @@ static void Cmd_ListMonsters_f(gentity_t *ent) {
 	if (!g_debug_monster_kills->integer)
 		return;
 
-	for (size_t i = 0; i < level.totalMonsters; i++) {
-		gentity_t *e = level.monstersRegistered[i];
+	for (size_t i = 0; i < level.total_monsters; i++) {
+		gentity_t *e = level.monsters_registered[i];
 
-		if (!e || !e->inUse)
+		if (!e || !e->inuse)
 			continue;
-		else if (!(e->svFlags & SVF_MONSTER) || (e->monsterInfo.aiflags & AI_DO_NOT_COUNT))
+		else if (!(e->svflags & SVF_MONSTER) || (e->monsterinfo.aiflags & AI_DO_NOT_COUNT))
 			continue;
-		else if (e->deadFlag)
+		else if (e->deadflag)
 			continue;
 
 		gi.Com_PrintFmt("{}\n", *e);
@@ -1841,7 +1763,7 @@ void BroadcastTeamChange(gentity_t *ent, int old_team, bool inactive, bool silen
 	if (!ent->client)
 		return;
 
-	if (notGTF(GTF_1V1) && ent->client->sess.team == old_team)
+	if (notGT(GT_DUEL) && ent->client->sess.team == old_team)
 		return;
 
 	if (silent)
@@ -1852,24 +1774,20 @@ void BroadcastTeamChange(gentity_t *ent, int old_team, bool inactive, bool silen
 	int32_t		client_num;
 
 	client_num = ent - g_entities - 1;
-	gi.Info_ValueForKey(ent->client->pers.userInfo, "name", name, sizeof(name));
+	gi.Info_ValueForKey(ent->client->pers.userinfo, "name", name, sizeof(name));
 
 	switch (ent->client->sess.team) {
 	case TEAM_FREE:
 		s = G_Fmt("{} joined the battle.\n", name).data();
-		//t = "%bind:inven:Toggles Menu%You have joined the game."; 
-		if (ent->client->sess.skillRating > 0) {
-			t = G_Fmt("You have joined the game.\nYour Skill Rating: {}", ent->client->sess.skillRating).data();
-		} else {
-			t = "You have joined the game.";
-		}
+		//t = "%bind:inven:Toggles Menu%You have joined the game.";
+		t = "You have joined the game.";
 		break;
 	case TEAM_SPECTATOR:
 		if (inactive) {
 			s = G_Fmt("{} is inactive,\nmoved to spectators.\n", name).data();
 			t = "You are inactive and have been\nmoved to spectators.";
 		} else {
-			if (GTF(GTF_1V1) && ent->client->sess.versusQueued) {
+			if (GT(GT_DUEL) && ent->client->sess.duel_queued) {
 				s = G_Fmt("{} is in the queue to play.\n", name).data();
 				t = "You are in the queue to play.";
 			} else {
@@ -1881,12 +1799,7 @@ void BroadcastTeamChange(gentity_t *ent, int old_team, bool inactive, bool silen
 	case TEAM_RED:
 	case TEAM_BLUE:
 		s = G_Fmt("{} joined the {} Team.\n", name, Teams_TeamName(ent->client->sess.team)).data();
-
-		if (ent->client->sess.skillRating > 0) {
-			t = G_Fmt("You have joined the {} Team.\nYour Skill Rating: {}", Teams_TeamName(ent->client->sess.team), ent->client->sess.skillRating).data();
-		} else {
-			t = G_Fmt("You have joined the {} Team.\n", Teams_TeamName(ent->client->sess.team)).data();
-		}
+		t = G_Fmt("You have joined the {} Team.\n", Teams_TeamName(ent->client->sess.team)).data();
 		break;
 	}
 
@@ -1894,14 +1807,14 @@ void BroadcastTeamChange(gentity_t *ent, int old_team, bool inactive, bool silen
 		for (auto ec : active_clients()) {
 			if (ec == ent)
 				continue;
-			if (ec->svFlags & SVF_BOT)
+			if (ec->svflags & SVF_BOT)
 				continue;
 			gi.LocClient_Print(ec, PRINT_CENTER, s);
 		}
 		//gi.Com_Print(s);
 	}
 
-	if (g_dm_do_readyup->integer && level.match_state == MatchState::MATCH_WARMUP_READYUP) {
+	if (g_dm_do_readyup->integer && level.match_state == matchst_t::MATCH_WARMUP_READYUP) {
 		BroadcastReadyReminderMessage();
 	} else if (t) {
 		gi.LocClient_Print(ent, PRINT_CENTER, G_Fmt("%bind:inven:Toggles Menu%{}", t).data() );
@@ -1915,7 +1828,7 @@ AllowTeamSwitch
 */
 static bool AllowTeamSwitch(gentity_t *ent, team_t desired_team) {
 	/*
-	if (desired_team != ent->client->sess.team && GT(GT_RR) && level.match_state == MatchState::MATCH_IN_PROGRESS) {
+	if (desired_team != ent->client->sess.team && GT(GT_RR) && level.match_state == matchst_t::MATCH_IN_PROGRESS) {
 		gi.LocClient_Print(ent, PRINT_HIGH, "You cannot change teams during a Red Rover match.\n");
 		return false;
 	}
@@ -1956,13 +1869,13 @@ bool AllowClientTeamSwitch(gentity_t *ent) {
 		return false;
 
 	if (g_dm_force_join->integer || !g_teamplay_allow_team_pick->integer) {
-		if (!(ent->svFlags & SVF_BOT)) {
+		if (!(ent->svflags & SVF_BOT)) {
 			gi.LocClient_Print(ent, PRINT_HIGH, "Team picks are disabled.");
 			return false;
 		}
 	}
 	
-	if (ent->client->resp.teamDelayTime > level.time) {
+	if (ent->client->resp.team_delay_time > level.time) {
 		gi.LocClient_Print(ent, PRINT_HIGH, "You may not switch teams more than once per 5 seconds.\n");
 		return false;
 	}
@@ -2005,7 +1918,7 @@ int TeamBalance(bool force) {
 	}
 
 	// sort client num list by join time
-	qsort(index, count, sizeof(index[0]), ClientListSortByJoinTime);
+	qsort(index, count, sizeof(index[0]), PlayerSortByJoinTime);
 
 	//run through sort list, switching from stack_team until teams are even
 	if (count) {
@@ -2040,128 +1953,6 @@ int TeamBalance(bool force) {
 		}
 	}
 	return 0;
-}
-
-/*
-=============
-SortPlayersBySkillRating
-
-=============
-*/
-static int SortPlayersBySkillRating(const void *a, const void *b) {
-	gclient_t *ca, *cb;
-
-	ca = &game.clients[*(int *)a];
-	cb = &game.clients[*(int *)b];
-
-	// sort special clients last
-	if (ca->sess.spectator_client < 0)
-		return 1;
-	if (cb->sess.spectator_client < 0)
-		return -1;
-
-	// then connecting clients
-	if (!ca->pers.connected)
-		return 1;
-	if (!cb->pers.connected)
-		return -1;
-
-	// then spectators
-	if (!ClientIsPlaying(ca) && !ClientIsPlaying(cb)) {
-		if (ca->sess.versusQueued && cb->sess.versusQueued) {
-			if (ca->sess.teamJoinTime > cb->sess.teamJoinTime)
-				return -1;
-			if (ca->sess.teamJoinTime < cb->sess.teamJoinTime)
-				return 1;
-		}
-		if (ca->sess.versusQueued)
-			return -1;
-		if (cb->sess.versusQueued)
-			return 1;
-		if (ca->sess.teamJoinTime > cb->sess.teamJoinTime)
-			return -1;
-		if (ca->sess.teamJoinTime < cb->sess.teamJoinTime)
-			return 1;
-		return 0;
-	}
-	if (!ClientIsPlaying(ca))
-		return 1;
-	if (!ClientIsPlaying(cb))
-		return -1;
-
-	if (ca->sess.skillRating > cb->sess.skillRating)
-		return -1;
-	if (ca->sess.skillRating < cb->sess.skillRating)
-		return 1;
-
-	return 0;
-}
-
-/*
-================
-TeamSkillShuffle
-
-Randomly shuffles all players in teamplay, tries to balance the skill
-================
-*/
-bool TeamSkillShuffle() {
-	int totalSkill = 0, numPlayers = 0;
-	int oldRedSkill = 0, oldBlueSkill = 0;
-	int averageSkill;
-
-	if (!Teams())
-		return false;
-
-	// count total skill rating
-	for (auto ec : active_clients()) {
-		if (!ClientIsPlaying(ec->client))
-			continue;
-		totalSkill += ec->client->sess.skillRating;
-		numPlayers++;
-
-		if (ec->client->sess.team == TEAM_RED)
-			oldRedSkill += ec->client->sess.skillRating;
-		else if (ec->client->sess.team == TEAM_BLUE)
-			oldBlueSkill += ec->client->sess.skillRating;
-	}
-
-	if (numPlayers < 2)
-		return false;
-
-	averageSkill = totalSkill / numPlayers;
-
-	// sort players by skill
-	qsort(level.skill_sorted_clients, level.num_connected_clients, sizeof(level.skill_sorted_clients[0]), SortPlayersBySkillRating);
-
-	// divide players into pairs, decending down the skill ranking, randomly assign teams between the pairs
-	for (int i = 0; i < numPlayers / 2; i++) {
-		gclient_t *cl1 = &game.clients[level.skill_sorted_clients[i]];
-		gclient_t *cl2 = &game.clients[level.skill_sorted_clients[i+1]];
-		bool join_red = brandom();
-
-		cl1->sess.team = join_red ? TEAM_RED : TEAM_BLUE;
-
-		if (cl2)
-			cl2->sess.team = cl1->sess.team == TEAM_RED ? TEAM_BLUE : TEAM_RED;
-	}
-
-	Match_Reset();
-
-	int newRedSkill = 0, newBlueSkill = 0;
-
-	// count total skill rating
-	for (auto ec : active_clients()) {
-		if (!ClientIsPlaying(ec->client))
-			continue;
-		if (ec->client->sess.team == TEAM_RED)
-			newRedSkill += ec->client->sess.skillRating;
-		else if (ec->client->sess.team == TEAM_BLUE)
-			newBlueSkill += ec->client->sess.skillRating;
-	}
-
-	gi.LocBroadcast_Print(PRINT_HIGH, "Team shuffle result: RedSkill={}->{} BlueSkill={}->{}\n", oldRedSkill, newRedSkill, oldBlueSkill, newBlueSkill);
-
-	return true;
 }
 
 /*
@@ -2212,7 +2003,7 @@ bool TeamShuffle() {
 		ent = &g_entities[index[i-1]];
 		if (!ent)
 			continue;
-		if (!ent->inUse)
+		if (!ent->inuse)
 			continue;
 		if (!ent->client)
 			continue;
@@ -2250,7 +2041,7 @@ to free floating spectator mode
 static void StopFollowing(gentity_t *ent, bool release) {
 	gclient_t *client;
 
-	if (ent->svFlags & SVF_BOT || !ent->inUse)
+	if (ent->svflags & SVF_BOT || !ent->inuse)
 		return;
 
 	client = ent->client;
@@ -2264,7 +2055,7 @@ static void StopFollowing(gentity_t *ent, bool release) {
 	//SetClientViewAngle(ent, client->ps.viewangles);
 
 	//client->ps.pm_flags &= ~PMF_FOLLOW;
-	ent->svFlags &= SVF_BOT;
+	ent->svflags &= SVF_BOT;
 
 	//client->ps.clientnum = ent - g_entities;
 
@@ -2279,7 +2070,7 @@ static void StopFollowing(gentity_t *ent, bool release) {
 	ent->client->ps.gunframe = 0;
 	ent->client->ps.gunrate = 0;
 	ent->client->ps.screen_blend = {};
-	ent->client->ps.damageBlend = {};
+	ent->client->ps.damage_blend = {};
 	ent->client->ps.rdflags = RDF_NONE;
 }
 
@@ -2295,7 +2086,7 @@ bool SetTeam(gentity_t *ent, team_t desired_team, bool inactive, bool force, boo
 	if (!force) {
 		if (!ClientIsPlaying(ent->client) && desired_team != TEAM_SPECTATOR) {
 			bool revoke = false;
-			if (level.match_state >= MatchState::MATCH_COUNTDOWN && g_match_lock->integer) {
+			if (level.match_state >= matchst_t::MATCH_COUNTDOWN && g_match_lock->integer) {
 				gi.LocClient_Print(ent, PRINT_HIGH, "Match is locked whilst in progress, no joining permitted now.\n");
 				revoke = true;
 			} else if (level.num_playing_human_clients >= maxplayers->integer) {
@@ -2313,7 +2104,7 @@ bool SetTeam(gentity_t *ent, team_t desired_team, bool inactive, bool force, boo
 			return false;
 		}
 
-		if (GTF(GTF_1V1)) {
+		if (GT(GT_DUEL)) {
 			if (desired_team != TEAM_SPECTATOR && level.num_playing_clients >= 2) {
 				desired_team = TEAM_SPECTATOR;
 				queue = true;
@@ -2324,13 +2115,13 @@ bool SetTeam(gentity_t *ent, team_t desired_team, bool inactive, bool force, boo
 		if (!AllowTeamSwitch(ent, desired_team))
 			return false;
 
-		if (!inactive && ent->client->resp.teamDelayTime > level.time) {
+		if (!inactive && ent->client->resp.team_delay_time > level.time) {
 			gi.LocClient_Print(ent, PRINT_HIGH, "You may not switch teams more than once per 5 seconds.\n");
 			P_Menu_Close(ent);
 			return false;
 		}
 	} else {
-		if (GTF(GTF_1V1)) {
+		if (GT(GT_DUEL)) {
 			if (desired_team == TEAM_NONE) {
 				desired_team = TEAM_SPECTATOR;
 				queue = true;
@@ -2343,7 +2134,7 @@ bool SetTeam(gentity_t *ent, team_t desired_team, bool inactive, bool force, boo
 	P_Menu_Close(ent);
 
 	// start as spectator
-	if (ent->moveType == MOVETYPE_NOCLIP)
+	if (ent->movetype == MOVETYPE_NOCLIP)
 		Weapon_Grapple_DoReset(ent->client);
 
 	CTF_DeadDropFlag(ent);
@@ -2351,22 +2142,21 @@ bool SetTeam(gentity_t *ent, team_t desired_team, bool inactive, bool force, boo
 
 	FreeFollower(ent);
 
-	ent->svFlags &= ~SVF_NOCLIENT;
+	ent->svflags &= ~SVF_NOCLIENT;
 	ent->client->resp.score = 0;
 	ent->client->sess.team = desired_team;
 	ent->client->resp.ctf_state = 0;
 	ent->client->sess.inactive = inactive;
 	ent->client->sess.inactivity_time = level.time + 1_min;
-	ent->client->sess.teamJoinTime = desired_team == TEAM_SPECTATOR ? 0_sec : level.time;
-	ent->client->sess.playStartTime = level.time;
-	ent->client->resp.teamDelayTime = force || !ent->client->sess.initialised ? level.time : level.time + 5_sec;
+	ent->client->sess.team_join_time = desired_team == TEAM_SPECTATOR ? 0_sec : level.time;
+	ent->client->resp.team_delay_time = force || !ent->client->sess.initialised ? level.time : level.time + 5_sec;
 	ent->client->sess.spectator_state = desired_team == TEAM_SPECTATOR ? SPECTATOR_FREE : SPECTATOR_NOT;
 	ent->client->sess.spectator_client = 0;
-	ent->client->sess.versusQueued = queue;
+	ent->client->sess.duel_queued = queue;
 
 	if (desired_team != TEAM_SPECTATOR) {
 		if (Teams())
-			AssignPlayerSkin(ent, ent->client->sess.skin);
+			G_AssignPlayerSkin(ent, ent->client->pers.skin);
 
 		G_RevertVote(ent->client);
 
@@ -2379,8 +2169,8 @@ bool SetTeam(gentity_t *ent, team_t desired_team, bool inactive, bool force, boo
 
 	ent->client->sess.initialised = true;
 
-	// if they are playing gauntlet, count as a loss
-	if (GT(GT_GAUNTLET) && old_team == TEAM_FREE)
+	// if they are playing a duel, count as a loss
+	if (GT(GT_DUEL) && old_team == TEAM_FREE)
 		ent->client->sess.losses++;
 
 	ClientSpawn(ent);
@@ -2460,6 +2250,16 @@ static void Cmd_FragMessages_f(gentity_t *ent) {
 
 /*
 =================
+Cmd_Announcer_f
+=================
+*/
+static void Cmd_Announcer_f(gentity_t *ent) {
+	ent->client->sess.pc.use_expanded ^= true;
+	gi.LocClient_Print(ent, PRINT_HIGH, "Match announcer: {}\n", ent->client->sess.pc.use_expanded ? "ON" : "OFF");
+}
+
+/*
+=================
 Cmd_KillBeep_f
 =================
 */
@@ -2488,8 +2288,8 @@ Cmd_Ghost_f
 static void Cmd_Ghost_f(gentity_t *ent) {
 	int i, n;
 
-	if (gi.argc() < 2 || !Q_strcasecmp(gi.argv(1), "?")) {
-		FormatUsage(gi.argv(0), { "code" }, {}, "Reinstates a previous match state.");
+	if (gi.argc() < 2) {
+		gi.LocClient_Print(ent, PRINT_HIGH, "Usage: {} <code>\n", gi.argv(0));
 		return;
 	}
 
@@ -2497,14 +2297,14 @@ static void Cmd_Ghost_f(gentity_t *ent) {
 		gi.LocClient_Print(ent, PRINT_HIGH, "You are already in the game.\n");
 		return;
 	}
-	if (level.match_state != MatchState::MATCH_IN_PROGRESS) {
+	if (level.match_state != matchst_t::MATCH_IN_PROGRESS) {
 		gi.LocClient_Print(ent, PRINT_HIGH, "No match is in progress.\n");
 		return;
 	}
 
 	n = atoi(gi.argv(1));
 
-	for (i = 0; i < MAX_CLIENTS; i++) {
+	for (i = 0; i < MAX_CLIENTS_KEX; i++) {
 		if (level.ghosts[i].code && level.ghosts[i].code == n) {
 			gi.LocClient_Print(ent, PRINT_HIGH, "Ghost code accepted, your position has been reinstated.\n");
 			level.ghosts[i].ent->client->resp.ghost = nullptr;
@@ -2513,11 +2313,11 @@ static void Cmd_Ghost_f(gentity_t *ent) {
 			ent->client->resp.score = level.ghosts[i].score;
 			ent->client->resp.ctf_state = 0;
 			level.ghosts[i].ent = ent;
-			ent->svFlags = SVF_NONE;
+			ent->svflags = SVF_NONE;
 			ent->flags &= ~FL_GODMODE;
 			ClientSpawn(ent);
 			gi.LocBroadcast_Print(PRINT_HIGH, "{} has been reinstated to {} team.\n",
-				ent->client->sess.netName, Teams_TeamName(ent->client->sess.team));
+				ent->client->resp.netname, Teams_TeamName(ent->client->sess.team));
 			return;
 		}
 	}
@@ -2526,15 +2326,76 @@ static void Cmd_Ghost_f(gentity_t *ent) {
 
 
 static void Cmd_Stats_f(gentity_t *ent) {
-	if (notGTF(GTF_CTF))
+	if (!(GTF(GTF_CTF)))
 		return;
 
+	ghost_t *g;
+	static std::string text;
 
+	text.clear();
+
+	if (level.match_state == matchst_t::MATCH_WARMUP_READYUP) {
+		for (auto ec : active_clients()) {
+			if (!ClientIsPlaying(ec->client))
+				continue;
+			if (ec->client->resp.ready)
+				continue;
+
+			std::string_view str = G_Fmt("{} is not ready.\n", ec->client->resp.netname);
+			if (text.length() + str.length() < MAX_STRING_CHARS - 50)
+				text += str;
+		}
+	}
+
+	uint32_t i;
+	for (i = 0, g = level.ghosts; i < MAX_CLIENTS_KEX; i++, g++)
+		if (g->ent)
+			break;
+
+	if (i == MAX_CLIENTS_KEX) {
+		if (!text.length())
+			text = "No statistics available.\n";
+
+		gi.Client_Print(ent, PRINT_HIGH, text.c_str());
+		return;
+	}
+
+	text += "  #|Name            |Score|Kills|Death|BasDf|CarDf|Effcy|\n";
+
+	for (i = 0, g = level.ghosts; i < MAX_CLIENTS_KEX; i++, g++) {
+		if (!*g->netname)
+			continue;
+
+		int32_t e;
+
+		if (g->deaths + g->kills == 0)
+			e = 50;
+		else
+			e = g->kills * 100 / (g->kills + g->deaths);
+		std::string_view str = G_Fmt("{:3}|{:<16.16}|{:5}|{:5}|{:5}|{:5}|{:5}|{:4}%|\n",
+			g->number,
+			g->netname,
+			g->score,
+			g->kills,
+			g->deaths,
+			g->basedef,
+			g->carrierdef,
+			e);
+
+		if (text.length() + str.length() > MAX_STRING_CHARS - 50) {
+			text += "And more...\n";
+			break;
+		}
+
+		text += str;
+	}
+
+	gi.Client_Print(ent, PRINT_HIGH, text.c_str());
 }
 
 static void Cmd_Boot_f(gentity_t *ent) {
-	if (gi.argc() < 2 || !Q_strcasecmp(gi.argv(1), "?")) {
-		FormatUsage(gi.argv(0), { "client name/number" }, {}, "Removes the specified client from the server. Does not work properly in Kex.");
+	if (gi.argc() < 2) {
+		gi.LocClient_Print(ent, PRINT_HIGH, "Usage: {} [client name/num]\n", gi.argv(0));
 		return;
 	}
 
@@ -2572,54 +2433,28 @@ static bool Vote_Val_None(gentity_t *ent) {
 }
 
 void Vote_Pass_Map() {
-	const MapEntry *map = game.mapSystem.GetMapEntry(level.vote_arg);
-	if (!map) {
-		gi.Com_Print("Map not found in pool at vote pass stage.\n");
-		return;
-	}
-
-	level.changeMap = map->filename.c_str();
-	game.overrideEnableFlags = level.vote_flags_enable;
-	game.overrideDisableFlags = level.vote_flags_disable;
-
+	level.changemap = level.vote_arg.data();
 	ExitLevel();
 }
 
 static bool Vote_Val_Map(gentity_t *ent) {
-	if (gi.argc() < 3 || !Q_strcasecmp(gi.argv(1), "?")) {
-		PrintMapList(ent, false);
+	if (gi.argc() < 3) {
+		gi.LocClient_Print(ent, PRINT_HIGH, "Valid maps are: {}\n", g_map_list->string);
 		return false;
 	}
 
-	const char *mapName = gi.argv(2);
-	const MapEntry *map = game.mapSystem.GetMapEntry(mapName);
-	if (!map) {
-		gi.LocClient_Print(ent, PRINT_HIGH, "Map '{}' not found in map pool.\n", mapName);
-		PrintMapList(ent, false);
+	char *token;
+	const char *mlist = g_map_list->string;
+
+	while (*(token = COM_Parse(&mlist)))
+		if (!Q_strcasecmp(token, gi.argv(2)))
+			break;
+
+	if (!*token) {
+		gi.LocClient_Print(ent, PRINT_HIGH, "Unknown map.\n");
+		gi.LocClient_Print(ent, PRINT_HIGH, "Valid maps are: {}\n", g_map_list->string);
 		return false;
 	}
-
-	if (map->lastPlayed.seconds() > 0 && (level.time - map->lastPlayed) < 1800_sec) {
-		gi.LocClient_Print(ent, PRINT_HIGH, "Map '{}' was played recently.\n", mapName);
-		return false;
-	}
-
-	// Store map name and flags in level vars
-	level.vote_arg = map->filename;
-
-	// Parse override flags
-	uint8_t enableFlags = 0, disableFlags = 0;
-	std::vector<std::string> flags;
-	for (int i = 3; i < gi.argc(); ++i)
-		flags.emplace_back(gi.argv(i));
-
-	if (!ParseMyMapFlags(flags, enableFlags, disableFlags)) {
-		gi.LocClient_Print(ent, PRINT_HIGH, "Invalid flag(s). Use +pu -fd etc.\n");
-		return false;
-	}
-
-	level.vote_flags_enable = enableFlags;
-	level.vote_flags_disable = disableFlags;
 
 	return true;
 }
@@ -2629,7 +2464,7 @@ void Vote_Pass_RestartMatch() {
 }
 
 void Vote_Pass_Gametype() {
-	gametype_t gt = GametypeStringToIndex(level.vote_arg.data());
+	gametype_t gt = GT_IndexFromString(level.vote_arg.data());
 	if (gt == GT_NONE)
 		return;
 	
@@ -2637,7 +2472,7 @@ void Vote_Pass_Gametype() {
 }
 
 static bool Vote_Val_Gametype(gentity_t *ent) {
-	if (GametypeStringToIndex(gi.argv(2)) == gametype_t::GT_NONE) {
+	if (GT_IndexFromString(gi.argv(2)) == gametype_t::GT_NONE) {
 		gi.LocClient_Print(ent, PRINT_HIGH, "Invalid gametype.\n");
 		return false;
 	}
@@ -2668,30 +2503,13 @@ static bool Vote_Val_Ruleset(gentity_t *ent) {
 }
 
 void Vote_Pass_NextMap() {
-	// Play queue overrides auto-select
-	if (!game.mapSystem.playQueue.empty()) {
-		const auto &queued = game.mapSystem.playQueue.front();
-		level.nextMap = queued.filename;
-		level.overrideEnableFlags = queued.settings.to_ulong();
-		level.overrideDisableFlags = 0;
-		ExitLevel();
-		return;
-	}
-
-	auto result = AutoSelectNextMap();
-	if (result.has_value()) {
-		level.nextMap = result->filename;
-		level.overrideEnableFlags = 0;
-		level.overrideDisableFlags = 0;
-		ExitLevel();
-	} else {
-		gi.LocBroadcast_Print(PRINT_HIGH, "No eligible maps available.\n");
-	}
+	Match_End();
+	level.intermission_exit = true;
 }
 
 void Vote_Pass_ShuffleTeams() {
-	TeamSkillShuffle();
-	//Match_Reset();
+	TeamShuffle();
+	Match_Reset();
 	gi.LocBroadcast_Print(PRINT_HIGH, "Teams have been shuffled.\n");
 }
 
@@ -2746,7 +2564,7 @@ void Vote_Pass_Timelimit() {
 	if (!argi)
 		gi.LocBroadcast_Print(PRINT_HIGH, "Time limit has been DISABLED.\n");
 	else
-		gi.LocBroadcast_Print(PRINT_HIGH, "Time limit has been set to {}.\n", TimeString(argi * 60000, false, false));
+		gi.LocBroadcast_Print(PRINT_HIGH, "Time limit has been set to {}.\n", G_TimeString(argi * 60000, false));
 
 	gi.cvar_forceset("timelimit", s);
 }
@@ -2760,7 +2578,7 @@ static bool Vote_Val_Timelimit(gentity_t *ent) {
 	}
 	
 	if (argi == timelimit->integer) {
-		gi.LocClient_Print(ent, PRINT_HIGH, "Time limit is already set to {}.\n", TimeString(argi * 60000, false, false));
+		gi.LocClient_Print(ent, PRINT_HIGH, "Time limit is already set to {}.\n", G_TimeString(argi * 60000, false));
 		return false;
 	}
 	return true;
@@ -2808,7 +2626,7 @@ vcmds_t vote_cmds[] = {
 	{"map",					Vote_Val_Map,			Vote_Pass_Map,			1,		2,	"[mapname]",						"changes to the specified map"},
 	{"nextmap",				Vote_Val_None,			Vote_Pass_NextMap,		2,		1,	"",									"move to the next map in the rotation"},
 	{"restart",				Vote_Val_None,			Vote_Pass_RestartMatch,	4,		1,	"",									"restarts the current match"},
-	{"gametype",			Vote_Val_Gametype,		Vote_Pass_Gametype,		8,		2,	"<ffa|duel|tdm|ctf|ca|ft|horde|gauntlet>",	"changes the current gametype"},
+	{"gametype",			Vote_Val_Gametype,		Vote_Pass_Gametype,		8,		2,	"<ffa|duel|tdm|ctf|ca|ft|horde>",	"changes the current gametype"},
 	{"timelimit",			Vote_Val_Timelimit,		Vote_Pass_Timelimit,	16,		2,	"<0..$>",							"alters the match time limit, 0 for no time limit"},
 	{"scorelimit",			Vote_Val_Scorelimit,	Vote_Pass_Scorelimit,	32,		2,	"<0..$>",							"alters the match score limit, 0 for no score limit"},
 	{"shuffle",				Vote_Val_ShuffleTeams,	Vote_Pass_ShuffleTeams,	64,		2,	"",									"shuffles teams"},
@@ -2816,7 +2634,7 @@ vcmds_t vote_cmds[] = {
 	{"cointoss",			Vote_Val_None,			Vote_Pass_Cointoss,		256,	1,	"",									"invokes a HEADS or TAILS cointoss"},
 	{"random",				Vote_Val_Random,		Vote_Pass_Random,		512,	1,	"<2-100>",							"randomly selects a number from 2 to specified value"},
 	{"balance",				Vote_Val_BalanceTeams,	Vote_Pass_BalanceTeams,	1024,	1,	"",									"balance teams without shuffling"},
-	{"ruleset",				Vote_Val_Ruleset,		Vote_Pass_Ruleset,		2048,	2,	"<q1/q2/q3a>",						"changes the current ruleset"},
+	{"ruleset",				Vote_Val_Ruleset,		Vote_Pass_Ruleset,		2048,	2,	"<q2re|mm|q3a>",					"changes the current ruleset"},
 };
 
 /*
@@ -2895,16 +2713,16 @@ void VoteCommandStore(gentity_t *ent) {
 	level.vote_yes = 1;
 	level.vote_no = 0;
 	
-	gi.LocBroadcast_Print(PRINT_CENTER, "{} called a vote:\n{}{}\n", level.vote_client->sess.netName, level.vote->name, level.vote_arg[0] ? G_Fmt(" {}", level.vote_arg).data() : "");
+	gi.LocBroadcast_Print(PRINT_CENTER, "{} called a vote:\n{}{}\n", level.vote_client->resp.netname, level.vote->name, level.vote_arg[0] ? G_Fmt(" {}", level.vote_arg).data() : "");
 
 	for (auto ec : active_clients())
 		ec->client->pers.voted = ec == ent ? 1 : 0;
 
 	ent->client->pers.vote_count++;
-	AnnouncerSound(world, "vote_now");
+	AnnouncerSound(world, "vote_now", "misc/pc_up.wav", true);
 
 	for (auto ec : active_players()) {
-		if (ec->svFlags & SVF_BOT)
+		if (ec->svflags & SVF_BOT)
 			continue;
 
 		//gi.local_sound(ec, CHAN_AUTO, gi.soundindex("misc/pc_up.wav"), 1, ATTN_NONE, 0);
@@ -2915,10 +2733,10 @@ void VoteCommandStore(gentity_t *ent) {
 		if (!ClientIsPlaying(ec->client) && !g_allow_spec_vote->integer)
 			continue;
 
-		ec->client->showInventory = false;
-		ec->client->showHelp = false;
-		ec->client->showScores = false;
-		gentity_t *e = ec->client->followTarget ? ec->client->followTarget : ec;
+		ec->client->showinventory = false;
+		ec->client->showhelp = false;
+		ec->client->showscores = false;
+		gentity_t *e = ec->client->follow_target ? ec->client->follow_target : ec;
 		ec->client->ps.stats[STAT_SHOW_STATUSBAR] = !ClientIsPlaying(e->client) ? 0 : 1;
 		P_Menu_Close(ec);
 		G_Menu_Vote_Open(ec);
@@ -2953,7 +2771,7 @@ static void Cmd_CallVote_f(gentity_t *ent) {
 		return;
 	}
 
-	if (!g_allow_vote_midgame->integer && level.match_state >= MatchState::MATCH_COUNTDOWN) {
+	if (!g_allow_vote_midgame->integer && level.match_state >= matchst_t::MATCH_COUNTDOWN) {
 		gi.LocClient_Print(ent, PRINT_HIGH, "Voting is only allowed during the warm up period.\n");
 		return;
 	}
@@ -3005,8 +2823,8 @@ static void Cmd_Vote_f(gentity_t *ent) {
 		return;
 	}
 	
-	if (gi.argc() < 2 || !Q_strcasecmp(gi.argv(1), "?")) {
-		FormatUsage(gi.argv(0), { "yes", "no" }, {}, "Casts your vote in current voting session.");
+	if (gi.argc() < 2) {
+		gi.LocClient_Print(ent, PRINT_HIGH, "Usage: {} [yes/no]\nCasts your vote in current voting session.\n", gi.argv(0));
 		return;
 	}
 
@@ -3064,14 +2882,14 @@ static void Cmd_Follow_f(gentity_t *ent) {
 		gi.Client_Print(ent, PRINT_HIGH, "You must spectate before you can follow.\n");
 		return;
 	}
-	if (gi.argc() < 2 || !Q_strcasecmp(gi.argv(1), "?")) {
-		FormatUsage(gi.argv(0), { "client name/number" }, {}, "Follows the specified player.");
+	if (gi.argc() < 2) {
+		gi.LocClient_Print(ent, PRINT_HIGH, "Usage: {} [client name/num]\nFollows the specified player.", gi.argv(0));
 		return;
 	}
 
 	gentity_t *follow_ent = ClientEntFromString(gi.argv(1));
 
-	if (!follow_ent || !follow_ent->inUse) {
+	if (!follow_ent || !follow_ent->inuse) {
 		gi.Client_Print(ent, PRINT_HIGH, "Invalid client specified.\n");
 		return;
 	}
@@ -3081,7 +2899,7 @@ static void Cmd_Follow_f(gentity_t *ent) {
 		return;
 	}
 
-	ent->client->followTarget = follow_ent;
+	ent->client->follow_target = follow_ent;
 	ent->client->follow_update = true;
 	UpdateChaseCam(ent);
 }
@@ -3106,8 +2924,8 @@ static void Cmd_FollowLeader_f(gentity_t *ent) {
 	ent->client->sess.pc.follow_leader ^= true;
 	gi.LocClient_Print(ent, PRINT_HIGH, "Auto-follow leader: {}\n", ent->client->sess.pc.follow_leader ? "ON" : "OFF");
 
-	if (!ClientIsPlaying(ent->client) && ent->client->sess.pc.follow_leader && ent->client->followTarget != leader) {
-		ent->client->followTarget = leader;
+	if (!ClientIsPlaying(ent->client) && ent->client->sess.pc.follow_leader && ent->client->follow_target != leader) {
+		ent->client->follow_target = leader;
 		ent->client->follow_update = true;
 		UpdateChaseCam(ent);
 	}
@@ -3131,8 +2949,8 @@ Cmd_LockTeam_f
 =================
 */
 static void Cmd_LockTeam_f(gentity_t *ent) {
-	if (gi.argc() < 2 || !Q_strcasecmp(gi.argv(1), "?")) {
-		FormatUsage(gi.argv(0), { "team" }, {}, "Locks a team, prevents players from joining.");
+	if (gi.argc() < 2) {
+		gi.LocClient_Print(ent, PRINT_HIGH, "Usage: {} [team]\n", gi.argv(0));
 		return;
 	}
 
@@ -3158,8 +2976,8 @@ Cmd_UnlockTeam_f
 =================
 */
 static void Cmd_UnlockTeam_f(gentity_t *ent) {
-	if (gi.argc() < 2 || !Q_strcasecmp(gi.argv(1), "?")) {
-		FormatUsage(gi.argv(0), { "team" }, {}, "Unlocks a locked team, allows players to join the team.");
+	if (gi.argc() < 2) {
+		gi.LocClient_Print(ent, PRINT_HIGH, "Usage: {} [team]\n", gi.argv(0));
 		return;
 	}
 
@@ -3185,20 +3003,20 @@ Cmd_SetTeam_f
 =================
 */
 static void Cmd_SetTeam_f(gentity_t *ent) {
-	if (gi.argc() < 2 || !Q_strcasecmp(gi.argv(1), "?")) {
-		FormatUsage(gi.argv(0), { "client name/number" }, {}, "Moves the client to the team.");
+	if (gi.argc() < 2) {
+		gi.LocClient_Print(ent, PRINT_HIGH, "Usage: {} [client name/num] [team]\n", gi.argv(0));
 		return;
 	}
 
 	gentity_t *targ = ClientEntFromString(gi.argv(1));
 
-	if (!targ || !targ->inUse || !targ->client) {
+	if (!targ || !targ->inuse || !targ->client) {
 		gi.LocClient_Print(ent, PRINT_HIGH, "Invalid client name or number.\n");
 		return;
 	}
 
 	if (gi.argc() == 2) {
-		gi.LocClient_Print(ent, PRINT_HIGH, "{} is on {} team.\n", targ->client->sess.netName, gi.argv(0));
+		gi.LocClient_Print(ent, PRINT_HIGH, "{} is on {} team.\n", targ->client->resp.netname, gi.argv(0));
 		return;
 	}
 
@@ -3209,7 +3027,7 @@ static void Cmd_SetTeam_f(gentity_t *ent) {
 	}
 
 	if (targ->client->sess.team == team) {
-		gi.LocClient_Print(ent, PRINT_HIGH, "{} is already on {} team.\n", targ->client->sess.netName, Teams_TeamName(team));
+		gi.LocClient_Print(ent, PRINT_HIGH, "{} is already on {} team.\n", targ->client->resp.netname, Teams_TeamName(team));
 		return;
 	}
 
@@ -3218,7 +3036,7 @@ static void Cmd_SetTeam_f(gentity_t *ent) {
 		return;
 	}
 
-	gi.LocBroadcast_Print(PRINT_HIGH, "[ADMIN]: Moved {} to {} team.\n", targ->client->sess.netName, Teams_TeamName(team));
+	gi.LocBroadcast_Print(PRINT_HIGH, "[ADMIN]: Moved {} to {} team.\n", targ->client->resp.netname, Teams_TeamName(team));
 	SetTeam(targ, team, false, true, false);
 }
 
@@ -3229,8 +3047,8 @@ Cmd_Shuffle_f
 */
 static void Cmd_Shuffle_f(gentity_t *ent) {
 	gi.Broadcast_Print(PRINT_HIGH, "[ADMIN]: Forced team shuffle.\n");
-	TeamSkillShuffle();
-	//Match_Reset();
+	TeamShuffle();
+	Match_Reset();
 }
 
 /*
@@ -3249,7 +3067,7 @@ Cmd_StartMatch_f
 =================
 */
 static void Cmd_StartMatch_f(gentity_t *ent) {
-	if (level.match_state > MatchState::MATCH_WARMUP_READYUP) {
+	if (level.match_state > matchst_t::MATCH_WARMUP_READYUP) {
 		gi.LocClient_Print(ent, PRINT_HIGH, "Match has already started.\n");
 		return;
 	}
@@ -3264,11 +3082,11 @@ Cmd_EndMatch_f
 =================
 */
 static void Cmd_EndMatch_f(gentity_t *ent) {
-	if (level.match_state < MatchState::MATCH_IN_PROGRESS) {
+	if (level.match_state < matchst_t::MATCH_IN_PROGRESS) {
 		gi.LocClient_Print(ent, PRINT_HIGH, "Match has not yet begun.\n");
 		return;
 	}
-	if (level.intermissionTime) {
+	if (level.intermission_time) {
 		gi.LocClient_Print(ent, PRINT_HIGH, "Match has already ended.\n");
 		return;
 	}
@@ -3281,11 +3099,11 @@ Cmd_ResetMatch_f
 =================
 */
 static void Cmd_ResetMatch_f(gentity_t *ent) {
-	if (level.match_state < MatchState::MATCH_IN_PROGRESS) {
+	if (level.match_state < matchst_t::MATCH_IN_PROGRESS) {
 		gi.LocClient_Print(ent, PRINT_HIGH, "Match has not yet begun.\n");
 		return;
 	}
-	if (level.intermissionTime) {
+	if (level.intermission_time) {
 		gi.LocClient_Print(ent, PRINT_HIGH, "Match has already ended.\n");
 		return;
 	}
@@ -3330,19 +3148,12 @@ static void Cmd_Gametype_f(gentity_t *ent) {
 	if (!deathmatch->integer)
 		return;
 
-	if (gi.argc() < 2 || !Q_strcasecmp(gi.argv(1), "?")) {
-		FormatUsage(gi.argv(0),
-			{ "gametype name" },
-			{},
-			G_Fmt("Changes the current gametype. Current gametype is {} ({}).\nValid gametypes: {}\n",
-				gt_long_name[g_gametype->integer],
-				g_gametype->integer,
-				GametypeOptionList()).data()
-		);
+	if (gi.argc() < 2) {
+		gi.LocClient_Print(ent, PRINT_HIGH, "Usage: {} <ffa|duel|tdm|ctf|ca|ft|horde>\nChanges current gametype. Current gametype is {} ({}).\n", gi.argv(0), gt_long_name[g_gametype->integer], g_gametype->integer);
 		return;
 	}
 
-	gametype_t gt = GametypeStringToIndex(gi.argv(1));
+	gametype_t gt = GT_IndexFromString(gi.argv(1));
 	if (gt == GT_NONE) {
 		gi.LocClient_Print(ent, PRINT_HIGH, "Invalid gametype.\n");
 		return;
@@ -3360,14 +3171,8 @@ static void Cmd_Ruleset_f(gentity_t *ent) {
 	if (!deathmatch->integer)
 		return;
 
-	if (gi.argc() < 2 || !Q_strcasecmp(gi.argv(1), "?")) {
-		FormatUsage(gi.argv(0),
-			{ "q1/q2/q3a" },
-			{},
-			G_Fmt("Changes the current ruleset. Current ruleset is {} ({}).\nValid rulesets: <q1|q2|q3a>\n",
-				rs_long_name[static_cast<int>(game.ruleset)],
-				static_cast<int>(game.ruleset)).data()
-		);
+	if (gi.argc() < 2) {
+		gi.LocClient_Print(ent, PRINT_HIGH, "Usage: {} <q2re|mm|q3a>\nChanges current ruleset. Current ruleset is {} ({}).\n", gi.argv(0), rs_long_name[(int)game.ruleset], (int)game.ruleset);
 		return;
 	}
 
@@ -3381,13 +3186,8 @@ static void Cmd_Ruleset_f(gentity_t *ent) {
 }
 
 static void Cmd_SetMap_f(gentity_t *ent) {
-	if (gi.argc() < 2 || !Q_strcasecmp(gi.argv(1), "?")) {
-		FormatUsage(gi.argv(0),
-			{ "mapname" },
-			{},
-			"Changes to a map within the map list."
-		);
-		PrintMapList(ent);
+	if (gi.argc() < 2) {
+		gi.LocClient_Print(ent, PRINT_HIGH, "Usage: {} [mapname]\nChanges to a map within the map list.", gi.argv(0));
 		return;
 	}
 
@@ -3396,7 +3196,7 @@ static void Cmd_SetMap_f(gentity_t *ent) {
 		return;
 	}
 	gi.LocBroadcast_Print(PRINT_HIGH, "[ADMIN]: Changing map to {}\n", gi.argv(1));
-	level.changeMap = gi.argv(1);
+	level.changemap = gi.argv(1);
 	ExitLevel();
 }
 
@@ -3413,31 +3213,8 @@ static void Cmd_MapRestart_f(gentity_t *ent) {
 
 static void Cmd_NextMap_f(gentity_t *ent) {
 	gi.Broadcast_Print(PRINT_HIGH, "[ADMIN]: Changing to next map.\n");
-
-	// If queue has maps, use the first
-	if (!game.mapSystem.playQueue.empty()) {
-		const auto &queued = game.mapSystem.playQueue.front();
-		level.nextMap = queued.filename;
-		level.overrideEnableFlags = queued.settings.to_ulong();
-		level.overrideDisableFlags = 0;
-
-		game.mapSystem.playQueue.erase(game.mapSystem.playQueue.begin());
-		Match_End();
-		level.intermissionPreExit = true;
-		return;
-	}
-
-	// Otherwise auto-select one
-	if (auto result = AutoSelectNextMap(); result.has_value()) {
-		level.nextMap = result->filename;
-		level.overrideEnableFlags = 0;
-		level.overrideDisableFlags = 0;
-
-		Match_End();
-		level.intermissionPreExit = true;
-	} else {
-		gi.LocClient_Print(ent, PRINT_HIGH, "No eligible next map found.\n");
-	}
+	Match_End();
+	level.intermission_exit = true;
 }
 
 static void Cmd_Admin_f(gentity_t *ent) {
@@ -3454,7 +3231,7 @@ static void Cmd_Admin_f(gentity_t *ent) {
 		if (admin_password->string && *admin_password->string && Q_strcasecmp(admin_password->string, gi.argv(1)) == 0) {
 			if (!ent->client->sess.admin) {
 				ent->client->sess.admin = true;
-				gi.LocBroadcast_Print(PRINT_HIGH, "{} has become an admin.\n", ent->client->sess.netName);
+				gi.LocBroadcast_Print(PRINT_HIGH, "{} has become an admin.\n", ent->client->resp.netname);
 			}
 			return;
 		}
@@ -3467,7 +3244,7 @@ static void Cmd_Admin_f(gentity_t *ent) {
 /*----------------------------------------------------------------*/
 
 static bool ReadyConditions(gentity_t *ent, bool desired_status, bool admin_cmd) {
-	if (level.match_state == MatchState::MATCH_WARMUP_READYUP)
+	if (level.match_state == matchst_t::MATCH_WARMUP_READYUP)
 		return true;
 
 	const char *s = nullptr;
@@ -3478,14 +3255,14 @@ static bool ReadyConditions(gentity_t *ent, bool desired_status, bool admin_cmd)
 	}
 
 	switch (level.warmup_requisite) {
-	case WarmupState::WARMUP_REQ_MORE_PLAYERS:
+	case warmupreq_t::WARMUP_REQ_MORE_PLAYERS:
 	{
-		int minp = GTF(GTF_1V1) ? 2 : minplayers->integer;
+		int minp = GT(GT_DUEL) ? 2 : minplayers->integer;
 		int req = minp - level.num_playing_clients;
 		gi.LocClient_Print(ent, PRINT_HIGH, "{}{} more player{} present.\n", s, req, req > 1 ? "s are" : " is");
 		break;
 	}
-	case WarmupState::WARMUP_REQ_BALANCE:
+	case warmupreq_t::WARMUP_REQ_BALANCE:
 		gi.LocClient_Print(ent, PRINT_HIGH, "{}teams are balanced.\n", s);
 		break;
 	default:
@@ -3514,14 +3291,14 @@ static void Cmd_UnReadyAll_f(gentity_t *ent) {
 }
 
 static void BroadcastReadyStatus(gentity_t *ent) {
-	gi.LocBroadcast_Print(PRINT_CENTER, "%bind:+wheel2:Use Compass to toggle your ready status.%MATCH IS IN WARMUP\n{} is {}ready.", ent->client->sess.netName, ent->client->resp.ready ? "" : "NOT ");
+	gi.LocBroadcast_Print(PRINT_CENTER, "%bind:+wheel2:Use Compass to toggle your ready status.%MATCH IS IN WARMUP\n{} is {}ready.", ent->client->resp.netname, ent->client->resp.ready ? "" : "NOT ");
 }
 
 static void Cmd_Ready_f(gentity_t *ent) {
 	if (!ReadyConditions(ent, true, false))
 		return;
 
-	if (level.match_state != MatchState::MATCH_WARMUP_READYUP) {
+	if (level.match_state != matchst_t::MATCH_WARMUP_READYUP) {
 		gi.LocClient_Print(ent, PRINT_HIGH, "You cannot ready at this stage of the match.\n");
 		return;
 	}
@@ -3567,18 +3344,134 @@ static void Cmd_UnHook_f(gentity_t *ent) {
 	Weapon_Grapple_DoReset(ent->client);
 }
 
+// ======================================================
+// MAP QUEUE
+// ======================================================
+
+static void MQ_PrintList(gentity_t *ent) {
+	std::string text = "";
+	for (size_t i = 0; i < game.mapqueue.size(); i++) {
+		if (!game.mapqueue[i].empty())
+			text += game.mapqueue[i] + " ";	// G_Fmt("{} \n", game.mapqueue[i].data()).data();
+	}
+	
+	gi.LocClient_Print(ent, PRINT_HIGH, G_Fmt("{}\n", text).data());
+}
+
+static void Cmd_MapList_f(gentity_t *ent) {
+	if (g_map_list->string[0]) {
+		gi.LocClient_Print(ent, PRINT_HIGH, "Current map list:\n");
+		gi.LocClient_Print(ent, PRINT_HIGH, G_Fmt("{}\n", g_map_list->string).data());
+		if (MQ_Count()) {
+			gi.LocClient_Print(ent, PRINT_HIGH, "\nCurrent MyMap Queue:\n");
+			MQ_PrintList(ent);
+		}
+	} else {
+		gi.LocClient_Print(ent, PRINT_HIGH, "No Map List set.\n");
+	}
+}
+
 static void Cmd_MapInfo_f(gentity_t *ent) {
 	if (level.mapname[0])
 		gi.LocClient_Print(ent, PRINT_HIGH, "MAP INFO:\nfilename: {}\n", level.mapname);
 	else return;
-	if (level.levelName[0])
-		gi.LocClient_Print(ent, PRINT_HIGH, "longname: {}\n", level.levelName);
+	if (level.level_name[0])
+		gi.LocClient_Print(ent, PRINT_HIGH, "longname: {}\n", level.level_name);
 	if (level.author[0])
 		gi.LocClient_Print(ent, PRINT_HIGH, "author{}: {}{}{}\n", level.author2[0] ? "s" : "", level.author, level.author2[0] ? ", " : "", level.author2[0] ? level.author2 : "");
 }
 
+static const char *MyMap_FlagString() {
+
+}
+
+static void Cmd_MyMap_f(gentity_t *ent) {
+	if (!g_allow_mymap->integer) {
+		gi.LocClient_Print(ent, PRINT_HIGH, "MyMap is disabled.\n");
+		return;
+	}
+
+	if (!g_map_list->string[0]) {
+		gi.LocClient_Print(ent, PRINT_HIGH, "No maps are queued as no map list is present.\n");
+		return;
+	}
+
+	if (gi.argc() < 2) {
+		gi.LocClient_Print(ent, PRINT_HIGH, "Add a map to the MyMap Queue.\nRecognized maps are:\n");
+		gi.LocClient_Print(ent, PRINT_HIGH, "{}\n", g_map_list->string);
+
+		if (MQ_Count()) {
+			gi.LocClient_Print(ent, PRINT_HIGH, "MyMap Queue => ");
+			MQ_PrintList(ent);
+		}
+		return;
+	}
+
+	if (!strcmp(gi.argv(1), level.mapname)) {
+		gi.LocClient_Print(ent, PRINT_HIGH, "Cannot add current map to MyMap Queue.\n");
+		return;
+	}
+	
+	MQ_Add(ent, gi.argv(1));
+	
+	std::string text = "";
+
+	for (size_t i = 0; i < game.mapqueue.size(); i++) {
+		if (!game.mapqueue[i].empty()) {
+			text += game.mapqueue[i];
+			
+			text += " ";
+		}
+	}
+
+	game.item_inhibit_pu = 0;
+	game.item_inhibit_pa = 0;
+	game.item_inhibit_ht = 0;
+	game.item_inhibit_ar = 0;
+	game.item_inhibit_am = 0;
+	game.item_inhibit_wp = 0;
+
+	//flags
+	// "pu", "pa", "ht", "ar", "am", "wp", "fd"
+	if (gi.argc() > 2) {
+		const char *s = nullptr;
+		bool add = false, subtract = false;
+
+		for (size_t i = 0; i < gi.argc(); i++) {
+			s = gi.argv(2 + i);
+			if (s[0] == '+') {
+				s++;
+				add = true;
+			} else if (s[0] == '-') {
+				s++;
+				subtract = true;
+			}
+
+			if (add || subtract) {
+				int num = add ? 1 : -1;
+				if (strcmp(s, "pu")) {
+					game.item_inhibit_pu = num;
+				} else if (strcmp(s, "pa")) {
+					game.item_inhibit_pa = num;
+				} else if (strcmp(s, "ht")) {
+					game.item_inhibit_ht = num;
+				} else if (strcmp(s, "ar")) {
+					game.item_inhibit_ar = num;
+				} else if (strcmp(s, "am")) {
+					game.item_inhibit_am = num;
+				} else if (strcmp(s, "wp")) {
+					game.item_inhibit_wp = num;
+				}
+			}
+		}
+	}
+	
+	if (text.size())
+		gi.LocBroadcast_Print(PRINT_HIGH, "MyMap Queue => {}\n", text.data());
+}
+
 static void Cmd_LoadMotd_f(gentity_t *ent) {
-	LoadMotd();
+	G_LoadMOTD();
 }
 
 static void Cmd_Motd_f(gentity_t *ent) {
@@ -3591,299 +3484,98 @@ static void Cmd_Motd_f(gentity_t *ent) {
 	gi.LocClient_Print(ent, PRINT_HIGH, "{}", s);
 }
 
-static void Cmd_MySkill_f(gentity_t *ent) {
-	int totalSkill = 0, numPlayers = 0;
-	int averageSkill = 0;
-
-	// count total skill rating
-	for (auto ec : active_clients()) {
-		if (!ClientIsPlaying(ec->client))
-			continue;
-		totalSkill += ec->client->sess.skillRating;
-		numPlayers++;
-	}
-
-	if (totalSkill && numPlayers)
-		averageSkill = totalSkill / numPlayers;
-
-	gi.LocClient_Print(ent, PRINT_HIGH, "Your Skill Rating in {}: {} (server avg: {})\n", level.gametype_name, ent->client->sess.skillRating, averageSkill);
-}
-
-// ======================================================
-
-void PrintMapList(gentity_t *ent, bool cycleOnly) {
-	if (!ent || !ent->client)
-		return;
-
-	const int maxMsgLen = 1024;
-	const int maxLineLen = 120;
-	int longestName = 0;
-
-	// Determine longest map name for formatting
-	for (const auto &map : game.mapSystem.mapPool) {
-		if (cycleOnly && !map.isCycleable)
-			continue;
-		if ((int)map.filename.length() > longestName)
-			longestName = (int)map.filename.length();
-	}
-
-	int colWidth = longestName + 1;
-	int cols = maxLineLen / colWidth;
-	if (cols == 0) cols = 1;
-
-	std::string message;
-	int colCount = 0;
-
-	for (const auto &map : game.mapSystem.mapPool) {
-		if (cycleOnly && !map.isCycleable)
-			continue;
-
-		message += map.filename;
-		message.append(colWidth - map.filename.length(), ' '); // pad spaces
-
-		if (++colCount >= cols) {
-			message += '\n';
-			colCount = 0;
-		}
-	}
-
-	// Ensure proper message segmentation
-	size_t pos = 0;
-	while (pos < message.length()) {
-		std::string part = message.substr(pos, maxMsgLen);
-		size_t lastNewline = part.find_last_of('\n');
-		if (lastNewline != std::string::npos && (pos + lastNewline) < message.length())
-			part = message.substr(pos, lastNewline + 1);
-
-		gi.LocClient_Print(ent, PRINT_HIGH, "{}", part);
-		pos += part.length();
-	}
-}
-
-void Cmd_MapPool_f(gentity_t *ent) {
-	PrintMapList(ent, false); // Show all maps
-}
-
-void Cmd_MapCycle_f(gentity_t *ent) {
-	PrintMapList(ent, true); // Show only cycleable maps
-}
-
-static void Cmd_LoadMapPool_f(gentity_t *ent) {
-	LoadMapPool(ent);
-	LoadMapCycle(ent);
-}
-
-static void Cmd_LoadMapCycle_f(gentity_t *ent) {
-	LoadMapCycle(ent);
-}
-
-bool ParseMyMapFlags(const std::vector<std::string> &args, uint8_t &enableFlags, uint8_t &disableFlags) {
-	enableFlags = 0;
-	disableFlags = 0;
-
-	for (const std::string &arg : args) {
-		if (arg.length() < 2 || (arg[0] != '+' && arg[0] != '-'))
-			return false;
-
-		bool enable = (arg[0] == '+');
-		const char *flag = arg.c_str() + 1;
-
-		uint8_t bit = 0;
-		if (_stricmp(flag, "pu") == 0) bit = MAPFLAG_PU;
-		else if (_stricmp(flag, "pa") == 0) bit = MAPFLAG_PA;
-		else if (_stricmp(flag, "ar") == 0) bit = MAPFLAG_AR;
-		else if (_stricmp(flag, "am") == 0) bit = MAPFLAG_AM;
-		else if (_stricmp(flag, "ht") == 0) bit = MAPFLAG_HT;
-		else if (_stricmp(flag, "bfg") == 0) bit = MAPFLAG_BFG;
-		else if (_stricmp(flag, "fd") == 0) bit = MAPFLAG_FD;
-		else if (_stricmp(flag, "sd") == 0) bit = MAPFLAG_SD;
-		else return false;
-
-		if (enable) enableFlags |= bit;
-		else disableFlags |= bit;
-	}
-
-	return true;
-}
-
-constexpr int MAX_MYMAP_QUEUE = 8;
-
-void Cmd_MyMap_f(gentity_t *ent) {
-	if (!ent || !ent->client || !g_maps_mymap->integer)
-		return;
-
-	const char *socialID = ent->client->sess.socialID;
-	if (!socialID || !*socialID) {
-		gi.LocClient_Print(ent, PRINT_HIGH, "You must be logged in to use MyMap.\n");
-		return;
-	}
-
-	int argc = gi.argc();
-	if (argc < 2 || strcmp(gi.argv(1), "?") == 0) {
-		gi.LocClient_Print(ent, PRINT_HIGH,
-			"MyMap Usage:\n  mymap <mapname> [+flag] [-flag] ...\n"
-			"Flags: +pu +pa +ar +am +ht +bfg +fd +sd (prefix with - to disable)\n"
-			"Use 'mymap ?' to view this message\n"
-			"Use 'mappool' to list maps, or see queue below.\n");
-
-		if (!game.mapSystem.playQueue.empty()) {
-			gi.LocClient_Print(ent, PRINT_HIGH, "Current Queue:\n");
-			for (const auto &q : game.mapSystem.playQueue) {
-				gi.LocClient_Print(ent, PRINT_HIGH, "- {}\n", q.filename);
-			}
-		}
-		return;
-	}
-
-	std::string mapName = gi.argv(1);
-	const MapEntry *map = game.mapSystem.GetMapEntry(mapName);
-	if (!map) {
-		gi.LocClient_Print(ent, PRINT_HIGH, "Map '{}' not found in map pool.\n", mapName);
-		return;
-	}
-
-	if (game.mapSystem.IsMapInQueue(mapName)) {
-		gi.LocClient_Print(ent, PRINT_HIGH, "Map '{}' is already in the play queue.\n", mapName);
-		return;
-	}
-
-	if (game.mapSystem.IsClientInQueue(socialID)) {
-		gi.LocClient_Print(ent, PRINT_HIGH, "You already have a map queued.\n");
-		return;
-	}
-
-	if (map->lastPlayed.seconds() > 0 && (level.time - map->lastPlayed) < 1800_sec) {
-		gi.LocClient_Print(ent, PRINT_HIGH, "Map '{}' was played recently. Try a different one.\n", mapName);
-		return;
-	}
-
-	if (game.mapSystem.playQueue.size() >= MAX_MYMAP_QUEUE) {
-		gi.LocClient_Print(ent, PRINT_HIGH, "The play queue is full.\n");
-		return;
-	}
-
-	uint8_t enableFlags = 0, disableFlags = 0;
-	std::vector<std::string> flagArgs;
-	for (int i = 2; i < argc; ++i)
-		flagArgs.emplace_back(gi.argv(i));
-
-	if (!ParseMyMapFlags(flagArgs, enableFlags, disableFlags)) {
-		gi.LocClient_Print(ent, PRINT_HIGH, "Invalid flag(s). Use 'mymap ?' for help.\n");
-		return;
-	}
-
-	QueuedMap queued;
-	queued.filename = map->filename;
-	queued.socialID = socialID;
-	queued.settings = (enableFlags | disableFlags);
-
-	game.mapSystem.playQueue.push_back(queued);
-
-	MyMapRequest req;
-	req.mapName = map->filename;
-	req.socialID = socialID;
-	req.enableFlags = enableFlags;
-	req.disableFlags = disableFlags;
-	req.queuedTime = level.time;
-
-	game.mapSystem.myMapQueue.push_back(req);
-
-	gi.LocClient_Print(ent, PRINT_HIGH, "Map '{}' added to the queue.\n", map->filename);
-}
-
 // =========================================
 
 cmds_t client_cmds[] = {
-	{"admin",			Cmd_Admin_f,			CF_ALLOW_INT | CF_ALLOW_SPEC},						// enables admin rights, requires entering in admin password
-	{"alertall",		Cmd_AlertAll_f,			CF_ALLOW_SPEC | CF_CHEAT_PROTECT},					// set all monsters in level to be alerted to presence of player
-	{"balance",			Cmd_BalanceTeams_f,		CF_ADMIN_ONLY | CF_ALLOW_INT | CF_ALLOW_SPEC},		// balance the teams without shuffling
-	{"boot",			Cmd_Boot_f,				CF_ADMIN_ONLY | CF_ALLOW_INT | CF_ALLOW_SPEC},		// remove a client from the server, non-functional
-	{"callvote",		Cmd_CallVote_f,			CF_ALLOW_DEAD | CF_ALLOW_SPEC},						// call a vote
-	{"checkpoi",		Cmd_CheckPOI_f,			CF_ALLOW_SPEC | CF_CHEAT_PROTECT},					// details all points of interest in campaigns
-	{"clear_ai_enemy",	Cmd_Clear_AI_Enemy_f,	CF_CHEAT_PROTECT},									// opposite of alertall, makes all monsters forget the player
-	{"clientlist",		Cmd_ClientList_f,		CF_ALLOW_DEAD | CF_ALLOW_INT | CF_ALLOW_SPEC},		// lists all clients in server, arg1 score or time to sort
-	{"cv",				Cmd_CallVote_f,			CF_ALLOW_DEAD | CF_ALLOW_SPEC},						// short-hand for callvote
-	{"drop",			Cmd_Drop_f,				CF_NONE},											// drop an item from inventory
-	{"drop_index",		Cmd_Drop_f,				CF_NONE},											// drop an item from inventory using index
-	{"endmatch",		Cmd_EndMatch_f,			CF_ADMIN_ONLY | CF_ALLOW_INT | CF_ALLOW_SPEC},		// force an end of a match
-	{"fm",				Cmd_FragMessages_f,		CF_ALLOW_SPEC | CF_ALLOW_DEAD},						// allow client to toggle display of frag messages
-	{"follow",			Cmd_Follow_f,			CF_ALLOW_SPEC | CF_ALLOW_DEAD, true},				// follow a player
-	{"followkiller",	Cmd_FollowKiller_f,		CF_ALLOW_SPEC | CF_ALLOW_DEAD, true},				// toggles behaviour to auto-follow killers as kills arise
-	{"followleader",	Cmd_FollowLeader_f,		CF_ALLOW_SPEC | CF_ALLOW_DEAD, true},				// toggles behaviour to auto-follow score leader as rankings are updated
-	{"followpowerup",	Cmd_FollowPowerup_f,	CF_ALLOW_SPEC | CF_ALLOW_DEAD, true},				// toggles behaviour to auto-follow players when they pick up a powerup
-	{"forcevote",		Cmd_ForceVote_f,		CF_ADMIN_ONLY | CF_ALLOW_INT | CF_ALLOW_SPEC},		// force a voting result
-	{"forfeit",			Cmd_Forfeit_f,			CF_ALLOW_DEAD, true},								// forfeit a match
-	{"gametype",		Cmd_Gametype_f,			CF_ADMIN_ONLY | CF_ALLOW_INT | CF_ALLOW_SPEC},		// change the gametype, resets the game
-	{"ghost",			Cmd_Ghost_f,			CF_ALLOW_DEAD | CF_ALLOW_INT | CF_ALLOW_SPEC},		// activates ghost reinstatement into match
-	{"give",			Cmd_Give_f,				CF_CHEAT_PROTECT, true},							// give an item
-	{"god",				Cmd_God_f,				CF_CHEAT_PROTECT, true},							// toggles god mode
-	{"help",			Cmd_Help_f,				CF_ALLOW_DEAD | CF_ALLOW_SPEC, true},				// shows help (in campaigns) or scoreboard (in deathmatch)
-	{"hook",			Cmd_Hook_f,				CF_NONE, true},										// fires off-hand hook (when enabled on server)
-	{"id",				Cmd_CrosshairID_f,		CF_ALLOW_SPEC | CF_ALLOW_DEAD},						// allows clients to toggle crosshair ID drawing
-	{"immortal",		Cmd_Immortal_f,			CF_CHEAT_PROTECT},									// cheat to take damage down to a minimum of 1 hp
-	{"invdrop",			Cmd_InvDrop_f,			CF_NONE},											// drops current inventory item
-	{"inven",			Cmd_Inven_f,			CF_ALLOW_DEAD | CF_ALLOW_SPEC, true},				// toggles drawing of inventory list (campaigns) or match menu (deathmatch)
-	{"invnext",			Cmd_InvNext_f,			CF_ALLOW_SPEC, true},	//spec for menu up/down		// cycles to next inventory item
-	{"invnextp",		Cmd_InvNextP_f,			CF_NONE, true},										// cycles to next powerup in inventory
-	{"invnextw",		Cmd_InvNextW_f,			CF_NONE, true},										// cycles to next weapon in inventory
-	{"invprev",			Cmd_InvPrev_f,			CF_ALLOW_SPEC, true},	//spec for menu up/down		// cycles to previous inventory item
-	{"invprevp",		Cmd_InvPrevP_f,			CF_NONE, true},										// cycles to previous powerup in inventory
-	{"invprevw",		Cmd_InvPrevW_f,			CF_NONE, true},										// cycles to previous weapon in inventory
-	{"invuse",			Cmd_InvUse_f,			CF_ALLOW_SPEC, true},	//spec for menu up/down		// uses current inventory item
-	{"kb",				Cmd_KillBeep_f,			CF_ALLOW_SPEC | CF_ALLOW_DEAD},						// allows clients to toggle or specify killbeeps
-	{"kill",			Cmd_Kill_f,				CF_NONE},											// player commits suicide
-	{"kill_ai",			Cmd_Kill_AI_f,			CF_CHEAT_PROTECT},									// removes all monsters from level
-	{"listentities",	Cmd_ListEntities_f,		CF_ALLOW_DEAD | CF_ALLOW_INT | CF_ALLOW_SPEC | CF_CHEAT_PROTECT},	// lists all entities in level
-	{"listmonsters",	Cmd_ListMonsters_f,		CF_ALLOW_DEAD | CF_ALLOW_INT | CF_ALLOW_SPEC | CF_CHEAT_PROTECT},	// lists all monsters in level
-	{"loadmotd",		Cmd_LoadMotd_f,			CF_ADMIN_ONLY | CF_ALLOW_INT | CF_ALLOW_SPEC},		// load/refresh message of the day from file
-	{"loadmappool",		Cmd_LoadMapPool_f,		CF_ADMIN_ONLY | CF_ALLOW_INT | CF_ALLOW_SPEC },		// load map pool file
-	{"loadmapcycle",	Cmd_LoadMapCycle_f,		CF_ADMIN_ONLY | CF_ALLOW_INT | CF_ALLOW_SPEC },		// load map cycle file
-	{"lockteam",		Cmd_LockTeam_f,			CF_ADMIN_ONLY | CF_ALLOW_INT | CF_ALLOW_SPEC},		// locks a team (prevents joining)
-	{"map_restart",		Cmd_MapRestart_f,		CF_ADMIN_ONLY | CF_ALLOW_INT | CF_ALLOW_SPEC},		// restarts the current map, does not reset game state
-	{"mapinfo",			Cmd_MapInfo_f,			CF_ALLOW_DEAD | CF_ALLOW_SPEC},						// prints details about current map
-	{"mappool",			Cmd_MapPool_f,			CF_ALLOW_DEAD | CF_ALLOW_SPEC},						// prints current map pool
-	{"mapcycle",		Cmd_MapCycle_f,			CF_ALLOW_DEAD | CF_ALLOW_SPEC},						// prints current map cycle
-	{"motd",			Cmd_Motd_f,				CF_ALLOW_SPEC | CF_ALLOW_INT},						// prints message of the day
-	{"mymap",			Cmd_MyMap_f,			CF_ALLOW_DEAD | CF_ALLOW_SPEC},						// adds a map to the play queue
-	{"nextmap",			Cmd_NextMap_f,			CF_ADMIN_ONLY | CF_ALLOW_INT | CF_ALLOW_SPEC},		// changes to the next map in the queue/picks from map list
-	{"noclip",			Cmd_NoClip_f,			CF_CHEAT_PROTECT, true},							// toggles no clipping
-	{"notarget",		Cmd_NoTarget_f,			CF_CHEAT_PROTECT, true},							// toggles no targetting from monsters
-	{"notready",		Cmd_NotReady_f,			CF_ALLOW_DEAD},										// sets "not ready" status during warmup readyup stage
-	{"novisible",		Cmd_NoVisible_f,		CF_CHEAT_PROTECT},									// toggles players being "invisible" to monsters
-	{"putaway",			Cmd_PutAway_f,			CF_ALLOW_SPEC},	//spec for menu close				// hides weapon
-	{"ready",			Cmd_Ready_f,			CF_ALLOW_DEAD},										// sets "ready" status during warmup readyup stage
-	{"readyall",		Cmd_ReadyAll_f,			CF_ADMIN_ONLY | CF_ALLOW_INT | CF_ALLOW_SPEC},		// admin forces all players to be ready during warmup readyup stage
-	{"readyup",			Cmd_ReadyUp_f,			CF_ALLOW_DEAD},										// toggles ready status during warmup readyup stage
-	{"resetmatch",		Cmd_ResetMatch_f,		CF_ADMIN_ONLY | CF_ALLOW_INT | CF_ALLOW_SPEC},		// admin forces the match back to warmup
-	{"ruleset",			Cmd_Ruleset_f,			CF_ADMIN_ONLY | CF_ALLOW_INT | CF_ALLOW_SPEC},		// changes the ruleset
-	{"score",			Cmd_Score_f,			CF_ALLOW_DEAD | CF_ALLOW_INT | CF_ALLOW_SPEC, true},// show scores
-	{"setpoi",			Cmd_SetPOI_f,			CF_ALLOW_SPEC | CF_CHEAT_PROTECT},					// sets the client's origin as a point of interest
-	{"setmap",			Cmd_SetMap_f,			CF_ADMIN_ONLY | CF_ALLOW_INT | CF_ALLOW_SPEC},		// admin: change the map, restricted to maps within the map list
-	{"setteam",			Cmd_SetTeam_f,			CF_ADMIN_ONLY | CF_ALLOW_INT | CF_ALLOW_SPEC},		// admin forces a client to a team
-	{"shuffle",			Cmd_Shuffle_f,			CF_ADMIN_ONLY | CF_ALLOW_INT | CF_ALLOW_SPEC},		// shuffles the teams, uses skill ratings as a reference
-	{"spawn",			Cmd_Spawn_f,			CF_ADMIN_ONLY | CF_ALLOW_SPEC},						// spawns an entity
-	{"sr",				Cmd_MySkill_f,			CF_ALLOW_DEAD | CF_ALLOW_SPEC},						// shows client's skill rating in current server and gametype
-	{"startmatch",		Cmd_StartMatch_f,		CF_ADMIN_ONLY | CF_ALLOW_INT | CF_ALLOW_SPEC},		// admin forces the match to start
-	{"stats",			Cmd_Stats_f,			CF_ALLOW_INT | CF_ALLOW_SPEC},						// 
-	{"target",			Cmd_Target_f,			CF_ALLOW_DEAD | CF_ALLOW_SPEC | CF_CHEAT_PROTECT},	// 
-	{"team",			Cmd_Team_f,				CF_ALLOW_DEAD | CF_ALLOW_SPEC},						// joins a team
-	{"teleport",		Cmd_Teleport_f,			CF_ALLOW_SPEC | CF_CHEAT_PROTECT},					// moves the client to specified coordinates and optionally sets view angles
-	{"time-out",		Cmd_TimeOut_f,			CF_ALLOW_DEAD | CF_ALLOW_SPEC},						// calls a timeout during a match
-	{"time-in",			Cmd_TimeIn_f,			CF_ALLOW_DEAD | CF_ALLOW_SPEC},						// cancels a timeout during a match
-	{"timer",			Cmd_Timer_f,			CF_ALLOW_SPEC | CF_ALLOW_DEAD},						// allows client to toggle drawing/hiding of HUD clock
-	{"unhook",			Cmd_UnHook_f,			CF_NONE, true},										// releases off-hand hook (when enabled on server)
-	{"unlockteam",		Cmd_UnlockTeam_f,		CF_ADMIN_ONLY | CF_ALLOW_INT | CF_ALLOW_SPEC},		// unlocks a locked team (allows joining)
-	{"unreadyall",		Cmd_UnReadyAll_f,		CF_ADMIN_ONLY | CF_ALLOW_INT | CF_ALLOW_SPEC},		// admin forces all players to "not ready" status during warmup readyup stage
-	{"use",				Cmd_Use_f,				CF_NONE, true},										// use a specified inventory item by name
-	{"use_index",		Cmd_Use_f,				CF_NONE, true},										// use a specified inventory item by index
-	{"use_index_only",	Cmd_Use_f,				CF_NONE, true},										// use a specified inventory item only by index
-	{"use_only",		Cmd_Use_f,				CF_NONE, true},										// use a specified inventory item only by name
-	{"vote",			Cmd_Vote_f,				CF_ALLOW_DEAD},										// cast a vote for the current voting session
-	{"wave",			Cmd_Wave_f,				CF_NONE},											// issues a player animation and corresponding broadcasted message
-	{"weaplast",		Cmd_WeapLast_f,			CF_NONE, true},										// switches to last used weapon
-	{"weapnext",		Cmd_WeapNext_f,			CF_NONE, true},										// switches to next weapon in cycle
-	{"weapprev",		Cmd_WeapPrev_f,			CF_NONE, true},										// switches to previous weapon in cycle
-	{"where",			Cmd_Where_f,			CF_ALLOW_SPEC},										// prints out client's current world coordinates and viee angles, copies to clipboard
+	{"admin",			Cmd_Admin_f,			CF_ALLOW_INT | CF_ALLOW_SPEC},
+	{"alertall",		Cmd_AlertAll_f,			CF_ALLOW_SPEC | CF_CHEAT_PROTECT},
+	{"announcer",		Cmd_Announcer_f,		CF_ALLOW_SPEC | CF_ALLOW_DEAD},
+	{"balance",			Cmd_BalanceTeams_f,		CF_ADMIN_ONLY | CF_ALLOW_INT | CF_ALLOW_SPEC},
+	{"boot",			Cmd_Boot_f,				CF_ADMIN_ONLY | CF_ALLOW_INT | CF_ALLOW_SPEC},
+	{"callvote",		Cmd_CallVote_f,			CF_ALLOW_DEAD | CF_ALLOW_SPEC},
+	{"checkpoi",		Cmd_CheckPOI_f,			CF_ALLOW_SPEC | CF_CHEAT_PROTECT},
+	{"clear_ai_enemy",	Cmd_Clear_AI_Enemy_f,	CF_CHEAT_PROTECT},
+	{"cv",				Cmd_CallVote_f,			CF_ALLOW_DEAD | CF_ALLOW_SPEC},
+	{"drop",			Cmd_Drop_f,				CF_NONE},
+	{"drop_index",		Cmd_Drop_f,				CF_NONE},
+	{"endmatch",		Cmd_EndMatch_f,			CF_ADMIN_ONLY | CF_ALLOW_INT | CF_ALLOW_SPEC},
+	{"fm",				Cmd_FragMessages_f,		CF_ALLOW_SPEC | CF_ALLOW_DEAD},
+	{"follow",			Cmd_Follow_f,			CF_ALLOW_SPEC | CF_ALLOW_DEAD},
+	{"followkiller",	Cmd_FollowKiller_f,		CF_ALLOW_SPEC | CF_ALLOW_DEAD},
+	{"followleader",	Cmd_FollowLeader_f,		CF_ALLOW_SPEC | CF_ALLOW_DEAD},
+	{"followpowerup",	Cmd_FollowPowerup_f,	CF_ALLOW_SPEC | CF_ALLOW_DEAD},
+	{"forcevote",		Cmd_ForceVote_f,		CF_ADMIN_ONLY | CF_ALLOW_INT | CF_ALLOW_SPEC},
+	{"forfeit",			Cmd_Forfeit_f,			CF_ALLOW_DEAD},
+	{"gametype",		Cmd_Gametype_f,			CF_ADMIN_ONLY | CF_ALLOW_INT | CF_ALLOW_SPEC},
+	{"ghost",			Cmd_Ghost_f,			CF_ALLOW_DEAD | CF_ALLOW_INT | CF_ALLOW_SPEC},
+	{"give",			Cmd_Give_f,				CF_ALLOW_SPEC | CF_CHEAT_PROTECT},
+	{"god",				Cmd_God_f,				CF_ALLOW_SPEC | CF_CHEAT_PROTECT},
+	{"help",			Cmd_Help_f,				CF_ALLOW_DEAD | CF_ALLOW_SPEC},
+	{"hook",			Cmd_Hook_f,				CF_NONE},
+	{"id",				Cmd_CrosshairID_f,		CF_ALLOW_SPEC | CF_ALLOW_DEAD},
+	{"immortal",		Cmd_Immortal_f,			CF_ALLOW_SPEC | CF_CHEAT_PROTECT},
+	{"invdrop",			Cmd_InvDrop_f,			CF_NONE},
+	{"inven",			Cmd_Inven_f,			CF_ALLOW_DEAD | CF_ALLOW_SPEC},
+	{"invnext",			Cmd_InvNext_f,			CF_ALLOW_SPEC},	//spec for menu up/down
+	{"invnextp",		Cmd_InvNextP_f,			CF_NONE},
+	{"invnextw",		Cmd_InvNextW_f,			CF_NONE},
+	{"invprev",			Cmd_InvPrev_f,			CF_ALLOW_SPEC},	//spec for menu up/down
+	{"invprevp",		Cmd_InvPrevP_f,			CF_NONE},
+	{"invprevw",		Cmd_InvPrevW_f,			CF_NONE},
+	{"invuse",			Cmd_InvUse_f,			CF_ALLOW_SPEC},	//spec for menu up/down
+	{"kb",				Cmd_KillBeep_f,			CF_ALLOW_SPEC | CF_ALLOW_DEAD},
+	{"kill",			Cmd_Kill_f,				CF_NONE},
+	{"kill_ai",			Cmd_Kill_AI_f,			CF_CHEAT_PROTECT},
+	{"listentities",	Cmd_ListEntities_f,		CF_ALLOW_DEAD | CF_ALLOW_INT | CF_ALLOW_SPEC | CF_CHEAT_PROTECT},
+	{"listmonsters",	Cmd_ListMonsters_f,		CF_ALLOW_DEAD | CF_ALLOW_INT | CF_ALLOW_SPEC | CF_CHEAT_PROTECT},
+	{"loadmotd",		Cmd_LoadMotd_f,			CF_ADMIN_ONLY | CF_ALLOW_INT | CF_ALLOW_SPEC},
+	{"lockteam",		Cmd_LockTeam_f,			CF_ADMIN_ONLY | CF_ALLOW_INT | CF_ALLOW_SPEC},
+	{"map_restart",		Cmd_MapRestart_f,		CF_ADMIN_ONLY | CF_ALLOW_INT | CF_ALLOW_SPEC},
+	{"mapinfo",			Cmd_MapInfo_f,			CF_ALLOW_DEAD | CF_ALLOW_SPEC},
+	{"maplist",			Cmd_MapList_f,			CF_ALLOW_DEAD | CF_ALLOW_SPEC},
+	{"motd",			Cmd_Motd_f,				CF_ALLOW_SPEC | CF_ALLOW_INT},
+	{"mymap",			Cmd_MyMap_f,			CF_ALLOW_DEAD | CF_ALLOW_SPEC},
+	{"nextmap",			Cmd_NextMap_f,			CF_ADMIN_ONLY | CF_ALLOW_INT | CF_ALLOW_SPEC},
+	{"noclip",			Cmd_NoClip_f,			CF_ALLOW_SPEC | CF_CHEAT_PROTECT},
+	{"notarget",		Cmd_NoTarget_f,			CF_ALLOW_SPEC | CF_CHEAT_PROTECT},
+	{"notready",		Cmd_NotReady_f,			CF_ALLOW_DEAD},
+	{"novisible",		Cmd_NoVisible_f,		CF_ALLOW_SPEC | CF_CHEAT_PROTECT},
+	{"players",			Cmd_Players_f,			CF_ALLOW_DEAD | CF_ALLOW_INT | CF_ALLOW_SPEC},
+	{"playtime",		Cmd_PlayersJoinTime_f,	CF_ALLOW_DEAD | CF_ALLOW_INT | CF_ALLOW_SPEC},
+	{"playrank",		Cmd_PlayersRanked_f,	CF_ALLOW_DEAD | CF_ALLOW_INT | CF_ALLOW_SPEC},
+	{"putaway",			Cmd_PutAway_f,			CF_ALLOW_SPEC},	//spec for menu close
+	{"ready",			Cmd_Ready_f,			CF_ALLOW_DEAD},
+	{"readyall",		Cmd_ReadyAll_f,			CF_ADMIN_ONLY | CF_ALLOW_INT | CF_ALLOW_SPEC},
+	{"readyup",			Cmd_ReadyUp_f,			CF_ALLOW_DEAD},
+	{"resetmatch",		Cmd_ResetMatch_f,		CF_ADMIN_ONLY | CF_ALLOW_INT | CF_ALLOW_SPEC},
+	{"ruleset",			Cmd_Ruleset_f,			CF_ADMIN_ONLY | CF_ALLOW_INT | CF_ALLOW_SPEC},
+	{"score",			Cmd_Score_f,			CF_ALLOW_DEAD | CF_ALLOW_INT | CF_ALLOW_SPEC},
+	{"setpoi",			Cmd_SetPOI_f,			CF_ALLOW_SPEC | CF_CHEAT_PROTECT},
+	{"setmap",			Cmd_SetMap_f,			CF_ADMIN_ONLY | CF_ALLOW_INT | CF_ALLOW_SPEC},
+	{"setteam",			Cmd_SetTeam_f,			CF_ADMIN_ONLY | CF_ALLOW_INT | CF_ALLOW_SPEC},
+	{"shuffle",			Cmd_Shuffle_f,			CF_ADMIN_ONLY | CF_ALLOW_INT | CF_ALLOW_SPEC},
+	{"spawn",			Cmd_Spawn_f,			CF_ADMIN_ONLY | CF_ALLOW_SPEC},
+	{"startmatch",		Cmd_StartMatch_f,		CF_ADMIN_ONLY | CF_ALLOW_INT | CF_ALLOW_SPEC},
+	{"stats",			Cmd_Stats_f,			CF_ALLOW_INT | CF_ALLOW_SPEC},
+	{"target",			Cmd_Target_f,			CF_ALLOW_DEAD | CF_ALLOW_SPEC | CF_CHEAT_PROTECT},
+	{"team",			Cmd_Team_f,				CF_ALLOW_DEAD | CF_ALLOW_SPEC},
+	{"teleport",		Cmd_Teleport_f,			CF_ALLOW_SPEC | CF_CHEAT_PROTECT},
+	{"time-out",		Cmd_TimeOut_f,			CF_ALLOW_DEAD | CF_ALLOW_SPEC},
+	{"time-in",			Cmd_TimeIn_f,			CF_ALLOW_DEAD | CF_ALLOW_SPEC},
+	{"timer",			Cmd_Timer_f,			CF_ALLOW_SPEC | CF_ALLOW_DEAD},
+	{"unhook",			Cmd_UnHook_f,			CF_NONE},
+	{"unlockteam",		Cmd_UnlockTeam_f,		CF_ADMIN_ONLY | CF_ALLOW_INT | CF_ALLOW_SPEC},
+	{"unreadyall",		Cmd_UnReadyAll_f,		CF_ADMIN_ONLY | CF_ALLOW_INT | CF_ALLOW_SPEC},
+	{"use",				Cmd_Use_f,				CF_NONE},
+	{"use_index",		Cmd_Use_f,				CF_NONE},
+	{"use_index_only",	Cmd_Use_f,				CF_NONE},
+	{"use_only",		Cmd_Use_f,				CF_NONE},
+	{"vote",			Cmd_Vote_f,				CF_ALLOW_DEAD},
+	{"wave",			Cmd_Wave_f,				CF_NONE},
+	{"weaplast",		Cmd_WeapLast_f,			CF_NONE},
+	{"weapnext",		Cmd_WeapNext_f,			CF_NONE},
+	{"weapprev",		Cmd_WeapPrev_f,			CF_NONE},
+	{"where",			Cmd_Where_f,			CF_ALLOW_SPEC},
 };
 
 /*
@@ -3902,70 +3594,6 @@ static cmds_t *FindClientCmdByName(const char *name) {
 	}
 
 	return nullptr;
-}
-
-/*
-=================
-HandleDynamicCvarCommand
-
-Allows replace_* and disable_* cvars to be used by server host at all times.
-=================
-*/
-static inline bool HandleDynamicCvarCommand(gentity_t *ent, const char *cmd) {
-	if (gi.argc() > 1 && (strstr(cmd, "replace_") || strstr(cmd, "disable_"))) {
-		gi.cvar_forceset(cmd, gi.argv(1));
-		return true;
-	}
-	return false;
-}
-
-/*
-=================
-HasCommandPermission
-=================
-*/
-static inline bool HasCommandPermission(gentity_t *ent, const cmds_t *cmd) {
-	if ((cmd->flags & CF_ADMIN_ONLY) && !AdminOk(ent)) return false;
-	if ((cmd->flags & CF_CHEAT_PROTECT) && !CheatsOk(ent)) return false;
-	if (!(cmd->flags & CF_ALLOW_DEAD) && !AliveOk(ent)) return false;
-	if (!(cmd->flags & CF_ALLOW_SPEC) && !SpectatorOk(ent)) return false;
-	if (!(cmd->flags & CF_ALLOW_INT) && level.intermissionTime) return false;
-	return true;
-}
-
-constexpr int FLOOD_LIMIT = 6;             // max allowed commands
-constexpr int FLOOD_TIME_MS = 4000;        // window in milliseconds
-constexpr int FLOOD_SILENCE_MS = 3000;     // lockout if flood exceeded
-
-/*
-=================
-CmdFloodCheck
-=================
-*/
-static inline bool CmdFloodCheck(gentity_t *ent) {
-	if (!ent || !ent->client)
-		return false;
-
-	gclient_t *cl = ent->client;
-
-	// If they're still in silence timeout, block them
-	if (level.time < cl->sess.command_flood_time)
-		return true;
-
-	// Count and compare window
-	if ((level.time - cl->sess.command_flood_time).milliseconds() > FLOOD_TIME_MS) {
-		cl->sess.command_flood_count = 1;
-		cl->sess.command_flood_time = level.time;
-	} else {
-		cl->sess.command_flood_count++;
-		if (cl->sess.command_flood_count > FLOOD_LIMIT) {
-			cl->sess.command_flood_time = level.time + gtime_t::from_ms(FLOOD_SILENCE_MS);
-			gi.LocClient_Print(ent, PRINT_HIGH, "Command flood detected. Please wait a moment before trying again.\n");
-			return true;
-		}
-	}
-
-	return false;
 }
 
 /*
@@ -3989,7 +3617,7 @@ void ClientCommand(gentity_t *ent) {
 		Cmd_Say_f(ent, false);
 		return;
 	}
-	if (!Q_strcasecmp(cmd, "say_team") || !Q_strcasecmp(cmd, "steam")) {
+	if (!Q_strcasecmp(cmd, "say_team") == 0 || !Q_strcasecmp(cmd, "steam")) {
 		if (Teams())
 			Cmd_Say_Team_f(ent, gi.args());
 		else
@@ -3998,14 +3626,37 @@ void ClientCommand(gentity_t *ent) {
 	}
 #endif
 
-	if (cc->floodExempt) {
-		// exempted
-	} else if (CmdFloodCheck(ent)) {
+	if (!cc) {
+		// always allow replace_/disable_ item cvars
+		if (gi.argc() > 1 && strstr(cmd, "replace_") || strstr(cmd, "disable_")) {
+			gi.cvar_forceset(cmd, gi.argv(1));
+		} else
+			gi.LocClient_Print(ent, PRINT_HIGH, "Invalid client command: \"{}\"\n", cmd);
 		return;
 	}
 
-	if (!HandleDynamicCvarCommand(ent, cmd)) return;
-	if (!HasCommandPermission(ent, cc)) return;
+	if (cc->flags & CF_ADMIN_ONLY)
+		if (!AdminOk(ent))
+			return;
+
+	if (cc->flags & CF_CHEAT_PROTECT)
+		if (!CheatsOk(ent))
+			return;
+
+	if (!(cc->flags & CF_ALLOW_DEAD))
+		if (!AliveOk(ent))
+			return;
+
+	if (!(cc->flags & CF_ALLOW_SPEC))
+		if (!SpectatorOk(ent))
+			return;
+
+	if (cc->flags & CF_MATCH_ONLY)
+		return;
+
+	if (!(cc->flags & CF_ALLOW_INT))
+		if (level.intermission_time)
+			return;
 
 	cc->func(ent);
 }

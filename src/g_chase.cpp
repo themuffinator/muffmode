@@ -6,10 +6,10 @@ void FreeFollower(gentity_t *ent) {
 	if (!ent)
 		return;
 
-	if (!ent->client->followTarget)
+	if (!ent->client->follow_target)
 		return;
 
-	ent->client->followTarget = nullptr;
+	ent->client->follow_target = nullptr;
 	ent->client->ps.pmove.pm_flags &= ~(PMF_NO_POSITIONAL_PREDICTION | PMF_NO_ANGULAR_PREDICTION);
 
 	ent->client->ps.kick_angles = {};
@@ -20,7 +20,7 @@ void FreeFollower(gentity_t *ent) {
 	ent->client->ps.gunframe = 0;
 	ent->client->ps.gunrate = 0;
 	ent->client->ps.screen_blend = {};
-	ent->client->ps.damageBlend = {};
+	ent->client->ps.damage_blend = {};
 	ent->client->ps.rdflags = RDF_NONE;
 }
 
@@ -29,23 +29,23 @@ void FreeClientFollowers(gentity_t *ent) {
 		return;
 
 	for (auto ec : active_clients()) {
-		if (!ec->client->followTarget)
+		if (!ec->client->follow_target)
 			continue;
-		if (ec->client->followTarget == ent)
+		if (ec->client->follow_target == ent)
 			FreeFollower(ec);
 	}
 }
 
 void UpdateChaseCam(gentity_t *ent) {
 	vec3_t	o, ownerv, goal;
-	gentity_t	*targ = ent->client->followTarget;
+	gentity_t	*targ = ent->client->follow_target;
 	vec3_t	forward, right;
 	trace_t	trace;
 	vec3_t	oldgoal;
 	vec3_t	angles;
 	
 	// is our follow target gone?
-	if (!targ || !targ->inUse || !targ->client || !ClientIsPlaying(targ->client) || targ->client->eliminated) {
+	if (!targ || !targ->inuse || !targ->client || !ClientIsPlaying(targ->client) || targ->client->eliminated) {
 		//SetTeam(ent, TEAM_SPECTATOR, false, false, false);
 		FreeClientFollowers(targ);
 		return;
@@ -57,7 +57,7 @@ void UpdateChaseCam(gentity_t *ent) {
 	// Q2Eaks eyecam handling
 	if (g_eyecam->integer) {
 		// mark the chased player as instanced so we can disable their model's visibility
-		targ->svFlags |= SVF_INSTANCED;
+		targ->svflags |= SVF_INSTANCED;
 
 		// copy everything from ps but pmove, pov, stats, and team
 		ent->client->ps.viewangles = targ->client->ps.viewangles;
@@ -70,7 +70,7 @@ void UpdateChaseCam(gentity_t *ent) {
 		ent->client->ps.gunframe = targ->client->ps.gunframe;
 		ent->client->ps.gunrate = targ->client->ps.gunrate;
 		ent->client->ps.screen_blend = targ->client->ps.screen_blend;
-		ent->client->ps.damageBlend = targ->client->ps.damageBlend;
+		ent->client->ps.damage_blend = targ->client->ps.damage_blend;
 		ent->client->ps.rdflags = targ->client->ps.rdflags;
 
 		// do pmove stuff so view looks right, but not pm_flags
@@ -79,7 +79,7 @@ void UpdateChaseCam(gentity_t *ent) {
 		ent->client->ps.pmove.pm_time = targ->client->ps.pmove.pm_time;
 		ent->client->ps.pmove.gravity = targ->client->ps.pmove.gravity;
 		ent->client->ps.pmove.delta_angles = targ->client->ps.pmove.delta_angles;
-		ent->client->ps.pmove.viewHeight = targ->client->ps.pmove.viewHeight;
+		ent->client->ps.pmove.viewheight = targ->client->ps.pmove.viewheight;
 		
 		ent->client->pers.hand = targ->client->pers.hand;
 		ent->client->pers.weapon = targ->client->pers.weapon;
@@ -87,7 +87,7 @@ void UpdateChaseCam(gentity_t *ent) {
 		//FIXME: color shells and damage blends not working
 
 		// unadjusted view and origin handling
-		angles = targ->client->vAngle;
+		angles = targ->client->v_angle;
 		AngleVectors(angles, forward, right, nullptr);
 		forward.normalize();
 		o = ownerv;
@@ -96,11 +96,11 @@ void UpdateChaseCam(gentity_t *ent) {
 	}
 	// vanilla chasecam code
 	else {
-		targ->svFlags &= ~SVF_INSTANCED;
+		targ->svflags &= ~SVF_INSTANCED;
 
-		ownerv[2] += targ->viewHeight;
+		ownerv[2] += targ->viewheight;
 
-		angles = targ->client->vAngle;
+		angles = targ->client->v_angle;
 		if (angles[PITCH] > 56)
 			angles[PITCH] = 56;
 		AngleVectors(angles, forward, right, nullptr);
@@ -111,7 +111,7 @@ void UpdateChaseCam(gentity_t *ent) {
 			o[2] = targ->s.origin[2] + 20;
 
 		// jump animation lifts
-		if (!targ->groundEntity)
+		if (!targ->groundentity)
 			o[2] += 16;
 
 		trace = gi.traceline(ownerv, o, targ, MASK_SOLID);
@@ -144,28 +144,28 @@ void UpdateChaseCam(gentity_t *ent) {
 		ent->s.modelindex3 = 0;
 	}
 
-	if (targ->deadFlag)
+	if (targ->deadflag)
 		ent->client->ps.pmove.pm_type = PM_DEAD;
 	else
 		ent->client->ps.pmove.pm_type = PM_FREEZE;
 
 	ent->s.origin = goal;
-	ent->client->ps.pmove.delta_angles = targ->client->vAngle - ent->client->resp.cmd_angles;
+	ent->client->ps.pmove.delta_angles = targ->client->v_angle - ent->client->resp.cmd_angles;
 
-	if (targ->deadFlag) {
+	if (targ->deadflag) {
 		ent->client->ps.viewangles[ROLL] = 40;
 		ent->client->ps.viewangles[PITCH] = -15;
 		ent->client->ps.viewangles[YAW] = targ->client->killer_yaw;
 	} else {
-		ent->client->ps.viewangles = targ->client->vAngle;
-		ent->client->vAngle = targ->client->vAngle;
-		AngleVectors(ent->client->vAngle, ent->client->vForward, nullptr, nullptr);
+		ent->client->ps.viewangles = targ->client->v_angle;
+		ent->client->v_angle = targ->client->v_angle;
+		AngleVectors(ent->client->v_angle, ent->client->v_forward, nullptr, nullptr);
 	}
 	
 	gentity_t *e = targ ? targ : ent;
 	ent->client->ps.stats[STAT_SHOW_STATUSBAR] = !ClientIsPlaying(e->client) || e->client->eliminated ? 0 : 1;
 
-	ent->viewHeight = 0;
+	ent->viewheight = 0;
 	if (g_eyecam->integer != 1)
 		ent->client->ps.pmove.pm_flags |= PMF_NO_POSITIONAL_PREDICTION | PMF_NO_ANGULAR_PREDICTION;
 	gi.linkentity(ent);
@@ -227,7 +227,7 @@ static int ClientNumberFromString(gentity_t *to, char *s) {
 	for (idnum = 0, cl = game.clients; idnum < game.maxclients; idnum++, cl++) {
 		if (!cl->pers.connected)
 			continue;
-		SanitizeString(cl->sess.netName, n2);
+		SanitizeString(cl->resp.netname, n2);
 		if (!strcmp(n2, s2)) {
 			return idnum;
 		}
@@ -241,24 +241,24 @@ void FollowNext(gentity_t *ent) {
 	ptrdiff_t i;
 	gentity_t *e;
 
-	if (!ent->client->followTarget)
+	if (!ent->client->follow_target)
 		return;
 
-	i = ent->client->followTarget - g_entities;
+	i = ent->client->follow_target - g_entities;
 	do {
 		i++;
 		if (i > game.maxclients)
 			i = 1;
 		e = g_entities + i;
-		if (!e->inUse)
+		if (!e->inuse)
 			continue;
 		if (ent->client->eliminated && ent->client->sess.team != e->client->sess.team)
 			continue;
 		if (ClientIsPlaying(e->client) && !e->client->eliminated)
 			break;
-	} while (e != ent->client->followTarget);
+	} while (e != ent->client->follow_target);
 
-	ent->client->followTarget = e;
+	ent->client->follow_target = e;
 	ent->client->follow_update = true;
 }
 
@@ -266,24 +266,24 @@ void FollowPrev(gentity_t *ent) {
 	int		 i;
 	gentity_t *e;
 
-	if (!ent->client->followTarget)
+	if (!ent->client->follow_target)
 		return;
 
-	i = ent->client->followTarget - g_entities;
+	i = ent->client->follow_target - g_entities;
 	do {
 		i--;
 		if (i < 1)
 			i = game.maxclients;
 		e = g_entities + i;
-		if (!e->inUse)
+		if (!e->inuse)
 			continue;
 		if (ent->client->eliminated && ent->client->sess.team != e->client->sess.team)
 			continue;
 		if (ClientIsPlaying(e->client) && !e->client->eliminated)
 			break;
-	} while (e != ent->client->followTarget);
+	} while (e != ent->client->follow_target);
 
-	ent->client->followTarget = e;
+	ent->client->follow_target = e;
 	ent->client->follow_update = true;
 }
 
@@ -293,8 +293,8 @@ void FollowCycle(gentity_t *ent, int dir) {
 	gclient_t	*cl = ent->client;
 	gentity_t		*follow_ent = nullptr;
 
-	// if they are playing a gauntlet game, count as a loss
-	if (GT(GT_GAUNTLET) && ent->client->sess.team == TEAM_FREE)
+	// if they are playing a duel game, count as a loss
+	if (GT(GT_DUEL) && ent->client->sess.team == TEAM_FREE)
 		ent->client->sess.losses++;
 
 	// first set them to spectator
@@ -327,7 +327,7 @@ void FollowCycle(gentity_t *ent, int dir) {
 		cl->sess.spectator_state = SPECTATOR_FOLLOW;
 
 		//q2
-		ent->client->followTarget = follow_ent;
+		ent->client->follow_target = follow_ent;
 		ent->client->follow_update = true;
 
 		return;
@@ -338,10 +338,10 @@ void FollowCycle(gentity_t *ent, int dir) {
 
 void GetFollowTarget(gentity_t *ent) {
 	for (auto ec : active_clients()) {
-		if (ec->inUse && ClientIsPlaying(ec->client) && !ec->client->eliminated) {
+		if (ec->inuse && ClientIsPlaying(ec->client) && !ec->client->eliminated) {
 			if (ent->client->eliminated && ent->client->sess.team != ec->client->sess.team)
 				continue;
-			ent->client->followTarget = ec;
+			ent->client->follow_target = ec;
 			ent->client->follow_update = true;
 			UpdateChaseCam(ent);
 			return;
