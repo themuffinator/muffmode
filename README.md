@@ -13,8 +13,8 @@ New creative possibilities are unlocked for level designers, with an array of ne
 Enhanced HUD info and a number of changable settings.
 
 ## Installation
-1. Locate your installation. For Steam, this is normally "C:\Program Files (x86)\Steam\steamapps\common\Quake 2\rerelease".
-2. Back up your baseq2/game_x64.dll.
+1. Locate your installation. For Steam, this is normally `C:\Program Files (x86)\Steam\steamapps\common\Quake 2\`.
+2. Back up your `rerelease/baseq2/game_x64.dll`.
 3. Download the latest [Muff Mode release](https://github.com/themuffinator/muffmode/releases/latest).
 4. Extract the entire zip to your "Quake 2" folder (not rerelease), allow file replacements (unless you already have Muff Mode, this should only replace the .dll).
 5. Load the game up as normal. A range of configs can be executed to apply settings once a game has been set up.
