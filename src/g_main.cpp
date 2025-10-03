@@ -259,7 +259,7 @@ int _gt[] = {
 	/* GT_TDM */ GTF_TEAMS | GTF_FRAGS,
 	/* GT_CTF */ GTF_TEAMS | GTF_CTF,
 	/* GT_CA */ GTF_TEAMS | GTF_ARENA | GTF_ROUNDS | GTF_ELIMINATION,
-	/* GT_FREEZE */ GTF_TEAMS | GTF_ELIMINATION,
+	/* GT_FREEZE */ GTF_TEAMS | GTF_ROUNDS | GTF_ELIMINATION,
 	/* GT_STRIKE */ GTF_TEAMS | GTF_ARENA | GTF_ROUNDS | GTF_CTF | GTF_ELIMINATION,
 	/* GT_RR */ GTF_TEAMS | GTF_ROUNDS | GTF_ARENA,
 	/* GT_LMS */ GTF_ELIMINATION,
@@ -1830,6 +1830,56 @@ static void CheckDMRoundState(void) {
 			}
 			break;
 		}
+		case GT_FREEZE:
+		{
+			int32_t total_red = 0, total_blue = 0;
+			int32_t frozen_red = 0, frozen_blue = 0;
+
+			for (auto ec : active_clients()) {
+				if (!ClientIsPlaying(ec->client))
+					continue;
+
+				switch (ec->client->sess.team) {
+				case TEAM_RED:
+					total_red++;
+					if (Freeze_IsFrozen(ec))
+						frozen_red++;
+					break;
+				case TEAM_BLUE:
+					total_blue++;
+					if (Freeze_IsFrozen(ec))
+						frozen_blue++;
+					break;
+				}
+			}
+
+			bool red_all_frozen = total_red > 0 && frozen_red >= total_red;
+			bool blue_all_frozen = total_blue > 0 && frozen_blue >= total_blue;
+
+			if (red_all_frozen && !blue_all_frozen) {
+				G_AdjustTeamScore(TEAM_BLUE, 1);
+				gi.LocBroadcast_Print(PRINT_CENTER, "{} wins the round!\n({} fully frozen)\n", Teams_TeamName(TEAM_BLUE), Teams_TeamName(TEAM_RED));
+				AnnouncerSound(world, "blue_wins_round", "ctf/flagcap.wav", true);
+				Round_End();
+				return;
+			}
+
+			if (blue_all_frozen && !red_all_frozen) {
+				G_AdjustTeamScore(TEAM_RED, 1);
+				gi.LocBroadcast_Print(PRINT_CENTER, "{} wins the round!\n({} fully frozen)\n", Teams_TeamName(TEAM_RED), Teams_TeamName(TEAM_BLUE));
+				AnnouncerSound(world, "red_wins_round", "ctf/flagcap.wav", false);
+				Round_End();
+				return;
+			}
+
+			if (red_all_frozen && blue_all_frozen && (total_red || total_blue)) {
+				gi.LocBroadcast_Print(PRINT_CENTER, "Round tied!\nBoth teams frozen.\n");
+				Round_End();
+				return;
+			}
+
+			break;
+		}
 		case GT_HORDE:
 			Horde_RunSpawning();
 			//if (level.horde_all_spawned && Horde_AllMonstersDead()) {
@@ -1862,18 +1912,18 @@ static void CheckDMRoundState(void) {
 		// hit the round time limit, check any other winning conditions
 		if (level.time >= level.round_state_timer) {
 			// highest number of players remaining or highest total health wins
-			if (GT(GT_CA)) {
-				if (level.num_living_red > level.num_living_blue) {
-					G_AdjustTeamScore(TEAM_RED, 1);
-					gi.LocBroadcast_Print(PRINT_CENTER, "{} wins the round!\n(players remaining: {} vs {})\n", Teams_TeamName(TEAM_RED), level.num_living_red, level.num_living_blue);
-					//gi.positioned_sound(world->s.origin, world, CHAN_AUTO | CHAN_RELIABLE, gi.soundindex("ctf/flagcap.wav"), 1, ATTN_NONE, 0);
-					AnnouncerSound(world, "red_wins_round", "ctf/flagcap.wav", false);
-				} else if (level.num_living_blue > level.num_living_red) {
-					G_AdjustTeamScore(TEAM_BLUE, 1);
-					gi.LocBroadcast_Print(PRINT_CENTER, "{} wins the round!\n(players remaining: {} vs {})\n", Teams_TeamName(TEAM_BLUE), level.num_living_blue, level.num_living_red);
-					//gi.positioned_sound(world->s.origin, world, CHAN_AUTO | CHAN_RELIABLE, gi.soundindex("ctf/flagcap.wav"), 1, ATTN_NONE, 0);
-					AnnouncerSound(world, "blue_wins_round", "ctf/flagcap.wav", true);
-				} else {
+                        if (GT(GT_CA)) {
+                                if (level.num_living_red > level.num_living_blue) {
+                                        G_AdjustTeamScore(TEAM_RED, 1);
+                                        gi.LocBroadcast_Print(PRINT_CENTER, "{} wins the round!\n(players remaining: {} vs {})\n", Teams_TeamName(TEAM_RED), level.num_living_red, level.num_living_blue);
+                                        //gi.positioned_sound(world->s.origin, world, CHAN_AUTO | CHAN_RELIABLE, gi.soundindex("ctf/flagcap.wav"), 1, ATTN_NONE, 0);
+                                        AnnouncerSound(world, "red_wins_round", "ctf/flagcap.wav", false);
+                                } else if (level.num_living_blue > level.num_living_red) {
+                                        G_AdjustTeamScore(TEAM_BLUE, 1);
+                                        gi.LocBroadcast_Print(PRINT_CENTER, "{} wins the round!\n(players remaining: {} vs {})\n", Teams_TeamName(TEAM_BLUE), level.num_living_blue, level.num_living_red);
+                                        //gi.positioned_sound(world->s.origin, world, CHAN_AUTO | CHAN_RELIABLE, gi.soundindex("ctf/flagcap.wav"), 1, ATTN_NONE, 0);
+                                        AnnouncerSound(world, "blue_wins_round", "ctf/flagcap.wav", true);
+                                } else {
 					int total_health_red = 0, total_health_blue = 0;
 
 					for (auto ec : active_players()) {
@@ -1894,20 +1944,40 @@ static void CheckDMRoundState(void) {
 						gi.LocBroadcast_Print(PRINT_CENTER, "{} wins the round!\n(total health: {} vs {})\n", Teams_TeamName(TEAM_RED), total_health_red, total_health_blue);
 						//gi.positioned_sound(world->s.origin, world, CHAN_AUTO | CHAN_RELIABLE, gi.soundindex("ctf/flagcap.wav"), 1, ATTN_NONE, 0);
 						AnnouncerSound(world, "red_wins_round", "ctf/flagcap.wav", false);
-					} else if (total_health_blue > total_health_red) {
-						G_AdjustTeamScore(TEAM_BLUE, 1);
-						gi.LocBroadcast_Print(PRINT_CENTER, "{} wins the round!\n(total health: {} vs {})\n", Teams_TeamName(TEAM_BLUE), total_health_blue, total_health_red);
-						//gi.positioned_sound(world->s.origin, world, CHAN_AUTO | CHAN_RELIABLE, gi.soundindex("ctf/flagcap.wav"), 1, ATTN_NONE, 0);
-						AnnouncerSound(world, "blue_wins_round", "ctf/flagcap.wav", true);
-					} else {
-						gi.LocBroadcast_Print(PRINT_CENTER, "Round draw!");
-					}
-				}
-			} else {
-				if (GT(GT_STRIKE)) {
-					if (level.strike_flag_touch)
-						gi.LocBroadcast_Print(PRINT_CENTER, "Turn has ended.\n{} scored a point!\n", Teams_TeamName(level.strike_red_attacks ? TEAM_RED : TEAM_BLUE));
-					else
+                                        } else if (total_health_blue > total_health_red) {
+                                                G_AdjustTeamScore(TEAM_BLUE, 1);
+                                                gi.LocBroadcast_Print(PRINT_CENTER, "{} wins the round!\n(total health: {} vs {})\n", Teams_TeamName(TEAM_BLUE), total_health_blue, total_health_red);
+                                                //gi.positioned_sound(world->s.origin, world, CHAN_AUTO | CHAN_RELIABLE, gi.soundindex("ctf/flagcap.wav"), 1, ATTN_NONE, 0);
+                                                AnnouncerSound(world, "blue_wins_round", "ctf/flagcap.wav", true);
+                                        } else {
+                                                gi.LocBroadcast_Print(PRINT_CENTER, "Round draw!");
+                                        }
+                                }
+                        } else if (GT(GT_FREEZE)) {
+                                if (level.num_living_red > level.num_living_blue) {
+                                        G_AdjustTeamScore(TEAM_RED, 1);
+                                        gi.LocBroadcast_Print(PRINT_CENTER, "{} wins the round!\n(players remaining: {} vs {})\n", Teams_TeamName(TEAM_RED), level.num_living_red, level.num_living_blue);
+                                        AnnouncerSound(world, "red_wins_round", "ctf/flagcap.wav", false);
+                                } else if (level.num_living_blue > level.num_living_red) {
+                                        G_AdjustTeamScore(TEAM_BLUE, 1);
+                                        gi.LocBroadcast_Print(PRINT_CENTER, "{} wins the round!\n(players remaining: {} vs {})\n", Teams_TeamName(TEAM_BLUE), level.num_living_blue, level.num_living_red);
+                                        AnnouncerSound(world, "blue_wins_round", "ctf/flagcap.wav", true);
+                                } else if (level.num_eliminated_blue < level.num_eliminated_red) {
+                                        G_AdjustTeamScore(TEAM_BLUE, 1);
+                                        gi.LocBroadcast_Print(PRINT_CENTER, "{} wins the round!\n(frozen players: {} vs {})\n", Teams_TeamName(TEAM_BLUE), level.num_eliminated_blue, level.num_eliminated_red);
+                                        AnnouncerSound(world, "blue_wins_round", "ctf/flagcap.wav", true);
+                                } else if (level.num_eliminated_red < level.num_eliminated_blue) {
+                                        G_AdjustTeamScore(TEAM_RED, 1);
+                                        gi.LocBroadcast_Print(PRINT_CENTER, "{} wins the round!\n(frozen players: {} vs {})\n", Teams_TeamName(TEAM_RED), level.num_eliminated_red, level.num_eliminated_blue);
+                                        AnnouncerSound(world, "red_wins_round", "ctf/flagcap.wav", false);
+                                } else {
+                                        gi.LocBroadcast_Print(PRINT_CENTER, "Round draw!\n");
+                                }
+                        } else {
+                                if (GT(GT_STRIKE)) {
+                                        if (level.strike_flag_touch)
+                                                gi.LocBroadcast_Print(PRINT_CENTER, "Turn has ended.\n{} scored a point!\n", Teams_TeamName(level.strike_red_attacks ? TEAM_RED : TEAM_BLUE));
+                                        else
 						gi.LocBroadcast_Print(PRINT_CENTER, "Turn has ended.\n{} successfully defended!", Teams_TeamName(!level.strike_red_attacks ? TEAM_RED : TEAM_BLUE));
 				}
 			}

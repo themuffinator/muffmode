@@ -3192,6 +3192,11 @@ void Round_End();
 void SetIntermissionPoint(void);
 void FindIntermissionPoint(void);
 void CalculateRanks();
+
+bool Freeze_IsFrozen(const gentity_t *ent);
+void Freeze_OnPlayerKilled(gentity_t *victim, gentity_t *attacker);
+void Freeze_UpdatePlayer(gentity_t *ent);
+void Freeze_ResetClient(gentity_t *ent);
 void CheckDMExitRules();
 int GT_ScoreLimit();
 const char *GT_ScoreLimitString();
@@ -3763,11 +3768,12 @@ struct gclient_t {
 	gtime_t	 last_firing_time;
 
 	bool		eliminated;
+	bool		freeze_thawing;
 /*freeze*/
 	gentity_t		*viewed;
-	float		thaw_time;
-	float		frozen_time;
-	float		moan_time;
+	gtime_t	thaw_time;
+	gtime_t	frozen_time;
+	gtime_t	moan_time;
 /*freeze*/
 
 	bool		ready_to_exit;

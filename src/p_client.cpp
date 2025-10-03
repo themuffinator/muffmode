@@ -348,6 +348,178 @@ mon_name_t monname[] = {
 	{ "monster_widow2", "Black Widow" },
 };
 
+static constexpr gtime_t FREEZE_THAW_DURATION = 10_sec;
+static constexpr gtime_t FREEZE_STATUS_INTERVAL = 1_sec;
+static constexpr float FREEZE_THAW_RADIUS = MELEE_DISTANCE + 12.f;
+
+static bool Freeze_CanProcess() {
+        return GT(GT_FREEZE) && level.match_state == matchst_t::MATCH_IN_PROGRESS &&
+                level.round_state == roundst_t::ROUND_IN_PROGRESS;
+}
+
+static bool Freeze_CanThaw(const gentity_t *frozen, const gentity_t *candidate) {
+        if (!candidate || !candidate->inuse || candidate == frozen)
+                return false;
+
+        if (!candidate->client || !ClientIsPlaying(candidate->client))
+                return false;
+
+        if (candidate->client->eliminated || candidate->health <= 0)
+                return false;
+
+        if (candidate->client->sess.team != frozen->client->sess.team)
+                return false;
+
+        vec3_t frozen_center = frozen->s.origin + (frozen->mins + frozen->maxs) * 0.5f;
+        vec3_t thawer_center = candidate->s.origin + (candidate->mins + candidate->maxs) * 0.5f;
+
+        return (frozen_center - thawer_center).length() <= FREEZE_THAW_RADIUS;
+}
+
+static void Freeze_ClearThaw(gentity_t *frozen) {
+        if (!frozen->client)
+                return;
+
+        frozen->client->resp.thawer = nullptr;
+        frozen->client->thaw_time = 0_ms;
+        frozen->client->moan_time = 0_ms;
+}
+
+static void Freeze_BeginThaw(gentity_t *frozen, gentity_t *thawer) {
+        auto cl = frozen->client;
+        cl->resp.thawer = thawer;
+        cl->thaw_time = level.time + FREEZE_THAW_DURATION;
+        cl->moan_time = level.time + FREEZE_STATUS_INTERVAL;
+
+        gi.sound(frozen, CHAN_BODY, gi.soundindex("world/steam3.wav"), 1, ATTN_NORM, 0);
+        gi.LocClient_Print(frozen, PRINT_CENTER, "{} is thawing you!", thawer->client->resp.netname);
+        gi.LocClient_Print(thawer, PRINT_CENTER, "Thawing {}...", frozen->client->resp.netname);
+}
+
+static void Freeze_AnnounceThawProgress(gentity_t *frozen) {
+        auto cl = frozen->client;
+        gentity_t *thawer = cl->resp.thawer;
+
+        if (!thawer || !thawer->client)
+                return;
+
+        gtime_t remaining = cl->thaw_time - level.time;
+        int seconds = clamp(remaining.seconds<int>() + 1, 1, FREEZE_THAW_DURATION.seconds<int>());
+
+        gi.LocClient_Print(frozen, PRINT_CENTER, "{} is thawing you... {}s", thawer->client->resp.netname, seconds);
+        gi.LocClient_Print(thawer, PRINT_CENTER, "Thawing {}... {}s", frozen->client->resp.netname, seconds);
+        cl->moan_time = level.time + FREEZE_STATUS_INTERVAL;
+}
+
+static void Freeze_FinishThaw(gentity_t *frozen, gentity_t *thawer, bool forced) {
+        if (!frozen->client)
+                return;
+
+        Freeze_ClearThaw(frozen);
+
+        gi.positioned_sound(frozen->s.origin, frozen, CHAN_BODY, gi.soundindex("world/brkglas.wav"), 1, ATTN_NORM, 0);
+        ThrowGibs(frozen, 40, { { 4, "models/objects/debris1/tris.md2", GIB_ORGANIC }, { 2, "models/objects/gibs/sm_meat/tris.md2", GIB_ORGANIC } });
+        ThrowClientHead(frozen, 40);
+
+        if (thawer && thawer->client) {
+                thawer->client->resp.thawed++;
+                gi.LocBroadcast_Print(PRINT_HIGH, "{} thawed {}!\n", thawer->client->resp.netname, frozen->client->resp.netname);
+        } else {
+                gi.LocClient_Print(frozen, PRINT_CENTER, forced ? "You thawed out on your own!\n" : "You thawed out!\n");
+        }
+
+        frozen->client->freeze_thawing = true;
+        frozen->client->eliminated = false;
+        frozen->client->frozen_time = 0_ms;
+        frozen->client->thaw_time = 0_ms;
+
+        ClientRespawn(frozen);
+
+        gi.LocClient_Print(frozen, PRINT_CENTER, "You are thawed!\n");
+        if (thawer && thawer->client)
+                gi.LocClient_Print(thawer, PRINT_CENTER, "You thawed {}!\n", frozen->client->resp.netname);
+
+        CalculateRanks();
+}
+
+bool Freeze_IsFrozen(const gentity_t *ent) {
+        if (!ent || !ent->client)
+                return false;
+
+        if (!GT(GT_FREEZE) || !ClientIsPlaying(ent->client))
+                return false;
+
+        return ent->client->eliminated && ent->health <= 0;
+}
+
+void Freeze_ResetClient(gentity_t *ent) {
+        if (!ent || !ent->client)
+                return;
+
+        ent->client->resp.thawer = nullptr;
+        ent->client->thaw_time = 0_ms;
+        ent->client->frozen_time = 0_ms;
+        ent->client->moan_time = 0_ms;
+}
+
+void Freeze_OnPlayerKilled(gentity_t *victim, gentity_t *attacker) {
+        if (!Freeze_CanProcess())
+                return;
+
+        if (!victim || !victim->client || !ClientIsPlaying(victim->client))
+                return;
+
+        victim->client->eliminated = true;
+        victim->client->freeze_thawing = false;
+        victim->client->resp.thawer = nullptr;
+        victim->client->thaw_time = 0_ms;
+        victim->client->moan_time = 0_ms;
+        victim->client->frozen_time = g_frozen_time->value > 0.f ? level.time + gtime_t::from_sec(g_frozen_time->value) : 0_ms;
+        victim->client->pers.health = 0;
+        victim->client->ps.stats[STAT_CHASE] = 0;
+
+        victim->s.effects |= EF_COLOR_SHELL;
+        victim->s.renderfx |= (RF_SHELL_RED | RF_SHELL_GREEN | RF_SHELL_BLUE);
+
+        gi.LocClient_Print(victim, PRINT_CENTER, "You are frozen! Wait for a teammate to thaw you.");
+
+        CalculateRanks();
+}
+
+void Freeze_UpdatePlayer(gentity_t *ent) {
+        if (!Freeze_CanProcess())
+                return;
+
+        if (!Freeze_IsFrozen(ent))
+                return;
+
+        auto cl = ent->client;
+
+        ent->s.effects |= EF_COLOR_SHELL;
+        ent->s.renderfx |= (RF_SHELL_RED | RF_SHELL_GREEN | RF_SHELL_BLUE);
+
+        if (cl->resp.thawer && !Freeze_CanThaw(ent, cl->resp.thawer))
+                Freeze_ClearThaw(ent);
+
+        if (!cl->resp.thawer) {
+                for (auto other : active_clients()) {
+                        if (!Freeze_CanThaw(ent, other))
+                                continue;
+
+                        Freeze_BeginThaw(ent, other);
+                        break;
+                }
+        } else if (level.time >= cl->thaw_time) {
+                Freeze_FinishThaw(ent, cl->resp.thawer, false);
+                return;
+        } else if (level.time >= cl->moan_time) {
+                Freeze_AnnounceThawProgress(ent);
+        }
+
+        if (g_frozen_time->value > 0.f && cl->frozen_time > 0_ms && level.time >= cl->frozen_time)
+                Freeze_FinishThaw(ent, nullptr, true);
+}
+
 static const char *MonsterName(const char *classname) {
 	for (size_t i = 0; i < ARRAY_LEN(monname); i++) {
 		if (!Q_strncasecmp(classname, monname[i].classname, strlen(classname)))
@@ -979,7 +1151,9 @@ DIE(player_die) (gentity_t *self, gentity_t *inflictor, gentity_t *attacker, int
 	else if (1_sec > (level.time - self->client->respawn_time))
 		MS_Adjust(self->client, MSTAT_DEATHS_SPAWN, 1);
 
-	self->svflags |= SVF_DEADMONSTER;
+        self->svflags |= SVF_DEADMONSTER;
+
+        Freeze_OnPlayerKilled(self, attacker);
 
 	if (!self->deadflag) {
 		self->client->respawn_time = (level.time + 1_sec);
@@ -2334,21 +2508,22 @@ void ClientSetEliminated(gentity_t *self) {
 }
 
 void ClientRespawn(gentity_t *ent) {
-	if (deathmatch->integer || coop->integer) {
-		// spectators don't leave bodies
-		if (ClientIsPlaying(ent->client))
-			CopyToBodyQue(ent);
-		ent->svflags &= ~SVF_NOCLIENT;
+        if (deathmatch->integer || coop->integer) {
+                // spectators don't leave bodies
+                if (ClientIsPlaying(ent->client) && !ent->client->freeze_thawing)
+                        CopyToBodyQue(ent);
+                ent->svflags &= ~SVF_NOCLIENT;
 
-		if (GT(GT_RR) && level.match_state == matchst_t::MATCH_IN_PROGRESS) {
-			ent->client->sess.team = Teams_OtherTeam(ent->client->sess.team);
-			G_AssignPlayerSkin(ent, ent->client->pers.skin);
-		}
+                if (GT(GT_RR) && level.match_state == matchst_t::MATCH_IN_PROGRESS) {
+                        ent->client->sess.team = Teams_OtherTeam(ent->client->sess.team);
+                        G_AssignPlayerSkin(ent, ent->client->pers.skin);
+                }
 
-		ClientSpawn(ent);
-		G_PostRespawn(ent);
-		return;
-	}
+                ClientSpawn(ent);
+                G_PostRespawn(ent);
+                ent->client->freeze_thawing = false;
+                return;
+        }
 
 	// restart the entire server
 	gi.AddCommandString("menu_loadgame\n");
@@ -2645,13 +2820,15 @@ void ClientSpawn(gentity_t *ent) {
 	client_respawn_t		resp;
 	client_session_t		sess;
 
-	if (GTF(GTF_ROUNDS) && GTF(GTF_ELIMINATION) && level.match_state == matchst_t::MATCH_IN_PROGRESS && notGT(GT_HORDE))
-		if (level.round_state == roundst_t::ROUND_IN_PROGRESS || level.round_state == roundst_t::ROUND_ENDED)
-			ClientSetEliminated(ent);
-	bool eliminated = ent->client->eliminated;
-	int lives = 0;
-	if (InCoopStyle() && g_coop_enable_lives->integer)
-		lives = ent->client->pers.spawned ? ent->client->pers.lives : g_coop_enable_lives->integer + 1;
+        bool thawing = client->freeze_thawing;
+
+        if (!thawing && GTF(GTF_ROUNDS) && GTF(GTF_ELIMINATION) && level.match_state == matchst_t::MATCH_IN_PROGRESS && notGT(GT_HORDE))
+                if (level.round_state == roundst_t::ROUND_IN_PROGRESS || level.round_state == roundst_t::ROUND_ENDED)
+                        ClientSetEliminated(ent);
+        bool eliminated = ent->client->eliminated;
+        int lives = 0;
+        if (InCoopStyle() && g_coop_enable_lives->integer)
+                lives = ent->client->pers.spawned ? ent->client->pers.lives : g_coop_enable_lives->integer + 1;
 	
 	// clear velocity now, since landmark may change it
 	ent->velocity = {};
@@ -2717,8 +2894,10 @@ void ClientSpawn(gentity_t *ent) {
 	if (client->awaiting_respawn)
 		ent->svflags &= ~SVF_NOCLIENT;
 
-	client->awaiting_respawn = false;
-	client->respawn_timeout = 0_ms;
+        client->awaiting_respawn = false;
+        client->respawn_timeout = 0_ms;
+
+        Freeze_ResetClient(ent);
 
 	char social_id[MAX_INFO_VALUE];
 	Q_strlcpy(social_id, ent->client->pers.social_id, sizeof(social_id));
@@ -2918,8 +3097,10 @@ void ClientSpawn(gentity_t *ent) {
 		client->newweapon = client->pers.weapon;
 	Change_Weapon(ent);
 
-	if (was_waiting_for_respawn)
-		G_PostRespawn(ent);
+        client->freeze_thawing = false;
+
+        if (was_waiting_for_respawn)
+                G_PostRespawn(ent);
 }
 
 /*
