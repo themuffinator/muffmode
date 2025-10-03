@@ -9,8 +9,8 @@ TANK
 */
 
 #include "../g_local.hpp"
-#include "m_tank.h"
-#include "m_flash.h"
+#include "m_tank.hpp"
+#include "m_flash.hpp"
 
 void tank_refire_rocket(gentity_t *self);
 void tank_doattack_rocket(gentity_t *self);

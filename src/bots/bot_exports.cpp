@@ -2,7 +2,7 @@
 // Licensed under the GNU General Public License 2.0.
 
 #include "../g_local.hpp"
-#include "bot_exports.h"
+#include "bot_exports.hpp"
 
 /*
 ================

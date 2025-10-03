@@ -6,7 +6,7 @@
 */
 
 #include "../g_local.hpp"
-#include "m_gekk.h"
+#include "m_gekk.hpp"
 
 constexpr spawnflags_t SPAWNFLAG_GEKK_CHANT = 8_spawnflag;
 constexpr spawnflags_t SPAWNFLAG_GEKK_NOJUMPING = 16_spawnflag;

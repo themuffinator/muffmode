@@ -9,7 +9,7 @@ BERSERK
 */
 
 #include "../g_local.hpp"
-#include "m_berserk.h"
+#include "m_berserk.hpp"
 
 constexpr spawnflags_t SPAWNFLAG_BERSERK_NOJUMPING = 8_spawnflag;
 

@@ -1917,7 +1917,7 @@ void SpawnEntities(const char *mapname, const char *entities, const char *spawnp
 
 //===================================================================
 
-#include "g_statusbar.h"
+#include "g_statusbar.hpp"
 
 // create & set the statusbar string for the current gamemode
 static void G_InitStatusbar() {

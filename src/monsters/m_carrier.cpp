@@ -13,8 +13,8 @@ carrier
 // self->monsterinfo.fire_wait used to prevent rapid refire of rocket launcher
 
 #include "../g_local.hpp"
-#include "m_carrier.h"
-#include "m_flash.h"
+#include "m_carrier.hpp"
+#include "m_flash.hpp"
 
 // nb: specifying flyer multiple times so it has a higher chance
 constexpr const char *default_reinforcements = "monster_flyer 1;monster_flyer 1;monster_flyer 1;monster_kamikaze 1";

@@ -5,8 +5,8 @@
 */
 
 #include "../g_local.hpp"
-#include "m_fixbot.h"
-#include "m_flash.h"
+#include "m_fixbot.hpp"
+#include "m_flash.hpp"
 
 bool infront(gentity_t *self, gentity_t *other);
 bool FindTarget(gentity_t *self);

@@ -1,6 +1,6 @@
 // Copyright (c) ZeniMax Media Inc.
 // Licensed under the GNU General Public License 2.0.
-#include "cg_local.h"
+#include "cg_local.hpp"
 
 constexpr int32_t STAT_MINUS = 10;  // num frame for '-' stats digit
 constexpr const char *sb_nums[2][11] =

@@ -12,8 +12,8 @@ black widow
 // self->plat2flags used for fire count (flashes)
 
 #include "../g_local.hpp"
-#include "m_widow.h"
-#include "m_flash.h"
+#include "m_widow.hpp"
+#include "m_flash.hpp"
 
 constexpr gtime_t RAIL_TIME = 3_sec;
 constexpr gtime_t BLASTER_TIME = 2_sec;

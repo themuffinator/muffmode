@@ -1,16 +1,16 @@
 // Copyright (c) ZeniMax Media Inc.
 // Licensed under the GNU General Public License 2.0.
 
-// bg_local.h -- shared game definitions for client and server modules
+// bg_local.hpp -- shared game definitions for client and server modules
 #pragma once
 
-#include "q_std.h"
+#include "q_std.hpp"
 
-// define GAME_INCLUDE so that game.h does not define the
+// define GAME_INCLUDE so that game.hpp does not define the
 // short, server-visible gclient_t and gentity_t structures,
 // because we define the full size ones in this file
 #define GAME_INCLUDE
-#include "game.h"
+#include "game.hpp"
 
 //
 // p_move.c

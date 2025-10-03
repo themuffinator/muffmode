@@ -9,7 +9,7 @@ boss3
 */
 
 #include "../g_local.hpp"
-#include "m_boss32.h"
+#include "m_boss32.hpp"
 
 USE(Use_Boss3) (gentity_t *self, gentity_t *other, gentity_t *activator) -> void {
 	gi.WriteByte(svc_temp_entity);

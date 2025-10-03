@@ -4,7 +4,7 @@
 // g_local.hpp -- local definitions for game module
 #pragma once
 
-#include "bg_local.h"
+#include "bg_local.hpp"
 #include "g_cvars.hpp"
 
 struct level_locals_t;
@@ -3148,7 +3148,7 @@ constexpr spawnflags_t SPAWNFLAG_LANDMARK_KEEP_Z = 1_spawnflag;
 
 bool ClientIsPlaying(gclient_t *cl);
 
-#include "p_menu.h"
+#include "p_menu.hpp"
 //============================================================================
 
 // client_t->anim_priority

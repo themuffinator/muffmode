@@ -9,8 +9,8 @@ floater
 */
 
 #include "../g_local.hpp"
-#include "m_float.h"
-#include "m_flash.h"
+#include "m_float.hpp"
+#include "m_flash.hpp"
 
 static cached_soundindex sound_attack2;
 static cached_soundindex sound_attack3;

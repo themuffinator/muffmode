@@ -3,7 +3,7 @@
 
 #pragma once
 
-#include "bot_utils.h"
-#include "bot_think.h"
-#include "bot_debug.h"
-#include "bot_exports.h"
+#include "bot_utils.hpp"
+#include "bot_think.hpp"
+#include "bot_debug.hpp"
+#include "bot_exports.hpp"

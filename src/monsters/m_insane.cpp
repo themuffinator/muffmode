@@ -9,7 +9,7 @@ insane
 */
 
 #include "../g_local.hpp"
-#include "m_insane.h"
+#include "m_insane.hpp"
 
 constexpr spawnflags_t SPAWNFLAG_INSANE_CRAWL = 4_spawnflag;
 constexpr spawnflags_t SPAWNFLAG_INSANE_CRUCIFIED = 8_spawnflag;

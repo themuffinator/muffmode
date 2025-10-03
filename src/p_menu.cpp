@@ -96,7 +96,7 @@ void P_Menu_UpdateEntry(menu_t *entry, const char *text, int align, SelectFunc_t
 	entry->SelectFunc = SelectFunc;
 }
 
-#include "g_statusbar.h"
+#include "g_statusbar.hpp"
 
 void P_Menu_Do_Update(gentity_t *ent) {
 	int			i;

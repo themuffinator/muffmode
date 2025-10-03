@@ -1,7 +1,7 @@
 #pragma once
 
-#include "q_std.h"
-#include "game.h"
+#include "q_std.hpp"
+#include "game.hpp"
 
 #include <cstdint>
 

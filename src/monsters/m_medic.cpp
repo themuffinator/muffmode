@@ -9,8 +9,8 @@ MEDIC
 */
 
 #include "../g_local.hpp"
-#include "m_medic.h"
-#include "m_flash.h"
+#include "m_medic.hpp"
+#include "m_flash.hpp"
 
 constexpr float MEDIC_MIN_DISTANCE = 32;
 constexpr float MEDIC_MAX_HEAL_DISTANCE = 400;

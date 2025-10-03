@@ -9,7 +9,7 @@ stalker
 */
 
 #include "../g_local.hpp"
-#include "m_stalker.h"
+#include "m_stalker.hpp"
 #include <float.h>
 
 static cached_soundindex sound_pain;

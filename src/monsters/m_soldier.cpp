@@ -9,8 +9,8 @@ SOLDIER
 */
 
 #include "../g_local.hpp"
-#include "m_soldier.h"
-#include "m_flash.h"
+#include "m_soldier.hpp"
+#include "m_flash.hpp"
 
 static cached_soundindex sound_idle;
 static cached_soundindex sound_sight1;

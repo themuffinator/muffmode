@@ -9,8 +9,8 @@ SHAMBLER
 */
 
 #include "../g_local.hpp"
-#include "m_shambler.h"
-#include "m_flash.h"
+#include "m_shambler.hpp"
+#include "m_flash.hpp"
 
 static cached_soundindex sound_pain;
 static cached_soundindex sound_idle;

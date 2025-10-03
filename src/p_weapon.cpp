@@ -3,7 +3,7 @@
 // g_weapon.c
 
 #include "g_local.hpp"
-#include "monsters/m_player.h"
+#include "monsters/m_player.hpp"
 
 #include <array>
 

@@ -9,8 +9,8 @@ flyer
 */
 
 #include "../g_local.hpp"
-#include "m_flyer.h"
-#include "m_flash.h"
+#include "m_flyer.hpp"
+#include "m_flash.hpp"
 
 static cached_soundindex sound_sight;
 static cached_soundindex sound_idle;

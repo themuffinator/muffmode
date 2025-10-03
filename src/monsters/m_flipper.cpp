@@ -9,7 +9,7 @@ FLIPPER
 */
 
 #include "../g_local.hpp"
-#include "m_flipper.h"
+#include "m_flipper.hpp"
 
 static cached_soundindex sound_chomp;
 static cached_soundindex sound_attack;

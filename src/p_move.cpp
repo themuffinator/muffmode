@@ -1,13 +1,13 @@
 // Copyright (c) ZeniMax Media Inc.
 // Licensed under the GNU General Public License 2.0.
 
-#include "q_std.h"
+#include "q_std.hpp"
 
 #include <array>
 #include <limits>
 
 #define GAME_INCLUDE
-#include "bg_local.h"
+#include "bg_local.hpp"
 
 // [Paril-KEX] generic code to detect & fix a stuck object
 stuck_result_t G_FixStuckObject_Generic(vec3_t &origin, const vec3_t &own_mins, const vec3_t &own_maxs, std::function<stuck_object_trace_fn_t> trace) {

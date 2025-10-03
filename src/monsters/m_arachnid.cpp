@@ -9,8 +9,8 @@ TANK
 */
 
 #include "../g_local.hpp"
-#include "m_arachnid.h"
-#include "m_flash.h"
+#include "m_arachnid.hpp"
+#include "m_flash.hpp"
 
 static cached_soundindex sound_pain;
 static cached_soundindex sound_death;

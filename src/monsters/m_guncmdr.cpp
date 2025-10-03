@@ -9,8 +9,8 @@ GUNNER
 */
 
 #include "../g_local.hpp"
-#include "m_gunner.h"
-#include "m_flash.h"
+#include "m_gunner.hpp"
+#include "m_flash.hpp"
 
 constexpr spawnflags_t SPAWNFLAG_GUNCMDR_NOJUMPING = 8_spawnflag;
 

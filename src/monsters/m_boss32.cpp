@@ -9,8 +9,8 @@ Makron -- Final Boss
 */
 
 #include "../g_local.hpp"
-#include "m_boss32.h"
-#include "m_flash.h"
+#include "m_boss32.hpp"
+#include "m_flash.hpp"
 
 void MakronRailgun(gentity_t *self);
 void MakronSaveloc(gentity_t *self);

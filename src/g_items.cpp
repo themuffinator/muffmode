@@ -1,8 +1,8 @@
 // Copyright (c) ZeniMax Media Inc.
 // Licensed under the GNU General Public License 2.0.
 #include "g_local.hpp"
-#include "bots/bot_includes.h"
-#include "monsters/m_player.h"	//doppelganger
+#include "bots/bot_includes.hpp"
+#include "monsters/m_player.hpp"	//doppelganger
 #include <array>
 #include <optional>
 #include <utility>

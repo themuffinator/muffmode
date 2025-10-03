@@ -9,8 +9,8 @@ boss2
 */
 
 #include "../g_local.hpp"
-#include "m_boss2.h"
-#include "m_flash.h"
+#include "m_boss2.hpp"
+#include "m_flash.hpp"
 
 // [Paril-KEX]
 constexpr spawnflags_t SPAWNFLAG_BOSS2_N64 = 8_spawnflag;

@@ -2,8 +2,8 @@
 // Licensed under the GNU General Public License 2.0.
 
 #include "../g_local.hpp"
-#include "bot_utils.h"
-#include "bot_debug.h"
+#include "bot_utils.hpp"
+#include "bot_debug.hpp"
 
 static const gentity_t *escortBot = nullptr;
 static const gentity_t *escortActor = nullptr;

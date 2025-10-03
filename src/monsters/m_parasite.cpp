@@ -9,7 +9,7 @@ parasite
 */
 
 #include "../g_local.hpp"
-#include "m_parasite.h"
+#include "m_parasite.hpp"
 
 constexpr float g_athena_parasite_miss_chance = 0.1f;
 constexpr float g_athena_parasite_proboscis_speed = 1250;

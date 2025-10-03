@@ -53,7 +53,7 @@ In-game menus leverage `P_Menu_Open`, `P_Menu_UpdateEntry`, and `P_Menu_Do_Updat
 - `p_client.cpp` defines spawnpoint entities for deathmatch, coop, and team modes, handles stuck-spawn fixes, instanced-item logic for coop, and maintains stock model/skin tables for character selection.
 - `p_hud.cpp` transitions clients into intermission, resets powerup timers, updates scoreboard layouts, and drives end-of-unit summaries broadcast via `svc_layout` messages.
 - `cg_main.cpp` exposes the client-game API (HUD drawing, layout flags, weapon/powerup wheel state, hit markers), propagates movement configuration (`pm_config`), and hooks configstring updates to toggle N64 physics or air acceleration on the fly.
-- `bg_local.h` and `q_std.h` supply shared math/utilities, compressed ammo/powerup stat helpers, and formatting utilities (`G_Fmt`, `G_FmtTo`) that replace heap-heavy formatting at runtime.
+- `bg_local.hpp` and `q_std.hpp` supply shared math/utilities, compressed ammo/powerup stat helpers, and formatting utilities (`G_Fmt`, `G_FmtTo`) that replace heap-heavy formatting at runtime.
 - `g_spawn.cpp` catalogs every entity factory—from player spawns and movers to Quake III–style targets—so map parsing can bind classnames to spawn functions, including Muff Mode’s additional triggers and shooters.
 - `bots/bot_utils.cpp` tracks per-entity state for bot awareness (movement flags, powerup timers, animation gestures), seeds armor metadata, and registers players with the bot subsystem, enabling AI to reason about equipment and situational context.
 

@@ -2,8 +2,8 @@
 // Licensed under the GNU General Public License 2.0.
 
 #include "g_local.hpp"
-#include "monsters/m_player.h"
-#include "bots/bot_includes.h"
+#include "monsters/m_player.hpp"
+#include "bots/bot_includes.hpp"
 
 static gentity_t *current_player;
 static gclient_t *current_client;

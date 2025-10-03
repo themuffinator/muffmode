@@ -3,7 +3,7 @@
 
 #pragma once
 
-// q_std.h -- 'standard' library stuff for game module
+// q_std.hpp -- 'standard' library stuff for game module
 // not meant to be included by engine, etc
 
 #include <cmath>
@@ -192,7 +192,7 @@ LerpAngle
 	return v;
 }
 
-#include "q_vec3.h"
+#include "q_vec3.hpp"
 
 //=============================================
 

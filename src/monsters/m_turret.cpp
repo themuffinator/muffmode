@@ -9,7 +9,7 @@ TURRET
 */
 
 #include "../g_local.hpp"
-#include "m_turret.h"
+#include "m_turret.hpp"
 
 constexpr spawnflags_t SPAWNFLAG_TURRET_BLASTER = 0x0008_spawnflag;
 constexpr spawnflags_t SPAWNFLAG_TURRET_MACHINEGUN = 0x0010_spawnflag;

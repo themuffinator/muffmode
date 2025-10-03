@@ -1,10 +1,10 @@
 // Copyright (c) ZeniMax Media Inc.
 // Licensed under the GNU General Public License 2.0.
 
-// cg_local.h -- local definitions for game module
+// cg_local.hpp -- local definitions for game module
 #pragma once
 
-#include "bg_local.h"
+#include "bg_local.hpp"
 
 extern cgame_import_t cgi;
 extern cgame_export_t cglobals;

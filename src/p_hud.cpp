@@ -1,7 +1,7 @@
 // Copyright (c) ZeniMax Media Inc.
 // Licensed under the GNU General Public License 2.0.
 #include "g_local.hpp"
-#include "g_statusbar.h"
+#include "g_statusbar.hpp"
 
 #include <algorithm>
 #include <limits>

@@ -1,8 +1,8 @@
 // Copyright (c) ZeniMax Media Inc.
 // Licensed under the GNU General Public License 2.0.
 
-#include "cg_local.h"
-#include "monsters/m_flash.h"
+#include "cg_local.hpp"
+#include "monsters/m_flash.hpp"
 
 cgame_import_t cgi;
 cgame_export_t cglobals;

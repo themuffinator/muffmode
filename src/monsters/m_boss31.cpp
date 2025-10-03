@@ -9,8 +9,8 @@ jorg
 */
 
 #include "../g_local.hpp"
-#include "m_boss31.h"
-#include "m_flash.h"
+#include "m_boss31.hpp"
+#include "m_flash.hpp"
 
 void SP_monster_makron(gentity_t *self);
 

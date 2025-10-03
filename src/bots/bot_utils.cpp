@@ -2,8 +2,8 @@
 // Licensed under the GNU General Public License 2.0.
 
 #include "../g_local.hpp"
-#include "../monsters/m_player.h"
-#include "bot_utils.h"
+#include "../monsters/m_player.hpp"
+#include "bot_utils.hpp"
 
 constexpr int Team_Coop_Monster = 0;
 

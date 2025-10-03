@@ -9,8 +9,8 @@ GLADIATOR
 */
 
 #include "../g_local.hpp"
-#include "m_gladiator.h"
-#include "m_flash.h"
+#include "m_gladiator.hpp"
+#include "m_flash.hpp"
 
 static cached_soundindex sound_pain1;
 static cached_soundindex sound_pain2;

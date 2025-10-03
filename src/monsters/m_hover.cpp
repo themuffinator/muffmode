@@ -9,8 +9,8 @@ hover
 */
 
 #include "../g_local.hpp"
-#include "m_hover.h"
-#include "m_flash.h"
+#include "m_hover.hpp"
+#include "m_flash.hpp"
 
 static cached_soundindex sound_pain1;
 static cached_soundindex sound_pain2;

@@ -2,8 +2,8 @@
 // Licensed under the GNU General Public License 2.0.
 
 #include "g_local.hpp"
-#include "bots/bot_includes.h"
-#include "monsters/m_player.h"	// match starts
+#include "bots/bot_includes.hpp"
+#include "monsters/m_player.hpp"	// match starts
 
 CHECK_GCLIENT_INTEGRITY;
 CHECK_ENTITY_INTEGRITY;

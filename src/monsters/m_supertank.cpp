@@ -9,8 +9,8 @@ SUPERTANK
 */
 
 #include "../g_local.hpp"
-#include "m_supertank.h"
-#include "m_flash.h"
+#include "m_supertank.hpp"
+#include "m_flash.hpp"
 
 constexpr spawnflags_t SPAWNFLAG_SUPERTANK_POWERSHIELD = 8_spawnflag;
 // n64

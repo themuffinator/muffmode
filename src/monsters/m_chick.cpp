@@ -9,8 +9,8 @@ chick
 */
 
 #include "../g_local.hpp"
-#include "m_chick.h"
-#include "m_flash.h"
+#include "m_chick.hpp"
+#include "m_flash.hpp"
 
 void chick_stand(gentity_t *self);
 void chick_run(gentity_t *self);

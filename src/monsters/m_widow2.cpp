@@ -11,8 +11,8 @@ black widow, part 2
 // timestamp used to prevent rapid fire of melee attack
 
 #include "../g_local.hpp"
-#include "m_widow2.h"
-#include "m_flash.h"
+#include "m_widow2.hpp"
+#include "m_flash.hpp"
 
 static cached_soundindex sound_pain1;
 static cached_soundindex sound_pain2;

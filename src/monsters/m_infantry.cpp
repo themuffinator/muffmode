@@ -9,8 +9,8 @@ INFANTRY
 */
 
 #include "../g_local.hpp"
-#include "m_infantry.h"
-#include "m_flash.h"
+#include "m_infantry.hpp"
+#include "m_flash.hpp"
 
 void InfantryMachineGun(gentity_t *self);
 

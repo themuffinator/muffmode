@@ -2325,7 +2325,7 @@ void SP_info_world_text(gentity_t *self) {
 	}
 }
 
-#include "monsters/m_player.h"
+#include "monsters/m_player.hpp"
 
 static USE(misc_player_mannequin_use) (gentity_t *self, gentity_t *other, gentity_t *activator) -> void {
 	self->monsterinfo.aiflags |= AI_TARGET_ANGER;

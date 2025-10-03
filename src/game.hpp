@@ -1,7 +1,7 @@
 // Copyright (c) ZeniMax Media Inc.
 // Licensed under the GNU General Public License 2.0.
 
-// game.h - game API stuff
+// game.hpp - game API stuff
 #pragma once
 
 #include <array>
@@ -107,7 +107,7 @@ constexpr bit_t<n> bit_v = 1ull << n;
 #define Q2GAME_API
 #endif
 
-// game.h -- game dll information visible to server
+// game.hpp -- game dll information visible to server
 // PARIL_NEW_API - value likely not used by any other Q2-esque engine in the wild
 constexpr int32_t GAME_API_VERSION = 2023;
 constexpr int32_t CGAME_API_VERSION = 2022;

@@ -3,8 +3,8 @@
 // g_actor.c
 
 #include "../g_local.hpp"
-#include "m_actor.h"
-#include "m_flash.h"
+#include "m_actor.hpp"
+#include "m_flash.hpp"
 
 constexpr const char *actor_names[] = {
 	"Hellrot",

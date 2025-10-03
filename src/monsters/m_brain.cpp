@@ -9,7 +9,7 @@ brain
 */
 
 #include "../g_local.hpp"
-#include "m_brain.h"
+#include "m_brain.hpp"
 
 static cached_soundindex sound_chest_open;
 static cached_soundindex sound_tentacles_extend;
