@@ -111,6 +111,7 @@
     <ClInclude Include="bots\bot_think.h" />
     <ClInclude Include="bots\bot_utils.h" />
     <ClInclude Include="cg_local.h" />
+    <ClInclude Include="g_cvars.hpp" />
     <ClInclude Include="game.h" />
     <ClInclude Include="g_local.h" />
     <ClInclude Include="g_statusbar.h" />
