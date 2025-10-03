@@ -1031,7 +1031,8 @@ void Match_Start() {
 	const char *s = G_TimeString(timelimit->value ? timelimit->value * 1000 : 0, true);
 	gi.configstring(CONFIG_MATCH_STATE, s);
 
-	Match_SetState(matchst_t::MATCH_IN_PROGRESS, level.time);
+        Match_SetState(matchst_t::MATCH_IN_PROGRESS);
+        level.match_state_timer = level.time;
 	level.warmup_requisite = warmupreq_t::WARMUP_REQ_NONE;
 	level.warmup_notice_time = 0_sec;
 
@@ -1642,7 +1643,8 @@ static void CheckDMWarmupState(void) {
 	// check because we run 3 game frames before calling Connect and/or ClientBegin
 	// for clients on a map_restart
 	if (Match_IsNone(level.match_state)) {
-		Match_SetState(matchst_t::MATCH_WARMUP_DELAYED, level.time + 5_sec);
+           Match_SetState(matchst_t::MATCH_WARMUP_DELAYED);
+           level.match_state_timer = level.time + 5_sec;
                 level.warmup_requisite = warmupreq_t::WARMUP_REQ_NONE;
 		level.warmup_notice_time = level.time;
                 return;
@@ -1729,7 +1731,8 @@ countdown:
                         Monsters_KillAll();
 
                         if (g_warmup_countdown->integer > 0) {
-						Match_SetState(matchst_t::MATCH_COUNTDOWN, level.time + gtime_t::from_sec(g_warmup_countdown->integer));
+                                          Match_SetState(matchst_t::MATCH_COUNTDOWN);
+                                          level.match_state_timer = level.time + gtime_t::from_sec(g_warmup_countdown->integer);
 
                                 // announce it
                                 if ((GT(GT_DUEL) || (level.num_playing_clients == 2 && g_match_lock->integer)) &&
@@ -3173,29 +3176,14 @@ static void G_UpdateTargetPushVelocity(gentity_t *ent, float gravity) {
 }
 
 static void G_UpdatePendulumSwing(gentity_t *ent, float gravity) {
-        if (gravity <= 0.f)
+        if (!ent || gravity <= 0.f)
                 return;
 
-        float length = std::fabs(ent->mins[2]);
-
-        if (length < 8.f)
-                length = 8.f;
-
-        float freq = (1.f / (PIf * 2.f)) * std::sqrt(gravity / (3.f * length));
-
-        if (!std::isfinite(freq) || freq <= 0.f)
-                return;
-
-        int duration = std::max(1, static_cast<int>(1000.f / freq));
-
-        int base_time = static_cast<int>(level.time.milliseconds());
-        float phase = ent->phase;
-        int offset = static_cast<int>(duration * phase);
-
-        ent->s.pos.trDuration = duration;
-        ent->s.pos.trTime = base_time + offset;
-        ent->s.apos.trDuration = duration;
-        ent->s.apos.trTime = base_time + offset;
+        // The legacy Quake II entity_state_t does not expose trajectory fields
+        // (pos/apos) that exist in the newer Quake III style code this logic
+        // originated from. Until the trajectory support is fully ported over,
+        // just keep the existing pendulum timing untouched.
+        (void)ent;
 }
 
 static void G_UpdateGravityDerivedData(float gravity) {
@@ -3289,7 +3277,7 @@ static void CheckGravityLotto() {
                 game.gravity_modified = g_gravity->modified_count;
                 G_ApplyGravityChange(new_gravity);
 
-                gi.bprintf(PRINT_HIGH, "Gravity lotto rolls %.0f\n", new_gravity);
+                gi.Broadcast_Print(PRINT_HIGH, G_Fmt("Gravity lotto rolls {:.0f}\n", new_gravity).data());
 
                 level.gravity_lotto_next = level.time + interval;
         } else if (level.gravity_lotto_next > desired_next) {
