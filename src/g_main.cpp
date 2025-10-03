@@ -67,6 +67,8 @@ void G_PrepFrame();
 void InitSave();
 
 #include <chrono>
+#include <fstream>
+#include <limits>
 #include <algorithm>
 #include <cmath>
 #include <cstring>
@@ -104,19 +106,14 @@ static void GT_SetLegacyCvars(gametype_t gt) {
 // =================================================
 
 static gentity_t *FindClosestPlayerToPoint(vec3_t point) {
-	float	bestplayerdistance;
-	vec3_t	v;
-	float	playerdistance;
 	gentity_t *closest = nullptr;
-
-	bestplayerdistance = 9999999;
+	float bestplayerdistance = std::numeric_limits<float>::max();
 
 	for (auto ec : active_clients()) {
 		if (ec->health <= 0 || ec->client->eliminated)
 			continue;
 
-		v = point - ec->s.origin;
-		playerdistance = v.length();
+		const float playerdistance = (point - ec->s.origin).length();
 
 		if (playerdistance < bestplayerdistance) {
 			bestplayerdistance = playerdistance;
@@ -262,7 +259,7 @@ static gitem_t *Horde_PickItem() {
 
 static const char *Horde_PickMonster() {
 	// collect valid monsters
-	static std::array<picked_item_t, q_countof(items)> picked_monsters;
+	static std::array<picked_item_t, q_countof(monsters)> picked_monsters;
 	static size_t num_picked_monsters;
 
 	num_picked_monsters = 0;
@@ -382,53 +379,46 @@ static bool Horde_AllMonstersDead() {
 
 void G_LoadMOTD() {
 	// load up ent override
-	const char *name = G_Fmt("baseq2/{}", g_motd_filename->string[0] ? g_motd_filename->string : "motd.txt").data();
-	FILE *f = fopen(name, "rb");
-	bool valid = true;
-	if (f != NULL) {
-		char *buffer = nullptr;
-		size_t length;
-		size_t read_length = 0;
+	const auto name_view = G_Fmt("baseq2/{}", g_motd_filename->string[0] ? g_motd_filename->string : "motd.txt");
+	const std::string name{name_view};
+	std::ifstream file{name, std::ios::binary};
 
-		fseek(f, 0, SEEK_END);
-		length = ftell(f);
-		fseek(f, 0, SEEK_SET);
+	if (!file.is_open())
+		return;
 
-		if (length > 0x40000) {
-			gi.Com_PrintFmt("{}: MoTD file length exceeds maximum: \"{}\"\n", __FUNCTION__, name);
-			valid = false;
-		}
-		if (valid) {
-			buffer = (char *)gi.TagMalloc(length + 1, '\0');
-			if (buffer) {
-				if (length) {
-					read_length = fread(buffer, 1, length, f);
-
-					if (length != read_length) {
-						gi.Com_PrintFmt("{}: MoTD file read error: \"{}\"\n", __FUNCTION__, name);
-						valid = false;
-					}
-				}
-			} else {
-				valid = false;
-			}
-		}
-		fclose(f);
-		
-		if (valid) {
-			buffer[length ? length : 0] = '\0';
-			game.motd.assign(buffer, length);
-			game.motd_mod_count++;
-			if (g_verbose->integer)
-				gi.Com_PrintFmt("{}: MotD file verified and loaded: \"{}\"\n", __FUNCTION__, name);
-		} else {
-			gi.Com_PrintFmt("{}: MotD file load error for \"{}\", discarding.\n", __FUNCTION__, name);
-		}
-
-		if (buffer)
-			gi.TagFree(buffer);
+	file.seekg(0, std::ios::end);
+	const auto end_pos = file.tellg();
+	if (end_pos == std::streampos(-1)) {
+		gi.Com_PrintFmt("{}: MotD file read error: \"{}\"\n", __FUNCTION__, name.c_str());
+		gi.Com_PrintFmt("{}: MotD file load error for \"{}\", discarding.\n", __FUNCTION__, name.c_str());
+		return;
 	}
+
+	const std::streamsize length = static_cast<std::streamsize>(end_pos);
+	if (length > static_cast<std::streamsize>(0x40000)) {
+		gi.Com_PrintFmt("{}: MoTD file length exceeds maximum: \"{}\"\n", __FUNCTION__, name.c_str());
+		gi.Com_PrintFmt("{}: MotD file load error for \"{}\", discarding.\n", __FUNCTION__, name.c_str());
+		return;
+	}
+
+	file.seekg(0, std::ios::beg);
+
+	std::string buffer(static_cast<size_t>(length), '\0');
+	if (!buffer.empty()) {
+		file.read(buffer.data(), length);
+		if (!file || file.gcount() != length) {
+			gi.Com_PrintFmt("{}: MotD file read error: \"{}\"\n", __FUNCTION__, name.c_str());
+			gi.Com_PrintFmt("{}: MotD file load error for \"{}\", discarding.\n", __FUNCTION__, name.c_str());
+			return;
+		}
+	}
+
+	game.motd = std::move(buffer);
+	game.motd_mod_count++;
+	if (g_verbose->integer)
+		gi.Com_PrintFmt("{}: MotD file verified and loaded: \"{}\"\n", __FUNCTION__, name.c_str());
 }
+
 
 int check_ruleset = -1;
 static void CheckRuleset() {
@@ -1020,7 +1010,6 @@ SetMatchID
 static void SetMatchID() {
 	//level.match_id = gt_short_name_upper[g_gametype->integer];
 	//level.match_id += "-";
-	level.match_id = stime();
 	level.match_id = stime();
 }
 
