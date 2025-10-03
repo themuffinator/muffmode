@@ -1584,10 +1584,15 @@ static void ParseWorldEntityString(const char *mapname, bool try_q3) {
 			if (length) {
 				read_length = fread(buffer, 1, length, f);
 
+				if (length == read_length)
+					buffer[length] = '\0';
+
 				if (length != read_length) {
 					//gi.Com_PrintFmt("{}: Entities override file read error: \"{}\"\n", __FUNCTION__, name);
 					ent_valid = false;
 				}
+			} else {
+				buffer[0] = '\0';
 			}
 		}
 		ent_file_exists = true;
@@ -1597,13 +1602,17 @@ static void ParseWorldEntityString(const char *mapname, bool try_q3) {
 			if (g_entity_override_load->integer && !strstr(level.mapname, ".dm2")) {
 
 				if (VerifyEntityString((const char *)buffer)) {
-					entities = (const char *)buffer;
+					level.entstring.assign(buffer, length);
+					entities = level.entstring.c_str();
 					//gi.Com_PrintFmt("Entities override: \"{}\"\n", name);
 				}
 			}
 		} else {
 			gi.Com_PrintFmt("{}: Entities override file load error for \"{}\", discarding.\n", __FUNCTION__, name);
 		}
+
+		if (buffer)
+			gi.TagFree(buffer);
 	}
 
 	// save ent override
@@ -1726,10 +1735,15 @@ void SpawnEntities(const char *mapname, const char *entities, const char *spawnp
 			if (length) {
 				read_length = fread(buffer, 1, length, f);
 
+				if (length == read_length)
+					buffer[length] = '\0';
+
 				if (length != read_length) {
 					//gi.Com_PrintFmt("{}: Entities override file read error: \"{}\"\n", __FUNCTION__, name);
 					ent_valid = false;
 				}
+			} else {
+				buffer[0] = '\0';
 			}
 		}
 		ent_file_exists = true;
@@ -1739,7 +1753,8 @@ void SpawnEntities(const char *mapname, const char *entities, const char *spawnp
 			if (g_entity_override_load->integer && !strstr(level.mapname, ".dm2")) {
 
 				if (VerifyEntityString((const char *)buffer)) {
-					entities = (const char *)buffer;
+					level.entstring.assign(buffer, length);
+					entities = level.entstring.c_str();
 					if (g_verbose->integer)
 						gi.Com_PrintFmt("{}: Entities override file verified and loaded: \"{}\"\n", __FUNCTION__, name);
 				}
@@ -1747,6 +1762,9 @@ void SpawnEntities(const char *mapname, const char *entities, const char *spawnp
 		} else {
 			gi.Com_PrintFmt("{}: Entities override file load error for \"{}\", discarding.\n", __FUNCTION__, name);
 		}
+
+		if (buffer)
+			gi.TagFree(buffer);
 	}
 
 	// save ent override
