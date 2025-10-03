@@ -5,10 +5,20 @@
 #include "g_local.h"
 #include "monsters/m_player.h"
 
-bool is_quad;
-bool is_haste;
-player_muzzle_t is_silenced;
-byte damage_multiplier;
+#include <array>
+
+namespace {
+
+struct WeaponEffectState {
+	bool quad_damage{ false };
+	bool haste{ false };
+	player_muzzle_t muzzle{ MZ_NONE };
+	byte damage_multiplier{ 1 };
+};
+
+WeaponEffectState weapon_effect_state;
+
+} // namespace
 
 /*
 ================
@@ -37,24 +47,24 @@ P_DamageModifier
 ================
 */
 byte P_DamageModifier(gentity_t *ent) {
-	is_quad = false;
-	damage_multiplier = 1;
+	weapon_effect_state.quad_damage = false;
+	weapon_effect_state.damage_multiplier = 1;
 
 	if (ent->client->pu_time_quad > level.time) {
-		damage_multiplier *= 4;
-		is_quad = true;
+	        weapon_effect_state.damage_multiplier *= 4;
+	        weapon_effect_state.quad_damage = true;
 
-		// if we're quad and DF_NO_STACK_DOUBLE is on, return now.
-		if (g_dm_no_stack_double->integer)
-			return damage_multiplier;
+	        // if we're quad and DF_NO_STACK_DOUBLE is on, return now.
+	        if (g_dm_no_stack_double->integer)
+	                return weapon_effect_state.damage_multiplier;
 	}
 
 	if (ent->client->pu_time_double > level.time) {
-		damage_multiplier *= 2;
-		is_quad = true;
+	        weapon_effect_state.damage_multiplier *= 2;
+	        weapon_effect_state.quad_damage = true;
 	}
 
-	return damage_multiplier;
+	return weapon_effect_state.damage_multiplier;
 }
 
 /*
@@ -329,12 +339,12 @@ static void Weapon_RunThink(gentity_t *ent) {
 
 	P_DamageModifier(ent);
 
-	is_haste = (ent->client->pu_time_haste > level.time);
+	weapon_effect_state.haste = (ent->client->pu_time_haste > level.time);
 
 	if (ent->client->silencer_shots)
-		is_silenced = MZ_SILENCED;
+		weapon_effect_state.muzzle = MZ_SILENCED;
 	else
-		is_silenced = MZ_NONE;
+		weapon_effect_state.muzzle = MZ_NONE;
 	ent->client->pers.weapon->weaponthink(ent);
 }
 
@@ -416,32 +426,19 @@ void NoAmmoWeaponChange(gentity_t *ent, bool sound) {
 		}
 	}
 
-	constexpr item_id_t no_ammo_order[] = {
-		IT_WEAPON_DISRUPTOR,
-		IT_WEAPON_BFG,
-		IT_WEAPON_RAILGUN,
-		IT_WEAPON_PLASMABEAM,
-		IT_WEAPON_IONRIPPER,
-		IT_WEAPON_HYPERBLASTER,
-		IT_WEAPON_ETF_RIFLE,
-		IT_WEAPON_CHAINGUN,
-		IT_WEAPON_MACHINEGUN,
-		IT_WEAPON_SSHOTGUN,
-		IT_WEAPON_SHOTGUN,
-		IT_WEAPON_PHALANX,
-		IT_WEAPON_RLAUNCHER,
-		IT_WEAPON_GLAUNCHER,
-		IT_WEAPON_PROXLAUNCHER,
-		IT_AMMO_GRENADES,
-		IT_WEAPON_BLASTER,
-		IT_WEAPON_CHAINFIST
-	};
+	constexpr std::array<item_id_t, 18> no_ammo_order = {
+		IT_WEAPON_DISRUPTOR,  IT_WEAPON_BFG,       IT_WEAPON_RAILGUN,   IT_WEAPON_PLASMABEAM, IT_WEAPON_IONRIPPER,
+		IT_WEAPON_HYPERBLASTER, IT_WEAPON_ETF_RIFLE, IT_WEAPON_CHAINGUN,  IT_WEAPON_MACHINEGUN, IT_WEAPON_SSHOTGUN,
+		IT_WEAPON_SHOTGUN,    IT_WEAPON_PHALANX,   IT_WEAPON_RLAUNCHER, IT_WEAPON_GLAUNCHER,  IT_WEAPON_PROXLAUNCHER,
+		IT_AMMO_GRENADES,     IT_WEAPON_BLASTER,   IT_WEAPON_CHAINFIST };
 
-	for (size_t i = 0; i < q_countof(no_ammo_order); i++) {
-		gitem_t *item = GetItemByIndex(no_ammo_order[i]);
+	for (const auto id : no_ammo_order) {
+		gitem_t *item = GetItemByIndex(id);
 
-		if (!item)
-			gi.Com_ErrorFmt("Invalid no ammo weapon switch weapon {}\n", (int32_t)no_ammo_order[i]);
+		if (!item) {
+			gi.Com_ErrorFmt("Invalid no ammo weapon switch weapon {}\n", (int32_t)id);
+			continue;
+		}
 
 		if (!ent->client->pers.inventory[item->id])
 			continue;
@@ -493,7 +490,7 @@ static inline gtime_t Weapon_AnimationTime(gentity_t *ent) {
 		ent->client->ps.gunrate = 10;
 
 	if (ent->client->ps.gunframe != 0 && (!(ent->client->pers.weapon->flags & IF_NO_HASTE) || ent->client->weaponstate != WEAPON_FIRING)) {
-		if (is_haste)
+		if (weapon_effect_state.haste)
 			ent->client->ps.gunrate *= 1.5;
 		if (Tech_ApplyTimeAccel(ent))
 			ent->client->ps.gunrate *= 2;
@@ -678,7 +675,7 @@ void Drop_Weapon(gentity_t *ent, gitem_t *item) {
 			drop->count += 5;
 	}
 
-	drop->count = clamp(drop->count, drop->count, ent->client->pers.inventory[ammo->id]);
+	drop->count = clamp(drop->count, 1, ent->client->pers.inventory[ammo->id]);
 
 	if (drop->count <= 0)
 		return;
@@ -1040,8 +1037,8 @@ static void Weapon_HandGrenade_Fire(gentity_t *ent, bool held) {
 	int	  speed;
 	float radius = (float)(damage + 40);
 
-	if (is_quad)
-		damage *= damage_multiplier;
+	if (weapon_effect_state.quad_damage)
+		damage *= weapon_effect_state.damage_multiplier;
 
 	vec3_t start, dir;
 	// Paril: kill sideways angle on grenades
@@ -1148,7 +1145,7 @@ void Throw_Generic(gentity_t *ent, int FRAME_FIRE_LAST, int FRAME_IDLE_LAST, int
 
 			if (Tech_ApplyTimeAccel(ent))
 				grenade_wait_time *= 0.5f;
-			if (is_haste)
+			if (weapon_effect_state.haste)
 				grenade_wait_time *= 0.5f;
 			if (g_frenzy->integer)
 				grenade_wait_time *= 0.5f;
@@ -1273,8 +1270,8 @@ static void Weapon_GrenadeLauncher_Fire(gentity_t *ent) {
 		speed = 600;
 	}
 
-	if (is_quad)
-		damage *= damage_multiplier;
+	if (weapon_effect_state.quad_damage)
+		damage *= weapon_effect_state.damage_multiplier;
 
 	vec3_t start, dir;
 	// Paril: kill sideways angle on grenades
@@ -1288,7 +1285,7 @@ static void Weapon_GrenadeLauncher_Fire(gentity_t *ent) {
 
 	gi.WriteByte(svc_muzzleflash);
 	gi.WriteEntity(ent);
-	gi.WriteByte(MZ_GRENADE | is_silenced);
+	gi.WriteByte(MZ_GRENADE | weapon_effect_state.muzzle);
 	gi.multicast(ent->s.origin, MULTICAST_PVS, false);
 
 	PlayerNoise(ent, start, PNOISE_WEAPON);
@@ -1345,9 +1342,9 @@ static void Weapon_RocketLauncher_Fire(gentity_t *ent) {
 	if (g_frenzy->integer)
 		speed *= 1.5;
 
-	if (is_quad) {
-		damage *= damage_multiplier;
-		splash_damage *= damage_multiplier;
+	if (weapon_effect_state.quad_damage) {
+		damage *= weapon_effect_state.damage_multiplier;
+		splash_damage *= weapon_effect_state.damage_multiplier;
 	}
 
 	vec3_t start, dir;
@@ -1359,7 +1356,7 @@ static void Weapon_RocketLauncher_Fire(gentity_t *ent) {
 	// send muzzle flash
 	gi.WriteByte(svc_muzzleflash);
 	gi.WriteEntity(ent);
-	gi.WriteByte(MZ_ROCKET | is_silenced);
+	gi.WriteByte(MZ_ROCKET | weapon_effect_state.muzzle);
 	gi.multicast(ent->s.origin, MULTICAST_PVS, false);
 
 	PlayerNoise(ent, start, PNOISE_WEAPON);
@@ -1677,8 +1674,8 @@ BLASTER / HYPERBLASTER
 */
 
 static void Weapon_Blaster_Fire(gentity_t *ent, const vec3_t &g_offset, int damage, bool hyper, effects_t effect) {
-	if (is_quad)
-		damage *= damage_multiplier;
+	if (weapon_effect_state.quad_damage)
+		damage *= weapon_effect_state.damage_multiplier;
 
 	vec3_t start, dir;
 	P_ProjectSource(ent, ent->client->v_angle, vec3_t{ 24, 8, -8 } + g_offset, start, dir);
@@ -1701,9 +1698,9 @@ static void Weapon_Blaster_Fire(gentity_t *ent, const vec3_t &g_offset, int dama
 	gi.WriteByte(svc_muzzleflash);
 	gi.WriteEntity(ent);
 	if (hyper)
-		gi.WriteByte(MZ_HYPERBLASTER | is_silenced);
+		gi.WriteByte(MZ_HYPERBLASTER | weapon_effect_state.muzzle);
 	else
-		gi.WriteByte(MZ_BLASTER | is_silenced);
+		gi.WriteByte(MZ_BLASTER | weapon_effect_state.muzzle);
 	gi.multicast(ent->s.origin, MULTICAST_PVS, false);
 
 	PlayerNoise(ent, start, PNOISE_WEAPON);
@@ -1837,9 +1834,9 @@ static void Weapon_Machinegun_Fire(gentity_t *ent) {
 		return;
 	}
 
-	if (is_quad) {
-		damage *= damage_multiplier;
-		kick *= damage_multiplier;
+	if (weapon_effect_state.quad_damage) {
+		damage *= weapon_effect_state.damage_multiplier;
+		kick *= weapon_effect_state.damage_multiplier;
 	}
 
 	vec3_t kick_origin{}, kick_angles{};
@@ -1862,7 +1859,7 @@ static void Weapon_Machinegun_Fire(gentity_t *ent) {
 
 	gi.WriteByte(svc_muzzleflash);
 	gi.WriteEntity(ent);
-	gi.WriteByte(MZ_MACHINEGUN | is_silenced);
+	gi.WriteByte(MZ_MACHINEGUN | weapon_effect_state.muzzle);
 	gi.multicast(ent->s.origin, MULTICAST_PVS, false);
 
 	PlayerNoise(ent, start, PNOISE_WEAPON);
@@ -1944,9 +1941,9 @@ static void Weapon_Chaingun_Fire(gentity_t *ent) {
 		return;
 	}
 
-	if (is_quad) {
-		damage *= damage_multiplier;
-		kick *= damage_multiplier;
+	if (weapon_effect_state.quad_damage) {
+		damage *= weapon_effect_state.damage_multiplier;
+		kick *= weapon_effect_state.damage_multiplier;
 	}
 
 	vec3_t kick_origin{}, kick_angles{};
@@ -1976,7 +1973,7 @@ static void Weapon_Chaingun_Fire(gentity_t *ent) {
 	// send muzzle flash
 	gi.WriteByte(svc_muzzleflash);
 	gi.WriteEntity(ent);
-	gi.WriteByte((MZ_CHAINGUN1 + shots - 1) | is_silenced);
+	gi.WriteByte((MZ_CHAINGUN1 + shots - 1) | weapon_effect_state.muzzle);
 	gi.multicast(ent->s.origin, MULTICAST_PVS, false);
 
 	PlayerNoise(ent, start, PNOISE_WEAPON);
@@ -2012,9 +2009,9 @@ static void Weapon_Shotgun_Fire(gentity_t *ent) {
 	if (RS(RS_Q3A))
 		damage = 10;
 
-	if (is_quad) {
-		damage *= damage_multiplier;
-		kick *= damage_multiplier;
+	if (weapon_effect_state.quad_damage) {
+		damage *= weapon_effect_state.damage_multiplier;
+		kick *= weapon_effect_state.damage_multiplier;
 	}
 
 	G_LagCompensate(ent, start, dir);
@@ -2024,7 +2021,7 @@ static void Weapon_Shotgun_Fire(gentity_t *ent) {
 	// send muzzle flash
 	gi.WriteByte(svc_muzzleflash);
 	gi.WriteEntity(ent);
-	gi.WriteByte(MZ_SHOTGUN | is_silenced);
+	gi.WriteByte(MZ_SHOTGUN | weapon_effect_state.muzzle);
 	gi.multicast(ent->s.origin, MULTICAST_PVS, false);
 
 	PlayerNoise(ent, start, PNOISE_WEAPON);
@@ -2044,9 +2041,9 @@ static void Weapon_SuperShotgun_Fire(gentity_t *ent) {
 	int damage = 6;
 	int kick = 12;
 
-	if (is_quad) {
-		damage *= damage_multiplier;
-		kick *= damage_multiplier;
+	if (weapon_effect_state.quad_damage) {
+		damage *= weapon_effect_state.damage_multiplier;
+		kick *= weapon_effect_state.damage_multiplier;
 	}
 
 	vec3_t start, dir;
@@ -2070,7 +2067,7 @@ static void Weapon_SuperShotgun_Fire(gentity_t *ent) {
 	// send muzzle flash
 	gi.WriteByte(svc_muzzleflash);
 	gi.WriteEntity(ent);
-	gi.WriteByte(MZ_SSHOTGUN | is_silenced);
+	gi.WriteByte(MZ_SSHOTGUN | weapon_effect_state.muzzle);
 	gi.multicast(ent->s.origin, MULTICAST_PVS, false);
 
 	PlayerNoise(ent, start, PNOISE_WEAPON);
@@ -2099,9 +2096,9 @@ static void Weapon_Railgun_Fire(gentity_t *ent) {
 	int damage = deathmatch->integer ? 100 : 150;
 	int kick = !!(RS(RS_MM)) ? (damage * 2) : (deathmatch->integer ? 200 : 225);
 
-	if (is_quad) {
-		damage *= damage_multiplier;
-		kick *= damage_multiplier;
+	if (weapon_effect_state.quad_damage) {
+		damage *= weapon_effect_state.damage_multiplier;
+		kick *= weapon_effect_state.damage_multiplier;
 	}
 
 	vec3_t start, dir;
@@ -2115,7 +2112,7 @@ static void Weapon_Railgun_Fire(gentity_t *ent) {
 	// send muzzle flash
 	gi.WriteByte(svc_muzzleflash);
 	gi.WriteEntity(ent);
-	gi.WriteByte(MZ_RAILGUN | is_silenced);
+	gi.WriteByte(MZ_RAILGUN | weapon_effect_state.muzzle);
 	gi.multicast(ent->s.origin, MULTICAST_PVS, false);
 
 	PlayerNoise(ent, start, PNOISE_WEAPON);
@@ -2157,7 +2154,7 @@ static void Weapon_BFG_Fire(gentity_t *ent) {
 		// send muzzle flash
 		gi.WriteByte(svc_muzzleflash);
 		gi.WriteEntity(ent);
-		gi.WriteByte(MZ_BFG | is_silenced);
+		gi.WriteByte(MZ_BFG | weapon_effect_state.muzzle);
 		gi.multicast(ent->s.origin, MULTICAST_PVS, false);
 
 		PlayerNoise(ent, ent->s.origin, PNOISE_WEAPON);
@@ -2169,8 +2166,8 @@ static void Weapon_BFG_Fire(gentity_t *ent) {
 	if (ent->client->pers.inventory[ent->client->pers.weapon->ammo] < 50)
 		return;
 
-	if (is_quad)
-		damage *= damage_multiplier;
+	if (weapon_effect_state.quad_damage)
+		damage *= weapon_effect_state.damage_multiplier;
 
 	vec3_t start, dir;
 	P_ProjectSource(ent, ent->client->v_angle, { 8, 8, -8 }, start, dir);
@@ -2187,7 +2184,7 @@ static void Weapon_BFG_Fire(gentity_t *ent) {
 	// send muzzle flash
 	gi.WriteByte(svc_muzzleflash);
 	gi.WriteEntity(ent);
-	gi.WriteByte(MZ_BFG2 | is_silenced);
+	gi.WriteByte(MZ_BFG2 | weapon_effect_state.muzzle);
 	gi.multicast(ent->s.origin, MULTICAST_PVS, false);
 
 	PlayerNoise(ent, start, PNOISE_WEAPON);
@@ -2219,11 +2216,11 @@ static void Weapon_ProxLauncher_Fire(gentity_t *ent) {
 
 	P_AddWeaponKick(ent, ent->client->v_forward * -2, { -1.f, 0.f, 0.f });
 
-	fire_prox(ent, start, dir, damage_multiplier, 600);
+	fire_prox(ent, start, dir, weapon_effect_state.damage_multiplier, 600);
 
 	gi.WriteByte(svc_muzzleflash);
 	gi.WriteEntity(ent);
-	gi.WriteByte(MZ_PROX | is_silenced);
+	gi.WriteByte(MZ_PROX | weapon_effect_state.muzzle);
 	gi.multicast(ent->s.origin, MULTICAST_PVS, false);
 
 	PlayerNoise(ent, start, PNOISE_WEAPON);
@@ -2258,7 +2255,7 @@ static void Weapon_Tesla_Fire(gentity_t *ent, bool held) {
 
 	ent->client->grenade_time = 0_ms;
 
-	fire_tesla(ent, start, dir, damage_multiplier, speed);
+	fire_tesla(ent, start, dir, weapon_effect_state.damage_multiplier, speed);
 
 	Stats_AddShot(ent);
 	RemoveAmmo(ent, 1);
@@ -2291,8 +2288,8 @@ static void Weapon_ChainFist_Fire(gentity_t *ent) {
 
 	int damage = deathmatch->integer ? 15 : 7;
 
-	if (is_quad)
-		damage *= damage_multiplier;
+	if (weapon_effect_state.quad_damage)
+		damage *= weapon_effect_state.damage_multiplier;
 
 	// set start point
 	vec3_t start, dir;
@@ -2305,7 +2302,7 @@ static void Weapon_ChainFist_Fire(gentity_t *ent) {
 
 		gi.WriteByte(svc_muzzleflash);
 		gi.WriteEntity(ent);
-		gi.WriteByte(MZ_GRENADE | is_silenced);
+		gi.WriteByte(MZ_GRENADE | weapon_effect_state.muzzle);
 		gi.multicast(ent->s.origin, MULTICAST_PVS, false);
 
 		PlayerNoise(ent, start, PNOISE_WEAPON);
@@ -2401,8 +2398,8 @@ static void Weapon_Disruptor_Fire(gentity_t *ent) {
 	// PMM - felt a little high at 25
 	damage = deathmatch->integer ? 45 : 135;
 
-	if (is_quad)
-		damage *= damage_multiplier; // pgm
+	if (weapon_effect_state.quad_damage)
+		damage *= weapon_effect_state.damage_multiplier; // pgm
 
 	mins = { -16, -16, -16 };
 	maxs = { 16, 16, 16 };
@@ -2444,7 +2441,7 @@ static void Weapon_Disruptor_Fire(gentity_t *ent) {
 	// send muzzle flash
 	gi.WriteByte(svc_muzzleflash);
 	gi.WriteEntity(ent);
-	gi.WriteByte(MZ_TRACKER | is_silenced);
+	gi.WriteByte(MZ_TRACKER | weapon_effect_state.muzzle);
 	gi.multicast(ent->s.origin, MULTICAST_PVS, false);
 
 	PlayerNoise(ent, start, PNOISE_WEAPON);
@@ -2489,9 +2486,9 @@ static void Weapon_ETF_Rifle_Fire(gentity_t *ent) {
 		return;
 	}
 
-	if (is_quad) {
-		damage *= damage_multiplier;
-		kick *= damage_multiplier;
+	if (weapon_effect_state.quad_damage) {
+		damage *= weapon_effect_state.damage_multiplier;
+		kick *= weapon_effect_state.damage_multiplier;
 	}
 
 	vec3_t kick_origin{}, kick_angles{};
@@ -2515,7 +2512,7 @@ static void Weapon_ETF_Rifle_Fire(gentity_t *ent) {
 	// send muzzle flash
 	gi.WriteByte(svc_muzzleflash);
 	gi.WriteEntity(ent);
-	gi.WriteByte((ent->client->ps.gunframe == 6 ? MZ_ETF_RIFLE : MZ_ETF_RIFLE_2) | is_silenced);
+	gi.WriteByte((ent->client->ps.gunframe == 6 ? MZ_ETF_RIFLE : MZ_ETF_RIFLE_2) | weapon_effect_state.muzzle);
 	gi.multicast(ent->s.origin, MULTICAST_PVS, false);
 
 	PlayerNoise(ent, start, PNOISE_WEAPON);
@@ -2596,9 +2593,9 @@ static void Weapon_PlasmaBeam_Fire(gentity_t *ent) {
 		break;
 	}
 
-	if (is_quad) {
-		damage *= damage_multiplier;
-		kick *= damage_multiplier;
+	if (weapon_effect_state.quad_damage) {
+		damage *= weapon_effect_state.damage_multiplier;
+		kick *= weapon_effect_state.damage_multiplier;
 	}
 
 	ent->client->kick.time = 0_ms;
@@ -2616,7 +2613,7 @@ static void Weapon_PlasmaBeam_Fire(gentity_t *ent) {
 	// send muzzle flash
 	gi.WriteByte(svc_muzzleflash);
 	gi.WriteEntity(ent);
-	gi.WriteByte(MZ_HEATBEAM | is_silenced);
+	gi.WriteByte(MZ_HEATBEAM | weapon_effect_state.muzzle);
 	gi.multicast(ent->s.origin, MULTICAST_PVS, false);
 
 	PlayerNoise(ent, start, PNOISE_WEAPON);
@@ -2653,8 +2650,8 @@ static void Weapon_IonRipper_Fire(gentity_t *ent) {
 	vec3_t tempang;
 	int	   damage = deathmatch->integer ? (RS(RS_MM)) ? 20 : 30 : 50;
 
-	if (is_quad)
-		damage *= damage_multiplier;
+	if (weapon_effect_state.quad_damage)
+		damage *= weapon_effect_state.damage_multiplier;
 
 	tempang = ent->client->v_angle;
 	tempang[YAW] += crandom();
@@ -2669,7 +2666,7 @@ static void Weapon_IonRipper_Fire(gentity_t *ent) {
 	// send muzzle flash
 	gi.WriteByte(svc_muzzleflash);
 	gi.WriteEntity(ent);
-	gi.WriteByte(MZ_IONRIPPER | is_silenced);
+	gi.WriteByte(MZ_IONRIPPER | weapon_effect_state.muzzle);
 	gi.multicast(ent->s.origin, MULTICAST_PVS, false);
 
 	PlayerNoise(ent, start, PNOISE_WEAPON);
@@ -2702,9 +2699,9 @@ static void Weapon_Phalanx_Fire(gentity_t *ent) {
 	splash_damage = 120;
 	splash_radius = 120;
 
-	if (is_quad) {
-		damage *= damage_multiplier;
-		splash_damage *= damage_multiplier;
+	if (weapon_effect_state.quad_damage) {
+		damage *= weapon_effect_state.damage_multiplier;
+		splash_damage *= weapon_effect_state.damage_multiplier;
 	}
 
 	vec3_t dir;
@@ -2725,7 +2722,7 @@ static void Weapon_Phalanx_Fire(gentity_t *ent) {
 		// send muzzle flash
 		gi.WriteByte(svc_muzzleflash);
 		gi.WriteEntity(ent);
-		gi.WriteByte(MZ_PHALANX2 | is_silenced);
+		gi.WriteByte(MZ_PHALANX2 | weapon_effect_state.muzzle);
 		gi.multicast(ent->s.origin, MULTICAST_PVS, false);
 
 		Stats_AddShot(ent);
@@ -2743,7 +2740,7 @@ static void Weapon_Phalanx_Fire(gentity_t *ent) {
 		// send muzzle flash
 		gi.WriteByte(svc_muzzleflash);
 		gi.WriteEntity(ent);
-		gi.WriteByte(MZ_PHALANX | is_silenced);
+		gi.WriteByte(MZ_PHALANX | weapon_effect_state.muzzle);
 		gi.multicast(ent->s.origin, MULTICAST_PVS, false);
 
 		PlayerNoise(ent, start, PNOISE_WEAPON);
