@@ -2472,12 +2472,19 @@ void Vote_Pass_Gametype() {
 }
 
 static bool Vote_Val_Gametype(gentity_t *ent) {
-	if (GT_IndexFromString(gi.argv(2)) == gametype_t::GT_NONE) {
-		gi.LocClient_Print(ent, PRINT_HIGH, "Invalid gametype.\n");
-		return false;
-	}
+        gametype_t gt = GT_IndexFromString(gi.argv(2));
 
-	return true;
+        if (gt == gametype_t::GT_NONE) {
+                gi.LocClient_Print(ent, PRINT_HIGH, "Invalid gametype.\nValid options: {}.\n", GT_CallvoteList());
+                return false;
+        }
+
+        if (static_cast<int>(gt) == g_gametype->integer) {
+                gi.LocClient_Print(ent, PRINT_HIGH, "Gametype is already set to {}.\n", gt_long_name[g_gametype->integer]);
+                return false;
+        }
+
+        return true;
 }
 
 static void Vote_Pass_Ruleset() {
@@ -2626,7 +2633,7 @@ vcmds_t vote_cmds[] = {
 	{"map",					Vote_Val_Map,			Vote_Pass_Map,			1,		2,	"[mapname]",						"changes to the specified map"},
 	{"nextmap",				Vote_Val_None,			Vote_Pass_NextMap,		2,		1,	"",									"move to the next map in the rotation"},
 	{"restart",				Vote_Val_None,			Vote_Pass_RestartMatch,	4,		1,	"",									"restarts the current match"},
-	{"gametype",			Vote_Val_Gametype,		Vote_Pass_Gametype,		8,		2,	"<cmp|ffa|duel|tdm|ctf|ca|ft|strike|rr|lms|horde|ball>",	"changes the current gametype"},
+	{"gametype",			Vote_Val_Gametype,		Vote_Pass_Gametype,		8,		2,	GT_CallvoteArgs(),	"changes the current gametype"},
 	{"timelimit",			Vote_Val_Timelimit,		Vote_Pass_Timelimit,	16,		2,	"<0..$>",							"alters the match time limit, 0 for no time limit"},
 	{"scorelimit",			Vote_Val_Scorelimit,	Vote_Pass_Scorelimit,	32,		2,	"<0..$>",							"alters the match score limit, 0 for no score limit"},
 	{"shuffle",				Vote_Val_ShuffleTeams,	Vote_Pass_ShuffleTeams,	64,		2,	"",									"shuffles teams"},
@@ -3148,18 +3155,23 @@ static void Cmd_Gametype_f(gentity_t *ent) {
 	if (!deathmatch->integer)
 		return;
 
-	if (gi.argc() < 2) {
-		gi.LocClient_Print(ent, PRINT_HIGH, "Usage: {} <cmp|ffa|duel|tdm|ctf|ca|ft|strike|rr|lms|horde|ball>\nChanges current gametype. Current gametype is {} ({}).\n", gi.argv(0), gt_long_name[g_gametype->integer], g_gametype->integer);
-		return;
-	}
+        if (gi.argc() < 2) {
+                gi.LocClient_Print(ent, PRINT_HIGH, "Usage: {} {}\nChanges current gametype. Current gametype is {} ({}).\n", gi.argv(0), GT_CallvoteArgs(), gt_long_name[g_gametype->integer], g_gametype->integer);
+                return;
+        }
 
-	gametype_t gt = GT_IndexFromString(gi.argv(1));
-	if (gt == GT_NONE) {
-		gi.LocClient_Print(ent, PRINT_HIGH, "Invalid gametype.\n");
-		return;
-	}
+        gametype_t gt = GT_IndexFromString(gi.argv(1));
+        if (gt == GT_NONE) {
+                gi.LocClient_Print(ent, PRINT_HIGH, "Invalid gametype.\nValid options: {}.\n", GT_CallvoteList());
+                return;
+        }
 
-	ChangeGametype(gt);
+        if (static_cast<int>(gt) == g_gametype->integer) {
+                gi.LocClient_Print(ent, PRINT_HIGH, "Gametype is already set to {}.\n", gt_long_name[g_gametype->integer]);
+                return;
+        }
+
+        ChangeGametype(gt);
 }
 
 /*
