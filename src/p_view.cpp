@@ -1266,15 +1266,18 @@ void ClientEndServerFrame(gentity_t *ent) {
 	P_ForceFogTransition(ent, false);
 
 	// check goals
-	G_PlayerNotifyGoal(ent);
+        G_PlayerNotifyGoal(ent);
 
-	// mega health
-	P_RunMegaHealth(ent);
+        // mega health
+        P_RunMegaHealth(ent);
 
-	// vampiric damage expiration
-	// don't expire if only 1 player in the match
-	if (g_vampiric_damage->integer && ClientIsPlaying(ent->client) && !IsCombatDisabled() && (ent->health > g_vampiric_exp_min->integer)) {
-		if (level.num_playing_clients > 1 && level.time > ent->client->vampire_expiretime) {
+        if (GT(GT_FREEZE))
+                Freeze_UpdatePlayer(ent);
+
+        // vampiric damage expiration
+        // don't expire if only 1 player in the match
+        if (g_vampiric_damage->integer && ClientIsPlaying(ent->client) && !IsCombatDisabled() && (ent->health > g_vampiric_exp_min->integer)) {
+                if (level.num_playing_clients > 1 && level.time > ent->client->vampire_expiretime) {
 			int quantity = floor((ent->health - 1) / ent->max_health) + 1;
 			ent->health -= quantity;
 			ent->client->vampire_expiretime = level.time + 1_sec;
