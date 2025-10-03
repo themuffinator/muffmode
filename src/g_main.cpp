@@ -554,7 +554,7 @@ void G_LoadMOTD() {
 	if (f != NULL) {
 		char *buffer = nullptr;
 		size_t length;
-		size_t read_length;
+		size_t read_length = 0;
 
 		fseek(f, 0, SEEK_END);
 		length = ftell(f);
@@ -566,25 +566,33 @@ void G_LoadMOTD() {
 		}
 		if (valid) {
 			buffer = (char *)gi.TagMalloc(length + 1, '\0');
-			if (length) {
-				read_length = fread(buffer, 1, length, f);
+			if (buffer) {
+				if (length) {
+					read_length = fread(buffer, 1, length, f);
 
-				if (length != read_length) {
-					gi.Com_PrintFmt("{}: MoTD file read error: \"{}\"\n", __FUNCTION__, name);
-					valid = false;
+					if (length != read_length) {
+						gi.Com_PrintFmt("{}: MoTD file read error: \"{}\"\n", __FUNCTION__, name);
+						valid = false;
+					}
 				}
+			} else {
+				valid = false;
 			}
 		}
 		fclose(f);
 		
 		if (valid) {
-			game.motd = (const char *)buffer;
+			buffer[length ? length : 0] = '\0';
+			game.motd.assign(buffer, length);
 			game.motd_mod_count++;
 			if (g_verbose->integer)
 				gi.Com_PrintFmt("{}: MotD file verified and loaded: \"{}\"\n", __FUNCTION__, name);
 		} else {
 			gi.Com_PrintFmt("{}: MotD file load error for \"{}\", discarding.\n", __FUNCTION__, name);
 		}
+
+		if (buffer)
+			gi.TagFree(buffer);
 	}
 }
 
