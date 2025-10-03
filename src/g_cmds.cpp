@@ -2626,7 +2626,7 @@ vcmds_t vote_cmds[] = {
 	{"map",					Vote_Val_Map,			Vote_Pass_Map,			1,		2,	"[mapname]",						"changes to the specified map"},
 	{"nextmap",				Vote_Val_None,			Vote_Pass_NextMap,		2,		1,	"",									"move to the next map in the rotation"},
 	{"restart",				Vote_Val_None,			Vote_Pass_RestartMatch,	4,		1,	"",									"restarts the current match"},
-	{"gametype",			Vote_Val_Gametype,		Vote_Pass_Gametype,		8,		2,	"<ffa|duel|tdm|ctf|ca|ft|horde>",	"changes the current gametype"},
+	{"gametype",			Vote_Val_Gametype,		Vote_Pass_Gametype,		8,		2,	"<cmp|ffa|duel|tdm|ctf|ca|ft|strike|rr|lms|horde|ball>",	"changes the current gametype"},
 	{"timelimit",			Vote_Val_Timelimit,		Vote_Pass_Timelimit,	16,		2,	"<0..$>",							"alters the match time limit, 0 for no time limit"},
 	{"scorelimit",			Vote_Val_Scorelimit,	Vote_Pass_Scorelimit,	32,		2,	"<0..$>",							"alters the match score limit, 0 for no score limit"},
 	{"shuffle",				Vote_Val_ShuffleTeams,	Vote_Pass_ShuffleTeams,	64,		2,	"",									"shuffles teams"},
@@ -3149,7 +3149,7 @@ static void Cmd_Gametype_f(gentity_t *ent) {
 		return;
 
 	if (gi.argc() < 2) {
-		gi.LocClient_Print(ent, PRINT_HIGH, "Usage: {} <ffa|duel|tdm|ctf|ca|ft|horde>\nChanges current gametype. Current gametype is {} ({}).\n", gi.argv(0), gt_long_name[g_gametype->integer], g_gametype->integer);
+		gi.LocClient_Print(ent, PRINT_HIGH, "Usage: {} <cmp|ffa|duel|tdm|ctf|ca|ft|strike|rr|lms|horde|ball>\nChanges current gametype. Current gametype is {} ({}).\n", gi.argv(0), gt_long_name[g_gametype->integer], g_gametype->integer);
 		return;
 	}
 
