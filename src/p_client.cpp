@@ -142,7 +142,7 @@ struct p_mods_skins_t {
 	std::array<std::string_view, MAX_PLAYER_STOCK_SKINS> sname{}; // index 0 will be default skin
 };
 
-static constexpr std::array<p_mods_skins_t, MAX_PLAYER_STOCK_MODELS> original_models = {
+static constexpr std::array<p_mods_skins_t, MAX_PLAYER_STOCK_MODELS> original_models{ {
 	{
 		"male",
 		{
@@ -179,7 +179,7 @@ static constexpr std::array<p_mods_skins_t, MAX_PLAYER_STOCK_MODELS> original_mo
 			"ps9000",	"tyr574"
 		}
 	}
-};
+} };
 
 static const char *ClientSkinOverride(const char *s) {
 
@@ -280,26 +280,26 @@ static void PCfg_ClientInitPConfig(gentity_t *ent) {
 
         if (!size_ec) {
                 if (size > 0x40000) {
-                        gi.Com_PrintFmt("{}: Player config load error for "{}" ({} bytes), discarding.\n", __FUNCTION__, filename, size);
+                        gi.Com_PrintFmt("{}: Player config load error for \"{}\" ({} bytes), discarding.\n", __FUNCTION__, filename, size);
                         return;
                 }
 
                 std::ifstream file(file_path, std::ios::binary);
                 if (!file) {
-                        gi.Com_PrintFmt("{}: Player config load error for "{}", discarding.\n", __FUNCTION__, filename);
+                        gi.Com_PrintFmt("{}: Player config load error for \"{}\", discarding.\n", __FUNCTION__, filename);
                         return;
                 }
 
                 std::string buffer(static_cast<size_t>(size), '\0');
                 if (!buffer.empty() && !file.read(buffer.data(), static_cast<std::streamsize>(buffer.size()))) {
-                        gi.Com_PrintFmt("{}: Player config load error for "{}", discarding.\n", __FUNCTION__, filename);
+                        gi.Com_PrintFmt("{}: Player config load error for \"{}\", discarding.\n", __FUNCTION__, filename);
                 }
 
                 return;
         }
 
         if (size_ec != std::errc::no_such_file_or_directory) {
-                gi.Com_PrintFmt("{}: Cannot access player config "{}": {}\n", __FUNCTION__, filename, size_ec.message());
+                gi.Com_PrintFmt("{}: Cannot access player config \"{}\": {}\n", __FUNCTION__, filename, size_ec.message());
                 return;
         }
 
@@ -316,7 +316,7 @@ static void PCfg_ClientInitPConfig(gentity_t *ent) {
                 return;
         }
 
-        gi.Com_PrintFmt("{}: Player config written to: "{}"\n", __FUNCTION__, filename);
+        gi.Com_PrintFmt("{}: Player config written to: \"{}\"\n", __FUNCTION__, filename);
 }
 
 
@@ -440,7 +440,7 @@ static void Freeze_FinishThaw(gentity_t *frozen, gentity_t *thawer, bool forced)
         Freeze_ClearThaw(frozen);
 
         gi.positioned_sound(frozen->s.origin, frozen, CHAN_BODY, gi.soundindex("world/brkglas.wav"), 1, ATTN_NORM, 0);
-        ThrowGibs(frozen, 40, { { 4, "models/objects/debris1/tris.md2", GIB_ORGANIC }, { 2, "models/objects/gibs/sm_meat/tris.md2", GIB_ORGANIC } });
+        ThrowGibs(frozen, 40, { { 4, "models/objects/debris1/tris.md2", GIB_NONE }, { 2, "models/objects/gibs/sm_meat/tris.md2", GIB_NONE } });
         ThrowClientHead(frozen, 40);
 
         if (thawer && thawer->client) {
