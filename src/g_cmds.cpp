@@ -193,16 +193,11 @@ Give items to a client
 ==================
 */
 static void Cmd_Give_f(gentity_t *ent) {
-	const char	*name = gi.args();
-	gitem_t		*it;
-	size_t		i;
-	bool		give_all;
-	gentity_t		*it_ent;
+	const char *name = gi.args();
+	gitem_t *it;
+	gentity_t *it_ent;
 
-	if (Q_strcasecmp(name, "all") == 0)
-		give_all = true;
-	else
-		give_all = false;
+	const bool give_all = Q_strcasecmp(name, "all") == 0;
 
 	if (give_all || Q_strcasecmp(gi.argv(1), "health") == 0) {
 		if (gi.argc() == 3)
@@ -214,7 +209,7 @@ static void Cmd_Give_f(gentity_t *ent) {
 	}
 
 	if (give_all || Q_strcasecmp(name, "weapons") == 0) {
-		for (i = 0; i < IT_TOTAL; i++) {
+		for (size_t i = 0; i < IT_TOTAL; i++) {
 			it = itemlist + i;
 			if (!it->pickup)
 				continue;
@@ -230,7 +225,7 @@ static void Cmd_Give_f(gentity_t *ent) {
 		if (give_all)
 			SpawnAndGiveItem(ent, IT_PACK);
 
-		for (i = 0; i < IT_TOTAL; i++) {
+		for (size_t i = 0; i < IT_TOTAL; i++) {
 			it = itemlist + i;
 			if (!it->pickup)
 				continue;
@@ -252,7 +247,7 @@ static void Cmd_Give_f(gentity_t *ent) {
 	}
 
 	if (give_all || Q_strcasecmp(name, "keys") == 0) {
-		for (i = 0; i < IT_TOTAL; i++) {
+		for (size_t i = 0; i < IT_TOTAL; i++) {
 			it = itemlist + i;
 			if (!it->pickup)
 				continue;
@@ -274,7 +269,7 @@ static void Cmd_Give_f(gentity_t *ent) {
 	}
 
 	if (give_all) {
-		for (i = 0; i < IT_TOTAL; i++) {
+		for (size_t i = 0; i < IT_TOTAL; i++) {
 			it = itemlist + i;
 			if (!it->pickup)
 				continue;
@@ -396,6 +391,12 @@ argv(3+n) "value"...
 =================
 */
 static void Cmd_Spawn_f(gentity_t *ent) {
+	const int arg_count = gi.argc();
+	if (arg_count < 2) {
+		gi.LocClient_Print(ent, PRINT_HIGH, "Usage: {} <classname> [\"key\" \"value\" ...]\n", gi.argv(0));
+		return;
+	}
+
 	solid_t backup = ent->solid;
 	ent->solid = SOLID_NOT;
 	gi.linkentity(ent);
@@ -408,9 +409,13 @@ static void Cmd_Spawn_f(gentity_t *ent) {
 
 	st = {};
 
-	if (gi.argc() > 3) {
-		for (int i = 2; i < gi.argc(); i += 2)
+	if (arg_count > 3) {
+		int i = 2;
+		for (; i + 1 < arg_count; i += 2)
 			ED_ParseField(gi.argv(i), gi.argv(i + 1), other);
+
+		if (i < arg_count)
+			gi.LocClient_Print(ent, PRINT_HIGH, "Ignoring dangling spawn key without value.\n");
 	}
 
 	ED_CallSpawn(other);
@@ -470,20 +475,39 @@ argv(6) roll
 =================
 */
 static void Cmd_Teleport_f(gentity_t *ent) {
-	if (gi.argc() < 4) {
-		gi.LocClient_Print(ent, PRINT_HIGH, "Usage: {} <x> <y> <z> <pitch> <yaw> <roll>\n", gi.argv(0));
+	const int argc = gi.argc();
+	if (argc != 4 && argc != 7) {
+		gi.LocClient_Print(ent, PRINT_HIGH, "Usage: {} <x> <y> <z> [<pitch> <yaw> <roll>]\n", gi.argv(0));
 		return;
 	}
 
-	ent->s.origin[0] = (float)atof(gi.argv(1));
-	ent->s.origin[1] = (float)atof(gi.argv(2));
-	ent->s.origin[2] = (float)atof(gi.argv(3));
+	auto parse_float = [ent](const char *text, const char *label, float &out) {
+		char *end = nullptr;
+		out = std::strtof(text, &end);
+		if (end == text) {
+			gi.LocClient_Print(ent, PRINT_HIGH, "Invalid {} value: {}\n", label, text);
+			return false;
+		}
+		return true;
+	};
 
-	if (gi.argc() >= 4) {
-		float pitch = (float)atof(gi.argv(4));
-		float yaw = (float)atof(gi.argv(5));
-		float roll = (float)atof(gi.argv(6));
-		vec3_t ang{ pitch, yaw, roll };
+	constexpr std::array<const char *, 3> coord_labels{ "x", "y", "z" };
+	for (size_t i = 0; i < coord_labels.size(); ++i) {
+		float value = 0.0f;
+		if (!parse_float(gi.argv(1 + static_cast<int>(i)), coord_labels[i], value))
+			return;
+		ent->s.origin[i] = value;
+	}
+
+	if (argc == 7) {
+		constexpr std::array<const char *, 3> angle_labels{ "pitch", "yaw", "roll" };
+		vec3_t ang{};
+		for (size_t i = 0; i < angle_labels.size(); ++i) {
+			float value = 0.0f;
+			if (!parse_float(gi.argv(4 + static_cast<int>(i)), angle_labels[i], value))
+				return;
+			ang[i] = value;
+		}
 
 		ent->client->ps.pmove.delta_angles = (ang - ent->client->resp.cmd_angles);
 		ent->client->ps.viewangles = {};
