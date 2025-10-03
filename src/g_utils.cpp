@@ -987,7 +987,7 @@ gametype_t GT_IndexFromString(const char *in) {
         long value = strtol(in, &end, 10);
 
         if (end && *end == '\0') {
-                if (value >= static_cast<long>(gametype_t::GT_FIRST) && value <= static_cast<long>(gametype_t::GT_LAST))
+                if (value >= static_cast<long>(GT_FIRST) && value <= static_cast<long>(GT_LAST))
                         return static_cast<gametype_t>(value);
                 return gametype_t::GT_NONE;
         }
@@ -1026,7 +1026,7 @@ const char *GT_CallvoteList() {
         static std::string buffer;
 
         if (buffer.empty()) {
-                for (int i = static_cast<int>(gametype_t::GT_FIRST); i <= static_cast<int>(gametype_t::GT_LAST); i++) {
+                for (int i = static_cast<int>(GT_FIRST); i <= static_cast<int>(GT_LAST); i++) {
                         const char *name = GT_CommandName(static_cast<gametype_t>(i));
                         if (!name || !name[0])
                                 continue;
