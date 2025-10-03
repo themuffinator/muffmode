@@ -761,10 +761,12 @@ void GT_Changes() {
 
 	//gi.Com_PrintFmt("GAMETYPE = {}\n", (int)gt);
 	
-	if (gt_teams_on != Teams()) {
-		team_reset = true;
-		gt_teams_on = Teams();
-	}
+        bool teams_enabled = (_gt[(int)gt] & GTF_TEAMS) != 0;
+
+        if (gt_teams_on != teams_enabled) {
+                gt_teams_on = teams_enabled;
+                team_reset = true;
+        }
 
 	if (team_reset) {
 		// move all to spectator first
