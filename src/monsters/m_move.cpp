@@ -2,7 +2,7 @@
 // Licensed under the GNU General Public License 2.0.
 // m_move.c -- monster movement
 
-#include "../g_local.h"
+#include "../g_local.hpp"
 
 // this is used for communications out of g_movestep to say what entity
 // is blocking us

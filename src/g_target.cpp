@@ -1,6 +1,6 @@
 // Copyright (c) ZeniMax Media Inc.
 // Licensed under the GNU General Public License 2.0.
-#include "g_local.h"
+#include "g_local.hpp"
 
 /*QUAKED target_temp_entity (1 0 0) (-8 -8 -8) (8 8 8) x x x x x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
 Fire an origin based temp entity event to the clients.

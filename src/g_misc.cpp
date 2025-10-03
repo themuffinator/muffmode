@@ -2,7 +2,7 @@
 // Licensed under the GNU General Public License 2.0.
 // g_misc.c
 
-#include "g_local.h"
+#include "g_local.hpp"
 
 #include <algorithm>
 #include <cstdlib>

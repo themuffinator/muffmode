@@ -8,7 +8,7 @@ insane
 ==============================================================================
 */
 
-#include "../g_local.h"
+#include "../g_local.hpp"
 #include "m_insane.h"
 
 constexpr spawnflags_t SPAWNFLAG_INSANE_CRAWL = 4_spawnflag;

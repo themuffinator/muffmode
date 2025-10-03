@@ -8,7 +8,7 @@ mutant
 ==============================================================================
 */
 
-#include "../g_local.h"
+#include "../g_local.hpp"
 #include "m_mutant.h"
 
 constexpr spawnflags_t SPAWNFLAG_MUTANT_NOJUMPING = 8_spawnflag;

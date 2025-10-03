@@ -2,7 +2,7 @@
 // Licensed under the GNU General Public License 2.0.
 // g_ai.c
 
-#include "g_local.h"
+#include "g_local.hpp"
 
 bool FindTarget(gentity_t *self);
 bool ai_checkattack(gentity_t *self, float dist);

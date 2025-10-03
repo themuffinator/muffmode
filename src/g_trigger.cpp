@@ -1,6 +1,6 @@
 // Copyright (c) ZeniMax Media Inc.
 // Licensed under the GNU General Public License 2.0.
-#include "g_local.h"
+#include "g_local.hpp"
 
 constexpr spawnflags_t SPAWNFLAG_TRIGGER_MONSTER = 0x01_spawnflag;
 constexpr spawnflags_t SPAWNFLAG_TRIGGER_NOT_PLAYER = 0x02_spawnflag;

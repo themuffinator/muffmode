@@ -8,7 +8,7 @@ GLADIATOR
 ==============================================================================
 */
 
-#include "../g_local.h"
+#include "../g_local.hpp"
 #include "m_gladiator.h"
 #include "m_flash.h"
 

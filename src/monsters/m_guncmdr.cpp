@@ -8,7 +8,7 @@ GUNNER
 ==============================================================================
 */
 
-#include "../g_local.h"
+#include "../g_local.hpp"
 #include "m_gunner.h"
 #include "m_flash.h"
 

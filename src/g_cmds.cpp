@@ -1,6 +1,6 @@
 // Copyright (c) ZeniMax Media Inc.
 // Licensed under the GNU General Public License 2.0.
-#include "g_local.h"
+#include "g_local.hpp"
 #include "monsters/m_player.h"
 enum cmd_flags_t : uint32_t {
 	CF_NONE				= 0,
