@@ -2,12 +2,6 @@
 // Licensed under the GNU General Public License 2.0.
 #include "g_local.h"
 #include "monsters/m_player.h"
-/*freeze*/
-#if 0
-#include "freeze.h"
-#endif
-/*freeze*/
-
 enum cmd_flags_t : uint32_t {
 	CF_NONE				= 0,
 	CF_ALLOW_DEAD		= bit_v<0>,
