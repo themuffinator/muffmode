@@ -221,10 +221,11 @@ enum gametype_t {
 	GT_CA,
 	GT_FREEZE,
 	GT_STRIKE,
-	GT_RR,
-	GT_LMS,
-	GT_HORDE,
-	GT_BALL,
+        GT_RR,
+        GT_LMS,
+        GT_LTS,
+        GT_HORDE,
+        GT_BALL,
 	GT_NUM_GAMETYPES
 };
 constexpr gametype_t GT_FIRST = GT_FFA;
@@ -250,32 +251,34 @@ inline int GT_Flags(gametype_t gt) {
 }
 
 constexpr const char *gt_short_name[GT_NUM_GAMETYPES] = {
-	"cmp",
-	"ffa",
-	"duel",
-	"tdm",
-	"ctf",
-	"ca",
-	"ft",
-	"strike",
-	"rr",
-	"lms",
-	"horde",
-	"ball"
+        "cmp",
+        "ffa",
+        "duel",
+        "tdm",
+        "ctf",
+        "ca",
+        "ft",
+        "strike",
+        "rr",
+        "lms",
+        "lts",
+        "horde",
+        "ball"
 };
 constexpr const char *gt_short_name_upper[GT_NUM_GAMETYPES] = {
-	"CMP",
-	"FFA",
-	"DUEL",
-	"TDM",
-	"CTF",
-	"CA",
-	"FT",
-	"STRIKE",
-	"REDROVER",
-	"LMS",
-	"HORDE",
-	"BALL",
+        "CMP",
+        "FFA",
+        "DUEL",
+        "TDM",
+        "CTF",
+        "CA",
+        "FT",
+        "STRIKE",
+        "REDROVER",
+        "LMS",
+        "LTS",
+        "HORDE",
+        "BALL",
 };
 constexpr const char *gt_long_name[GT_NUM_GAMETYPES] = {
         "Campaign",
@@ -288,6 +291,7 @@ constexpr const char *gt_long_name[GT_NUM_GAMETYPES] = {
         "CaptureStrike",
         "Red Rover",
         "Last Man Standing",
+        "Last Team Standing",
         "Horde Mode",
         "ProBall"
 };
@@ -2536,6 +2540,10 @@ bool IsScoringDisabled();
 void BroadcastReadyReminderMessage();
 void TeleportPlayerToRandomSpawnPoint(gentity_t *ent, bool fx);
 bool InCoopStyle();
+bool G_GametypeUsesLives();
+int G_GametypeInitialLives();
+bool G_GametypeUsesSquadRespawn();
+bool G_GametypeEliminationHUDActive();
 gentity_t *ClientEntFromString(const char *in);
 ruleset_t RS_IndexFromString(const char *in);
 void TeleporterVelocity(gentity_t *ent, gvec3_t angles);

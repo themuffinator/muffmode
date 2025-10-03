@@ -4,6 +4,7 @@
 
 #include "g_local.h"
 
+#include <algorithm>
 #include <array>
 #include <cctype>
 #include <cstdlib>
@@ -959,6 +960,7 @@ constexpr std::array<std::array<const char *, GT_MAX_COMMAND_ALIASES>, static_ca
         /* GT_STRIKE */    std::array<const char *, GT_MAX_COMMAND_ALIASES>{ "strike", "capturestrike", nullptr, nullptr, nullptr },
         /* GT_RR */        std::array<const char *, GT_MAX_COMMAND_ALIASES>{ "rr", "redrover", nullptr, nullptr, nullptr },
         /* GT_LMS */       std::array<const char *, GT_MAX_COMMAND_ALIASES>{ "lms", "lastmanstanding", "lastman", nullptr, nullptr },
+        /* GT_LTS */       std::array<const char *, GT_MAX_COMMAND_ALIASES>{ "lts", "lastteamstanding", "lastteam", nullptr, nullptr },
         /* GT_HORDE */     std::array<const char *, GT_MAX_COMMAND_ALIASES>{ "horde", nullptr, nullptr, nullptr, nullptr },
         /* GT_BALL */      std::array<const char *, GT_MAX_COMMAND_ALIASES>{ "ball", "proball", nullptr, nullptr, nullptr },
 }};
@@ -1080,7 +1082,53 @@ void TeleportPlayerToRandomSpawnPoint(gentity_t *ent, bool fx) {
 }
 
 bool InCoopStyle() {
-	return coop->integer || GT(GT_HORDE);
+        return coop->integer || GT(GT_HORDE);
+}
+
+bool G_GametypeUsesLives() {
+        if (InCoopStyle() && g_coop_enable_lives->integer)
+                return true;
+
+        if (GT(GT_LMS))
+                return true;
+
+        if (GT(GT_LTS))
+                return true;
+
+        return false;
+}
+
+int G_GametypeInitialLives() {
+        if (InCoopStyle() && g_coop_enable_lives->integer)
+                return std::max(0, g_coop_num_lives->integer + 1);
+
+        if (GT(GT_LMS))
+                return std::max(1, g_lms_num_lives->integer);
+
+        if (GT(GT_LTS))
+                return std::max(0, g_lts_num_lives->integer + 1);
+
+        return 0;
+}
+
+bool G_GametypeUsesSquadRespawn() {
+        if (InCoopStyle())
+                return g_coop_squad_respawn->integer != 0;
+
+        if (GT(GT_LTS))
+                return true;
+
+        return false;
+}
+
+bool G_GametypeEliminationHUDActive() {
+        if (InCoopStyle() && (g_coop_enable_lives->integer || g_coop_squad_respawn->integer))
+                return true;
+
+        if (GT(GT_LMS) || GT(GT_LTS))
+                return true;
+
+        return false;
 }
 
 /*

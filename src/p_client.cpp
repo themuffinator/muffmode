@@ -1297,35 +1297,44 @@ DIE(player_die) (gentity_t *self, gentity_t *inflictor, gentity_t *attacker, int
 		}
 	}
 
-	if (!self->deadflag) {
-		if (InCoopStyle() && (g_coop_squad_respawn->integer || g_coop_enable_lives->integer)) {
-			if (g_coop_enable_lives->integer && self->client->pers.lives) {
-				self->client->pers.lives--;
-				self->client->resp.coop_respawn.lives--;
-			}
+        if (!self->deadflag) {
+                bool coop_mode = InCoopStyle();
+                bool elimination_mode = coop_mode || GT(GT_LMS) || GT(GT_LTS);
 
-			bool allPlayersDead = true;
+                if (elimination_mode && (G_GametypeUsesLives() || G_GametypeUsesSquadRespawn())) {
+                        if (G_GametypeUsesLives() && self->client->pers.lives) {
+                                self->client->pers.lives--;
 
-			for (auto player : active_clients())
-				if (player->health > 0 || (!level.deadly_kill_box && g_coop_enable_lives->integer && player->client->pers.lives > 0)) {
-					allPlayersDead = false;
-					break;
-				}
+                                if (coop_mode)
+                                        self->client->resp.coop_respawn.lives--;
 
-			if (allPlayersDead) // allow respawns for telefrags and weird shit
-			{
-				level.coop_level_restart_time = level.time + 5_sec;
+                                if (!coop_mode && self->client->pers.lives == 0)
+                                        ClientSetEliminated(self);
+                        }
 
-				for (auto player : active_clients())
-					gi.LocCenter_Print(player, "$g_coop_lose");
-			}
+                        if (coop_mode) {
+                                bool allPlayersDead = true;
 
-			// in 3 seconds, attempt a respawn or put us into
-			// spectator mode
-			if (!level.coop_level_restart_time)
-				self->client->respawn_time = level.time + 3_sec;
-		}
-	}
+                                for (auto player : active_clients())
+                                        if (player->health > 0 || (!level.deadly_kill_box && g_coop_enable_lives->integer && player->client->pers.lives > 0)) {
+                                                allPlayersDead = false;
+                                                break;
+                                        }
+
+                                if (allPlayersDead) {
+                                        level.coop_level_restart_time = level.time + 5_sec;
+
+                                        for (auto player : active_clients())
+                                                gi.LocCenter_Print(player, "$g_coop_lose");
+                                }
+
+                                if (!level.coop_level_restart_time)
+                                        self->client->respawn_time = level.time + 3_sec;
+                        } else {
+                                self->client->respawn_time = level.time + 3_sec;
+                        }
+                }
+        }
 
 	level.total_player_deaths++;
 
@@ -1591,8 +1600,13 @@ void InitClientPersistant(gentity_t *ent, gclient_t *client) {
 		client->pers.lastweapon = client->pers.weapon;
 	}
 
-	if (InCoopStyle() && g_coop_enable_lives->integer)
-		client->pers.lives = g_coop_num_lives->integer + 1;
+        if (G_GametypeUsesLives()) {
+                client->pers.lives = G_GametypeInitialLives();
+                client->resp.coop_respawn.lives = client->pers.lives;
+        } else {
+                client->pers.lives = 0;
+                client->resp.coop_respawn.lives = 0;
+        }
 
 	if (ent->client->pers.autoshield >= AUTO_SHIELD_AUTO)
 		ent->flags |= FL_WANTS_POWER_ARMOR;
@@ -4610,60 +4624,75 @@ static inline bool G_FindRespawnSpot(gentity_t *player, vec3_t &spot) {
 
 // [Paril-KEX] check each player to find a good
 // respawn target & position
-inline std::tuple<gentity_t *, vec3_t> G_FindSquadRespawnTarget() {
-	bool monsters_searching_for_anybody = G_MonstersSearchingFor(nullptr);
+inline std::tuple<gentity_t *, vec3_t> G_FindEliminationRespawnTarget(gentity_t *ent) {
+        bool coop_mode = InCoopStyle();
+        bool monsters_searching_for_anybody = coop_mode ? G_MonstersSearchingFor(nullptr) : false;
 
-	for (auto player : active_clients()) {
-		// no dead players
-		if (player->deadflag)
-			continue;
+        for (auto player : active_clients()) {
+                if (player == ent)
+                        continue;
 
-		// check combat state; we can't have taken damage recently
-		if (player->client->last_damage_time >= level.time) {
-			player->client->coop_respawn_state = COOP_RESPAWN_IN_COMBAT;
-			continue;
-		}
+                if (player->deadflag)
+                        continue;
 
-		// check if any monsters are currently targeting us
-		// or searching for us
-		if (G_MonstersSearchingFor(player)) {
-			player->client->coop_respawn_state = COOP_RESPAWN_IN_COMBAT;
-			continue;
-		}
+                if (!ClientIsPlaying(player->client))
+                        continue;
 
-		// check firing state; if any enemies are mad at any players,
-		// don't respawn until everybody has cooled down
-		if (monsters_searching_for_anybody && player->client->last_firing_time >= level.time) {
-			player->client->coop_respawn_state = COOP_RESPAWN_IN_COMBAT;
-			continue;
-		}
+                if (player->client->eliminated)
+                        continue;
 
-		// check positioning; we must be on world ground
-		if (player->groundentity != world) {
-			player->client->coop_respawn_state = COOP_RESPAWN_BAD_AREA;
-			continue;
-		}
+                if (!coop_mode && player->client->sess.team != ent->client->sess.team)
+                        continue;
 
-		// can't be in liquid
-		if (player->waterlevel >= WATER_UNDER) {
-			player->client->coop_respawn_state = COOP_RESPAWN_BAD_AREA;
-			continue;
-		}
+                if (player->client->respawn_time >= level.time) {
+                        player->client->coop_respawn_state = COOP_RESPAWN_WAITING;
+                        continue;
+                }
 
-		// good player; pick a spot
-		vec3_t spot;
+                if (player->client->last_damage_time >= level.time) {
+                        player->client->coop_respawn_state = COOP_RESPAWN_IN_COMBAT;
+                        continue;
+                }
 
-		if (!G_FindRespawnSpot(player, spot)) {
-			player->client->coop_respawn_state = COOP_RESPAWN_BLOCKED;
-			continue;
-		}
+                if (coop_mode) {
+                        if (G_MonstersSearchingFor(player)) {
+                                player->client->coop_respawn_state = COOP_RESPAWN_IN_COMBAT;
+                                continue;
+                        }
 
-		// good player most likely
-		return { player, spot };
-	}
+                        if (monsters_searching_for_anybody && player->client->last_firing_time >= level.time) {
+                                player->client->coop_respawn_state = COOP_RESPAWN_IN_COMBAT;
+                                continue;
+                        }
+                } else {
+                        if (player->client->last_firing_time >= level.time) {
+                                player->client->coop_respawn_state = COOP_RESPAWN_IN_COMBAT;
+                                continue;
+                        }
+                }
 
-	// no good player
-	return { nullptr, {} };
+                if (player->groundentity != world) {
+                        player->client->coop_respawn_state = COOP_RESPAWN_BAD_AREA;
+                        continue;
+                }
+
+                if (player->waterlevel >= WATER_UNDER) {
+                        player->client->coop_respawn_state = COOP_RESPAWN_BAD_AREA;
+                        continue;
+                }
+
+                vec3_t spot;
+
+                if (!G_FindRespawnSpot(player, spot)) {
+                        player->client->coop_respawn_state = COOP_RESPAWN_BLOCKED;
+                        continue;
+                }
+
+                player->client->coop_respawn_state = COOP_RESPAWN_NONE;
+                return { player, spot };
+        }
+
+        return { nullptr, {} };
 }
 
 enum respawn_state_t {
@@ -4677,86 +4706,95 @@ enum respawn_state_t {
 // note that this is only called if they are allowed to respawn (not
 // restarting the level due to all being dead)
 static bool G_CoopRespawn(gentity_t *ent) {
-	// don't do this in non-coop
-	if (!InCoopStyle())
-		return false;
-	// if we don't have squad or lives, it doesn't matter
-	if (!g_coop_squad_respawn->integer && !g_coop_enable_lives->integer)
-		return false;
+        bool coop_mode = InCoopStyle();
+        bool lms_mode = GT(GT_LMS);
+        bool lts_mode = GT(GT_LTS);
 
-	respawn_state_t state = RESPAWN_NONE;
+        if (!coop_mode && !lms_mode && !lts_mode)
+                return false;
 
-	// first pass: if we have no lives left, just move to spectator
-	if (g_coop_enable_lives->integer) {
-		if (ent->client->pers.lives == 0) {
-			state = RESPAWN_SPECTATE;
-			ent->client->coop_respawn_state = COOP_RESPAWN_NO_LIVES;
-		}
-	}
+        bool uses_lives = G_GametypeUsesLives();
+        bool uses_squad = G_GametypeUsesSquadRespawn();
 
-	// second pass: check for where to spawn
-	if (state == RESPAWN_NONE) {
-		// if squad respawn, don't respawn until we can find a good player to spawn on.
-		if (coop->integer && g_coop_squad_respawn->integer) {
-			bool allDead = true;
+        if (!uses_lives && !uses_squad)
+                return false;
 
-			for (auto player : active_clients()) {
-				if (player->health > 0) {
-					allDead = false;
-					break;
-				}
-			}
+        respawn_state_t state = RESPAWN_NONE;
 
-			// all dead, so if we ever get here we have lives enabled;
-			// we should just respawn at the start of the level
-			if (allDead)
-				state = RESPAWN_START;
-			else {
-				auto [good_player, good_spot] = G_FindSquadRespawnTarget();
+        if (uses_lives && ent->client->pers.lives == 0) {
+                state = RESPAWN_SPECTATE;
+                ent->client->coop_respawn_state = COOP_RESPAWN_NO_LIVES;
+        }
 
-				if (good_player) {
-					state = RESPAWN_SQUAD;
+        if (state == RESPAWN_NONE) {
+                if (uses_squad) {
+                        if (coop_mode) {
+                                bool allDead = true;
 
-					squad_respawn_position = good_spot;
-					squad_respawn_angles = good_player->s.angles;
-					squad_respawn_angles[2] = 0;
+                                for (auto player : active_clients()) {
+                                        if (player->health > 0) {
+                                                allDead = false;
+                                                break;
+                                        }
+                                }
 
-					use_squad_respawn = true;
-				} else {
-					state = RESPAWN_SPECTATE;
-				}
-			}
-		} else
-			state = RESPAWN_START;
-	}
+                                if (allDead) {
+                                        state = uses_lives ? RESPAWN_START : RESPAWN_SPECTATE;
+                                } else {
+                                        auto [good_player, good_spot] = G_FindEliminationRespawnTarget(ent);
 
-	if (state == RESPAWN_SQUAD || state == RESPAWN_START) {
-		// give us our max health back since it will reset
-		// to pers.health; in instanced items we'd lose the items
-		// we touched so we always want to respawn with our max.
-		if (P_UseCoopInstancedItems())
-			ent->client->pers.health = ent->client->pers.max_health = ent->max_health;
+                                        if (good_player) {
+                                                state = RESPAWN_SQUAD;
 
-		ClientRespawn(ent);
+                                                squad_respawn_position = good_spot;
+                                                squad_respawn_angles = good_player->s.angles;
+                                                squad_respawn_angles[2] = 0;
 
-		ent->client->latched_buttons = BUTTON_NONE;
-		use_squad_respawn = false;
-	} else if (state == RESPAWN_SPECTATE) {
-		if (!ent->client->coop_respawn_state)
-			ent->client->coop_respawn_state = COOP_RESPAWN_WAITING;
+                                                use_squad_respawn = true;
+                                        } else {
+                                                state = RESPAWN_SPECTATE;
+                                        }
+                                }
+                        } else {
+                                auto [good_player, good_spot] = G_FindEliminationRespawnTarget(ent);
 
-		if (ClientIsPlaying(ent->client)) {
-			// move us to spectate just so we don't have to twiddle
-			// our thumbs forever
-			CopyToBodyQue(ent);
-			ent->client->sess.team = TEAM_SPECTATOR;
-			MoveClientToFreeCam(ent);
-			gi.linkentity(ent);
-			GetFollowTarget(ent);
-		}
-	}
+                                if (good_player) {
+                                        state = RESPAWN_SQUAD;
+                                        squad_respawn_position = good_spot;
+                                        squad_respawn_angles = good_player->s.angles;
+                                        squad_respawn_angles[2] = 0;
+                                        use_squad_respawn = true;
+                                } else {
+                                        state = RESPAWN_SPECTATE;
+                                }
+                        }
+                } else {
+                        state = RESPAWN_START;
+                }
+        }
 
-	return true;
+        if (state == RESPAWN_SQUAD || state == RESPAWN_START) {
+                if (P_UseCoopInstancedItems())
+                        ent->client->pers.health = ent->client->pers.max_health = ent->max_health;
+
+                ClientRespawn(ent);
+
+                ent->client->latched_buttons = BUTTON_NONE;
+                use_squad_respawn = false;
+        } else if (state == RESPAWN_SPECTATE) {
+                if (!ent->client->coop_respawn_state)
+                        ent->client->coop_respawn_state = COOP_RESPAWN_WAITING;
+
+                if (ClientIsPlaying(ent->client)) {
+                        CopyToBodyQue(ent);
+                        ent->client->sess.team = TEAM_SPECTATOR;
+                        MoveClientToFreeCam(ent);
+                        gi.linkentity(ent);
+                        GetFollowTarget(ent);
+                }
+        }
+
+        return true;
 }
 
 /*

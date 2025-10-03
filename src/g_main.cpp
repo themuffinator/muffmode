@@ -79,6 +79,7 @@ int _gt[] = {
         /* GT_STRIKE */ GTF_TEAMS | GTF_ARENA | GTF_ROUNDS | GTF_CTF | GTF_ELIMINATION,
         /* GT_RR */ GTF_TEAMS | GTF_ROUNDS | GTF_ARENA,
         /* GT_LMS */ GTF_ELIMINATION,
+        /* GT_LTS */ GTF_TEAMS | GTF_ROUNDS | GTF_ELIMINATION,
         /* GT_HORDE */ GTF_ROUNDS,
         /* GT_BALL */ 0
 };
@@ -787,18 +788,23 @@ static void Entities_Reset(bool reset_players, bool reset_ghost, bool reset_scor
 			if (reset_ghost)
 				ec->client->resp.ghost = nullptr;
 
-			if (ClientIsPlaying(ec->client)) {
-				if (reset_ghost) {
-					// make up a ghost code
-					Match_Ghost_Assign(ec);
-				}
-				Weapon_Grapple_DoReset(ec->client);
+                        if (ClientIsPlaying(ec->client)) {
+                                if (reset_ghost) {
+                                        // make up a ghost code
+                                        Match_Ghost_Assign(ec);
+                                }
+                                Weapon_Grapple_DoReset(ec->client);
 
-				ec->client->eliminated = false;
-				ec->client->resp.ready = false;
-				ec->movetype = MOVETYPE_NOCLIP;
-				ec->client->respawn_time = level.time + FRAME_TIME_MS;
-				ClientSpawn(ec);
+                                if (GT(GT_LTS) && G_GametypeUsesLives()) {
+                                        ec->client->pers.lives = G_GametypeInitialLives();
+                                        ec->client->resp.coop_respawn.lives = ec->client->pers.lives;
+                                }
+
+                                ec->client->eliminated = false;
+                                ec->client->resp.ready = false;
+                                ec->movetype = MOVETYPE_NOCLIP;
+                                ec->client->respawn_time = level.time + FRAME_TIME_MS;
+                                ClientSpawn(ec);
 				gi.linkentity(ec);
 			}
 		}
@@ -1339,15 +1345,18 @@ static void CheckDMRoundState(void) {
 	// end round
 	if (level.round_state == roundst_t::ROUND_IN_PROGRESS) {
 		switch (g_gametype->integer) {
-		case GT_CA:
-		{
-			int8_t count_red = 0, count_blue = 0;
-			int8_t count_living_red = 0, count_living_blue = 0;
+                case GT_CA:
+                case GT_LTS:
+                {
+                        int8_t count_red = 0, count_blue = 0;
+                        int8_t count_living_red = 0, count_living_blue = 0;
+                        bool strike = GT(GT_STRIKE);
+                        bool lts = GT(GT_LTS);
 
-			for (auto ec : active_clients()) {
-				switch (ec->client->sess.team) {
-				case TEAM_RED:
-					count_red++;
+                        for (auto ec : active_clients()) {
+                                switch (ec->client->sess.team) {
+                                case TEAM_RED:
+                                        count_red++;
 					if (!ec->client->eliminated)
 						count_living_red++;
 					break;
@@ -2751,19 +2760,45 @@ void CheckDMExitRules() {
 
 	bool teams = Teams() && notGT(GT_RR);
 	
-	if (teams && g_teamplay_force_balance->integer) {
-		if (abs(level.num_playing_red - level.num_playing_blue) > 1) {
-			if (g_teamplay_auto_balance->integer) {
-				TeamBalance(true);
-			} else {
-				QueueIntermission("Teams are imbalanced.", true, true);
-			}
-			return;
-		}
-	}
+        if (teams && g_teamplay_force_balance->integer) {
+                if (abs(level.num_playing_red - level.num_playing_blue) > 1) {
+                        if (g_teamplay_auto_balance->integer) {
+                                TeamBalance(true);
+                        } else {
+                                QueueIntermission("Teams are imbalanced.", true, true);
+                        }
+                        return;
+                }
+        }
 
-	if (timelimit->value) {
-		if (!(GTF(GTF_ROUNDS)) || level.round_state == roundst_t::ROUND_ENDED) {
+        if (GT(GT_LMS)) {
+                int alive_players = 0;
+                gentity_t *last_player = nullptr;
+
+                for (auto player : active_clients()) {
+                        if (!ClientIsPlaying(player->client))
+                                continue;
+                        if (player->client->sess.team != TEAM_FREE)
+                                continue;
+                        if (player->client->eliminated)
+                                continue;
+
+                        alive_players++;
+                        last_player = player;
+                }
+
+                if (alive_players <= 1) {
+                        if (alive_players == 1 && last_player) {
+                                QueueIntermission(G_Fmt("{} is the last one standing!", last_player->client->resp.netname).data(), false, false);
+                        } else {
+                                QueueIntermission("Everyone eliminated!", true, false);
+                        }
+                        return;
+                }
+        }
+
+        if (timelimit->value) {
+                if (!(GTF(GTF_ROUNDS)) || level.round_state == roundst_t::ROUND_ENDED) {
 			if (level.time >= level.match_time + gtime_t::from_min(timelimit->value) + level.overtime) {
 				// check for overtime
 				if (ScoreIsTied()) {
@@ -3191,11 +3226,14 @@ static void CheckCvars() {
 }
 
 static bool G_AnyDeadPlayersWithoutLives() {
-	for (auto player : active_clients())
-		if (player->health <= 0 && (!player->client->pers.lives || player->client->eliminated))
-			return true;
+        if (!InCoopStyle() || !g_coop_enable_lives->integer)
+                return false;
 
-	return false;
+        for (auto player : active_clients())
+                if (player->health <= 0 && (!player->client->pers.lives || player->client->eliminated))
+                        return true;
+
+        return false;
 }
 
 /*
@@ -3294,18 +3332,18 @@ static inline void G_RunFrame_(bool main_loop) {
 	// clear client coop respawn states; this is done
 	// early since it may be set multiple times for different
 	// players
-	if (InCoopStyle() && (g_coop_enable_lives->integer || g_coop_squad_respawn->integer)) {
-		for (auto player : active_clients()) {
-			if (player->client->respawn_time >= level.time)
-				player->client->coop_respawn_state = COOP_RESPAWN_WAITING;
-			else if (g_coop_enable_lives->integer && player->health <= 0 && player->client->pers.lives == 0)
-				player->client->coop_respawn_state = COOP_RESPAWN_NO_LIVES;
-			else if (g_coop_enable_lives->integer && G_AnyDeadPlayersWithoutLives())
-				player->client->coop_respawn_state = COOP_RESPAWN_NO_LIVES;
-			else
-				player->client->coop_respawn_state = COOP_RESPAWN_NONE;
-		}
-	}
+        if (G_GametypeEliminationHUDActive()) {
+                for (auto player : active_clients()) {
+                        if (player->client->respawn_time >= level.time)
+                                player->client->coop_respawn_state = COOP_RESPAWN_WAITING;
+                        else if (G_GametypeUsesLives() && player->health <= 0 && player->client->pers.lives == 0)
+                                player->client->coop_respawn_state = COOP_RESPAWN_NO_LIVES;
+                        else if (InCoopStyle() && G_GametypeUsesLives() && G_AnyDeadPlayersWithoutLives())
+                                player->client->coop_respawn_state = COOP_RESPAWN_NO_LIVES;
+                        else
+                                player->client->coop_respawn_state = COOP_RESPAWN_NONE;
+                }
+        }
 
 	//
 	// treat each object in turn
@@ -3365,11 +3403,11 @@ static inline void G_RunFrame_(bool main_loop) {
 	// see if needpass needs updated
 	CheckNeedPass();
 
-	if (InCoopStyle() && (g_coop_enable_lives->integer || g_coop_squad_respawn->integer)) {
-		// rarely, we can see a flash of text if all players respawned
-		// on some other player, so if everybody is now alive we'll reset
-		// back to empty
-		bool reset_coop_respawn = true;
+        if (G_GametypeEliminationHUDActive()) {
+                // rarely, we can see a flash of text if all players respawned
+                // on some other player, so if everybody is now alive we'll reset
+                // back to empty
+                bool reset_coop_respawn = true;
 
 		for (auto player : active_clients()) {
 			if (player->health > 0) {	//muff: changed from >= to >

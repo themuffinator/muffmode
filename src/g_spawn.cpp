@@ -958,12 +958,13 @@ static constexpr const char *gt_spawn_string[GT_NUM_GAMETYPES] = {
 	"team",
 	"ctf",
 	"ca",
-	"freeze",
-	"strike",
-	"rr",
-	"lms",
-	"horde",
-	"ball"
+        "freeze",
+        "strike",
+        "rr",
+        "lms",
+        "lts",
+        "horde",
+        "ball"
 };
 
 /*

@@ -75,6 +75,8 @@ inline const char *DefaultCheatsValue()
         _(game_cvar_stage::INIT, g_coop_squad_respawn, "g_coop_squad_respawn", CVAR_LITERAL("1"), CVAR_LATCH) \
         _(game_cvar_stage::INIT, g_coop_enable_lives, "g_coop_enable_lives", CVAR_LITERAL("0"), CVAR_LATCH) \
         _(game_cvar_stage::INIT, g_coop_num_lives, "g_coop_num_lives", CVAR_LITERAL("2"), CVAR_LATCH) \
+        _(game_cvar_stage::INIT, g_lms_num_lives, "g_lms_num_lives", CVAR_LITERAL("9"), CVAR_LATCH) \
+        _(game_cvar_stage::INIT, g_lts_num_lives, "g_lts_num_lives", CVAR_LITERAL("1"), CVAR_LATCH) \
         _(game_cvar_stage::INIT, g_coop_instanced_items, "g_coop_instanced_items", CVAR_LITERAL("1"), CVAR_LATCH) \
         _(game_cvar_stage::INIT, g_allow_grapple, "g_allow_grapple", CVAR_LITERAL("auto"), CVAR_NOFLAGS) \
         _(game_cvar_stage::INIT, g_allow_kill, "g_allow_kill", CVAR_LITERAL("1"), CVAR_NOFLAGS) \
