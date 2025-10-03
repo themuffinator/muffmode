@@ -1,0 +1,11 @@
+prefix=C:/Program Files (x86)/Steam/steamapps/common/Quake 2/rerelease/muffmode/src/vcpkg_installed/x64-windows/vcpkg/pkgs/jsoncpp_x64-windows/debug
+exec_prefix=C:/Program Files (x86)/Steam/steamapps/common/Quake 2/rerelease/muffmode/src/vcpkg_installed/x64-windows/vcpkg/pkgs/jsoncpp_x64-windows/debug
+libdir=${exec_prefix}/lib
+includedir=${prefix}/include
+
+Name: jsoncpp
+Description: A C++ library for interacting with JSON
+Version: 1.9.5
+URL: https://github.com/open-source-parsers/jsoncpp
+Libs: -L${libdir} -ljsoncpp
+Cflags: -I${includedir}

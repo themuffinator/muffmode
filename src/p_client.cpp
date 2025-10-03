@@ -468,7 +468,7 @@ bool Freeze_IsFrozen(const gentity_t *ent) {
         if (!ent || !ent->client)
                 return false;
 
-        if (!GT(GT_FREEZE) || !ClientIsPlaying(ent->client))
+        if (notGT(GT_FREEZE) || !ClientIsPlaying(ent->client))
                 return false;
 
         return ent->client->eliminated && ent->health <= 0;

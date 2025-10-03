@@ -838,7 +838,7 @@ static void CG_ExecuteLayoutString(const char *s, vrect_t hud_vrect, vrect_t hud
 					cgi.Com_Error("client >= MAX_CLIENTS");
 			}
 
-			int score, ping, time;
+			int score, ping;
 
 			token = COM_Parse(&s);
 			if (!skip_depth)
