@@ -1,9 +1,11 @@
 #pragma once
 
 #include "q_std.h"
-#include "game.h"
 
+#include <cstddef>
 #include <cstdint>
+
+#include "game.h"
 
 enum class game_cvar_stage : uint8_t {
         PRE_INIT,
@@ -21,8 +23,10 @@ struct game_cvar_descriptor {
 };
 
 #define CVAR_LITERAL(value) []() -> const char * { return value; }
-#define CVAR_FMT(...) []() -> const char * { return G_Fmt(__VA_ARGS__).data(); }
 #define CVAR_VALUE(expr) []() -> const char * { return (expr); }
+
+#define STRINGIFY_IMPL(value) #value
+#define STRINGIFY(value) STRINGIFY_IMPL(value)
 
 inline const char *DefaultCheatsValue()
 {
@@ -35,7 +39,7 @@ inline const char *DefaultCheatsValue()
 
 #define GAME_CVAR_ENTRIES(_) \
         /* Pre-initialization cvars */ \
-        _(game_cvar_stage::PRE_INIT, maxclients, "maxclients", CVAR_FMT("{}", MAX_SPLIT_PLAYERS), CVAR_SERVERINFO | CVAR_LATCH) \
+        _(game_cvar_stage::PRE_INIT, maxclients, "maxclients", CVAR_LITERAL(STRINGIFY(MAX_SPLIT_PLAYERS)), CVAR_SERVERINFO | CVAR_LATCH) \
         _(game_cvar_stage::PRE_INIT, minplayers, "minplayers", CVAR_LITERAL("2"), CVAR_NOFLAGS) \
         _(game_cvar_stage::PRE_INIT, maxplayers, "maxplayers", CVAR_LITERAL("16"), CVAR_NOFLAGS) \
         _(game_cvar_stage::PRE_INIT, deathmatch, "deathmatch", CVAR_LITERAL("1"), CVAR_LATCH) \
@@ -96,7 +100,7 @@ inline const char *DefaultCheatsValue()
         _(game_cvar_stage::INIT, g_dedicated, "dedicated", CVAR_LITERAL("0"), CVAR_NOSET) \
         _(game_cvar_stage::INIT, g_cheats, "cheats", CVAR_VALUE(DefaultCheatsValue()), CVAR_SERVERINFO | CVAR_LATCH) \
         _(game_cvar_stage::INIT, skill, "skill", CVAR_LITERAL("3"), CVAR_LATCH) \
-        _(game_cvar_stage::INIT, maxentities, "maxentities", CVAR_FMT("{}", MAX_ENTITIES), CVAR_LATCH) \
+        _(game_cvar_stage::INIT, maxentities, "maxentities", CVAR_LITERAL(STRINGIFY(MAX_ENTITIES)), CVAR_LATCH) \
         _(game_cvar_stage::INIT, fraglimit, "fraglimit", CVAR_LITERAL("0"), CVAR_SERVERINFO) \
         _(game_cvar_stage::INIT, timelimit, "timelimit", CVAR_LITERAL("0"), CVAR_SERVERINFO) \
         _(game_cvar_stage::INIT, roundlimit, "roundlimit", CVAR_LITERAL("8"), CVAR_SERVERINFO) \
@@ -248,6 +252,7 @@ inline void ForEachGameCvar(game_cvar_stage stage, Fn &&fn)
 
 #undef GAME_CVAR_ENTRIES
 #undef CVAR_LITERAL
-#undef CVAR_FMT
 #undef CVAR_VALUE
+#undef STRINGIFY
+#undef STRINGIFY_IMPL
 

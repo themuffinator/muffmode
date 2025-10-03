@@ -1244,11 +1244,15 @@ enum {
 struct configstring_remap_t {
 	// start position in the configstring list
 	// to write into
-	size_t  start;
+	size_t	start;
 	// max length to write into; [start+length-1] should always
 	// be set to '\0'
-	size_t  length;
+	size_t	length;
 };
+
+constexpr size_t cs_remap_offset(int32_t id, int32_t newer, int32_t older, size_t stride = CS_MAX_STRING_LENGTH) {
+	return static_cast<size_t>(static_cast<int64_t>(id) + static_cast<int64_t>(newer) - static_cast<int64_t>(older)) * stride;
+}
 
 constexpr configstring_remap_t CS_REMAP(int32_t id) {
 	// direct mapping
@@ -1260,23 +1264,23 @@ constexpr configstring_remap_t CS_REMAP(int32_t id) {
 		return { (CS_STATUSBAR * CS_MAX_STRING_LENGTH) + ((id - CS_STATUSBAR_OLD) * CS_MAX_STRING_LENGTH_OLD), (CS_AIRACCEL - CS_STATUSBAR) * CS_MAX_STRING_LENGTH };
 	// offset
 	else if (id < CS_MODELS_OLD)
-		return { (id + (CS_AIRACCEL - CS_AIRACCEL_OLD)) * CS_MAX_STRING_LENGTH, CS_MAX_STRING_LENGTH };
+		return { cs_remap_offset(id, CS_AIRACCEL, CS_AIRACCEL_OLD), CS_MAX_STRING_LENGTH };
 	else if (id < CS_SOUNDS_OLD)
-		return { (id + (CS_MODELS - CS_MODELS_OLD)) * CS_MAX_STRING_LENGTH, CS_MAX_STRING_LENGTH };
+		return { cs_remap_offset(id, CS_MODELS, CS_MODELS_OLD), CS_MAX_STRING_LENGTH };
 	else if (id < CS_IMAGES_OLD)
-		return { (id + (CS_SOUNDS - CS_SOUNDS_OLD)) * CS_MAX_STRING_LENGTH, CS_MAX_STRING_LENGTH };
+		return { cs_remap_offset(id, CS_SOUNDS, CS_SOUNDS_OLD), CS_MAX_STRING_LENGTH };
 	else if (id < CS_LIGHTS_OLD)
-		return { (id + (CS_IMAGES - CS_IMAGES_OLD)) * CS_MAX_STRING_LENGTH, CS_MAX_STRING_LENGTH };
+		return { cs_remap_offset(id, CS_IMAGES, CS_IMAGES_OLD), CS_MAX_STRING_LENGTH };
 	else if (id < CS_ITEMS_OLD)
-		return { (id + (CS_LIGHTS - CS_LIGHTS_OLD)) * CS_MAX_STRING_LENGTH, CS_MAX_STRING_LENGTH };
+		return { cs_remap_offset(id, CS_LIGHTS, CS_LIGHTS_OLD), CS_MAX_STRING_LENGTH };
 	else if (id < CS_PLAYERSKINS_OLD)
-		return { (id + (CS_ITEMS - CS_ITEMS_OLD)) * CS_MAX_STRING_LENGTH, CS_MAX_STRING_LENGTH };
+		return { cs_remap_offset(id, CS_ITEMS, CS_ITEMS_OLD), CS_MAX_STRING_LENGTH };
 	else if (id < CS_GENERAL_OLD)
-		return { (id + (CS_PLAYERSKINS - CS_PLAYERSKINS_OLD)) * CS_MAX_STRING_LENGTH, CS_MAX_STRING_LENGTH };
+		return { cs_remap_offset(id, CS_PLAYERSKINS, CS_PLAYERSKINS_OLD), CS_MAX_STRING_LENGTH };
 
 	// general also needs some special handling because it's both
 	// offset *and* allowed to overflow
-	return { (id + (CS_GENERAL - CS_GENERAL_OLD)) * CS_MAX_STRING_LENGTH_OLD, (MAX_CONFIGSTRINGS - CS_GENERAL) * CS_MAX_STRING_LENGTH };
+	return { cs_remap_offset(id, CS_GENERAL, CS_GENERAL_OLD, CS_MAX_STRING_LENGTH_OLD), (MAX_CONFIGSTRINGS - CS_GENERAL) * CS_MAX_STRING_LENGTH };
 }
 
 static_assert(CS_REMAP(CS_MODELS_OLD).start == (CS_MODELS * 96), "check CS_REMAP");
