@@ -3,26 +3,9 @@
 #include "g_local.h"
 #include "g_statusbar.h"
 
-/*
-======================================================================
-
-INTERMISSION
-
-======================================================================
-*/
-
-static const char *EndMatchVictorString() {
-	if (!level.intermission_time)
-		return nullptr;
-
-	const char *s = nullptr;
-
-	if (Teams() && !(GT(GT_RR))) {
-		
-		return s;
-	}
-
-}
+#include <algorithm>
+#include <limits>
+#include <vector>
 
 void MultiplayerScoreboard(gentity_t *ent);
 
@@ -194,12 +177,9 @@ void G_EndOfUnitMessage() {
 //     u8 team
 // ]
 void G_ReportMatchDetails(bool is_end) {
-	static std::array<uint32_t, MAX_CLIENTS> player_ranks;
+	std::array<uint32_t, MAX_CLIENTS> player_ranks{};
+	const bool teams = Teams() && notGT(GT_RR);
 
-	player_ranks = {};
-	bool teams = Teams() && notGT(GT_RR);
-
-	// teamplay is simple
 	if (teams) {
 		Teams_CalcRankings(player_ranks);
 
@@ -207,60 +187,73 @@ void G_ReportMatchDetails(bool is_end) {
 		gi.WriteString("RED TEAM");
 		gi.WriteString("BLUE TEAM");
 	} else {
-		// sort players by score, then match everybody to
-		// the current highest score downwards until we run out of players.
-		static std::array<gentity_t *, MAX_CLIENTS> sorted_players;
-		size_t num_active_players = 0;
+		std::vector<gentity_t *> sorted_players;
+		sorted_players.reserve(game.maxclients);
 
 		for (auto player : active_clients())
-			sorted_players[num_active_players++] = player;
+			sorted_players.push_back(player);
 
-		std::sort(sorted_players.begin(), sorted_players.begin() + num_active_players, [](const gentity_t *a, const gentity_t *b) { return b->client->resp.score < a->client->resp.score; });
+		std::sort(sorted_players.begin(), sorted_players.end(), [](const gentity_t *a, const gentity_t *b) {
+			return b->client->resp.score < a->client->resp.score;
+		});
 
-		int32_t current_score = INT_MIN;
-		int32_t current_rank = 0;
+		int32_t current_score = std::numeric_limits<int32_t>::min();
+		uint32_t current_rank = 0;
 
-		for (size_t i = 0; i < num_active_players; i++) {
-			if (!current_rank || sorted_players[i]->client->resp.score != current_score) {
-				current_rank++;
-				current_score = sorted_players[i]->client->resp.score;
+		for (const auto *player : sorted_players) {
+			const auto *client = player->client;
+			if (!client)
+				continue;
+
+			const int32_t score = client->resp.score;
+			if (!current_rank || score != current_score) {
+				++current_rank;
+				current_score = score;
 			}
 
-			player_ranks[sorted_players[i]->s.number - 1] = current_rank;
+			const auto index = static_cast<size_t>(player->s.number - 1);
+			if (index < player_ranks.size())
+				player_ranks[index] = current_rank;
 		}
 
 		gi.WriteByte(0);
 	}
 
-	uint8_t num_players = 0;
+	std::vector<gentity_t *> playing_players;
+	playing_players.reserve(level.num_playing_clients);
 
 	for (auto player : active_clients()) {
-		// leave spectators out of this data, they don't need to be seen.
-		if (player->client->pers.spawned && ClientIsPlaying(player->client)) {
-			// just in case...
-			if (teams && !ClientIsPlaying(player->client))
-				continue;
+		auto *client = player->client;
+		if (!client)
+			continue;
+		if (!client->pers.spawned)
+			continue;
+		if (!ClientIsPlaying(client))
+			continue;
 
-			num_players++;
-		}
+		const auto index = static_cast<size_t>(player->s.number - 1);
+		if (index >= player_ranks.size())
+			continue;
+
+		playing_players.push_back(player);
 	}
 
+	const auto max_serialisable_players = static_cast<size_t>(std::numeric_limits<uint8_t>::max());
+	const auto num_players = static_cast<uint8_t>(std::min(playing_players.size(), max_serialisable_players));
 	gi.WriteByte(num_players);
 
-	for (auto player : active_clients()) {
-		// leave spectators out of this data, they don't need to be seen.
-		if (player->client->pers.spawned && ClientIsPlaying(player->client)) {
-			// just in case...
-			if (teams && !ClientIsPlaying(player->client))
-				continue;
+	for (size_t i = 0; i < num_players; ++i) {
+		auto *player = playing_players[i];
+		auto *client = player->client;
+		const auto index = static_cast<size_t>(player->s.number - 1);
 
-			gi.WriteByte(player->s.number - 1);
-			gi.WriteLong(player->client->resp.score);
-			gi.WriteByte(player_ranks[player->s.number - 1]);
+		gi.WriteByte(static_cast<uint8_t>(index));
+		gi.WriteLong(client->resp.score);
+		const auto rank = std::min<uint32_t>(player_ranks[index], std::numeric_limits<uint8_t>::max());
+		gi.WriteByte(static_cast<uint8_t>(rank));
 
-			if (teams)
-				gi.WriteByte(player->client->sess.team == TEAM_RED ? 0 : 1);
-		}
+		if (teams)
+			gi.WriteByte(client->sess.team == TEAM_RED ? 0 : 1);
 	}
 
 	gi.ReportMatchDetails_Multicast(is_end);
