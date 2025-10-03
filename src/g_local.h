@@ -306,6 +306,60 @@ typedef enum {
 	MATCH_ENDED				// match or final round has ended
 } matchst_t;
 
+//
+// Helper utilities for reasoning about the current match state.
+// Keeping the helpers here avoids scattering fragile enum comparisons
+// across the codebase and makes the intent of the checks clearer.
+//
+constexpr bool Match_IsNone(matchst_t state) {
+	return state == matchst_t::MATCH_NONE;
+}
+
+constexpr bool Match_IsDelayedWarmup(matchst_t state) {
+	return state == matchst_t::MATCH_WARMUP_DELAYED;
+}
+
+constexpr bool Match_IsDefaultWarmup(matchst_t state) {
+	return state == matchst_t::MATCH_WARMUP_DEFAULT;
+}
+
+constexpr bool Match_IsReadyUp(matchst_t state) {
+	return state == matchst_t::MATCH_WARMUP_READYUP;
+}
+
+constexpr bool Match_IsActiveWarmup(matchst_t state) {
+	return Match_IsDefaultWarmup(state) || Match_IsReadyUp(state);
+}
+
+constexpr bool Match_IsCountdown(matchst_t state) {
+	return state == matchst_t::MATCH_COUNTDOWN;
+}
+
+constexpr bool Match_IsPreGame(matchst_t state) {
+	return state > matchst_t::MATCH_NONE && state < matchst_t::MATCH_IN_PROGRESS;
+}
+
+constexpr bool Match_IsPreCountdown(matchst_t state) {
+	return state < matchst_t::MATCH_COUNTDOWN;
+}
+
+constexpr bool Match_IsOngoing(matchst_t state) {
+	return state == matchst_t::MATCH_IN_PROGRESS;
+}
+
+constexpr bool Match_HasStarted(matchst_t state) {
+	return state >= matchst_t::MATCH_IN_PROGRESS;
+}
+
+constexpr bool Match_IsPostGame(matchst_t state) {
+	return state == matchst_t::MATCH_ENDED;
+}
+
+inline void Match_SetState(matchst_t new_state, gtime_t timer = 0_sec) {
+	level.match_state = new_state;
+	level.match_state_timer = timer;
+}
+
 typedef enum {
 	WARMUP_REQ_NONE,
 	WARMUP_REQ_MORE_PLAYERS,

@@ -1042,7 +1042,7 @@ static void Cmd_Forfeit_f(gentity_t *ent) {
 		gi.LocClient_Print(ent, PRINT_HIGH, "Forfeit is only available in a duel.\n");
 		return;
 	}
-	if (level.match_state < matchst_t::MATCH_IN_PROGRESS) {
+	if (!Match_HasStarted(level.match_state)) {
 		gi.LocClient_Print(ent, PRINT_HIGH, "Forfeit is not available during warmup.\n");
 		return;
 	}
@@ -3082,7 +3082,7 @@ Cmd_EndMatch_f
 =================
 */
 static void Cmd_EndMatch_f(gentity_t *ent) {
-	if (level.match_state < matchst_t::MATCH_IN_PROGRESS) {
+	if (!Match_HasStarted(level.match_state)) {
 		gi.LocClient_Print(ent, PRINT_HIGH, "Match has not yet begun.\n");
 		return;
 	}
@@ -3099,7 +3099,7 @@ Cmd_ResetMatch_f
 =================
 */
 static void Cmd_ResetMatch_f(gentity_t *ent) {
-	if (level.match_state < matchst_t::MATCH_IN_PROGRESS) {
+	if (!Match_HasStarted(level.match_state)) {
 		gi.LocClient_Print(ent, PRINT_HIGH, "Match has not yet begun.\n");
 		return;
 	}

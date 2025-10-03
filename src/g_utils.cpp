@@ -816,8 +816,8 @@ G_TimeString
 =================
 */
 const char *G_TimeString(const int msec, bool state) {
-	if (state) {
-		if (level.match_state < matchst_t::MATCH_COUNTDOWN)
+        if (state) {
+                if (Match_IsPreCountdown(level.match_state))
 			return "WARMUP";
 
 		if (level.intermission_queued || level.intermission_time)
@@ -845,8 +845,8 @@ G_TimeStringMs
 =================
 */
 const char *G_TimeStringMs(const int msec, bool state) {
-	if (state) {
-		if (level.match_state < matchst_t::MATCH_COUNTDOWN)
+        if (state) {
+                if (Match_IsPreCountdown(level.match_state))
 			return "WARMUP";
 
 		if (level.intermission_queued || level.intermission_time)
@@ -891,7 +891,7 @@ bool InAMatch() {
 		return false;
 	if (level.intermission_queued)
 		return false;
-	if (level.match_state == matchst_t::MATCH_IN_PROGRESS)
+	if (Match_IsOngoing(level.match_state))
 		return true;
 
 	return false;
@@ -904,9 +904,9 @@ bool IsCombatDisabled() {
 		return true;
 	if (level.intermission_time)
 		return true;
-	if (level.match_state == matchst_t::MATCH_COUNTDOWN)
+	if (Match_IsCountdown(level.match_state))
 		return true;
-	if (GTF(GTF_ROUNDS) && level.match_state == matchst_t::MATCH_IN_PROGRESS) {
+	if (GTF(GTF_ROUNDS) && Match_IsOngoing(level.match_state)) {
 		// added round ended to allow gibbing etc. at end of rounds
 		// scoring to be explicitly disabled during this time
 		if (level.round_state == roundst_t::ROUND_COUNTDOWN && (notGT(GT_HORDE)))
@@ -922,7 +922,7 @@ bool IsPickupsDisabled() {
 		return true;
 	if (level.intermission_time)
 		return true;
-	if (level.match_state == matchst_t::MATCH_COUNTDOWN)
+	if (Match_IsCountdown(level.match_state))
 		return true;
 	return false;
 }
@@ -930,7 +930,7 @@ bool IsPickupsDisabled() {
 bool IsScoringDisabled() {
 	if (!deathmatch->integer)
 		return true;
-	if (level.match_state != matchst_t::MATCH_IN_PROGRESS)
+	if (!Match_IsOngoing(level.match_state))
 		return true;
 	if (level.intermission_time)
 		return true;
@@ -1040,7 +1040,7 @@ static bool MS_Validation(gclient_t *cl, mstats_t index) {
 		return false;
 	}
 
-	if (!g_matchstats->integer || level.match_state != matchst_t::MATCH_IN_PROGRESS)
+	if (!g_matchstats->integer || !Match_IsOngoing(level.match_state))
 		return false;
 
 	if (cl->sess.is_a_bot)

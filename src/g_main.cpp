@@ -469,7 +469,7 @@ static void Horde_RunSpawning() {
 	if (notGT(GT_HORDE))
 		return;
 
-	bool warmup = level.match_state == MATCH_WARMUP_DEFAULT || level.match_state == MATCH_WARMUP_READYUP;
+	bool warmup = Match_IsActiveWarmup(level.match_state);
 	
 	if (!warmup && level.round_state != ROUND_IN_PROGRESS)
 		return;
@@ -766,7 +766,7 @@ void GT_Changes() {
         if (gt_teams_on != teams_enabled) {
                 gt_teams_on = teams_enabled;
                 team_reset = true;
-        }
+	}
 
 	if (team_reset) {
 		// move all to spectator first
@@ -1086,8 +1086,7 @@ static void InitGame() {
 
 	level.ready_to_exit = false;
 
-	level.match_state = matchst_t::MATCH_WARMUP_DELAYED;
-	level.match_state_timer = 0_sec;
+	Match_SetState(matchst_t::MATCH_WARMUP_DELAYED);
 	level.match_time = level.time;
 	level.warmup_notice_time = level.time;
 
@@ -1476,8 +1475,7 @@ void Match_Start() {
 	const char *s = G_TimeString(timelimit->value ? timelimit->value * 1000 : 0, true);
 	gi.configstring(CONFIG_MATCH_STATE, s);
 
-	level.match_state = matchst_t::MATCH_IN_PROGRESS;
-	level.match_state_timer = level.time;
+	Match_SetState(matchst_t::MATCH_IN_PROGRESS, level.time);
 	level.warmup_requisite = warmupreq_t::WARMUP_REQ_NONE;
 	level.warmup_notice_time = 0_sec;
 
@@ -1520,10 +1518,9 @@ void Match_Reset() {
 	UnReadyAll();
 
 	level.match_time = level.time;
-	level.match_state = matchst_t::MATCH_WARMUP_DEFAULT;
-	level.warmup_requisite = warmupreq_t::WARMUP_REQ_NONE;
-	level.warmup_notice_time = 0_sec;
-	level.match_state_timer = 0_sec;
+	Match_SetState(matchst_t::MATCH_WARMUP_DEFAULT);
+        level.warmup_requisite = warmupreq_t::WARMUP_REQ_NONE;
+        level.warmup_notice_time = 0_sec;
 	level.intermission_queued = 0_sec;
 	level.intermission_exit = false;
 	level.intermission_time = 0_sec;
@@ -1927,13 +1924,13 @@ CheckDMCountdown
 =============
 */
 static void CheckDMCountdown(void) {
-	if ((level.match_state != matchst_t::MATCH_COUNTDOWN && level.round_state != roundst_t::ROUND_COUNTDOWN) || level.intermission_time) {
+        if ((!Match_IsCountdown(level.match_state) && level.round_state != roundst_t::ROUND_COUNTDOWN) || level.intermission_time) {
 		if (level.countdown_check)
 			level.countdown_check = 0_sec;
 		return;
 	}
 
-	gtime_t base = (level.round_state == roundst_t::ROUND_COUNTDOWN) ? level.round_state_timer : level.match_state_timer;
+        gtime_t base = (level.round_state == roundst_t::ROUND_COUNTDOWN) ? level.round_state_timer : level.match_state_timer;
 	int t = (base + 1_sec - level.time).seconds<int>();
 
 	if (!level.countdown_check || level.countdown_check.seconds<int>() > t) {
@@ -1958,7 +1955,7 @@ static void CheckDMMatchEndWarning(void) {
 	if (GTF(GTF_ROUNDS))
 		return;
 
-	if (level.match_state != matchst_t::MATCH_IN_PROGRESS || !timelimit->value) {
+        if (!Match_IsOngoing(level.match_state) || !timelimit->value) {
 		if (level.matchendwarn_check)
 			level.matchendwarn_check = 0_sec;
 		return;
@@ -1989,14 +1986,13 @@ Once a frame, check for changes in match state during warmup
 static void CheckDMWarmupState(void) {
 	uint8_t min_players;
 
-	if (!level.num_playing_clients) {
-		if (level.match_state != matchst_t::MATCH_NONE) {
-			level.match_state = matchst_t::MATCH_NONE;
-			level.match_state_timer = 0_sec;
-			level.warmup_requisite = warmupreq_t::WARMUP_REQ_NONE;
-			level.warmup_notice_time = 0_sec;
-			return;
-		}
+        if (!level.num_playing_clients) {
+                if (!Match_IsNone(level.match_state)) {
+                        Match_SetState(matchst_t::MATCH_NONE);
+                        level.warmup_requisite = warmupreq_t::WARMUP_REQ_NONE;
+                        level.warmup_notice_time = 0_sec;
+                        return;
+                }
 		// pull in any spectating bots
 		for (auto ec : active_clients())
 			if (!ClientIsPlaying(ec->client) && (ec->client->sess.is_a_bot || ec->svflags & SVF_BOT))
@@ -2009,26 +2005,25 @@ static void CheckDMWarmupState(void) {
 		return;
 
 	min_players = GT(GT_DUEL) ? 2 : minplayers->integer;
-	if (level.match_state < matchst_t::MATCH_COUNTDOWN && !g_dm_do_warmup->integer && level.num_playing_clients >= min_players) {
+	if (Match_IsPreCountdown(level.match_state) && !g_dm_do_warmup->integer && level.num_playing_clients >= min_players) {
 		Match_Start();
 		return;
 	}
 
 	// check because we run 3 game frames before calling Connect and/or ClientBegin
 	// for clients on a map_restart
-	if (level.match_state == matchst_t::MATCH_NONE) {
-		level.match_state = matchst_t::MATCH_WARMUP_DELAYED;
-		level.match_state_timer = level.time + 5_sec;
-		level.warmup_requisite = warmupreq_t::WARMUP_REQ_NONE;
+	if (Match_IsNone(level.match_state)) {
+		Match_SetState(matchst_t::MATCH_WARMUP_DELAYED, level.time + 5_sec);
+                level.warmup_requisite = warmupreq_t::WARMUP_REQ_NONE;
 		level.warmup_notice_time = level.time;
-		return;
+                return;
 	}
 
-	if (level.match_state == matchst_t::MATCH_WARMUP_DELAYED && level.match_state_timer > level.time)
-		return;
+	if (Match_IsDelayedWarmup(level.match_state) && level.match_state_timer > level.time)
+                return;
 
-	if (level.match_state == matchst_t::MATCH_WARMUP_DEFAULT || level.match_state == matchst_t::MATCH_WARMUP_READYUP)
-		Horde_RunSpawning();
+	if (Match_IsActiveWarmup(level.match_state))
+                Horde_RunSpawning();
 
 	bool not_enough = false;
 	bool teams_imba = false;
@@ -2056,86 +2051,82 @@ static void CheckDMWarmupState(void) {
 	if (!g_dm_allow_no_humans->integer && !level.num_playing_human_clients)
 		not_enough = true;
 
-	if (not_enough || teams_imba) {
-		if (level.match_state <= matchst_t::MATCH_COUNTDOWN) {
-			if (level.match_state == matchst_t::MATCH_WARMUP_READYUP)
-				UnReadyAll();
-			else if (level.match_state == matchst_t::MATCH_COUNTDOWN)
-				gi.LocBroadcast_Print(PRINT_CENTER, "Countdown cancelled: {}\n", teams_imba ? "teams are imbalanced" : "not enough players");
+        if (not_enough || teams_imba) {
+                if (!Match_HasStarted(level.match_state)) {
+			if (Match_IsReadyUp(level.match_state))
+                                UnReadyAll();
+                        else if (Match_IsCountdown(level.match_state))
+                                gi.LocBroadcast_Print(PRINT_CENTER, "Countdown cancelled: {}\n", teams_imba ? "teams are imbalanced" : "not enough players");
 
-			if (level.match_state != matchst_t::MATCH_WARMUP_DEFAULT) {
-				level.match_state = matchst_t::MATCH_WARMUP_DEFAULT;
-				level.match_state_timer = 0_sec;
-				level.warmup_requisite = teams_imba ? warmupreq_t::WARMUP_REQ_BALANCE : warmupreq_t::WARMUP_REQ_MORE_PLAYERS;
-				level.warmup_notice_time = level.time;
-			}
-		}
-		return; // still waiting for players
+                        if (!Match_IsDefaultWarmup(level.match_state)) {
+                                Match_SetState(matchst_t::MATCH_WARMUP_DEFAULT);
+                                level.warmup_requisite = teams_imba ? warmupreq_t::WARMUP_REQ_BALANCE : warmupreq_t::WARMUP_REQ_MORE_PLAYERS;
+                                level.warmup_notice_time = level.time;
+                        }
+                }
+                return; // still waiting for players
 	}
 
-	if (level.match_state == matchst_t::MATCH_WARMUP_DEFAULT) {
-		if (!g_dm_do_readyup->integer)
-			goto countdown;
-		level.match_state = matchst_t::MATCH_WARMUP_READYUP;
-		level.match_state_timer = 0_sec;
-		level.warmup_requisite = warmupreq_t::WARMUP_REQ_READYUP;
+	if (Match_IsDefaultWarmup(level.match_state)) {
+                if (!g_dm_do_readyup->integer)
+                        goto countdown;
+		Match_SetState(matchst_t::MATCH_WARMUP_READYUP);
+                level.warmup_requisite = warmupreq_t::WARMUP_REQ_READYUP;
 		level.warmup_notice_time = level.time;
 
-		BroadcastReadyReminderMessage();
-		return;
+                BroadcastReadyReminderMessage();
+                return;
 	}
 
-	if (level.match_state > matchst_t::MATCH_COUNTDOWN)
-		return;
+	if (Match_HasStarted(level.match_state))
+                return;
 
-	// if the warmup is changed at the console, restart it
-	if (g_warmup_countdown->modified_count != level.warmup_modification_count) {
-		level.warmup_modification_count = g_warmup_countdown->modified_count;
-		level.match_state_timer = 0_sec;
-		level.match_state = matchst_t::MATCH_WARMUP_DEFAULT;
-		level.warmup_requisite = warmupreq_t::WARMUP_REQ_NONE;
-		level.warmup_notice_time = 0_sec;
-		level.prepare_to_fight = false;
-		return;
+        // if the warmup is changed at the console, restart it
+        if (g_warmup_countdown->modified_count != level.warmup_modification_count) {
+                level.warmup_modification_count = g_warmup_countdown->modified_count;
+		Match_SetState(matchst_t::MATCH_WARMUP_DEFAULT);
+                level.warmup_requisite = warmupreq_t::WARMUP_REQ_NONE;
+                level.warmup_notice_time = 0_sec;
+                level.prepare_to_fight = false;
+                return;
 	}
 
-	// if sufficient number of players are ready, start countdown
-	if (level.match_state == matchst_t::MATCH_WARMUP_READYUP) {
-		if (CheckReady()) {
+        // if sufficient number of players are ready, start countdown
+	if (Match_IsReadyUp(level.match_state)) {
+                if (CheckReady()) {
 countdown:
-			level.match_state = matchst_t::MATCH_COUNTDOWN;
-			level.warmup_requisite = warmupreq_t::WARMUP_REQ_NONE;
-			level.warmup_notice_time = 0_sec;
-			Monsters_KillAll();
+                        level.warmup_requisite = warmupreq_t::WARMUP_REQ_NONE;
+                        level.warmup_notice_time = 0_sec;
+                        Monsters_KillAll();
 
-			if (g_warmup_countdown->integer > 0) {
-				level.match_state_timer = level.time + gtime_t::from_sec(g_warmup_countdown->integer);
+                        if (g_warmup_countdown->integer > 0) {
+						Match_SetState(matchst_t::MATCH_COUNTDOWN, level.time + gtime_t::from_sec(g_warmup_countdown->integer));
 
-				// announce it
-				if ((GT(GT_DUEL) || (level.num_playing_clients == 2 && g_match_lock->integer)) &&
-						&game.clients[level.sorted_clients[0]] && &game.clients[level.sorted_clients[1]])
-					gi.LocBroadcast_Print(PRINT_CENTER, "{} vs {}\nBegins in...", game.clients[level.sorted_clients[0]].resp.netname, game.clients[level.sorted_clients[1]].resp.netname);
-				else
-					gi.LocBroadcast_Print(PRINT_CENTER, "{}\nBegins in...", level.gametype_name);
+                                // announce it
+                                if ((GT(GT_DUEL) || (level.num_playing_clients == 2 && g_match_lock->integer)) &&
+                                                &game.clients[level.sorted_clients[0]] && &game.clients[level.sorted_clients[1]])
+                                        gi.LocBroadcast_Print(PRINT_CENTER, "{} vs {}\nBegins in...", game.clients[level.sorted_clients[0]].resp.netname, game.clients[level.sorted_clients[1]].resp.netname);
+                                else
+                                        gi.LocBroadcast_Print(PRINT_CENTER, "{}\nBegins in...", level.gametype_name);
 
-				//gi.LocBroadcast_Print(PRINT_HIGH, "{}Match {} starting...\n", g_match_lock->integer ? "TEAMS LOCKED! " : "", level.match_id.data());
-				if (!level.prepare_to_fight) {
-					AnnouncerSound(world, (Teams() && level.num_playing_clients >= 4) ? "prepare_your_team" : "prepare_to_fight", nullptr, false);
-					level.prepare_to_fight = true;
-				}
-			} else {
-				level.match_state_timer = 0_ms;
-				goto start;
-			}
-		}
-		return;
+                                //gi.LocBroadcast_Print(PRINT_HIGH, "{}Match {} starting...\n", g_match_lock->integer ? "TEAMS LOCKED! " : "", level.match_id.data());
+                                if (!level.prepare_to_fight) {
+                                        AnnouncerSound(world, (Teams() && level.num_playing_clients >= 4) ? "prepare_your_team" : "prepare_to_fight", nullptr, false);
+                                        level.prepare_to_fight = true;
+                                }
+                        } else {
+						Match_SetState(matchst_t::MATCH_COUNTDOWN);
+                                goto start;
+                        }
+                }
+                return;
 	}
 
-	// if the warmup time has counted down, start the match
-	if (level.match_state == matchst_t::MATCH_COUNTDOWN && level.time.seconds() >= level.match_state_timer.seconds()) {
+        // if the warmup time has counted down, start the match
+	if (Match_IsCountdown(level.match_state) && level.time >= level.match_state_timer) {
 start:
-		Match_Start();
-		return;
+                Match_Start();
+                return;
 	}
 }
 
@@ -2909,8 +2900,7 @@ An end of match condition has been reached
 void Match_End() {
 	gentity_t *ent;
 
-	level.match_state = matchst_t::MATCH_ENDED;
-	level.match_state_timer = 0_sec;
+	Match_SetState(matchst_t::MATCH_ENDED);
 
 	// see if there is a queued map to go to
 	if (MQ_Count()) {
@@ -3042,8 +3032,7 @@ void QueueIntermission(const char *msg, bool boo, bool reset) {
 	if (reset) {
 		Match_Reset();
 	} else {
-		level.match_state = matchst_t::MATCH_ENDED;
-		level.match_state_timer = 0_sec;
+		Match_SetState(matchst_t::MATCH_ENDED);
 		level.match_time = level.time;
 		level.intermission_queued = level.time;
 
@@ -3250,13 +3239,13 @@ void CheckDMExitRules() {
 }
 
 static bool Match_NextMap() {
-	if (level.match_state == matchst_t::MATCH_ENDED) {
-		level.match_state = matchst_t::MATCH_WARMUP_DELAYED;
+	if (Match_IsPostGame(level.match_state)) {
+		Match_SetState(matchst_t::MATCH_WARMUP_DELAYED);
 		level.warmup_notice_time = level.time;
 		Match_Reset();
 		return true;
 	}
-	return false;
+        return false;
 }
 
 /*
