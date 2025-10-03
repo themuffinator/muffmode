@@ -3,145 +3,150 @@
 
 #include "q_std.h"
 
+#include <array>
+#include <limits>
+
 #define GAME_INCLUDE
 #include "bg_local.h"
 
 // [Paril-KEX] generic code to detect & fix a stuck object
 stuck_result_t G_FixStuckObject_Generic(vec3_t &origin, const vec3_t &own_mins, const vec3_t &own_maxs, std::function<stuck_object_trace_fn_t> trace) {
-	if (!trace(origin, own_mins, own_maxs, origin).startsolid)
-		return stuck_result_t::GOOD_POSITION;
+        if (!trace(origin, own_mins, own_maxs, origin).startsolid)
+                return stuck_result_t::GOOD_POSITION;
 
-	struct {
-		float distance;
-		vec3_t origin;
-	} good_positions[6];
-	size_t num_good_positions = 0;
+        struct side_check_t {
+                std::array<int8_t, 3> normal;
+                std::array<int8_t, 3> mins;
+                std::array<int8_t, 3> maxs;
+        };
 
-	constexpr struct {
-		std::array<int8_t, 3> normal;
-		std::array<int8_t, 3> mins, maxs;
-	} side_checks[] = {
-		{ { 0, 0, 1 }, { -1, -1, 0 }, { 1, 1, 0 } },
-		{ { 0, 0, -1 }, { -1, -1, 0 }, { 1, 1, 0 } },
-		{ { 1, 0, 0 }, { 0, -1, -1 }, { 0, 1, 1 } },
-		{ { -1, 0, 0 }, { 0, -1, -1 }, { 0, 1, 1 } },
-		{ { 0, 1, 0 }, { -1, 0, -1 }, { 1, 0, 1 } },
-		{ { 0, -1, 0 }, { -1, 0, -1 }, { 1, 0, 1 } },
-	};
+        constexpr std::array<side_check_t, 6> side_checks{{
+                side_check_t{ { 0, 0, 1 }, { -1, -1, 0 }, { 1, 1, 0 } },
+                side_check_t{ { 0, 0, -1 }, { -1, -1, 0 }, { 1, 1, 0 } },
+                side_check_t{ { 1, 0, 0 }, { 0, -1, -1 }, { 0, 1, 1 } },
+                side_check_t{ { -1, 0, 0 }, { 0, -1, -1 }, { 0, 1, 1 } },
+                side_check_t{ { 0, 1, 0 }, { -1, 0, -1 }, { 1, 0, 1 } },
+                side_check_t{ { 0, -1, 0 }, { -1, 0, -1 }, { 1, 0, 1 } },
+        }};
 
-	for (size_t sn = 0; sn < q_countof(side_checks); sn++) {
-		auto &side = side_checks[sn];
-		vec3_t start = origin;
-		vec3_t mins{}, maxs{};
+        bool        found_position = false;
+        float       best_distance = std::numeric_limits<float>::max();
+        vec3_t best_origin{};
 
-		for (size_t n = 0; n < 3; n++) {
-			if (side.normal[n] < 0)
-				start[n] += own_mins[n];
-			else if (side.normal[n] > 0)
-				start[n] += own_maxs[n];
+        for (size_t sn = 0; sn < side_checks.size(); sn++) {
+                const auto &side = side_checks[sn];
+                vec3_t start = origin;
+                vec3_t mins{};
+                vec3_t maxs{};
 
-			if (side.mins[n] == -1)
-				mins[n] = own_mins[n];
-			else if (side.mins[n] == 1)
-				mins[n] = own_maxs[n];
+                for (size_t n = 0; n < side.normal.size(); n++) {
+                        if (side.normal[n] < 0)
+                                start[n] += own_mins[n];
+                        else if (side.normal[n] > 0)
+                                start[n] += own_maxs[n];
 
-			if (side.maxs[n] == -1)
-				maxs[n] = own_mins[n];
-			else if (side.maxs[n] == 1)
-				maxs[n] = own_maxs[n];
-		}
+                        if (side.mins[n] == -1)
+                                mins[n] = own_mins[n];
+                        else if (side.mins[n] == 1)
+                                mins[n] = own_maxs[n];
 
-		trace_t tr = trace(start, mins, maxs, start);
+                        if (side.maxs[n] == -1)
+                                maxs[n] = own_mins[n];
+                        else if (side.maxs[n] == 1)
+                                maxs[n] = own_maxs[n];
+                }
 
-		int8_t needed_epsilon_fix = -1;
-		int8_t needed_epsilon_dir;
+                trace_t tr = trace(start, mins, maxs, start);
 
-		if (tr.startsolid) {
-			for (size_t e = 0; e < 3; e++) {
-				if (side.normal[e] != 0)
-					continue;
+                int8_t needed_epsilon_fix = -1;
+                int8_t needed_epsilon_dir = 0;
 
-				vec3_t ep_start = start;
-				ep_start[e] += 1;
+                if (tr.startsolid) {
+                        for (size_t e = 0; e < side.normal.size(); e++) {
+                                if (side.normal[e] != 0)
+                                        continue;
 
-				tr = trace(ep_start, mins, maxs, ep_start);
+                                vec3_t ep_start = start;
+                                ep_start[e] += 1;
 
-				if (!tr.startsolid) {
-					start = ep_start;
-					needed_epsilon_fix = e;
-					needed_epsilon_dir = 1;
-					break;
-				}
+                                tr = trace(ep_start, mins, maxs, ep_start);
 
-				ep_start[e] -= 2;
-				tr = trace(ep_start, mins, maxs, ep_start);
+                                if (!tr.startsolid) {
+                                        start = ep_start;
+                                        needed_epsilon_fix = static_cast<int8_t>(e);
+                                        needed_epsilon_dir = 1;
+                                        break;
+                                }
 
-				if (!tr.startsolid) {
-					start = ep_start;
-					needed_epsilon_fix = e;
-					needed_epsilon_dir = -1;
-					break;
-				}
-			}
-		}
+                                ep_start[e] -= 2;
+                                tr = trace(ep_start, mins, maxs, ep_start);
 
-		// no good
-		if (tr.startsolid)
-			continue;
+                                if (!tr.startsolid) {
+                                        start = ep_start;
+                                        needed_epsilon_fix = static_cast<int8_t>(e);
+                                        needed_epsilon_dir = -1;
+                                        break;
+                                }
+                        }
+                }
 
-		vec3_t opposite_start = origin;
-		auto &other_side = side_checks[sn ^ 1];
+                // no good
+                if (tr.startsolid)
+                        continue;
 
-		for (size_t n = 0; n < 3; n++) {
-			if (other_side.normal[n] < 0)
-				opposite_start[n] += own_mins[n];
-			else if (other_side.normal[n] > 0)
-				opposite_start[n] += own_maxs[n];
-		}
+                vec3_t opposite_start = origin;
+                const auto &other_side = side_checks[sn ^ 1];
 
-		if (needed_epsilon_fix >= 0)
-			opposite_start[needed_epsilon_fix] += needed_epsilon_dir;
+                for (size_t n = 0; n < other_side.normal.size(); n++) {
+                        if (other_side.normal[n] < 0)
+                                opposite_start[n] += own_mins[n];
+                        else if (other_side.normal[n] > 0)
+                                opposite_start[n] += own_maxs[n];
+                }
 
-		// potentially a good side; start from our center, push back to the opposite side
-		// to find how much clearance we have
-		tr = trace(start, mins, maxs, opposite_start);
+                if (needed_epsilon_fix >= 0)
+                        opposite_start[needed_epsilon_fix] += needed_epsilon_dir;
 
-		// ???
-		if (tr.startsolid)
-			continue;
+                // potentially a good side; start from our center, push back to the opposite side
+                // to find how much clearance we have
+                tr = trace(start, mins, maxs, opposite_start);
 
-		// check the delta
-		vec3_t end = tr.endpos;
-		// push us very slightly away from the wall
-		end += vec3_t{ (float)side.normal[0], (float)side.normal[1], (float)side.normal[2] } *0.125f;
+                // ???
+                if (tr.startsolid)
+                        continue;
 
-		// calculate delta
-		const vec3_t delta = end - opposite_start;
-		vec3_t new_origin = origin + delta;
+                // check the delta
+                vec3_t end = tr.endpos;
+                // push us very slightly away from the wall
+                end += vec3_t{ (float)side.normal[0], (float)side.normal[1], (float)side.normal[2] } *0.125f;
 
-		if (needed_epsilon_fix >= 0)
-			new_origin[needed_epsilon_fix] += needed_epsilon_dir;
+                // calculate delta
+                const vec3_t delta = end - opposite_start;
+                vec3_t new_origin = origin + delta;
 
-		tr = trace(new_origin, own_mins, own_maxs, new_origin);
+                if (needed_epsilon_fix >= 0)
+                        new_origin[needed_epsilon_fix] += needed_epsilon_dir;
 
-		// bad
-		if (tr.startsolid)
-			continue;
+                tr = trace(new_origin, own_mins, own_maxs, new_origin);
 
-		good_positions[num_good_positions].origin = new_origin;
-		good_positions[num_good_positions].distance = delta.lengthSquared();
-		num_good_positions++;
-	}
+                // bad
+                if (tr.startsolid)
+                        continue;
 
-	if (num_good_positions) {
-		std::sort(&good_positions[0], &good_positions[num_good_positions - 1], [](const auto &a, const auto &b) { return a.distance < b.distance; });
+                const float distance = delta.lengthSquared();
+                if (!found_position || distance < best_distance) {
+                        best_distance = distance;
+                        best_origin = new_origin;
+                        found_position = true;
+                }
+        }
 
-		origin = good_positions[0].origin;
+        if (found_position) {
+                origin = best_origin;
+                return stuck_result_t::FIXED;
+        }
 
-		return stuck_result_t::FIXED;
-	}
-
-	return stuck_result_t::NO_GOOD_POSITION;
+        return stuck_result_t::NO_GOOD_POSITION;
 }
 
 // all of the locals will be zeroed before each
