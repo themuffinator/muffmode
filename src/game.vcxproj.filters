@@ -3,6 +3,7 @@
   <ItemGroup>
     <ClInclude Include="bg_local.h" />
     <ClInclude Include="cg_local.h" />
+    <ClInclude Include="g_cvars.hpp" />
     <ClInclude Include="g_local.h" />
     <ClInclude Include="g_statusbar.h" />
     <ClInclude Include="game.h" />
