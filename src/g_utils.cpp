@@ -4,6 +4,11 @@
 
 #include "g_local.h"
 
+#include <array>
+#include <cctype>
+#include <cstdlib>
+#include <string>
+
 /*
 =============
 G_Find
@@ -939,14 +944,111 @@ bool IsScoringDisabled() {
 	return false;
 }
 
+namespace {
+
+constexpr size_t GT_MAX_COMMAND_ALIASES = 5;
+
+constexpr std::array<std::array<const char *, GT_MAX_COMMAND_ALIASES>, static_cast<size_t>(gametype_t::GT_NUM_GAMETYPES)> gt_command_aliases = {{
+        /* GT_NONE */      std::array<const char *, GT_MAX_COMMAND_ALIASES>{ "campaign", "cmp", nullptr, nullptr, nullptr },
+        /* GT_FFA */       std::array<const char *, GT_MAX_COMMAND_ALIASES>{ "ffa", "dm", "deathmatch", nullptr, nullptr },
+        /* GT_DUEL */      std::array<const char *, GT_MAX_COMMAND_ALIASES>{ "duel", "1v1", "tourney", nullptr, nullptr },
+        /* GT_TDM */       std::array<const char *, GT_MAX_COMMAND_ALIASES>{ "tdm", "teamdm", "teamdeathmatch", nullptr, nullptr },
+        /* GT_CTF */       std::array<const char *, GT_MAX_COMMAND_ALIASES>{ "ctf", "capturetheflag", nullptr, nullptr, nullptr },
+        /* GT_CA */        std::array<const char *, GT_MAX_COMMAND_ALIASES>{ "ca", "clanarena", "arena", nullptr, nullptr },
+        /* GT_FREEZE */    std::array<const char *, GT_MAX_COMMAND_ALIASES>{ "freeze", "ft", "freezetag", nullptr, nullptr },
+        /* GT_STRIKE */    std::array<const char *, GT_MAX_COMMAND_ALIASES>{ "strike", "capturestrike", nullptr, nullptr, nullptr },
+        /* GT_RR */        std::array<const char *, GT_MAX_COMMAND_ALIASES>{ "rr", "redrover", nullptr, nullptr, nullptr },
+        /* GT_LMS */       std::array<const char *, GT_MAX_COMMAND_ALIASES>{ "lms", "lastmanstanding", "lastman", nullptr, nullptr },
+        /* GT_HORDE */     std::array<const char *, GT_MAX_COMMAND_ALIASES>{ "horde", nullptr, nullptr, nullptr, nullptr },
+        /* GT_BALL */      std::array<const char *, GT_MAX_COMMAND_ALIASES>{ "ball", "proball", nullptr, nullptr, nullptr },
+}};
+
+bool GT_StringEquals(const char *lhs, const char *rhs) {
+        if (!lhs || !rhs)
+                return false;
+        return !Q_strcasecmp(lhs, rhs);
+}
+
+} // namespace
+
 gametype_t GT_IndexFromString(const char *in) {
-	for (size_t i = 0; i < gametype_t::GT_NUM_GAMETYPES; i++) {
-		if (!Q_strcasecmp(in, gt_short_name[i]))
-			return (gametype_t)i;
-		if (!Q_strcasecmp(in, gt_long_name[i]))
-			return (gametype_t)i;
-	}
-	return gametype_t::GT_NONE;
+        if (!in)
+                return gametype_t::GT_NONE;
+
+        while (*in && isspace(*in))
+                in++;
+
+        if (!*in)
+                return gametype_t::GT_NONE;
+
+        char *end = nullptr;
+        long value = strtol(in, &end, 10);
+
+        if (end && *end == '\0') {
+                if (value >= static_cast<long>(gametype_t::GT_FIRST) && value <= static_cast<long>(gametype_t::GT_LAST))
+                        return static_cast<gametype_t>(value);
+                return gametype_t::GT_NONE;
+        }
+
+        for (size_t i = 0; i < static_cast<size_t>(gametype_t::GT_NUM_GAMETYPES); i++) {
+                if (GT_StringEquals(in, gt_short_name[i]))
+                        return static_cast<gametype_t>(i);
+                if (GT_StringEquals(in, gt_short_name_upper[i]))
+                        return static_cast<gametype_t>(i);
+                if (GT_StringEquals(in, gt_long_name[i]))
+                        return static_cast<gametype_t>(i);
+
+                for (const char *alias : gt_command_aliases[i]) {
+                        if (GT_StringEquals(in, alias))
+                                return static_cast<gametype_t>(i);
+                }
+        }
+
+        return gametype_t::GT_NONE;
+}
+
+const char *GT_CommandName(gametype_t gt) {
+        size_t index = static_cast<size_t>(gt);
+        if (index >= static_cast<size_t>(gametype_t::GT_NUM_GAMETYPES))
+                return nullptr;
+
+        for (const char *alias : gt_command_aliases[index]) {
+                if (alias && alias[0])
+                        return alias;
+        }
+
+        return gt_short_name[index];
+}
+
+const char *GT_CallvoteList() {
+        static std::string buffer;
+
+        if (buffer.empty()) {
+                for (int i = static_cast<int>(gametype_t::GT_FIRST); i <= static_cast<int>(gametype_t::GT_LAST); i++) {
+                        const char *name = GT_CommandName(static_cast<gametype_t>(i));
+                        if (!name || !name[0])
+                                continue;
+
+                        if (!buffer.empty())
+                                buffer += '|';
+
+                        buffer += name;
+                }
+        }
+
+        return buffer.c_str();
+}
+
+const char *GT_CallvoteArgs() {
+        static std::string buffer;
+
+        if (buffer.empty()) {
+                buffer = "<";
+                buffer += GT_CallvoteList();
+                buffer += ">";
+        }
+
+        return buffer.c_str();
 }
 
 void BroadcastReadyReminderMessage() {

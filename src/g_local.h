@@ -5,6 +5,7 @@
 #pragma once
 
 #include "bg_local.h"
+#include "g_cvars.hpp"
 
 // the "gameversion" client command will print this plus compile date
 constexpr const char *GAMEVERSION = "baseq2";
@@ -244,6 +245,10 @@ extern int _gt[GT_NUM_GAMETYPES];
 #define GT( x ) g_gametype->integer == (int)(x)
 #define notGT( x ) g_gametype->integer != (int)(x)
 
+inline int GT_Flags(gametype_t gt) {
+        return _gt[static_cast<size_t>(gt)];
+}
+
 constexpr const char *gt_short_name[GT_NUM_GAMETYPES] = {
 	"cmp",
 	"ffa",
@@ -273,19 +278,23 @@ constexpr const char *gt_short_name_upper[GT_NUM_GAMETYPES] = {
 	"BALL",
 };
 constexpr const char *gt_long_name[GT_NUM_GAMETYPES] = {
-	"Campaign",
-	"Deathmatch",
-	"Duel",
-	"Team Deathmatch",
-	"Capture the Flag",
-	"Clan Arena",
-	"Freeze Tag",
-	"CaptureStrike",
-	"Red Rover",
-	"Last Man Standing",
-	"Horde Mode",
-	"ProBall"
+        "Campaign",
+        "Deathmatch",
+        "Duel",
+        "Team Deathmatch",
+        "Capture the Flag",
+        "Clan Arena",
+        "Freeze Tag",
+        "CaptureStrike",
+        "Red Rover",
+        "Last Man Standing",
+        "Horde Mode",
+        "ProBall"
 };
+
+const char *GT_CommandName(gametype_t gt);
+const char *GT_CallvoteList();
+const char *GT_CallvoteArgs();
 
 enum monflags_t {
 	MF_NONE		= 0x00,
@@ -2367,194 +2376,6 @@ template<typename T>
 [[nodiscard]] inline bool brandom() {
 	return irandom(2) == 0;
 }
-
-extern cvar_t *hostname;
-
-extern cvar_t *deathmatch;
-extern cvar_t *ctf;
-extern cvar_t *teamplay;
-extern cvar_t *g_gametype;
-
-extern cvar_t *coop;
-
-extern cvar_t *skill;
-extern cvar_t *fraglimit;
-extern cvar_t *capturelimit;
-extern cvar_t *timelimit;
-extern cvar_t *roundlimit;
-extern cvar_t *roundtimelimit;
-extern cvar_t *mercylimit;
-extern cvar_t *noplayerstime;
-
-extern cvar_t *g_ruleset;
-
-extern cvar_t *password;
-extern cvar_t *spectator_password;
-extern cvar_t *admin_password;
-extern cvar_t *needpass;
-extern cvar_t *filterban;
-
-extern cvar_t *maxplayers;
-extern cvar_t *minplayers;
-
-extern cvar_t *ai_allow_dm_spawn;
-extern cvar_t *ai_damage_scale;
-extern cvar_t *ai_model_scale;
-extern cvar_t *ai_movement_disabled;
-
-extern cvar_t *bot_debug_follow_actor;
-extern cvar_t *bot_debug_move_to_point;
-
-extern cvar_t *flood_msgs;
-extern cvar_t *flood_persecond;
-extern cvar_t *flood_waitdelay;
-
-extern cvar_t *bob_pitch;
-extern cvar_t *bob_roll;
-extern cvar_t *bob_up;
-extern cvar_t *gun_x, *gun_y, *gun_z;
-extern cvar_t *run_pitch;
-extern cvar_t *run_roll;
-
-extern cvar_t *g_airaccelerate;
-extern cvar_t *g_allow_admin;
-extern cvar_t *g_allow_custom_skins;
-extern cvar_t *g_allow_forfeit;
-extern cvar_t *g_allow_grapple;
-extern cvar_t *g_allow_kill;
-extern cvar_t *g_allow_mymap;
-extern cvar_t *g_allow_spec_vote;
-extern cvar_t *g_allow_techs;
-extern cvar_t *g_allow_vote_midgame;
-extern cvar_t *g_allow_voting;
-extern cvar_t *g_arena_dmg_armor;
-extern cvar_t *g_arena_start_armor;
-extern cvar_t *g_arena_start_health;
-extern cvar_t *g_cheats;
-extern cvar_t *g_coop_enable_lives;
-extern cvar_t *g_coop_health_scaling;
-extern cvar_t *g_coop_instanced_items;
-extern cvar_t *g_coop_num_lives;
-extern cvar_t *g_coop_player_collision;
-extern cvar_t *g_coop_squad_respawn;
-extern cvar_t *g_corpse_sink_time;
-extern cvar_t *g_damage_scale;
-extern cvar_t *g_debug_monster_kills;
-extern cvar_t *g_debug_monster_paths;
-extern cvar_t *g_dedicated;
-extern cvar_t *g_disable_player_collision;
-extern cvar_t *g_dm_allow_exit;
-extern cvar_t *g_dm_allow_no_humans;
-extern cvar_t *g_dm_auto_join;
-extern cvar_t *g_dm_crosshair_id;
-extern cvar_t *g_dm_do_readyup;
-extern cvar_t *g_dm_do_warmup;
-extern cvar_t *g_dm_exec_level_cfg;
-extern cvar_t *g_dm_force_join;
-extern cvar_t *g_dm_force_respawn;
-extern cvar_t *g_dm_force_respawn_time;
-extern cvar_t *g_dm_holdable_adrenaline;
-extern cvar_t *g_dm_instant_items;
-extern cvar_t *g_dm_intermission_shots;
-extern cvar_t *g_dm_item_respawn_rate;
-extern cvar_t *g_dm_no_fall_damage;
-extern cvar_t *g_dm_no_quad_drop;
-extern cvar_t *g_dm_no_self_damage;
-extern cvar_t *g_dm_no_stack_double;
-extern cvar_t *g_dm_overtime;
-extern cvar_t *g_dm_player_spawn_rule;
-extern cvar_t *g_dm_powerup_drop;
-extern cvar_t *g_dm_powerups_minplayers;
-extern cvar_t *g_dm_random_items;
-extern cvar_t *g_dm_respawn_delay_min;
-extern cvar_t *g_dm_respawn_point_min_dist;
-extern cvar_t *g_dm_respawn_point_min_dist_debug;
-extern cvar_t *g_dm_same_level;
-extern cvar_t *g_dm_spawnpads;
-extern cvar_t *g_dm_strong_mines;
-extern cvar_t *g_dm_timeout_length;
-extern cvar_t *g_dm_weapons_stay;
-extern cvar_t *g_drop_cmds;
-extern cvar_t *g_entity_override_dir;
-extern cvar_t *g_entity_override_load;
-extern cvar_t *g_entity_override_save;
-extern cvar_t *g_eyecam;
-extern cvar_t *g_fast_doors;
-extern cvar_t *g_frag_messages;
-extern cvar_t *g_frenzy;
-extern cvar_t *g_friendly_fire;
-extern cvar_t *g_frozen_time;
-extern cvar_t *g_grapple_damage;
-extern cvar_t *g_grapple_fly_speed;
-extern cvar_t *g_grapple_offhand;
-extern cvar_t *g_grapple_pull_speed;
-extern cvar_t *g_gravity;
-extern cvar_t *g_huntercam;
-extern cvar_t *g_inactivity;
-extern cvar_t *g_infinite_ammo;
-extern cvar_t *g_instagib;
-extern cvar_t *g_instagib_splash;
-extern cvar_t *g_instant_weapon_switch;
-extern cvar_t *g_item_bobbing;
-extern cvar_t *g_knockback_scale;
-extern cvar_t *g_ladder_steps;
-extern cvar_t *g_lag_compensation;
-extern cvar_t *g_map_list;
-extern cvar_t *g_map_list_shuffle;
-extern cvar_t *g_map_pool;
-extern cvar_t *g_mapspawn_no_bfg;
-extern cvar_t *g_mapspawn_no_plasmabeam;
-extern cvar_t *g_match_lock;
-extern cvar_t *g_matchstats;
-extern cvar_t *g_maxvelocity;
-extern cvar_t *g_motd_filename;
-extern cvar_t *g_mover_debug;
-extern cvar_t *g_mover_speed_scale;
-extern cvar_t *g_nadefest;
-extern cvar_t *g_no_armor;
-extern cvar_t *g_no_health;
-extern cvar_t *g_no_items;
-extern cvar_t *g_no_mines;
-extern cvar_t *g_no_nukes;
-extern cvar_t *g_no_powerups;
-extern cvar_t *g_no_spheres;
-extern cvar_t *g_owner_auto_join;
-extern cvar_t *g_owner_push_scores;
-extern cvar_t *g_gametype_cfg;
-extern cvar_t *g_quadhog;
-extern cvar_t *g_quick_weapon_switch;
-extern cvar_t *g_rollangle;
-extern cvar_t *g_rollspeed;
-extern cvar_t *g_round_countdown;
-extern cvar_t *g_select_empty;
-extern cvar_t *g_showhelp;
-extern cvar_t *g_showmotd;
-extern cvar_t *g_skip_view_modifiers;
-extern cvar_t *g_start_items;
-extern cvar_t *g_starting_health;
-extern cvar_t *g_starting_health_bonus;
-extern cvar_t *g_starting_armor;
-extern cvar_t *g_stopspeed;
-extern cvar_t *g_strict_saves;
-extern cvar_t *g_teamplay_allow_team_pick;
-extern cvar_t *g_teamplay_armor_protect;
-extern cvar_t *g_teamplay_auto_balance;
-extern cvar_t *g_teamplay_force_balance;
-extern cvar_t *g_teamplay_item_drop_notice;
-extern cvar_t *g_teleporter_freeze;
-extern cvar_t *g_vampiric_damage;
-extern cvar_t *g_vampiric_exp_min;
-extern cvar_t *g_vampiric_health_max;
-extern cvar_t *g_vampiric_percentile;
-extern cvar_t *g_verbose;
-extern cvar_t *g_vote_flags;
-extern cvar_t *g_vote_limit;
-extern cvar_t *g_warmup_countdown;
-extern cvar_t *g_warmup_ready_percentage;
-extern cvar_t *g_weapon_projection;
-extern cvar_t *g_weapon_respawn_time;
-
-extern cvar_t *bot_name_prefix;
 
 #define world (&g_entities[0])
 #define host (&g_entities[1])
