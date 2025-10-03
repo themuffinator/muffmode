@@ -253,19 +253,33 @@ void InitSave();
 #include <chrono>
 
 int _gt[] = {
-	/* GT_NONE */ 0,
-	/* GT_FFA */ GTF_FRAGS,
-	/* GT_DUEL */ GTF_FRAGS,
-	/* GT_TDM */ GTF_TEAMS | GTF_FRAGS,
-	/* GT_CTF */ GTF_TEAMS | GTF_CTF,
-	/* GT_CA */ GTF_TEAMS | GTF_ARENA | GTF_ROUNDS | GTF_ELIMINATION,
-	/* GT_FREEZE */ GTF_TEAMS | GTF_ELIMINATION,
-	/* GT_STRIKE */ GTF_TEAMS | GTF_ARENA | GTF_ROUNDS | GTF_CTF | GTF_ELIMINATION,
-	/* GT_RR */ GTF_TEAMS | GTF_ROUNDS | GTF_ARENA,
-	/* GT_LMS */ GTF_ELIMINATION,
-	/* GT_HORDE */ GTF_ROUNDS,
-	/* GT_BALL */ 0
+        /* GT_NONE */ 0,
+        /* GT_FFA */ GTF_FRAGS,
+        /* GT_DUEL */ GTF_FRAGS,
+        /* GT_TDM */ GTF_TEAMS | GTF_FRAGS,
+        /* GT_CTF */ GTF_TEAMS | GTF_CTF,
+        /* GT_CA */ GTF_TEAMS | GTF_ARENA | GTF_ROUNDS | GTF_ELIMINATION,
+        /* GT_FREEZE */ GTF_TEAMS | GTF_ELIMINATION,
+        /* GT_STRIKE */ GTF_TEAMS | GTF_ARENA | GTF_ROUNDS | GTF_CTF | GTF_ELIMINATION,
+        /* GT_RR */ GTF_TEAMS | GTF_ROUNDS | GTF_ARENA,
+        /* GT_LMS */ GTF_ELIMINATION,
+        /* GT_HORDE */ GTF_ROUNDS,
+        /* GT_BALL */ 0
 };
+
+static void GT_SetLegacyCvars(gametype_t gt) {
+        if (gt <= gametype_t::GT_NONE || gt >= gametype_t::GT_NUM_GAMETYPES)
+                gt = gametype_t::GT_FFA;
+
+        bool wants_ctf = (GT_Flags(gt) & GTF_CTF) != 0;
+        bool wants_teamplay = (GT_Flags(gt) & GTF_TEAMS) != 0;
+
+        if (!!ctf->integer != wants_ctf)
+                gi.cvar_forceset("ctf", wants_ctf ? "1" : "0");
+
+        if (!!teamplay->integer != wants_teamplay)
+                gi.cvar_forceset("teamplay", wants_teamplay ? "1" : "0");
+}
 
 // =================================================
 
@@ -615,24 +629,22 @@ static void InitGametype() {
 	constexpr const char *COOP = "coop";
 	bool force_dm = false;
 
-	if (g_gametype->integer < 0 || g_gametype->integer >= GT_NUM_GAMETYPES)
-		gi.cvar_forceset("g_gametype", G_Fmt("{}", clamp(g_gametype->integer, (int)GT_FIRST, (int)GT_LAST)).data());
+        if (g_gametype->integer < 0 || g_gametype->integer >= GT_NUM_GAMETYPES)
+                gi.cvar_forceset("g_gametype", G_Fmt("{}", clamp(g_gametype->integer, (int)GT_FIRST, (int)GT_LAST)).data());
+
+        gametype_t current = (gametype_t)clamp(g_gametype->integer, (int)GT_FIRST, (int)GT_LAST);
+        GT_SetLegacyCvars(current);
 	
-	if (ctf->integer) {
-		force_dm = true;
-		// force coop off
-		if (coop->integer)
-			gi.cvar_set(COOP, "0");
-		// force tdm off
-		if (teamplay->integer)
-			gi.cvar_set("teamplay", "0");
-	}
-	if (teamplay->integer) {
-		force_dm = true;
-		// force coop off
-		if (coop->integer)
-			gi.cvar_set(COOP, "0");
-	}
+        if (ctf->integer) {
+                force_dm = true;
+                if (coop->integer)
+                        gi.cvar_set(COOP, "0");
+        }
+        if (teamplay->integer) {
+                force_dm = true;
+                if (coop->integer)
+                        gi.cvar_set(COOP, "0");
+        }
 
 	if (force_dm && !deathmatch->integer) {
 		gi.Com_Print("Forcing deathmatch.\n");
@@ -649,27 +661,15 @@ static void InitGametype() {
 }
 
 void ChangeGametype(gametype_t gt) {
-	switch (gt) {
-	case gametype_t::GT_CTF:
-		if (!ctf->integer)
-			gi.cvar_forceset("ctf", "1");
-		break;
-	case gametype_t::GT_TDM:
-		if (!teamplay->integer)
-			gi.cvar_forceset("teamplay", "1");
-		break;
-	default:
-		if (ctf->integer)
-			gi.cvar_forceset("ctf", "0");
-		if (teamplay->integer)
-			gi.cvar_forceset("teamplay", "0");
-		break;
-	}
+        if (gt <= gametype_t::GT_NONE || gt >= gametype_t::GT_NUM_GAMETYPES)
+                gt = gametype_t::GT_FFA;
 
-	if (!deathmatch->integer) {
-		gi.Com_Print("Forcing deathmatch.\n");
-		gi.cvar_forceset("deathmatch", "1");
-	}
+        GT_SetLegacyCvars(gt);
+
+        if (!deathmatch->integer) {
+                gi.Com_Print("Forcing deathmatch.\n");
+                gi.cvar_forceset("deathmatch", "1");
+        }
 
 	if ((int)gt != g_gametype->integer)
 		gi.cvar_forceset("g_gametype", G_Fmt("{}", (int)gt).data());
@@ -688,76 +688,32 @@ void GT_Changes() {
 	if (!level.init)
 		return;
 
-	bool changed = false, team_reset = false;
-	gametype_t gt = gametype_t::GT_NONE;
+        bool changed = false, team_reset = false;
+        gametype_t gt = gametype_t::GT_NONE;
 
-	if (gt_g_gametype != g_gametype->modified_count) {
-		gt = (gametype_t)clamp(g_gametype->integer, (int)GT_FIRST, (int)GT_LAST);
+        if (gt_g_gametype != g_gametype->modified_count) {
+                gt = (gametype_t)clamp(g_gametype->integer, (int)GT_FIRST, (int)GT_LAST);
 
-		if (gt != gt_check) {
-			switch (gt) {
-			case gametype_t::GT_TDM:
-				if (!teamplay->integer)
-					gi.cvar_forceset("teamplay", "1");
-				break;
-			case gametype_t::GT_CTF:
-				if (!ctf->integer)
-					gi.cvar_forceset("ctf", "1");
-				break;
-			default:
-				if (teamplay->integer)
-					gi.cvar_forceset("teamplay", "0");
-				if (ctf->integer)
-					gi.cvar_forceset("ctf", "0");
-				break;
-			}
-			gt_teamplay = teamplay->modified_count;
-			gt_ctf = ctf->modified_count;
-			changed = true;
-		}
-	}
+                if (gt != gt_check)
+                        changed = true;
+        }
 
-	if (!changed) {
-		if (gt_teamplay != teamplay->modified_count) {
-			if (teamplay->integer) {
-				gt = gametype_t::GT_TDM;
-				if (!teamplay->integer)
-					gi.cvar_forceset("teamplay", "1");
-				if (ctf->integer)
-					gi.cvar_forceset("ctf", "0");
-			} else {
-				gt = gametype_t::GT_FFA;
-				if (teamplay->integer)
-					gi.cvar_forceset("teamplay", "0");
-				if (ctf->integer)
-					gi.cvar_forceset("ctf", "0");
-			}
-			changed = true;
-			gt_teamplay = teamplay->modified_count;
-			gt_ctf = ctf->modified_count;
-		}
-		if (gt_ctf != ctf->modified_count) {
-			if (ctf->integer) {
-				gt = gametype_t::GT_CTF;
-				if (teamplay->integer)
-					gi.cvar_forceset("teamplay", "0");
-				if (!ctf->integer)
-					gi.cvar_forceset("ctf", "1");
-			} else {
-				gt = gametype_t::GT_TDM;
-				if (!teamplay->integer)
-					gi.cvar_forceset("teamplay", "1");
-				if (ctf->integer)
-					gi.cvar_forceset("ctf", "0");
-			}
-			changed = true;
-			gt_teamplay = teamplay->modified_count;
-			gt_ctf = ctf->modified_count;
-		}
-	}
+        if (!changed) {
+                if (gt_teamplay != teamplay->modified_count) {
+                        gt = teamplay->integer ? gametype_t::GT_TDM : gametype_t::GT_FFA;
+                        changed = true;
+                } else if (gt_ctf != ctf->modified_count) {
+                        gt = ctf->integer ? gametype_t::GT_CTF : gametype_t::GT_TDM;
+                        changed = true;
+                }
+        }
 
-	if (!changed || gt == gametype_t::GT_NONE)
-		return;
+        if (!changed || gt == gametype_t::GT_NONE)
+                return;
+
+        GT_SetLegacyCvars(gt);
+        gt_teamplay = teamplay->modified_count;
+        gt_ctf = ctf->modified_count;
 
 	//gi.Com_PrintFmt("GAMETYPE = {}\n", (int)gt);
 	

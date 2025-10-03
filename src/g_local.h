@@ -244,6 +244,10 @@ extern int _gt[GT_NUM_GAMETYPES];
 #define GT( x ) g_gametype->integer == (int)(x)
 #define notGT( x ) g_gametype->integer != (int)(x)
 
+inline int GT_Flags(gametype_t gt) {
+        return _gt[static_cast<size_t>(gt)];
+}
+
 constexpr const char *gt_short_name[GT_NUM_GAMETYPES] = {
 	"cmp",
 	"ffa",
@@ -273,19 +277,23 @@ constexpr const char *gt_short_name_upper[GT_NUM_GAMETYPES] = {
 	"BALL",
 };
 constexpr const char *gt_long_name[GT_NUM_GAMETYPES] = {
-	"Campaign",
-	"Deathmatch",
-	"Duel",
-	"Team Deathmatch",
-	"Capture the Flag",
-	"Clan Arena",
-	"Freeze Tag",
-	"CaptureStrike",
-	"Red Rover",
-	"Last Man Standing",
-	"Horde Mode",
-	"ProBall"
+        "Campaign",
+        "Deathmatch",
+        "Duel",
+        "Team Deathmatch",
+        "Capture the Flag",
+        "Clan Arena",
+        "Freeze Tag",
+        "CaptureStrike",
+        "Red Rover",
+        "Last Man Standing",
+        "Horde Mode",
+        "ProBall"
 };
+
+const char *GT_CommandName(gametype_t gt);
+const char *GT_CallvoteList();
+const char *GT_CallvoteArgs();
 
 enum monflags_t {
 	MF_NONE		= 0x00,
