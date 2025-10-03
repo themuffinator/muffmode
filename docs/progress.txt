@@ -15,7 +15,8 @@ The Big Gametype and Mapping Update!
 				7. CaptureStrike
 				8. Red Rover
 				9. Last Man Standing
-				10. Horde
+                                10. Horde
+                                11. ProBall
 		- Obsolete gametype cvars such as 'duel' have been removed. For compatibility purposes, all that remain are 'ctf' and 'teamplay' but these are overridden by g_gametype.
 		- New command for admins: "gametype [gametype_name]" changes the gametype to the specified name, effectively the same as callvote gametype.
 
@@ -25,7 +26,8 @@ The Big Gametype and Mapping Update!
 	- CaptureStrike: A Threewave classic, combines Clan Arena, CTF and Counter Strike. Teams take turns attacking or defending and battle until one team is dead, or the attacking team captures the flag.
 	- Red Rover: Another Rocket Arena mode, a unique full arsenal arena mode where players switch teams on death. Once there are no players remaining on a team - or a player hits the score limit, the player with the highest score wins.
 	- Freeze Tag
-	- Last Man Standing
+       - Last Man Standing
+       - ProBall: Fast-paced arena soccer featuring grapple-fueled movement and explosive goals.
 	
 * NEW ADMIN CVARS:
 	- g_ruleset: gameplay rules (default 2):
