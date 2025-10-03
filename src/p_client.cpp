@@ -3789,15 +3789,15 @@ bool ClientConnect(gentity_t *ent, char *userinfo, const char *social_id, bool i
 		ent->svflags |= SVF_BOT;
 		ent->client->sess.is_a_bot = true;
 
-		if (bot_name_prefix->string[0] && *bot_name_prefix->string) {
-			char oldname[MAX_INFO_VALUE];
-			char newname[MAX_NETNAME];
+                if (bot_name_prefix->string[0] && *bot_name_prefix->string) {
+                        char oldname[MAX_INFO_VALUE];
+                        char newname[MAX_NETNAME];
 
-			gi.Info_ValueForKey(userinfo, "name", oldname, sizeof(oldname));
-			strcpy(newname, bot_name_prefix->string);
-			Q_strlcat(newname, oldname, sizeof(oldname));
-			gi.Info_SetValueForKey(userinfo, "name", newname);
-		}
+                        gi.Info_ValueForKey(userinfo, "name", oldname, sizeof(oldname));
+                        Q_strlcpy(newname, bot_name_prefix->string, sizeof(newname));
+                        Q_strlcat(newname, oldname, sizeof(newname));
+                        gi.Info_SetValueForKey(userinfo, "name", newname);
+                }
 	}
 
 	Q_strlcpy(ent->client->pers.social_id, social_id, sizeof(ent->client->pers.social_id));
