@@ -10,7 +10,7 @@ black widow, part 2
 
 // timestamp used to prevent rapid fire of melee attack
 
-#include "../g_local.h"
+#include "../g_local.hpp"
 #include "m_widow2.h"
 #include "m_flash.h"
 

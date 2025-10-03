@@ -8,7 +8,7 @@ boss2
 ==============================================================================
 */
 
-#include "../g_local.h"
+#include "../g_local.hpp"
 #include "m_boss2.h"
 #include "m_flash.h"
 

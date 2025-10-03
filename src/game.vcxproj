@@ -113,7 +113,7 @@
     <ClInclude Include="cg_local.h" />
     <ClInclude Include="g_cvars.hpp" />
     <ClInclude Include="game.h" />
-    <ClInclude Include="g_local.h" />
+    <ClInclude Include="g_local.hpp" />
     <ClInclude Include="g_statusbar.h" />
     <ClInclude Include="monsters\m_actor.h" />
     <ClInclude Include="monsters\m_arachnid.h" />

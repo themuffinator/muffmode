@@ -1,11 +1,14 @@
 // Copyright (c) ZeniMax Media Inc.
 // Licensed under the GNU General Public License 2.0.
 
-// g_local.h -- local definitions for game module
+// g_local.hpp -- local definitions for game module
 #pragma once
 
 #include "bg_local.h"
 #include "g_cvars.hpp"
+
+struct level_locals_t;
+extern level_locals_t level;
 
 // the "gameversion" client command will print this plus compile date
 constexpr const char *GAMEVERSION = "baseq2";
@@ -324,48 +327,48 @@ typedef enum {
 // Keeping the helpers here avoids scattering fragile enum comparisons
 // across the codebase and makes the intent of the checks clearer.
 //
-constexpr bool Match_IsNone(matchst_t state) {
-	return state == matchst_t::MATCH_NONE;
+[[nodiscard]] constexpr bool Match_IsNone(matchst_t state) {
+        return state == matchst_t::MATCH_NONE;
 }
 
-constexpr bool Match_IsDelayedWarmup(matchst_t state) {
-	return state == matchst_t::MATCH_WARMUP_DELAYED;
+[[nodiscard]] constexpr bool Match_IsDelayedWarmup(matchst_t state) {
+        return state == matchst_t::MATCH_WARMUP_DELAYED;
 }
 
-constexpr bool Match_IsDefaultWarmup(matchst_t state) {
-	return state == matchst_t::MATCH_WARMUP_DEFAULT;
+[[nodiscard]] constexpr bool Match_IsDefaultWarmup(matchst_t state) {
+        return state == matchst_t::MATCH_WARMUP_DEFAULT;
 }
 
-constexpr bool Match_IsReadyUp(matchst_t state) {
-	return state == matchst_t::MATCH_WARMUP_READYUP;
+[[nodiscard]] constexpr bool Match_IsReadyUp(matchst_t state) {
+        return state == matchst_t::MATCH_WARMUP_READYUP;
 }
 
-constexpr bool Match_IsActiveWarmup(matchst_t state) {
-	return Match_IsDefaultWarmup(state) || Match_IsReadyUp(state);
+[[nodiscard]] constexpr bool Match_IsActiveWarmup(matchst_t state) {
+        return Match_IsDefaultWarmup(state) || Match_IsReadyUp(state);
 }
 
-constexpr bool Match_IsCountdown(matchst_t state) {
-	return state == matchst_t::MATCH_COUNTDOWN;
+[[nodiscard]] constexpr bool Match_IsCountdown(matchst_t state) {
+        return state == matchst_t::MATCH_COUNTDOWN;
 }
 
-constexpr bool Match_IsPreGame(matchst_t state) {
-	return state > matchst_t::MATCH_NONE && state < matchst_t::MATCH_IN_PROGRESS;
+[[nodiscard]] constexpr bool Match_IsPreGame(matchst_t state) {
+        return state > matchst_t::MATCH_NONE && state < matchst_t::MATCH_IN_PROGRESS;
 }
 
-constexpr bool Match_IsPreCountdown(matchst_t state) {
-	return state < matchst_t::MATCH_COUNTDOWN;
+[[nodiscard]] constexpr bool Match_IsPreCountdown(matchst_t state) {
+        return state < matchst_t::MATCH_COUNTDOWN;
 }
 
-constexpr bool Match_IsOngoing(matchst_t state) {
-	return state == matchst_t::MATCH_IN_PROGRESS;
+[[nodiscard]] constexpr bool Match_IsOngoing(matchst_t state) {
+        return state == matchst_t::MATCH_IN_PROGRESS;
 }
 
-constexpr bool Match_HasStarted(matchst_t state) {
-	return state >= matchst_t::MATCH_IN_PROGRESS;
+[[nodiscard]] constexpr bool Match_HasStarted(matchst_t state) {
+        return state >= matchst_t::MATCH_IN_PROGRESS;
 }
 
-constexpr bool Match_IsPostGame(matchst_t state) {
-	return state == matchst_t::MATCH_ENDED;
+[[nodiscard]] constexpr bool Match_IsPostGame(matchst_t state) {
+        return state == matchst_t::MATCH_ENDED;
 }
 
 inline void Match_SetState(matchst_t new_state, gtime_t timer = 0_sec) {
@@ -2294,7 +2297,6 @@ using save_die_t = save_data_t<void(*)(gentity_t *self, gentity_t *inflictor, ge
 constexpr gtime_t DUCK_INTERVAL = 5000_ms;
 
 extern game_locals_t  game;
-extern level_locals_t level;
 extern game_export_t  globals;
 extern spawn_temp_t	  st;
 

@@ -3,7 +3,7 @@
 
 // standard library stuff for game DLL
 
-#include "g_local.h"
+#include "g_local.hpp"
 
 //====================================================================================
 

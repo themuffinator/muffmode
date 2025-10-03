@@ -3,7 +3,7 @@
 
 #include <sstream>
 
-#include "g_local.h"
+#include "g_local.hpp"
 #include <float.h>
 #ifdef __clang__
 #pragma clang diagnostic push

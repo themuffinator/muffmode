@@ -8,7 +8,7 @@ floater
 ==============================================================================
 */
 
-#include "../g_local.h"
+#include "../g_local.hpp"
 #include "m_float.h"
 #include "m_flash.h"
 
