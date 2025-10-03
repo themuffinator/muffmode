@@ -4,6 +4,7 @@
 #include "monsters/m_player.h"
 
 #include <assert.h>
+#include <utility>
 
 constexpr const char *BREAKER = "\35\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\37";
 
@@ -313,54 +314,82 @@ const menu_t pmstatsmenu[] = {
 
 static void G_Menu_PMStats_Update(gentity_t *ent) {
 
-	if (!g_matchstats->integer) return;
+        if (!g_matchstats->integer) return;
 
-	menu_t *entries = ent->client->menu->entries;
-	client_match_stats_t *st = &ent->client->mstats;
-	int i = 0;
-	char value[MAX_INFO_VALUE] = { 0 };
-	gi.Info_ValueForKey(g_entities[1].client->pers.userinfo, "name", value, sizeof(value));
+        menu_t *entries = ent->client->menu->entries;
+        client_match_stats_t *st = &ent->client->mstats;
+        const int max_entries = ent->client->menu->num - 1; // keep return entry intact
+        int i = 0;
+        char value[MAX_INFO_VALUE] = { 0 };
+        gi.Info_ValueForKey(ent->client->pers.userinfo, "name", value, sizeof(value));
 
-	Q_strlcpy(entries[i].text, "Player Stats for Match", sizeof(entries[i].text));
-	i++;
+        auto add_line = [&](std::string_view text) {
+                if (i >= max_entries)
+                        return;
+                Q_strlcpy(entries[i].text, text.data(), sizeof(entries[i].text));
+                ++i;
+        };
 
-	if (value[0]) {
-		Q_strlcpy(entries[i].text, G_Fmt("{}", value).data(), sizeof(entries[i].text));
-		i++;
-	}
+        auto add_fmt = [&](auto &&... args) {
+                add_line(G_Fmt(std::forward<decltype(args)>(args)...));
+        };
 
-	Q_strlcpy(entries[i].text, BREAKER, sizeof(entries[i].text));
-	i++;
+        auto add_blank = [&]() {
+                if (i >= max_entries)
+                        return;
+                entries[i].text[0] = '\0';
+                ++i;
+        };
 
-	Q_strlcpy(entries[i].text, G_Fmt("kills: {}", st->total_kills).data(), sizeof(entries[i].text));
-	i++;
-	Q_strlcpy(entries[i].text, G_Fmt("deaths: {}", st->total_deaths).data(), sizeof(entries[i].text));
-	i++;
-	if (st->total_kills) {
-		float val = st->total_kills > 0 ? ((float)st->total_kills / (float)st->total_deaths) : 0;
-		Q_strlcpy(entries[i].text, G_Fmt("k/d ratio: {:2}", val).data(), sizeof(entries[i].text));
-		i++;
-	}
-	i++;
-	Q_strlcpy(entries[i].text, G_Fmt("dmg dealt: {}", st->total_dmg_dealt).data(), sizeof(entries[i].text));
-	i++;
-	Q_strlcpy(entries[i].text, G_Fmt("dmg received: {}", st->total_dmg_received).data(), sizeof(entries[i].text));
-	i++;
-	if (st->total_dmg_dealt) {
-		float val = st->total_dmg_dealt ? ((float)st->total_dmg_dealt / (float)st->total_dmg_received) : 0;
-		Q_strlcpy(entries[i].text, G_Fmt("dmg ratio: {:02}", val).data(), sizeof(entries[i].text));
-		i++;
-	}
-	i++;
-	Q_strlcpy(entries[i].text, G_Fmt("shots fired: {}", st->total_shots).data(), sizeof(entries[i].text));
-	i++;
-	Q_strlcpy(entries[i].text, G_Fmt("shots on target: {}", st->total_hits).data(), sizeof(entries[i].text));
-	i++;
-	if (st->total_hits) {
-		int val = st->total_hits ? ((float)st->total_hits / (float)st->total_shots) * 100. : 0;
-		Q_strlcpy(entries[i].text, G_Fmt("total accuracy: {}%", val).data(), sizeof(entries[i].text));
-		i++;
-	}
+        add_line("Player Stats for Match");
+
+        if (value[0])
+                add_line(value);
+
+        add_line(BREAKER);
+
+        add_fmt("kills: {}", st->total_kills);
+        add_fmt("deaths: {}", st->total_deaths);
+
+        if (st->total_kills > 0 && st->total_deaths > 0) {
+                float kd_ratio = static_cast<float>(st->total_kills) / static_cast<float>(st->total_deaths);
+                add_fmt("k/d ratio: {:.2f}", kd_ratio);
+        } else if (st->total_kills > 0 && st->total_deaths == 0) {
+                add_line("k/d ratio: \xE2\x88\x9E");
+        } else {
+                add_line("k/d ratio: N/A");
+        }
+
+        add_blank();
+
+        add_fmt("dmg dealt: {}", st->total_dmg_dealt);
+        add_fmt("dmg received: {}", st->total_dmg_received);
+
+        if (st->total_dmg_dealt > 0 && st->total_dmg_received > 0) {
+                float dmg_ratio = static_cast<float>(st->total_dmg_dealt) / static_cast<float>(st->total_dmg_received);
+                add_fmt("dmg ratio: {:.2f}", dmg_ratio);
+        } else if (st->total_dmg_dealt > 0 && st->total_dmg_received == 0) {
+                add_line("dmg ratio: \xE2\x88\x9E");
+        } else {
+                add_line("dmg ratio: N/A");
+        }
+
+        add_blank();
+
+        add_fmt("shots fired: {}", st->total_shots);
+        add_fmt("shots on target: {}", st->total_hits);
+
+        if (st->total_shots > 0) {
+                float accuracy = (static_cast<float>(st->total_hits) / static_cast<float>(st->total_shots)) * 100.0f;
+                add_fmt("total accuracy: {:.1f}%", accuracy);
+        } else {
+                add_line("total accuracy: N/A");
+        }
+
+        while (i < max_entries) {
+                entries[i].text[0] = '\0';
+                ++i;
+        }
 }
 
 static void G_Menu_PMStats(gentity_t *ent, menu_hnd_t *p) {
