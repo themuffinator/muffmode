@@ -16,10 +16,17 @@ static THINK(info_player_start_drop) (gentity_t *self) -> void {
 }
 
 static inline void deathmatch_spawn_flags(gentity_t *self) {
-	if (st.nobots)
-		self->flags = FL_NO_BOTS;
-	if (st.nohumans)
-		self->flags = FL_NO_HUMANS;
+        // Preserve any pre-existing entity flags while respecting the spawn
+        // configuration for "nobots" / "nohumans". These key/value pairs are
+        // meant to selectively add the restrictions, not replace the entire
+        // flag mask. Previously we overwrote the flags field, which meant only
+        // the last restriction applied (and any other flags were cleared).
+        self->flags &= ~(FL_NO_BOTS | FL_NO_HUMANS);
+
+        if (st.nobots)
+                self->flags |= FL_NO_BOTS;
+        if (st.nohumans)
+                self->flags |= FL_NO_HUMANS;
 }
 
 /*QUAKED info_player_start (1 0 0) (-16 -16 -24) (16 16 32) x x x x x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
