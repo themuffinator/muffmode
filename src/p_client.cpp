@@ -3833,7 +3833,10 @@ bool ClientConnect(gentity_t *ent, char *userinfo, const char *social_id, bool i
 #endif
 	ent->client->pers.connected = true;
 
-	ent->client->pers.ingame = true;
+	// Flag the client as not having fully joined the game yet. This will be
+	// flipped to true in ClientBegin once the player actually spawns so
+	// join notifications only fire after a successful spawn.
+	ent->client->pers.ingame = false;
 
 	// entity 1 is always server host, so make admin
 	if (ent == &g_entities[1])
@@ -3872,6 +3875,9 @@ void ClientDisconnect(gentity_t *ent) {
 	if (!ent->client)
 		return;
 
+	const bool was_connected = ent->client->pers.connected;
+	const bool was_ingame = ent->client->pers.ingame;
+
 	TossClientItems(ent);
 	PlayerTrail_Destroy(ent);
 
@@ -3905,6 +3911,7 @@ void ClientDisconnect(gentity_t *ent) {
 	ent->sv.init = false;
 	ent->classname = "disconnected";
 	ent->client->pers.connected = false;
+	ent->client->pers.ingame = false;
 	ent->client->pers.spawned = false;
 	ent->timestamp = level.time + 1_sec;
 
@@ -3917,10 +3924,9 @@ void ClientDisconnect(gentity_t *ent) {
 				ec->client->menutime = level.time;
 	}
 
-	if (ent->client->pers.connected)
-		if (ent->client->resp.netname && ent->client->sess.initialised)
-			gi.LocBroadcast_Print(PRINT_CENTER, "{} has left the server.",
-				ent->client->resp.netname);
+	if (was_connected && was_ingame && ent->client->resp.netname[0] && ent->client->sess.initialised)
+		gi.LocBroadcast_Print(PRINT_CENTER, "{} has left the server.",
+			ent->client->resp.netname);
 }
 
 //==============================================================
