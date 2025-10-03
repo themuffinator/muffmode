@@ -2,7 +2,6 @@
 
 #include "q_std.h"
 
-#include <cstddef>
 #include <cstdint>
 
 #include "game.h"
@@ -12,23 +11,13 @@ enum class game_cvar_stage : uint8_t {
         INIT,
 };
 
-using cvar_default_fn = const char *(*)();
-
-struct game_cvar_descriptor {
-        cvar_t **storage;
-        const char *name;
-        cvar_default_fn default_fn;
-        cvar_flags_t flags;
-        game_cvar_stage stage;
-};
-
 #define CVAR_LITERAL(value) []() -> const char * { return value; }
 #define CVAR_VALUE(expr) []() -> const char * { return (expr); }
 
 #define STRINGIFY_IMPL(value) #value
 #define STRINGIFY(value) STRINGIFY_IMPL(value)
 
-inline const char *DefaultCheatsValue()
+[[maybe_unused]] inline const char *DefaultCheatsValue()
 {
 #if defined(_DEBUG)
         return "1";
@@ -231,24 +220,6 @@ inline const char *DefaultCheatsValue()
 #define DECLARE_GAME_CVAR(stage, identifier, name, default_fn, flags) inline cvar_t *identifier = nullptr;
 GAME_CVAR_ENTRIES(DECLARE_GAME_CVAR)
 #undef DECLARE_GAME_CVAR
-
-inline const game_cvar_descriptor g_game_cvar_descriptors[] = {
-#define DEFINE_GAME_CVAR(stage, identifier, name, default_fn, flags) { &identifier, name, default_fn, flags, stage },
-        GAME_CVAR_ENTRIES(DEFINE_GAME_CVAR)
-#undef DEFINE_GAME_CVAR
-};
-
-inline constexpr size_t g_game_cvar_descriptors_count = sizeof(g_game_cvar_descriptors) / sizeof(g_game_cvar_descriptors[0]);
-
-template<typename Fn>
-inline void ForEachGameCvar(game_cvar_stage stage, Fn &&fn)
-{
-        for (const auto &descriptor : g_game_cvar_descriptors) {
-                if (descriptor.stage == stage) {
-                        fn(descriptor);
-                }
-        }
-}
 
 #undef GAME_CVAR_ENTRIES
 #undef CVAR_LITERAL

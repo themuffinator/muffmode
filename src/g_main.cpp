@@ -7,7 +7,9 @@
 
 CHECK_GCLIENT_INTEGRITY;
 CHECK_ENTITY_INTEGRITY;
-
+ 
+constexpr int32_t DEFAULT_GRAPPLE_SPEED = 650; // speed of grapple in flight
+constexpr float DEFAULT_GRAPPLE_PULL_SPEED = 650.0f; // speed player is pulled at
 
 std::mt19937 mt_rand;
 
@@ -28,14 +30,6 @@ cached_modelindex		sm_meat_index;
 cached_soundindex		snd_fry;
 
 gentity_t *g_entities;
-
-static void RegisterCvars(game_cvar_stage stage)
-{
-        ForEachGameCvar(stage, [](const game_cvar_descriptor &descriptor) {
-                const char *default_value = descriptor.default_fn();
-                *descriptor.storage = gi.cvar(descriptor.name, default_value, descriptor.flags);
-        });
-}
 
 int ii_duel_header;
 int ii_highlight;
@@ -588,7 +582,16 @@ is loaded.
 ============
 */
 static void PreInitGame() {
-        RegisterCvars(game_cvar_stage::PRE_INIT);
+        maxclients = gi.cvar("maxclients", G_Fmt("{}", MAX_SPLIT_PLAYERS).data(), CVAR_SERVERINFO | CVAR_LATCH);
+        minplayers = gi.cvar("minplayers", "2", CVAR_NOFLAGS);
+        maxplayers = gi.cvar("maxplayers", "16", CVAR_NOFLAGS);
+
+        deathmatch = gi.cvar("deathmatch", "1", CVAR_LATCH);
+        teamplay = gi.cvar("teamplay", "0", CVAR_SERVERINFO);
+        ctf = gi.cvar("ctf", "0", CVAR_SERVERINFO);
+        g_gametype = gi.cvar("g_gametype", G_Fmt("{}", (int)GT_FFA).data(), CVAR_SERVERINFO);
+        coop = gi.cvar("coop", "0", CVAR_LATCH);
+
         InitGametype();
 }
 
@@ -607,9 +610,216 @@ static void InitGame() {
 	// seed RNG
 	mt_rand.seed((uint32_t)std::chrono::system_clock::now().time_since_epoch().count());
 
-        RegisterCvars(game_cvar_stage::INIT);
+        hostname = gi.cvar("hostname", "Welcome to Muff Mode!", CVAR_NOFLAGS);
+
+        gun_x = gi.cvar("gun_x", "0", CVAR_NOFLAGS);
+        gun_y = gi.cvar("gun_y", "0", CVAR_NOFLAGS);
+        gun_z = gi.cvar("gun_z", "0", CVAR_NOFLAGS);
+
+        g_rollspeed = gi.cvar("g_rollspeed", "200", CVAR_NOFLAGS);
+        g_rollangle = gi.cvar("g_rollangle", "2", CVAR_NOFLAGS);
+        g_maxvelocity = gi.cvar("g_maxvelocity", "2000", CVAR_NOFLAGS);
+        g_gravity = gi.cvar("g_gravity", "800", CVAR_NOFLAGS);
+
+        g_skip_view_modifiers = gi.cvar("g_skip_view_modifiers", "0", CVAR_NOSET);
+
+        g_stopspeed = gi.cvar("g_stopspeed", "100", CVAR_NOFLAGS);
+
+        g_horde_starting_wave = gi.cvar("g_horde_starting_wave", "1", CVAR_SERVERINFO | CVAR_LATCH);
+
+        g_huntercam = gi.cvar("g_huntercam", "1", CVAR_SERVERINFO | CVAR_LATCH);
+        g_dm_strong_mines = gi.cvar("g_dm_strong_mines", "0", CVAR_NOFLAGS);
+        g_dm_random_items = gi.cvar("g_dm_random_items", "0", CVAR_NOFLAGS);
+
+        g_instagib = gi.cvar("g_instagib", "0", CVAR_SERVERINFO | CVAR_LATCH);
+        g_instagib_splash = gi.cvar("g_instagib_splash", "0", CVAR_NOFLAGS);
+        g_owner_auto_join = gi.cvar("g_owner_auto_join", "1", CVAR_NOFLAGS);
+        g_owner_push_scores = gi.cvar("g_owner_push_scores", "0", CVAR_NOFLAGS);
+        g_gametype_cfg = gi.cvar("g_gametype_cfg", "1", CVAR_NOFLAGS);
+        g_quadhog = gi.cvar("g_quadhog", "0", CVAR_SERVERINFO | CVAR_LATCH);
+        g_gravity_lotto = gi.cvar("g_gravity_lotto", "0", CVAR_SERVERINFO | CVAR_LATCH);
+        g_gravity_lotto_interval = gi.cvar("g_gravity_lotto_interval", "30", CVAR_NOFLAGS);
+        g_gravity_lotto_min = gi.cvar("g_gravity_lotto_min", "400", CVAR_NOFLAGS);
+        g_gravity_lotto_max = gi.cvar("g_gravity_lotto_max", "1200", CVAR_NOFLAGS);
+        g_nadefest = gi.cvar("g_nadefest", "0", CVAR_SERVERINFO | CVAR_LATCH);
+        g_frenzy = gi.cvar("g_frenzy", "0", CVAR_SERVERINFO | CVAR_LATCH);
+        g_vampiric_damage = gi.cvar("g_vampiric_damage", "0", CVAR_NOFLAGS);
+        g_vampiric_exp_min = gi.cvar("g_vampiric_exp_min", "0", CVAR_NOFLAGS);
+        g_vampiric_health_max = gi.cvar("g_vampiric_health_max", "9999", CVAR_NOFLAGS);
+        g_vampiric_percentile = gi.cvar("g_vampiric_percentile", "0.67f", CVAR_NOFLAGS);
+
+        g_frozen_time = gi.cvar("g_frozen_time", "180", CVAR_NOFLAGS);
+
+        g_coop_player_collision = gi.cvar("g_coop_player_collision", "0", CVAR_LATCH);
+        g_coop_squad_respawn = gi.cvar("g_coop_squad_respawn", "1", CVAR_LATCH);
+        g_coop_enable_lives = gi.cvar("g_coop_enable_lives", "0", CVAR_LATCH);
+        g_coop_num_lives = gi.cvar("g_coop_num_lives", "2", CVAR_LATCH);
+        g_lms_num_lives = gi.cvar("g_lms_num_lives", "9", CVAR_LATCH);
+        g_lts_num_lives = gi.cvar("g_lts_num_lives", "1", CVAR_LATCH);
+        g_coop_instanced_items = gi.cvar("g_coop_instanced_items", "1", CVAR_LATCH);
+        g_allow_grapple = gi.cvar("g_allow_grapple", "auto", CVAR_NOFLAGS);
+        g_allow_kill = gi.cvar("g_allow_kill", "1", CVAR_NOFLAGS);
+        g_grapple_offhand = gi.cvar("g_grapple_offhand", "0", CVAR_NOFLAGS);
+        g_grapple_fly_speed = gi.cvar("g_grapple_fly_speed", G_Fmt("{}", DEFAULT_GRAPPLE_SPEED).data(), CVAR_NOFLAGS);
+        g_grapple_pull_speed = gi.cvar("g_grapple_pull_speed", G_Fmt("{}", DEFAULT_GRAPPLE_PULL_SPEED).data(), CVAR_NOFLAGS);
+        g_grapple_damage = gi.cvar("g_grapple_damage", "10", CVAR_NOFLAGS);
+
+        g_frag_messages = gi.cvar("g_frag_messages", "1", CVAR_NOFLAGS);
+
+        g_debug_monster_paths = gi.cvar("g_debug_monster_paths", "0", CVAR_NOFLAGS);
+        g_debug_monster_kills = gi.cvar("g_debug_monster_kills", "0", CVAR_LATCH);
+
+        bot_debug_follow_actor = gi.cvar("bot_debug_follow_actor", "0", CVAR_NOFLAGS);
+        bot_debug_move_to_point = gi.cvar("bot_debug_move_to_point", "0", CVAR_NOFLAGS);
+
+        g_dedicated = gi.cvar("dedicated", "0", CVAR_NOSET);
+
+        g_cheats = gi.cvar("cheats",
+#if defined(_DEBUG)
+                "1"
+#else
+                "0"
+#endif
+                , CVAR_SERVERINFO | CVAR_LATCH);
 
         gi.cvar("gamename", GAMEVERSION, CVAR_SERVERINFO | CVAR_LATCH);
+
+        skill = gi.cvar("skill", "3", CVAR_LATCH);
+        maxentities = gi.cvar("maxentities", G_Fmt("{}", MAX_ENTITIES).data(), CVAR_LATCH);
+
+        fraglimit = gi.cvar("fraglimit", "0", CVAR_SERVERINFO);
+        timelimit = gi.cvar("timelimit", "0", CVAR_SERVERINFO);
+        roundlimit = gi.cvar("roundlimit", "8", CVAR_SERVERINFO);
+        roundtimelimit = gi.cvar("roundtimelimit", "2", CVAR_SERVERINFO);
+        capturelimit = gi.cvar("capturelimit", "8", CVAR_SERVERINFO);
+        mercylimit = gi.cvar("mercylimit", "0", CVAR_NOFLAGS);
+        noplayerstime = gi.cvar("noplayerstime", "10", CVAR_NOFLAGS);
+
+        g_ruleset = gi.cvar("g_ruleset", G_Fmt("{}", (int)RS_MM).data(), CVAR_SERVERINFO);
+
+        password = gi.cvar("password", "", CVAR_USERINFO);
+        spectator_password = gi.cvar("spectator_password", "", CVAR_USERINFO);
+        admin_password = gi.cvar("admin_password", "", CVAR_NOFLAGS);
+        needpass = gi.cvar("needpass", "0", CVAR_SERVERINFO);
+        filterban = gi.cvar("filterban", "1", CVAR_NOFLAGS);
+
+        run_pitch = gi.cvar("run_pitch", "0.002", CVAR_NOFLAGS);
+        run_roll = gi.cvar("run_roll", "0.005", CVAR_NOFLAGS);
+        bob_up = gi.cvar("bob_up", "0.005", CVAR_NOFLAGS);
+        bob_pitch = gi.cvar("bob_pitch", "0.002", CVAR_NOFLAGS);
+        bob_roll = gi.cvar("bob_roll", "0.002", CVAR_NOFLAGS);
+
+        flood_msgs = gi.cvar("flood_msgs", "4", CVAR_NOFLAGS);
+        flood_persecond = gi.cvar("flood_persecond", "4", CVAR_NOFLAGS);
+        flood_waitdelay = gi.cvar("flood_waitdelay", "10", CVAR_NOFLAGS);
+
+        ai_allow_dm_spawn = gi.cvar("ai_allow_dm_spawn", "0", CVAR_NOFLAGS);
+        ai_damage_scale = gi.cvar("ai_damage_scale", "1", CVAR_NOFLAGS);
+        ai_model_scale = gi.cvar("ai_model_scale", "0", CVAR_NOFLAGS);
+        ai_movement_disabled = gi.cvar("ai_movement_disabled", "0", CVAR_NOFLAGS);
+
+        g_airaccelerate = gi.cvar("g_airaccelerate", "0", CVAR_NOFLAGS);
+        g_allow_admin = gi.cvar("g_allow_admin", "1", CVAR_NOFLAGS);
+        g_allow_custom_skins = gi.cvar("g_allow_custom_skins", "1", CVAR_NOFLAGS);
+        g_allow_forfeit = gi.cvar("g_allow_forfeit", "1", CVAR_NOFLAGS);
+        g_allow_mymap = gi.cvar("g_allow_mymap", "1", CVAR_NOFLAGS);
+        g_allow_spec_vote = gi.cvar("g_allow_spec_vote", "0", CVAR_NOFLAGS);
+        g_allow_techs = gi.cvar("g_allow_techs", "auto", CVAR_NOFLAGS);
+        g_allow_vote_midgame = gi.cvar("g_allow_vote_midgame", "0", CVAR_NOFLAGS);
+        g_allow_voting = gi.cvar("g_allow_voting", "1", CVAR_NOFLAGS);
+        g_arena_dmg_armor = gi.cvar("g_arena_dmg_armor", "0", CVAR_NOFLAGS);
+        g_arena_start_armor = gi.cvar("g_arena_start_armor", "200", CVAR_NOFLAGS);
+        g_arena_start_health = gi.cvar("g_arena_start_health", "200", CVAR_NOFLAGS);
+        g_coop_health_scaling = gi.cvar("g_coop_health_scaling", "0", CVAR_LATCH);
+        g_corpse_sink_time = gi.cvar("g_corpse_sink_time", "15", CVAR_NOFLAGS);
+        g_damage_scale = gi.cvar("g_damage_scale", "1", CVAR_NOFLAGS);
+        g_disable_player_collision = gi.cvar("g_disable_player_collision", "0", CVAR_NOFLAGS);
+        g_dm_allow_exit = gi.cvar("g_dm_allow_exit", "0", CVAR_NOFLAGS);
+        g_dm_allow_no_humans = gi.cvar("g_dm_allow_no_humans", "1", CVAR_NOFLAGS);
+        g_dm_auto_join = gi.cvar("g_dm_auto_join", "1", CVAR_NOFLAGS);
+        g_dm_crosshair_id = gi.cvar("g_dm_crosshair_id", "1", CVAR_NOFLAGS);
+        g_dm_do_readyup = gi.cvar("g_dm_do_readyup", "0", CVAR_NOFLAGS);
+        g_dm_do_warmup = gi.cvar("g_dm_do_warmup", "1", CVAR_NOFLAGS);
+        g_dm_exec_level_cfg = gi.cvar("g_dm_exec_level_cfg", "0", CVAR_NOFLAGS);
+        g_dm_force_join = gi.cvar("g_dm_force_join", "0", CVAR_NOFLAGS);
+        g_dm_force_respawn = gi.cvar("g_dm_force_respawn", "1", CVAR_NOFLAGS);
+        g_dm_force_respawn_time = gi.cvar("g_dm_force_respawn_time", "3", CVAR_NOFLAGS);
+        g_dm_holdable_adrenaline = gi.cvar("g_dm_holdable_adrenaline", "1", CVAR_NOFLAGS);
+        g_dm_instant_items = gi.cvar("g_dm_instant_items", "1", CVAR_NOFLAGS);
+        g_dm_intermission_shots = gi.cvar("g_dm_intermission_shots", "0", CVAR_NOFLAGS);
+        g_dm_item_respawn_rate = gi.cvar("g_dm_item_respawn_rate", "1.0", CVAR_NOFLAGS);
+        g_dm_no_fall_damage = gi.cvar("g_dm_no_fall_damage", "0", CVAR_NOFLAGS);
+        g_dm_no_quad_drop = gi.cvar("g_dm_no_quad_drop", "0", CVAR_NOFLAGS);
+        g_dm_no_self_damage = gi.cvar("g_dm_no_self_damage", "0", CVAR_NOFLAGS);
+        g_dm_no_stack_double = gi.cvar("g_dm_no_stack_double", "0", CVAR_NOFLAGS);
+        g_dm_overtime = gi.cvar("g_dm_overtime", "120", CVAR_NOFLAGS);
+        g_dm_powerup_drop = gi.cvar("g_dm_powerup_drop", "1", CVAR_NOFLAGS);
+        g_dm_powerups_minplayers = gi.cvar("g_dm_powerups_minplayers", "0", CVAR_NOFLAGS);
+        g_dm_respawn_delay_min = gi.cvar("g_dm_respawn_delay_min", "1", CVAR_NOFLAGS);
+        g_dm_respawn_point_min_dist = gi.cvar("g_dm_respawn_point_min_dist", "256", CVAR_NOFLAGS);
+        g_dm_respawn_point_min_dist_debug = gi.cvar("g_dm_respawn_point_min_dist_debug", "0", CVAR_NOFLAGS);
+        g_dm_same_level = gi.cvar("g_dm_same_level", "0", CVAR_NOFLAGS);
+        g_dm_player_spawn_rule = gi.cvar("g_dm_player_spawn_rule", "1", CVAR_NOFLAGS);
+        g_dm_spawnpads = gi.cvar("g_dm_spawnpads", "1", CVAR_NOFLAGS);
+        g_dm_timeout_length = gi.cvar("g_dm_timeout_length", "120", CVAR_NOFLAGS);
+        g_dm_weapons_stay = gi.cvar("g_dm_weapons_stay", "0", CVAR_NOFLAGS);
+        g_drop_cmds = gi.cvar("g_drop_cmds", "7", CVAR_NOFLAGS);
+        g_entity_override_dir = gi.cvar("g_entity_override_dir", "maps", CVAR_NOFLAGS);
+        g_entity_override_load = gi.cvar("g_entity_override_load", "1", CVAR_NOFLAGS);
+        g_entity_override_save = gi.cvar("g_entity_override_save", "0", CVAR_NOFLAGS);
+        g_eyecam = gi.cvar("g_eyecam", "1", CVAR_NOFLAGS);
+        g_fast_doors = gi.cvar("g_fast_doors", "1", CVAR_NOFLAGS);
+        g_frames_per_frame = gi.cvar("g_frames_per_frame", "1", CVAR_NOFLAGS);
+        g_friendly_fire = gi.cvar("g_friendly_fire", "0", CVAR_NOFLAGS);
+        g_inactivity = gi.cvar("g_inactivity", "120", CVAR_NOFLAGS);
+        g_infinite_ammo = gi.cvar("g_infinite_ammo", "0", CVAR_LATCH);
+        g_instant_weapon_switch = gi.cvar("g_instant_weapon_switch", "0", CVAR_LATCH);
+        g_item_bobbing = gi.cvar("g_item_bobbing", "1", CVAR_NOFLAGS);
+        g_knockback_scale = gi.cvar("g_knockback_scale", "1.0", CVAR_NOFLAGS);
+        g_ladder_steps = gi.cvar("g_ladder_steps", "1", CVAR_NOFLAGS);
+        g_lag_compensation = gi.cvar("g_lag_compensation", "1", CVAR_NOFLAGS);
+        g_map_list = gi.cvar("g_map_list", "", CVAR_NOFLAGS);
+        g_map_list_shuffle = gi.cvar("g_map_list_shuffle", "1", CVAR_NOFLAGS);
+        g_map_pool = gi.cvar("g_map_pool", "", CVAR_NOFLAGS);
+        g_mapspawn_no_bfg = gi.cvar("g_no_bfg", "0", CVAR_NOFLAGS);
+        g_mapspawn_no_plasmabeam = gi.cvar("g_no_plasmabeam", "0", CVAR_NOFLAGS);
+        g_match_lock = gi.cvar("g_match_lock", "0", CVAR_SERVERINFO);
+        g_matchstats = gi.cvar("g_matchstats", "0", CVAR_NOFLAGS);
+        g_motd_filename = gi.cvar("g_motd_filename", "motd.txt", CVAR_NOFLAGS);
+        g_mover_debug = gi.cvar("g_mover_debug", "0", CVAR_NOFLAGS);
+        g_mover_speed_scale = gi.cvar("g_mover_speed_scale", "1.0f", CVAR_NOFLAGS);
+        g_no_armor = gi.cvar("g_no_armor", "0", CVAR_NOFLAGS);
+        g_no_health = gi.cvar("g_no_health", "0", CVAR_NOFLAGS);
+        g_no_items = gi.cvar("g_no_items", "0", CVAR_NOFLAGS);
+        g_no_mines = gi.cvar("g_no_mines", "0", CVAR_NOFLAGS);
+        g_no_nukes = gi.cvar("g_no_nukes", "0", CVAR_NOFLAGS);
+        g_no_powerups = gi.cvar("g_no_powerups", "0", CVAR_NOFLAGS);
+        g_no_spheres = gi.cvar("g_no_spheres", "0", CVAR_NOFLAGS);
+        g_quick_weapon_switch = gi.cvar("g_quick_weapon_switch", "1", CVAR_LATCH);
+        g_round_countdown = gi.cvar("g_round_countdown", "10", CVAR_NOFLAGS);
+        g_select_empty = gi.cvar("g_select_empty", "0", CVAR_ARCHIVE);
+        g_showhelp = gi.cvar("g_showhelp", "1", CVAR_NOFLAGS);
+        g_showmotd = gi.cvar("g_showmotd", "1", CVAR_NOFLAGS);
+        g_start_items = gi.cvar("g_start_items", "", CVAR_NOFLAGS);
+        g_starting_health = gi.cvar("g_starting_health", "100", CVAR_NOFLAGS);
+        g_starting_health_bonus = gi.cvar("g_starting_health_bonus", "25", CVAR_NOFLAGS);
+        g_starting_armor = gi.cvar("g_starting_armor", "0", CVAR_NOFLAGS);
+        g_strict_saves = gi.cvar("g_strict_saves", "1", CVAR_NOFLAGS);
+        g_teamplay_allow_team_pick = gi.cvar("g_teamplay_allow_team_pick", "0", CVAR_NOFLAGS);
+        g_teamplay_armor_protect = gi.cvar("g_teamplay_armor_protect", "0", CVAR_NOFLAGS);
+        g_teamplay_auto_balance = gi.cvar("g_teamplay_auto_balance", "1", CVAR_NOFLAGS);
+        g_teamplay_force_balance = gi.cvar("g_teamplay_force_balance", "0", CVAR_NOFLAGS);
+        g_teamplay_item_drop_notice = gi.cvar("g_teamplay_item_drop_notice", "1", CVAR_NOFLAGS);
+        g_teleporter_freeze = gi.cvar("g_teleporter_freeze", "0", CVAR_NOFLAGS);
+        g_verbose = gi.cvar("g_verbose", "0", CVAR_NOFLAGS);
+        g_vote_flags = gi.cvar("g_vote_flags", "0", CVAR_NOFLAGS);
+        g_vote_limit = gi.cvar("g_vote_limit", "3", CVAR_NOFLAGS);
+        g_warmup_countdown = gi.cvar("g_warmup_countdown", "10", CVAR_NOFLAGS);
+        g_warmup_ready_percentage = gi.cvar("g_warmup_ready_percentage", "0.51f", CVAR_NOFLAGS);
+        g_weapon_projection = gi.cvar("g_weapon_projection", "0", CVAR_NOFLAGS);
+        g_weapon_respawn_time = gi.cvar("g_weapon_respawn_time", "30", CVAR_NOFLAGS);
+
+        bot_name_prefix = gi.cvar("bot_name_prefix", "B|", CVAR_NOFLAGS);
 
 	// ruleset
 	CheckRuleset();
