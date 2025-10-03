@@ -1016,14 +1016,18 @@ static void G_Menu_ServerInfo_Update(gentity_t *ent) {
 		Q_strlcpy(entries[i].text, "Weapons Frenzy", sizeof(entries[i].text));
 		i++;
 	}
-	if (g_nadefest->integer) {
-		Q_strlcpy(entries[i].text, "Nade Fest", sizeof(entries[i].text));
-		i++;
-	}
-	if (g_quadhog->integer) {
-		Q_strlcpy(entries[i].text, "Quad Hog", sizeof(entries[i].text));
-		i++;
-	}
+        if (g_nadefest->integer) {
+                Q_strlcpy(entries[i].text, "Nade Fest", sizeof(entries[i].text));
+                i++;
+        }
+        if (g_quadhog->integer) {
+                Q_strlcpy(entries[i].text, "Quad Hog", sizeof(entries[i].text));
+                i++;
+        }
+        if (g_gravity_lotto->integer) {
+                Q_strlcpy(entries[i].text, "Gravity Lotto", sizeof(entries[i].text));
+                i++;
+        }
 
 	Q_strlcpy(entries[i].text, BREAKER, sizeof(entries[i].text));
 	i++;

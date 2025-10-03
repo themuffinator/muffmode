@@ -2057,9 +2057,11 @@ void GT_SetLongName(void) {
 				s = "Frenzy CTF";
 			} else if (g_nadefest->integer) {
 				s = "NadeFest CTF";
-			} else if (g_quadhog->integer) {
-				s = "Quad Hog CTF";
-			} else {
+                        } else if (g_quadhog->integer) {
+                                s = "Quad Hog CTF";
+                        } else if (g_gravity_lotto->integer) {
+                                s = "Gravity Lotto CTF";
+                        } else {
 				s = gt_long_name[GT_CTF];
 			}
 		} else if (GT(GT_FREEZE)) {
@@ -2071,9 +2073,11 @@ void GT_SetLongName(void) {
 				s = "Frenzy Freeze";
 			} else if (g_nadefest->integer) {
 				s = "NadeFest Freeze";
-			} else if (g_quadhog->integer) {
-				s = "Quad Hog Freeze";
-			} else {
+                        } else if (g_quadhog->integer) {
+                                s = "Quad Hog Freeze";
+                        } else if (g_gravity_lotto->integer) {
+                                s = "Gravity Lotto Freeze";
+                        } else {
 				s = gt_long_name[GT_FREEZE];
 			}
 		} else if (GT(GT_CA)) {
@@ -2085,9 +2089,11 @@ void GT_SetLongName(void) {
 				s = "Frenzy CA";
 			} else if (g_nadefest->integer) {
 				s = "NadeFest CA";
-			} else if (g_quadhog->integer) {
-				s = "Quad Hog CA";
-			} else {
+                        } else if (g_quadhog->integer) {
+                                s = "Quad Hog CA";
+                        } else if (g_gravity_lotto->integer) {
+                                s = "Gravity Lotto CA";
+                        } else {
 				s = gt_long_name[GT_CA];
 			}
 		} else if (GT(GT_RR)) {
@@ -2099,9 +2105,11 @@ void GT_SetLongName(void) {
 				s = "Frenzy RR";
 			} else if (g_nadefest->integer) {
 				s = "NadeFest RR";
-			} else if (g_quadhog->integer) {
-				s = "Quad Hog RR";
-			} else {
+                        } else if (g_quadhog->integer) {
+                                s = "Quad Hog RR";
+                        } else if (g_gravity_lotto->integer) {
+                                s = "Gravity Lotto RR";
+                        } else {
 				s = gt_long_name[GT_RR];
 			}
 		} else if (GT(GT_STRIKE)) {
@@ -2113,9 +2121,11 @@ void GT_SetLongName(void) {
 				s = "Frenzy Strike";
 			} else if (g_nadefest->integer) {
 				s = "NadeFest Strike";
-			} else if (g_quadhog->integer) {
-				s = "Quad Hog Strike";
-			} else {
+                        } else if (g_quadhog->integer) {
+                                s = "Quad Hog Strike";
+                        } else if (g_gravity_lotto->integer) {
+                                s = "Gravity Lotto Strike";
+                        } else {
 				s = gt_long_name[GT_STRIKE];
 			}
 		} else if (GT(GT_TDM)) {
@@ -2127,9 +2137,11 @@ void GT_SetLongName(void) {
 				s = "Frenzy TDM";
 			} else if (g_nadefest->integer) {
 				s = "NadeFest TDM";
-			} else if (g_quadhog->integer) {
-				s = "Quad Hog TDM";
-			} else {
+                        } else if (g_quadhog->integer) {
+                                s = "Quad Hog TDM";
+                        } else if (g_gravity_lotto->integer) {
+                                s = "Gravity Lotto TDM";
+                        } else {
 				s = gt_long_name[GT_TDM];
 			}
 		} else if (GT(GT_DUEL)) {
@@ -2141,9 +2153,11 @@ void GT_SetLongName(void) {
 				s = "Frenzy Duel";
 			} else if (g_nadefest->integer) {
 				s = "NadeFest Duel";
-			} else if (g_quadhog->integer) {
-				s = "Quad Hog Duel";
-			} else {
+                        } else if (g_quadhog->integer) {
+                                s = "Quad Hog Duel";
+                        } else if (g_gravity_lotto->integer) {
+                                s = "Gravity Lotto Duel";
+                        } else {
 				s = gt_long_name[GT_DUEL];
 			}
 		} else if (GT(GT_HORDE)) {
@@ -2155,9 +2169,11 @@ void GT_SetLongName(void) {
 				s = "Frenzy Horde";
 			} else if (g_nadefest->integer) {
 				s = "NadeFest Horde";
-			} else if (g_quadhog->integer) {
-				s = "Quad Hog Horde";
-			} else {
+                        } else if (g_quadhog->integer) {
+                                s = "Quad Hog Horde";
+                        } else if (g_gravity_lotto->integer) {
+                                s = "Gravity Lotto Horde";
+                        } else {
 				s = gt_long_name[GT_HORDE];
 			}
 		} else if (GT(GT_BALL)) {
@@ -2169,9 +2185,11 @@ void GT_SetLongName(void) {
 				s = "Frenzy ProBall";
 			} else if (g_nadefest->integer) {
 				s = "NadeFest ProBall";
-			} else if (g_quadhog->integer) {
-				s = "Quad Hog ProBall";
-			} else {
+                        } else if (g_quadhog->integer) {
+                                s = "Quad Hog ProBall";
+                        } else if (g_gravity_lotto->integer) {
+                                s = "Gravity Lotto ProBall";
+                        } else {
 				s = gt_long_name[GT_BALL];
 			}
 		} else if (deathmatch->integer) {
@@ -2183,9 +2201,11 @@ void GT_SetLongName(void) {
 				s = "Frenzy FFA";
 			} else if (g_nadefest->integer) {
 				s = "NadeFest";
-			} else if (g_quadhog->integer) {
-				s = "Quad Hog";
-			} else {
+                        } else if (g_quadhog->integer) {
+                                s = "Quad Hog";
+                        } else if (g_gravity_lotto->integer) {
+                                s = "Gravity Lotto";
+                        } else {
 				s = gt_long_name[GT_FFA];
 			}
 		} else {
@@ -2349,6 +2369,10 @@ void SP_worldspawn(gentity_t *ent) {
 		level.gravity = atof(st.gravity);
 		gi.cvar_set("g_gravity", st.gravity);
 	}
+
+	level.gravity_lotto_base = level.gravity;
+	level.gravity_lotto_next = 0_ms;
+	level.gravity_lotto_active = false;
 
 	snd_fry.assign("player/fry.wav"); // standing in lava / slime
 
