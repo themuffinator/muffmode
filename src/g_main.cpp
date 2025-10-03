@@ -674,20 +674,6 @@ static void InitGame() {
 
 //===================================================================
 
-#if 0
-static void ClearBodyQue(void) {
-	int	i;
-	gentity_t *ent;
-
-	for (i = 0; i < BODY_QUEUE_SIZE; i++) {
-		ent = level.bodyQue[i];
-		if (ent->linked) {
-			gi.unlinkentity(ent);
-		}
-	}
-}
-#endif
-
 static void Monsters_KillAll() {
 	for (size_t i = 0; i < globals.max_entities; i++) {
 		if (!g_entities[i].inuse)
@@ -708,6 +694,9 @@ static void Entities_ItemTeams_Reset() {
 	int			count, choice;
 
 	for (ent = g_entities + 1, i = 1; i < globals.num_entities; i++, ent++) {
+		if (!ent)
+			continue;
+
 		if (!ent->inuse)
 			continue;
 
