@@ -3,6 +3,7 @@
 #include "g_local.h"
 #include "bots/bot_includes.h"
 #include "monsters/m_player.h"	//doppelganger
+#include <utility>
 
 bool Pickup_Weapon(gentity_t *ent, gentity_t *other);
 void Use_Weapon(gentity_t *ent, gitem_t *inv);
@@ -2657,14 +2658,16 @@ static void Use_PowerArmor(gentity_t *ent, gitem_t *item) {
 }
 
 static bool Pickup_PowerArmor(gentity_t *ent, gentity_t *other) {
-	other->client->pers.inventory[ent->item->id]++;
+        other->client->pers.inventory[ent->item->id]++;
 
-	SetRespawn(ent, gtime_t::from_sec(ent->item->quantity));
+        SetRespawn(ent, gtime_t::from_sec(ent->item->quantity));
 
-	if ((deathmatch->integer && !other->client->pers.inventory[ent->item->id]) || !deathmatch->integer)
-		G_CheckPowerArmor(other);
+        const bool should_auto_enable = !deathmatch->integer ||
+                !ent->spawnflags.has(SPAWNFLAG_ITEM_DROPPED | SPAWNFLAG_ITEM_DROPPED_PLAYER);
+        if (should_auto_enable)
+                G_CheckPowerArmor(other);
 
-	return true;
+        return true;
 }
 
 static void Drop_PowerArmor(gentity_t *ent, gitem_t *item) {
@@ -2691,8 +2694,6 @@ Touch_Item
 ===============
 */
 TOUCH(Touch_Item) (gentity_t *ent, gentity_t *other, const trace_t &tr, bool other_touching_self) -> void {
-	bool taken;
-
 	if (!other->client)
 		return;
 	if (other->health < 1)
@@ -2703,18 +2704,20 @@ TOUCH(Touch_Item) (gentity_t *ent, gentity_t *other, const trace_t &tr, bool oth
 		return; // not a grabbable item?
 
 	gitem_t *it = ent->item;
+	const bool is_coop = coop->integer != 0;
+	const bool instanced_items = is_coop && P_UseCoopInstancedItems();
+	const bool is_deathmatch = deathmatch->integer != 0;
+	const int32_t player_number = other->s.number - 1;
 
 	// already got this instanced item
-	if (coop->integer && P_UseCoopInstancedItems()) {
-		if (ent->item_picked_up_by[other->s.number - 1])
-			return;
-	}
+	if (instanced_items && ent->item_picked_up_by[player_number])
+		return;
 
 	// can't pickup during match countdown
 	if (IsPickupsDisabled())
 		return;
 
-	taken = it->pickup(ent, other);
+	const bool taken = it->pickup(ent, other);
 
 	ValidateSelectedItem(other);
 
@@ -2735,29 +2738,27 @@ TOUCH(Touch_Item) (gentity_t *ent, gentity_t *other, const trace_t &tr, bool oth
 
 		if (ent->noise_index)
 			gi.sound(other, CHAN_ITEM, ent->noise_index, 1, ATTN_NORM, 0);
-		else if (it->pickup_sound) {
+		else if (it->pickup_sound)
 			gi.sound(other, CHAN_ITEM, gi.soundindex(it->pickup_sound), 1, ATTN_NORM, 0);
-		}
-		int32_t player_number = other->s.number - 1;
 
-		if (coop->integer && P_UseCoopInstancedItems() && !ent->item_picked_up_by[player_number]) {
+		if (instanced_items && !ent->item_picked_up_by[player_number]) {
 			ent->item_picked_up_by[player_number] = true;
 
 			// [Paril-KEX] this is to fix a coop quirk where items
 			// that send a message on pick up will only print on the
-			// player that picked them up, and never anybody else; 
+			// player that picked them up, and never anybody else;
 			// when instanced items are enabled we don't need to limit
 			// ourselves to this, but it does mean that relays that trigger
 			// messages won't work, so we'll have to fix those
 			if (ent->message)
 				G_PrintActivationMessage(ent, other, false);
 		}
-		if (deathmatch->integer) {
+		if (is_deathmatch) {
 			switch (it->id) {
 			case IT_ARMOR_BODY:
 			case IT_POWER_SCREEN:
 			case IT_POWER_SHIELD:
-			case IT_ADRENALINE: 
+			case IT_ADRENALINE:
 			case IT_HEALTH_MEGA:
 			case IT_POWERUP_QUAD:
 			case IT_POWERUP_DOUBLE:
@@ -2802,43 +2803,42 @@ TOUCH(Touch_Item) (gentity_t *ent, gentity_t *other, const trace_t &tr, bool oth
 		// [Paril-KEX] see above msg; this also disables the message in DM
 		// since there's no need to print pickup messages in DM (this wasn't
 		// even a documented feature, relays were traditionally used for this)
-		const char *message_backup = nullptr;
-
-		if (deathmatch->integer || (coop->integer && P_UseCoopInstancedItems()))
-			std::swap(message_backup, ent->message);
+		const bool suppress_message = is_deathmatch || instanced_items;
+		const char *message_backup = suppress_message ? std::exchange(ent->message, nullptr) : nullptr;
 
 		G_UseTargets(ent, other);
 
-		if (deathmatch->integer || (coop->integer && P_UseCoopInstancedItems()))
-			std::swap(message_backup, ent->message);
+		if (suppress_message)
+			ent->message = message_backup;
 
 		ent->spawnflags |= SPAWNFLAG_ITEM_TARGETS_USED;
 	}
 
-	if (taken) {
-		bool should_remove = false;
+	if (!taken)
+		return;
 
-		if (coop->integer) {
-			// in coop with instanced items, *only* dropped 
-			// player items will ever get deleted permanently.
-			if (P_UseCoopInstancedItems())
-				should_remove = ent->spawnflags.has(SPAWNFLAG_ITEM_DROPPED_PLAYER);
-			// in coop without instanced items, IF_STAY_COOP items remain
-			// if not dropped
-			else
-				should_remove = ent->spawnflags.has(SPAWNFLAG_ITEM_DROPPED | SPAWNFLAG_ITEM_DROPPED_PLAYER) || !(it->flags & IF_STAY_COOP);
-		} else
-			should_remove = !deathmatch->integer || ent->spawnflags.has(SPAWNFLAG_ITEM_DROPPED | SPAWNFLAG_ITEM_DROPPED_PLAYER);
+	bool should_remove = false;
 
-		if (should_remove) {
-			if (ent->flags & FL_RESPAWN)
-				ent->flags &= ~FL_RESPAWN;
-			else
-				G_FreeEntity(ent);
-		}
+	if (is_coop) {
+		// in coop with instanced items, *only* dropped
+		// player items will ever get deleted permanently.
+		if (instanced_items)
+			should_remove = ent->spawnflags.has(SPAWNFLAG_ITEM_DROPPED_PLAYER);
+		// in coop without instanced items, IF_STAY_COOP items remain
+		// if not dropped
+		else
+			should_remove = ent->spawnflags.has(SPAWNFLAG_ITEM_DROPPED | SPAWNFLAG_ITEM_DROPPED_PLAYER) || !(it->flags & IF_STAY_COOP);
+	} else {
+		should_remove = !is_deathmatch || ent->spawnflags.has(SPAWNFLAG_ITEM_DROPPED | SPAWNFLAG_ITEM_DROPPED_PLAYER);
+	}
+
+	if (should_remove) {
+		if (ent->flags & FL_RESPAWN)
+			ent->flags &= ~FL_RESPAWN;
+		else
+			G_FreeEntity(ent);
 	}
 }
-
 //======================================================================
 
 static TOUCH(drop_temp_touch) (gentity_t *ent, gentity_t *other, const trace_t &tr, bool other_touching_self) -> void {
