@@ -330,8 +330,11 @@ static void G_Menu_PMStats_Update(gentity_t *ent) {
                 ++i;
         };
 
-        auto add_fmt = [&](auto &&... args) {
-                add_line(G_Fmt(std::forward<decltype(args)>(args)...));
+        auto add_fmt = [&](const auto &format_str, auto &&... args) {
+                if (i >= max_entries)
+                        return;
+                G_FmtTo_(entries[i].text, format_str, std::forward<decltype(args)>(args)...);
+                ++i;
         };
 
         auto add_blank = [&]() {
