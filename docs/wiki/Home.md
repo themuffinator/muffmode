@@ -5,6 +5,13 @@
 
 The distribution ships with updated game logic, curated server configuration, bot assets, and map entity overrides so hosts can deploy a turnkey experience out of the box.
 
+## Reference Pages
+- [Server Configuration](Server-Configuration.md)
+- [Command Reference](Command-Reference.md)
+- [General Features](General-Features.md)
+- [Gametypes & Mutators](Gametypes-and-Mutators.md)
+- [Match Features & Balance](Match-Features-and-Balance.md)
+
 Headline features include a purpose-built HUD/scoreboard, an in-game control menu, expanded admin tooling, deeper match-flow logic, smarter teamplay helpers, entity override controls, EyeCam spectating, and bundled “Muff Maps” recreations of classic arenas (Almost Lost, Arena of Death, Hidden Fortress, Longest Yard, Proving Grounds, Vertical Vengeance).
 
 ## Installation & Setup
