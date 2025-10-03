@@ -4,6 +4,9 @@
 
 #include "g_local.h"
 
+#include <algorithm>
+#include <cstdlib>
+
 /*QUAKED func_group (0 0 0) ? x x x x x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
 Used to group brushes together just for editor convenience.
 */
@@ -34,29 +37,20 @@ Misc functions
 =================
 */
 void VelocityForDamage(int damage, vec3_t &v) {
-	v[0] = 100.0f * crandom();
-	v[1] = 100.0f * crandom();
-	v[2] = frandom(200.0f, 300.0f);
+        v = {
+                100.0f * crandom(),
+                100.0f * crandom(),
+                frandom(200.0f, 300.0f)
+        };
 
-	if (damage < 50)
-		v = v * 0.7f;
-	else
-		v = v * 1.2f;
+        const float scale = (damage < 50) ? 0.7f : 1.2f;
+        v *= scale;
 }
 
 void ClipGibVelocity(gentity_t *ent) {
-	if (ent->velocity[0] < -300)
-		ent->velocity[0] = -300;
-	else if (ent->velocity[0] > 300)
-		ent->velocity[0] = 300;
-	if (ent->velocity[1] < -300)
-		ent->velocity[1] = -300;
-	else if (ent->velocity[1] > 300)
-		ent->velocity[1] = 300;
-	if (ent->velocity[2] < 200)
-		ent->velocity[2] = 200; // always some upwards
-	else if (ent->velocity[2] > 500)
-		ent->velocity[2] = 500;
+        ent->velocity[0] = std::clamp(ent->velocity[0], -300.0f, 300.0f);
+        ent->velocity[1] = std::clamp(ent->velocity[1], -300.0f, 300.0f);
+        ent->velocity[2] = std::clamp(ent->velocity[2], 200.0f, 500.0f); // always some upwards
 }
 
 /*
@@ -111,26 +105,28 @@ gentity_t *ThrowGib(gentity_t *self, const char *gibname, int damage, gib_type_t
 	} else
 		gib = G_Spawn();
 
-	size = self->size * 0.5f;
-	// since absmin is bloated by 1, un-bloat it here
-	origin = (self->absmin + vec3_t{ 1, 1, 1 }) + size;
+        size = self->size * 0.5f;
+        // since absmin is bloated by 1, un-bloat it here
+        origin = (self->absmin + vec3_t{ 1, 1, 1 }) + size;
 
-	int32_t i;
+        constexpr int32_t kMaxPlacementTries = 3;
+        int32_t attempt = 0;
 
-	for (i = 0; i < 3; i++) {
-		gib->s.origin = origin + vec3_t{ crandom(), crandom(), crandom() }.scaled(size);
+        for (; attempt < kMaxPlacementTries; ++attempt) {
+                const vec3_t offset = vec3_t{ crandom(), crandom(), crandom() }.scaled(size);
+                gib->s.origin = origin + offset;
 
-		// try 3 times to get a good, non-solid position
-		if (!(gi.pointcontents(gib->s.origin) & MASK_SOLID))
-			break;
-	}
+                // try a few times to get a good, non-solid position
+                if (!(gi.pointcontents(gib->s.origin) & MASK_SOLID))
+                        break;
+        }
 
-	if (i == 3) {
-		// only free us if we're not being turned into the gib, otherwise
-		// just spawn inside a wall
-		if (gib != self) {
-			G_FreeEntity(gib);
-			return nullptr;
+        if (attempt == kMaxPlacementTries) {
+                // only free us if we're not being turned into the gib, otherwise
+                // just spawn inside a wall
+                if (gib != self) {
+                        G_FreeEntity(gib);
+                        return nullptr;
 		}
 	}
 
@@ -494,6 +490,47 @@ struct shadow_light_info_t {
 
 static shadow_light_info_t shadowlightinfo[MAX_SHADOW_LIGHTS];
 
+namespace {
+
+size_t clamp_shadow_light_count(const char *context) {
+        const int32_t raw_count = level.shadow_light_count;
+        const int32_t clamped = std::clamp(raw_count, 0, static_cast<int32_t>(MAX_SHADOW_LIGHTS));
+
+        if (clamped != raw_count) {
+                gi.Com_PrintFmt("{}: clamping shadow light count from {} to {}\n", context, raw_count, clamped);
+                level.shadow_light_count = clamped;
+        }
+
+        return static_cast<size_t>(clamped);
+}
+
+template<typename T, typename Converter>
+bool parse_shadow_light_value(const char **cursor, size_t index, const char *field_name, Converter &&converter, T &out) {
+        const char *token = COM_ParseEx(cursor, ";");
+        if (!token || !*token) {
+                gi.Com_PrintFmt("Shadow light {} missing {} entry in configstring\n", index, field_name);
+                return false;
+        }
+
+        out = converter(token);
+        return true;
+}
+
+bool try_register_shadow_light(gentity_t *self, const shadow_light_data_t &data) {
+        if (level.shadow_light_count >= static_cast<int32_t>(MAX_SHADOW_LIGHTS)) {
+                gi.Com_PrintFmt("{} exceeds MAX_SHADOW_LIGHTS ({}); ignoring shadow light registration\n", *self, MAX_SHADOW_LIGHTS);
+                return false;
+        }
+
+        auto &slot = shadowlightinfo[level.shadow_light_count];
+        slot.entity_number = self->s.number;
+        slot.shadowlight = data;
+        ++level.shadow_light_count;
+        return true;
+}
+
+} // namespace
+
 const shadow_light_data_t *GetShadowLightData(int32_t entity_number) {
 	for (size_t i = 0; i < level.shadow_light_count; i++) {
 		if (shadowlightinfo[i].entity_number == entity_number)
@@ -504,40 +541,48 @@ const shadow_light_data_t *GetShadowLightData(int32_t entity_number) {
 }
 
 void setup_shadow_lights() {
-	for (int i = 0; i < level.shadow_light_count; ++i) {
-		gentity_t *self = &g_entities[shadowlightinfo[i].entity_number];
+        const size_t count = clamp_shadow_light_count("setup_shadow_lights");
 
-		shadowlightinfo[i].shadowlight.lighttype = shadow_light_type_t::point;
-		shadowlightinfo[i].shadowlight.conedirection = {};
+        for (size_t i = 0; i < count; ++i) {
+                auto &info = shadowlightinfo[i];
 
-		if (self->target) {
-			gentity_t *target = G_FindByString<&gentity_t::targetname>(nullptr, self->target);
-			if (target) {
-				shadowlightinfo[i].shadowlight.conedirection = (target->s.origin - self->s.origin).normalized();
-				shadowlightinfo[i].shadowlight.lighttype = shadow_light_type_t::cone;
-			}
-		}
+                if (info.entity_number < 0 || static_cast<uint32_t>(info.entity_number) >= globals.num_entities) {
+                        gi.Com_PrintFmt("Shadow light {} references invalid entity index {}\n", i, info.entity_number);
+                        continue;
+                }
 
-		if (self->itemtarget) {
-			gentity_t *target = G_FindByString<&gentity_t::targetname>(nullptr, self->itemtarget);
-			if (target)
-				shadowlightinfo[i].shadowlight.lightstyle = target->style;
-		}
+                gentity_t *self = &g_entities[info.entity_number];
+                auto &shadow_data = info.shadowlight;
 
-		gi.configstring(CS_SHADOWLIGHTS + i, G_Fmt("{};{};{:1};{};{:1};{:1};{:1};{};{:1};{:1};{:1};{:1}",
-			self->s.number,
-			(int)shadowlightinfo[i].shadowlight.lighttype,
-			shadowlightinfo[i].shadowlight.radius,
-			shadowlightinfo[i].shadowlight.resolution,
-			shadowlightinfo[i].shadowlight.intensity,
-			shadowlightinfo[i].shadowlight.fade_start,
-			shadowlightinfo[i].shadowlight.fade_end,
-			shadowlightinfo[i].shadowlight.lightstyle,
-			shadowlightinfo[i].shadowlight.coneangle,
-			shadowlightinfo[i].shadowlight.conedirection[0],
-			shadowlightinfo[i].shadowlight.conedirection[1],
-			shadowlightinfo[i].shadowlight.conedirection[2]).data());
-	}
+                shadow_data.lighttype = shadow_light_type_t::point;
+                shadow_data.conedirection = {};
+
+                if (self->target) {
+                        if (gentity_t *target = G_FindByString<&gentity_t::targetname>(nullptr, self->target)) {
+                                shadow_data.conedirection = (target->s.origin - self->s.origin).normalized();
+                                shadow_data.lighttype = shadow_light_type_t::cone;
+                        }
+                }
+
+                if (self->itemtarget) {
+                        if (gentity_t *target = G_FindByString<&gentity_t::targetname>(nullptr, self->itemtarget))
+                                shadow_data.lightstyle = target->style;
+                }
+
+                gi.configstring(CS_SHADOWLIGHTS + static_cast<int>(i), G_Fmt("{};{};{:1};{};{:1};{:1};{:1};{};{:1};{:1};{:1};{:1}",
+                        self->s.number,
+                        static_cast<int>(shadow_data.lighttype),
+                        shadow_data.radius,
+                        shadow_data.resolution,
+                        shadow_data.intensity,
+                        shadow_data.fade_start,
+                        shadow_data.fade_end,
+                        shadow_data.lightstyle,
+                        shadow_data.coneangle,
+                        shadow_data.conedirection[0],
+                        shadow_data.conedirection[1],
+                        shadow_data.conedirection[2]).data());
+        }
 }
 
 // fix an oversight in shadow light code that causes
@@ -545,65 +590,70 @@ void setup_shadow_lights() {
 // if the spawn functions are changed.
 // this will work without changing the save/load code.
 void G_LoadShadowLights() {
-	for (size_t i = 0; i < level.shadow_light_count; i++) {
-		const char *cstr = gi.get_configstring(CS_SHADOWLIGHTS + i);
-		const char *token = COM_ParseEx(&cstr, ";");
+        const size_t count = clamp_shadow_light_count("G_LoadShadowLights");
 
-		if (token && *token) {
-			shadowlightinfo[i].entity_number = atoi(token);
+        for (size_t i = 0; i < count; ++i) {
+                const char *cstr = gi.get_configstring(CS_SHADOWLIGHTS + static_cast<int>(i));
+                const char *token = COM_ParseEx(&cstr, ";");
 
-			token = COM_ParseEx(&cstr, ";");
-			shadowlightinfo[i].shadowlight.lighttype = (shadow_light_type_t)atoi(token);
+                if (!token || !*token)
+                        continue;
 
-			token = COM_ParseEx(&cstr, ";");
-			shadowlightinfo[i].shadowlight.radius = atof(token);
+                shadowlightinfo[i].entity_number = static_cast<int>(std::strtol(token, nullptr, 10));
 
-			token = COM_ParseEx(&cstr, ";");
-			shadowlightinfo[i].shadowlight.resolution = atoi(token);
+                int type = 0;
+                if (!parse_shadow_light_value(&cstr, i, "type", [](const char *value) { return static_cast<int>(std::strtol(value, nullptr, 10)); }, type))
+                        continue;
 
-			token = COM_ParseEx(&cstr, ";");
-			shadowlightinfo[i].shadowlight.intensity = atof(token);
+                auto &shadow_data = shadowlightinfo[i].shadowlight;
+                shadow_data.lighttype = static_cast<shadow_light_type_t>(type);
 
-			token = COM_ParseEx(&cstr, ";");
-			shadowlightinfo[i].shadowlight.fade_start = atof(token);
+                if (!parse_shadow_light_value(&cstr, i, "radius", [](const char *value) { return std::strtof(value, nullptr); }, shadow_data.radius))
+                        continue;
 
-			token = COM_ParseEx(&cstr, ";");
-			shadowlightinfo[i].shadowlight.fade_end = atof(token);
+                if (!parse_shadow_light_value(&cstr, i, "resolution", [](const char *value) { return static_cast<int>(std::strtol(value, nullptr, 10)); }, shadow_data.resolution))
+                        continue;
 
-			token = COM_ParseEx(&cstr, ";");
-			shadowlightinfo[i].shadowlight.lightstyle = atoi(token);
+                if (!parse_shadow_light_value(&cstr, i, "intensity", [](const char *value) { return std::strtof(value, nullptr); }, shadow_data.intensity))
+                        continue;
 
-			token = COM_ParseEx(&cstr, ";");
-			shadowlightinfo[i].shadowlight.coneangle = atof(token);
+                if (!parse_shadow_light_value(&cstr, i, "fade start", [](const char *value) { return std::strtof(value, nullptr); }, shadow_data.fade_start))
+                        continue;
 
-			token = COM_ParseEx(&cstr, ";");
-			shadowlightinfo[i].shadowlight.conedirection[0] = atof(token);
+                if (!parse_shadow_light_value(&cstr, i, "fade end", [](const char *value) { return std::strtof(value, nullptr); }, shadow_data.fade_end))
+                        continue;
 
-			token = COM_ParseEx(&cstr, ";");
-			shadowlightinfo[i].shadowlight.conedirection[1] = atof(token);
+                if (!parse_shadow_light_value(&cstr, i, "lightstyle", [](const char *value) { return static_cast<int>(std::strtol(value, nullptr, 10)); }, shadow_data.lightstyle))
+                        continue;
 
-			token = COM_ParseEx(&cstr, ";");
-			shadowlightinfo[i].shadowlight.conedirection[2] = atof(token);
-		}
-	}
+                if (!parse_shadow_light_value(&cstr, i, "cone angle", [](const char *value) { return std::strtof(value, nullptr); }, shadow_data.coneangle))
+                        continue;
+
+                if (!parse_shadow_light_value(&cstr, i, "cone dir x", [](const char *value) { return std::strtof(value, nullptr); }, shadow_data.conedirection[0]))
+                        continue;
+
+                if (!parse_shadow_light_value(&cstr, i, "cone dir y", [](const char *value) { return std::strtof(value, nullptr); }, shadow_data.conedirection[1]))
+                        continue;
+
+                if (!parse_shadow_light_value(&cstr, i, "cone dir z", [](const char *value) { return std::strtof(value, nullptr); }, shadow_data.conedirection[2]))
+                        continue;
+        }
 }
 // ---------------------------------------------------------------------------------
 
 static void setup_dynamic_light(gentity_t *self) {
 	// [Sam-KEX] Shadow stuff
-	if (st.sl.data.radius > 0) {
-		self->s.renderfx = RF_CASTSHADOW;
-		self->itemtarget = st.sl.lightstyletarget;
+        if (st.sl.data.radius > 0) {
+                self->s.renderfx = RF_CASTSHADOW;
+                self->itemtarget = st.sl.lightstyletarget;
 
-		shadowlightinfo[level.shadow_light_count].entity_number = self->s.number;
-		shadowlightinfo[level.shadow_light_count].shadowlight = st.sl.data;
-		level.shadow_light_count++;
+                try_register_shadow_light(self, st.sl.data);
 
-		self->mins[0] = self->mins[1] = self->mins[2] = 0;
-		self->maxs[0] = self->maxs[1] = self->maxs[2] = 0;
+                self->mins = {};
+                self->maxs = {};
 
-		gi.linkentity(self);
-	}
+                gi.linkentity(self);
+        }
 }
 
 static USE(dynamic_light_use) (gentity_t *self, gentity_t *other, gentity_t *activator) -> void {
@@ -862,12 +912,16 @@ static DIE(func_explosive_explode) (gentity_t *self, gentity_t *inflictor, genti
 
 	self->takedamage = false;
 
-	if (self->dmg)
-		T_RadiusDamage(self, attacker, (float)self->dmg, nullptr, (float)(self->dmg + 40), DAMAGE_NONE, MOD_EXPLOSIVE);
+        if (self->dmg)
+                T_RadiusDamage(self, attacker, (float)self->dmg, nullptr, (float)(self->dmg + 40), DAMAGE_NONE, MOD_EXPLOSIVE);
 
-	self->velocity = inflictor->s.origin - self->s.origin;
-	self->velocity.normalize();
-	self->velocity *= 150;
+        vec3_t push_velocity{};
+        if (inflictor) {
+                push_velocity = inflictor->s.origin - self->s.origin;
+                if (!push_velocity.normalize())
+                        push_velocity = {};
+        }
+        self->velocity = push_velocity * 150.0f;
 
 	mass = self->mass;
 	if (!mass)
