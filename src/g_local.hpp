@@ -7,6 +7,7 @@
 #include "bg_local.h"
 #include "g_cvars.hpp"
 
+struct gtime_t;
 struct level_locals_t;
 extern level_locals_t level;
 
@@ -371,10 +372,8 @@ typedef enum {
         return state == matchst_t::MATCH_ENDED;
 }
 
-inline void Match_SetState(matchst_t new_state, gtime_t timer = 0_sec) {
-	level.match_state = new_state;
-	level.match_state_timer = timer;
-}
+void Match_SetState(matchst_t new_state, gtime_t timer);
+void Match_SetState(matchst_t new_state);
 
 typedef enum {
 	WARMUP_REQ_NONE,
@@ -1786,6 +1785,15 @@ struct level_locals_t {
 
 	bool		prepare_to_fight;
 };
+
+inline void Match_SetState(matchst_t new_state, gtime_t timer) {
+	level.match_state = new_state;
+	level.match_state_timer = timer;
+}
+
+inline void Match_SetState(matchst_t new_state) {
+	Match_SetState(new_state, 0_sec);
+}
 
 struct shadow_light_temp_t {
 	shadow_light_data_t data;
