@@ -867,66 +867,7 @@ static void Entities_Reset(bool reset_players, bool reset_ghost, bool reset_scor
 		}
 	}
 }
-#if 0
-static int SortRoundScores(const void *a, const void *b) {
-	gclient_t *ca, *cb;
 
-	ca = &game.clients[*(int *)a];
-	cb = &game.clients[*(int *)b];
-
-	// sort special clients last
-	if (ca->sess.spectator_client < 0)
-		return 1;
-	if (cb->sess.spectator_client < 0)
-		return -1;
-
-	// then connecting clients
-	if (!ca->pers.connected)
-		return 1;
-	if (!cb->pers.connected)
-		return -1;
-
-	// then spectators
-	if (!ClientIsPlaying(ca) && !ClientIsPlaying(cb)) {
-		if (ca->sess.duel_queued && cb->sess.duel_queued) {
-			if (ca->sess.team_join_time > cb->sess.team_join_time)
-				return -1;
-			if (ca->sess.team_join_time < cb->sess.team_join_time)
-				return 1;
-		}
-		if (ca->sess.duel_queued)
-			return -1;
-		if (cb->sess.duel_queued)
-			return 1;
-		if (ca->sess.team_join_time > cb->sess.team_join_time)
-			return -1;
-		if (ca->sess.team_join_time < cb->sess.team_join_time)
-			return 1;
-		return 0;
-	}
-	if (!ClientIsPlaying(ca))
-		return 1;
-	if (!ClientIsPlaying(cb))
-		return -1;
-
-	// then sort by score
-	if (ca->resp.score - ca->resp.old_score > cb->resp.score - cb->resp.old_score)
-		return -1;
-	if (ca->resp.score - ca->resp.old_score < cb->resp.score - cb->resp.old_score)
-		return 1;
-
-	return 0;
-}
-
-gclient_t *Round_SaveOldPlayerScore() {
-	gclient_t *cl = nullptr;
-	int high = 0;
-	for (auto ec : active_clients()) {
-
-		ec->client->resp.old_score = ec->client->resp.score;
-	}
-}
-#endif
 /*
 =============
 Round_StartNew
@@ -2510,7 +2451,7 @@ gentity_t *CreateTargetChangeLevel(const char *map) {
 	return ent;
 }
 
-inline std::vector<std::string> str_split(const std::string_view &str, char by) {
+inline static std::vector<std::string> str_split(const std::string_view &str, char by) {
 	std::vector<std::string> out;
 	size_t start, end = 0;
 
@@ -2927,7 +2868,7 @@ void Teams_CalcRankings(std::array<uint32_t, MAX_CLIENTS> &player_ranks) {
 
 	for (auto player : active_clients())
 		if (player->client->pers.spawned && ClientIsPlaying(player->client))
-			player_ranks[player->s.number - 1] = player->client->sess.team == winning_team ? 1 : 2;
+			player_ranks[static_cast<std::array<uint32_t, 256Ui64>::size_type>(player->s.number) - 1] = player->client->sess.team == winning_team ? 1 : 2;
 }
 
 /*
@@ -3579,7 +3520,7 @@ static inline void G_RunFrame_(bool main_loop) {
 		level.entry->time += FRAME_TIME_S;
 
 	// [Paril-KEX] run monster pains now
-	for (size_t i = 0; i < globals.num_entities + 1 + game.maxclients + BODY_QUEUE_SIZE; i++) {
+	for (size_t i = 0; i < static_cast<unsigned long long>(globals.num_entities) + 1 + game.maxclients + BODY_QUEUE_SIZE; i++) {
 		gentity_t *e = &g_entities[i];
 
 		if (!e->inuse || !(e->svflags & SVF_MONSTER))

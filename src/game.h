@@ -10,10 +10,10 @@
 // compatibility with legacy float[3] stuff for engine
 #ifdef GAME_INCLUDE
 using gvec3_t = vec3_t;
-using gvec3_ptr_t = vec3_t *;
-using gvec3_cptr_t = const vec3_t *;
-using gvec3_ref_t = vec3_t &;
-using gvec3_cref_t = const vec3_t &;
+using gvec3_ptr_t = vec3_t*;
+using gvec3_cptr_t = const vec3_t*;
+using gvec3_ref_t = vec3_t&;
+using gvec3_cref_t = const vec3_t&;
 using gvec4_t = std::array<float, 4>;
 #else
 using gvec3_t = float[3];
@@ -104,7 +104,7 @@ constexpr bit_t<n> bit_v = 1ull << n;
 #elif defined(KEX_Q2GAME_IMPORTS)
 #define Q2GAME_API extern "C" __declspec( dllimport )
 #else
-#define Q2GAME_API extern "C"
+#define Q2GAME_API
 #endif
 
 // game.h -- game dll information visible to server
@@ -189,20 +189,20 @@ MAKE_ENUM_BITFLAGS(cvar_flags_t);
 
 // nothing outside the Cvar_*() functions should modify these fields!
 struct cvar_t {
-	char *name;
-	char *string;
-	char *latched_string; // for CVAR_LATCH vars
+	char* name;
+	char* string;
+	char* latched_string; // for CVAR_LATCH vars
 	cvar_flags_t flags;
 	int32_t      modified_count; // changed each time the cvar is changed, but never zero
 	float		 value;
-	cvar_t *next;
+	cvar_t* next;
 	int32_t      integer; // integral value
 };
 
 // convenience function to check if the given cvar ptr has been
 // modified from its previous modified value, and automatically
 // assigns modified to cvar's current value
-inline bool Cvar_WasModified(const cvar_t *cvar, int32_t &modified) {
+inline bool Cvar_WasModified(const cvar_t* cvar, int32_t& modified) {
 	if (cvar->modified_count != modified) {
 		modified = cvar->modified_count;
 		return true;
@@ -338,13 +338,13 @@ struct trace_t {
 	float		fraction;	// time completed, 1.0 = didn't hit anything
 	gvec3_t		endpos;		// final position
 	cplane_t	plane;		// surface normal at impact
-	csurface_t *surface;	// surface hit
+	csurface_t* surface;	// surface hit
 	contents_t	contents;	// contents on other side of surface hit
-	gentity_t *ent;		// not set by CM_*() functions
+	gentity_t* ent;		// not set by CM_*() functions
 
 	// [Paril-KEX] the second-best surface hit from a trace
 	cplane_t	plane2;		// second surface normal at impact
-	csurface_t *surface2;	// second surface hit
+	csurface_t* surface2;	// second surface hit
 };
 
 // pmove_state_t is the information necessary for client side movement
@@ -396,9 +396,9 @@ struct pmove_state_t {
 	// changed by spawns, rotating objects, and teleporters
 	int8_t					viewheight; // view height, added to origin[2] + viewoffset[2], for crouching
 
-//muffmode
+	//muffmode
 	bool					haste;
-//-muffmode
+	//-muffmode
 };
 
 //
@@ -464,15 +464,15 @@ struct pmove_t {
 
 	gvec3_t mins, maxs; // bounding box size
 
-	gentity_t *groundentity;
+	gentity_t* groundentity;
 	cplane_t      groundplane;
 	contents_t    watertype;
 	water_level_t waterlevel;
 
-	gentity_t *player; // opaque handle
+	gentity_t* player; // opaque handle
 
 	// clip against world & entities
-	trace_t(*trace)(gvec3_cref_t start, gvec3_cptr_t mins, gvec3_cptr_t maxs, gvec3_cref_t end, const gentity_t *passent, contents_t contentmask);
+	trace_t(*trace)(gvec3_cref_t start, gvec3_cptr_t mins, gvec3_cptr_t maxs, gvec3_cref_t end, const gentity_t* passent, contents_t contentmask);
 	// [Paril-KEX] clip against world only
 	trace_t(*clip)(gvec3_cref_t start, gvec3_cptr_t mins, gvec3_cptr_t maxs, gvec3_cref_t end, contents_t contentmask);
 
@@ -1244,15 +1244,11 @@ enum {
 struct configstring_remap_t {
 	// start position in the configstring list
 	// to write into
-	size_t	start;
+	size_t  start;
 	// max length to write into; [start+length-1] should always
 	// be set to '\0'
-	size_t	length;
+	size_t  length;
 };
-
-constexpr size_t cs_remap_offset(int32_t id, int32_t newer, int32_t older, size_t stride = CS_MAX_STRING_LENGTH) {
-	return static_cast<size_t>(static_cast<int64_t>(id) + static_cast<int64_t>(newer) - static_cast<int64_t>(older)) * stride;
-}
 
 constexpr configstring_remap_t CS_REMAP(int32_t id) {
 	// direct mapping
@@ -1264,23 +1260,23 @@ constexpr configstring_remap_t CS_REMAP(int32_t id) {
 		return { (CS_STATUSBAR * CS_MAX_STRING_LENGTH) + ((id - CS_STATUSBAR_OLD) * CS_MAX_STRING_LENGTH_OLD), (CS_AIRACCEL - CS_STATUSBAR) * CS_MAX_STRING_LENGTH };
 	// offset
 	else if (id < CS_MODELS_OLD)
-		return { cs_remap_offset(id, CS_AIRACCEL, CS_AIRACCEL_OLD), CS_MAX_STRING_LENGTH };
+		return { (id + (CS_AIRACCEL - CS_AIRACCEL_OLD)) * CS_MAX_STRING_LENGTH, CS_MAX_STRING_LENGTH };
 	else if (id < CS_SOUNDS_OLD)
-		return { cs_remap_offset(id, CS_MODELS, CS_MODELS_OLD), CS_MAX_STRING_LENGTH };
+		return { (id + (CS_MODELS - CS_MODELS_OLD)) * CS_MAX_STRING_LENGTH, CS_MAX_STRING_LENGTH };
 	else if (id < CS_IMAGES_OLD)
-		return { cs_remap_offset(id, CS_SOUNDS, CS_SOUNDS_OLD), CS_MAX_STRING_LENGTH };
+		return { (id + (CS_SOUNDS - CS_SOUNDS_OLD)) * CS_MAX_STRING_LENGTH, CS_MAX_STRING_LENGTH };
 	else if (id < CS_LIGHTS_OLD)
-		return { cs_remap_offset(id, CS_IMAGES, CS_IMAGES_OLD), CS_MAX_STRING_LENGTH };
+		return { (id + (CS_IMAGES - CS_IMAGES_OLD)) * CS_MAX_STRING_LENGTH, CS_MAX_STRING_LENGTH };
 	else if (id < CS_ITEMS_OLD)
-		return { cs_remap_offset(id, CS_LIGHTS, CS_LIGHTS_OLD), CS_MAX_STRING_LENGTH };
+		return { (id + (CS_LIGHTS - CS_LIGHTS_OLD)) * CS_MAX_STRING_LENGTH, CS_MAX_STRING_LENGTH };
 	else if (id < CS_PLAYERSKINS_OLD)
-		return { cs_remap_offset(id, CS_ITEMS, CS_ITEMS_OLD), CS_MAX_STRING_LENGTH };
+		return { (id + (CS_ITEMS - CS_ITEMS_OLD)) * CS_MAX_STRING_LENGTH, CS_MAX_STRING_LENGTH };
 	else if (id < CS_GENERAL_OLD)
-		return { cs_remap_offset(id, CS_PLAYERSKINS, CS_PLAYERSKINS_OLD), CS_MAX_STRING_LENGTH };
+		return { (id + (CS_PLAYERSKINS - CS_PLAYERSKINS_OLD)) * CS_MAX_STRING_LENGTH, CS_MAX_STRING_LENGTH };
 
 	// general also needs some special handling because it's both
 	// offset *and* allowed to overflow
-	return { cs_remap_offset(id, CS_GENERAL, CS_GENERAL_OLD, CS_MAX_STRING_LENGTH_OLD), (MAX_CONFIGSTRINGS - CS_GENERAL) * CS_MAX_STRING_LENGTH };
+	return { (id + (CS_GENERAL - CS_GENERAL_OLD)) * CS_MAX_STRING_LENGTH_OLD, (MAX_CONFIGSTRINGS - CS_GENERAL) * CS_MAX_STRING_LENGTH };
 }
 
 static_assert(CS_REMAP(CS_MODELS_OLD).start == (CS_MODELS * 96), "check CS_REMAP");
@@ -1612,7 +1608,7 @@ struct PathRequest {
 	} traversals;
 
 	struct PathArray {
-		mutable gvec3_t *array = nullptr;  // array to store raw path points
+		mutable gvec3_t* array = nullptr;  // array to store raw path points
 		int64_t           count = 0;        // number of elements in array
 	} pathPoints;
 };
@@ -1717,10 +1713,10 @@ struct g_entity_t {
 	gvec3_t                     velocity;
 	gvec3_t                     start_origin;
 	gvec3_t                     end_origin;
-	gentity_t *enemy;
-	gentity_t *ground_entity;
-	const char *classname;
-	const char *targetname;
+	gentity_t* enemy;
+	gentity_t* ground_entity;
+	const char* classname;
+	const char* targetname;
 	char                        netname[MAX_NETNAME];
 	int32_t                     inventory[MAX_ITEMS] = { 0 };
 	armorInfo_t                 armor_info[Max_Armor_Types];
@@ -1733,7 +1729,7 @@ struct entity_shared_t
 #endif
 {
 	entity_state_t s;
-	gclient_t *client; // nullptr if not a player
+	gclient_t* client; // nullptr if not a player
 	// the server expects the first part
 	// of gclient_t to be a player_state_t
 	// but the rest of it is opaque
@@ -1752,7 +1748,7 @@ struct entity_shared_t
 	vec3_t	   absmin, absmax, size;
 	solid_t	   solid;
 	contents_t clipmask;
-	gentity_t *owner;
+	gentity_t* owner;
 };
 
 #define CHECK_INTEGRITY(from_type, to_type, member)                           \
@@ -1810,7 +1806,7 @@ enum class BoxEntitiesResult_t {
 
 MAKE_ENUM_BITFLAGS(BoxEntitiesResult_t);
 
-using BoxEntitiesFilter_t = BoxEntitiesResult_t(*)(gentity_t *, void *);
+using BoxEntitiesFilter_t = BoxEntitiesResult_t(*)(gentity_t*, void*);
 
 //
 // functions provided by the main engine
@@ -1821,47 +1817,47 @@ struct game_import_t {
 	uint32_t    frame_time_ms;
 
 	// broadcast to all clients
-	void (*Broadcast_Print)(print_type_t printlevel, const char *message);
+	void (*Broadcast_Print)(print_type_t printlevel, const char* message);
 
 	// print to appropriate places (console, log file, etc)
-	void (*Com_Print)(const char *msg);
+	void (*Com_Print)(const char* msg);
 
 	// print directly to a single client (or nullptr for server console)
-	void (*Client_Print)(gentity_t *ent, print_type_t printlevel, const char *message);
+	void (*Client_Print)(gentity_t* ent, print_type_t printlevel, const char* message);
 
 	// center-print to player (legacy function)
-	void (*Center_Print)(gentity_t *ent, const char *message);
+	void (*Center_Print)(gentity_t* ent, const char* message);
 
-	void (*sound)(gentity_t *ent, soundchan_t channel, int soundindex, float volume, float attenuation, float timeofs);
-	void (*positioned_sound)(gvec3_cref_t origin, gentity_t *ent, soundchan_t channel, int soundindex, float volume, float attenuation, float timeofs);
+	void (*sound)(gentity_t* ent, soundchan_t channel, int soundindex, float volume, float attenuation, float timeofs);
+	void (*positioned_sound)(gvec3_cref_t origin, gentity_t* ent, soundchan_t channel, int soundindex, float volume, float attenuation, float timeofs);
 	// [Paril-KEX] like sound, but only send to the player indicated by the parameter;
 	// this is mainly to handle split screen properly
-	void (*local_sound)(gentity_t *target, gvec3_cptr_t origin, gentity_t *ent, soundchan_t channel, int soundindex, float volume, float attenuation, float timeofs, uint32_t dupe_key);
+	void (*local_sound)(gentity_t* target, gvec3_cptr_t origin, gentity_t* ent, soundchan_t channel, int soundindex, float volume, float attenuation, float timeofs, uint32_t dupe_key);
 
 	// config strings hold all the index strings, the lightstyles,
 	// and misc data like the sky definition and cdtrack.
 	// All of the current configstrings are sent to clients when
 	// they connect, and changes are sent to all connected clients.
-	void (*configstring)(int num, const char *string);
-	const char *(*get_configstring)(int num);
+	void (*configstring)(int num, const char* string);
+	const char* (*get_configstring)(int num);
 
-	void (*Com_Error)(const char *message);
+	void (*Com_Error)(const char* message);
 
 	// the *index functions create configstrings and some internal server state
-	int (*modelindex)(const char *name);
-	int (*soundindex)(const char *name);
+	int (*modelindex)(const char* name);
+	int (*soundindex)(const char* name);
 	// [Paril-KEX] imageindex can precache both pics for the HUD and
 	// textures used for RF_CUSTOMSKIN; to register an image as a texture,
 	// the path must be relative to the mod dir and end in an extension
 	// ie models/my_model/skin.tga
-	int (*imageindex)(const char *name);
+	int (*imageindex)(const char* name);
 
-	void (*setmodel)(gentity_t *ent, const char *name);
+	void (*setmodel)(gentity_t* ent, const char* name);
 
 	// collision detection
-	trace_t(*trace)(gvec3_cref_t start, gvec3_cptr_t mins, gvec3_cptr_t maxs, gvec3_cref_t end, const gentity_t *passent, contents_t contentmask);
+	trace_t(*trace)(gvec3_cref_t start, gvec3_cptr_t mins, gvec3_cptr_t maxs, gvec3_cref_t end, const gentity_t* passent, contents_t contentmask);
 	// [Paril-KEX] clip the box against the specified entity
-	trace_t(*clip)(gentity_t *entity, gvec3_cref_t start, gvec3_cptr_t mins, gvec3_cptr_t maxs, gvec3_cref_t end, contents_t contentmask);
+	trace_t(*clip)(gentity_t* entity, gvec3_cref_t start, gvec3_cptr_t mins, gvec3_cptr_t maxs, gvec3_cref_t end, contents_t contentmask);
 	contents_t(*pointcontents)(gvec3_cref_t point);
 	bool (*inPVS)(gvec3_cref_t p1, gvec3_cref_t p2, bool portals);
 	bool (*inPHS)(gvec3_cref_t p1, gvec3_cref_t p2, bool portals);
@@ -1871,8 +1867,8 @@ struct game_import_t {
 	// an entity will never be sent to a client or used for collision
 	// if it is not passed to linkentity.  If the size, position, or
 	// solidity changes, it must be relinked.
-	void (*linkentity)(gentity_t *ent);
-	void (*unlinkentity)(gentity_t *ent); // call before removing an interactive entity
+	void (*linkentity)(gentity_t* ent);
+	void (*unlinkentity)(gentity_t* ent); // call before removing an interactive entity
 
 	// return a list of entities that touch the input absmin/absmax.
 	// if maxcount is 0, it will return a count but not attempt to fill "list".
@@ -1880,75 +1876,75 @@ struct game_import_t {
 	// any more of list (the return count will cap at maxcount).
 	// the filter function can remove unnecessary entities from the final list; it is illegal
 	// to modify world links in this callback.
-	size_t(*BoxEntities)(gvec3_cref_t mins, gvec3_cref_t maxs, gentity_t **list, size_t maxcount, solidity_area_t areatype, BoxEntitiesFilter_t filter, void *filter_data);
+	size_t(*BoxEntities)(gvec3_cref_t mins, gvec3_cref_t maxs, gentity_t** list, size_t maxcount, solidity_area_t areatype, BoxEntitiesFilter_t filter, void* filter_data);
 
 	// network messaging
 	void (*multicast)(gvec3_cref_t origin, multicast_t to, bool reliable);
 	// [Paril-KEX] `dupe_key` is a key unique to a group of calls to unicast
 	// that will prevent sending the message on this frame with the same key
 	// to the same player (for splitscreen players).
-	void (*unicast)(gentity_t *ent, bool reliable, uint32_t dupe_key);
+	void (*unicast)(gentity_t* ent, bool reliable, uint32_t dupe_key);
 
 	void (*WriteChar)(int c);
 	void (*WriteByte)(int c);
 	void (*WriteShort)(int c);
 	void (*WriteLong)(int c);
 	void (*WriteFloat)(float f);
-	void (*WriteString)(const char *s);
+	void (*WriteString)(const char* s);
 	void (*WritePosition)(gvec3_cref_t pos);
 	void (*WriteDir)(gvec3_cref_t pos);	  // single byte encoded, very coarse
 	void (*WriteAngle)(float f); // legacy 8-bit angle
-	void (*WriteEntity)(const gentity_t *e);
+	void (*WriteEntity)(const gentity_t* e);
 
 	// managed memory allocation
-	void *(*TagMalloc)(size_t size, int tag);
-	void (*TagFree)(void *block);
+	void* (*TagMalloc)(size_t size, int tag);
+	void (*TagFree)(void* block);
 	void (*FreeTags)(int tag);
 
 	// console variable interaction
-	cvar_t *(*cvar)(const char *var_name, const char *value, cvar_flags_t flags);
-	cvar_t *(*cvar_set)(const char *var_name, const char *value);
-	cvar_t *(*cvar_forceset)(const char *var_name, const char *value);
+	cvar_t* (*cvar)(const char* var_name, const char* value, cvar_flags_t flags);
+	cvar_t* (*cvar_set)(const char* var_name, const char* value);
+	cvar_t* (*cvar_forceset)(const char* var_name, const char* value);
 
 	// ClientCommand and ServerCommand parameter access
 	int (*argc)();
-	const char *(*argv)(int n);
-	const char *(*args)(); // concatenation of all argv >= 1
+	const char* (*argv)(int n);
+	const char* (*args)(); // concatenation of all argv >= 1
 
 	// add commands to the server console as if they were typed in
 	// for map changing, etc
-	void (*AddCommandString)(const char *text);
+	void (*AddCommandString)(const char* text);
 
 	void (*DebugGraph)(float value, int color);
 
 	// Fetch named extension from engine.
-	void *(*GetExtension)(const char *name);
+	void* (*GetExtension)(const char* name);
 
 	// === [KEX] Additional APIs ===
 
 	// bots
-	void (*Bot_RegisterEntity)(const gentity_t *entity);
-	void (*Bot_UnRegisterEntity)(const gentity_t *entity);
-	GoalReturnCode(*Bot_MoveToPoint)(const gentity_t *bot, gvec3_cref_t point, const float moveTolerance);
-	GoalReturnCode(*Bot_FollowActor)(const gentity_t *bot, const gentity_t *actor);
+	void (*Bot_RegisterEntity)(const gentity_t* entity);
+	void (*Bot_UnRegisterEntity)(const gentity_t* entity);
+	GoalReturnCode(*Bot_MoveToPoint)(const gentity_t* bot, gvec3_cref_t point, const float moveTolerance);
+	GoalReturnCode(*Bot_FollowActor)(const gentity_t* bot, const gentity_t* actor);
 
 	// pathfinding - returns true if a path was found
-	bool (*GetPathToGoal)(const PathRequest &request, PathInfo &info);
+	bool (*GetPathToGoal)(const PathRequest& request, PathInfo& info);
 
 	// localization
-	void (*Loc_Print)(gentity_t *ent, print_type_t level, const char *base, const char **args, size_t num_args);
+	void (*Loc_Print)(gentity_t* ent, print_type_t level, const char* base, const char** args, size_t num_args);
 
 	// drawing
-	void (*Draw_Line)(gvec3_cref_t start, gvec3_cref_t end, const rgba_t &color, const float lifeTime, const bool depthTest);
-	void (*Draw_Point)(gvec3_cref_t point, const float size, const rgba_t &color, const float lifeTime, const bool depthTest);
-	void (*Draw_Circle)(gvec3_cref_t origin, const float radius, const rgba_t &color, const float lifeTime, const bool depthTest);
-	void (*Draw_Bounds)(gvec3_cref_t mins, gvec3_cref_t maxs, const rgba_t &color, const float lifeTime, const bool depthTest);
-	void (*Draw_Sphere)(gvec3_cref_t origin, const float radius, const rgba_t &color, const float lifeTime, const bool depthTest);
-	void (*Draw_OrientedWorldText)(gvec3_cref_t origin, const char *text, const rgba_t &color, const float size, const float lifeTime, const bool depthTest);
-	void (*Draw_StaticWorldText)(gvec3_cref_t origin, gvec3_cref_t angles, const char *text, const rgba_t &color, const float size, const float lifeTime, const bool depthTest);
-	void (*Draw_Cylinder)(gvec3_cref_t origin, const float halfHeight, const float radius, const rgba_t &color, const float lifeTime, const bool depthTest);
-	void (*Draw_Ray)(gvec3_cref_t origin, gvec3_cref_t direction, const float length, const float size, const rgba_t &color, const float lifeTime, const bool depthTest);
-	void (*Draw_Arrow)(gvec3_cref_t start, gvec3_cref_t end, const float size, const rgba_t &lineColor, const rgba_t &arrowColor, const float lifeTime, const bool depthTest);
+	void (*Draw_Line)(gvec3_cref_t start, gvec3_cref_t end, const rgba_t& color, const float lifeTime, const bool depthTest);
+	void (*Draw_Point)(gvec3_cref_t point, const float size, const rgba_t& color, const float lifeTime, const bool depthTest);
+	void (*Draw_Circle)(gvec3_cref_t origin, const float radius, const rgba_t& color, const float lifeTime, const bool depthTest);
+	void (*Draw_Bounds)(gvec3_cref_t mins, gvec3_cref_t maxs, const rgba_t& color, const float lifeTime, const bool depthTest);
+	void (*Draw_Sphere)(gvec3_cref_t origin, const float radius, const rgba_t& color, const float lifeTime, const bool depthTest);
+	void (*Draw_OrientedWorldText)(gvec3_cref_t origin, const char* text, const rgba_t& color, const float size, const float lifeTime, const bool depthTest);
+	void (*Draw_StaticWorldText)(gvec3_cref_t origin, gvec3_cref_t angles, const char* text, const rgba_t& color, const float size, const float lifeTime, const bool depthTest);
+	void (*Draw_Cylinder)(gvec3_cref_t origin, const float halfHeight, const float radius, const rgba_t& color, const float lifeTime, const bool depthTest);
+	void (*Draw_Ray)(gvec3_cref_t origin, gvec3_cref_t direction, const float length, const float size, const rgba_t& color, const float lifeTime, const bool depthTest);
+	void (*Draw_Arrow)(gvec3_cref_t start, gvec3_cref_t end, const float size, const rgba_t& lineColor, const rgba_t& arrowColor, const float lifeTime, const bool depthTest);
 
 	// scoreboard
 	void (*ReportMatchDetails_Multicast)(bool is_end);
@@ -1957,12 +1953,12 @@ struct game_import_t {
 	uint32_t(*ServerFrame)();
 
 	// misc utils
-	void (*SendToClipBoard)(const char *text);
+	void (*SendToClipBoard)(const char* text);
 
 	// info string stuff
-	size_t(*Info_ValueForKey) (const char *s, const char *key, char *buffer, size_t buffer_len);
-	bool (*Info_RemoveKey) (char *s, const char *key);
-	bool (*Info_SetValueForKey) (char *s, const char *key, const char *value);
+	size_t(*Info_ValueForKey) (const char* s, const char* key, char* buffer, size_t buffer_len);
+	bool (*Info_RemoveKey) (char* s, const char* key);
+	bool (*Info_SetValueForKey) (char* s, const char* key, const char* value);
 };
 
 enum class shadow_light_type_t {
@@ -2005,7 +2001,7 @@ struct game_export_t {
 	void (*Shutdown)();
 
 	// each new level entered will cause a call to SpawnEntities
-	void (*SpawnEntities)(const char *mapname, const char *entstring, const char *spawnpoint);
+	void (*SpawnEntities)(const char* mapname, const char* entstring, const char* spawnpoint);
 
 	// Read/Write Game is for storing persistant cross level information
 	// about the world state and the clients.
@@ -2014,15 +2010,15 @@ struct game_export_t {
 
 	// returns pointer to tagmalloc'd allocated string.
 	// tagfree after use
-	char *(*WriteGameJson)(bool autosave, size_t *out_size);
-	void (*ReadGameJson)(const char *json);
+	char* (*WriteGameJson)(bool autosave, size_t* out_size);
+	void (*ReadGameJson)(const char* json);
 
 	// ReadLevel is called after the default map information has been
 	// loaded with SpawnEntities
 	// returns pointer to tagmalloc'd allocated string.
 	// tagfree after use
-	char *(*WriteLevelJson)(bool transition, size_t *out_size);
-	void (*ReadLevelJson)(const char *json);
+	char* (*WriteLevelJson)(bool transition, size_t* out_size);
+	void (*ReadLevelJson)(const char* json);
 
 	// [Paril-KEX] game can tell the server whether a save is allowed
 	// currently or not.
@@ -2032,13 +2028,13 @@ struct game_export_t {
 	// coop slot re-use. Return nullptr if none is available. You can not
 	// return a slot that is currently in use by another client; that must
 	// throw a fatal error.
-	gentity_t *(*ClientChooseSlot) (const char *userinfo, const char *social_id, bool is_bot, gentity_t **ignore, size_t num_ignore, bool cinematic);
-	bool (*ClientConnect)(gentity_t *ent, char *userinfo, const char *social_id, bool is_bot);
-	void (*ClientBegin)(gentity_t *ent);
-	void (*ClientUserinfoChanged)(gentity_t *ent, const char *userinfo);
-	void (*ClientDisconnect)(gentity_t *ent);
-	void (*ClientCommand)(gentity_t *ent);
-	void (*ClientThink)(gentity_t *ent, usercmd_t *cmd);
+	gentity_t* (*ClientChooseSlot) (const char* userinfo, const char* social_id, bool is_bot, gentity_t** ignore, size_t num_ignore, bool cinematic);
+	bool (*ClientConnect)(gentity_t* ent, char* userinfo, const char* social_id, bool is_bot);
+	void (*ClientBegin)(gentity_t* ent);
+	void (*ClientUserinfoChanged)(gentity_t* ent, const char* userinfo);
+	void (*ClientDisconnect)(gentity_t* ent);
+	void (*ClientCommand)(gentity_t* ent);
+	void (*ClientThink)(gentity_t* ent, usercmd_t* cmd);
 
 	void (*RunFrame)(bool main_loop);
 	// [Paril-KEX] allow the game DLL to clear per-frame stuff
@@ -2058,7 +2054,7 @@ struct game_export_t {
 	// can vary in size from one game to another.
 	//
 	// The size will be fixed when ge->Init() is called
-	gentity_t	*gentities;
+	gentity_t* gentities;
 	size_t      gentity_size;
 	uint32_t    num_entities; // current number, <= max_entities
 	uint32_t    max_entities;
@@ -2067,23 +2063,23 @@ struct game_export_t {
 	server_flags_t  server_flags;
 
 	// [KEX]: Pmove as export
-	void (*Pmove)(pmove_t *pmove); // player movement code called by server & client
+	void (*Pmove)(pmove_t* pmove); // player movement code called by server & client
 
 	// Fetch named extension from game DLL.
-	void *(*GetExtension)(const char *name);
+	void* (*GetExtension)(const char* name);
 
-	void    (*Bot_SetWeapon)(gentity_t *botEntity, const int weaponIndex, const bool instantSwitch);
-	void    (*Bot_TriggerEntity)(gentity_t *botEntity, gentity_t *entity);
-	void    (*Bot_UseItem)(gentity_t *botEntity, const int32_t itemID);
-	int32_t(*Bot_GetItemID)(const char *classname);
-	void    (*Entity_ForceLookAtPoint)(gentity_t *entity, gvec3_cref_t point);
-	bool    (*Bot_PickedUpItem)(gentity_t *botEntity, gentity_t *itemEntity);
+	void    (*Bot_SetWeapon)(gentity_t* botEntity, const int weaponIndex, const bool instantSwitch);
+	void    (*Bot_TriggerEntity)(gentity_t* botEntity, gentity_t* entity);
+	void    (*Bot_UseItem)(gentity_t* botEntity, const int32_t itemID);
+	int32_t(*Bot_GetItemID)(const char* classname);
+	void    (*Entity_ForceLookAtPoint)(gentity_t* entity, gvec3_cref_t point);
+	bool    (*Bot_PickedUpItem)(gentity_t* botEntity, gentity_t* itemEntity);
 
 	// [KEX]: Checks entity visibility instancing
-	bool (*Entity_IsVisibleToPlayer)(gentity_t *ent, gentity_t *player);
+	bool (*Entity_IsVisibleToPlayer)(gentity_t* ent, gentity_t* player);
 
 	// Fetch info from the shadow light, for culling
-	const shadow_light_data_t *(*GetShadowLightData)(int32_t entity_number);
+	const shadow_light_data_t* (*GetShadowLightData)(int32_t entity_number);
 };
 
 // generic rectangle
@@ -2116,32 +2112,32 @@ struct cgame_import_t {
 	uint32_t    frame_time_ms;
 
 	// print to appropriate places (console, log file, etc)
-	void (*Com_Print)(const char *msg);
+	void (*Com_Print)(const char* msg);
 
 	// config strings hold all the index strings, the lightstyles,
 	// and misc data like the sky definition and cdtrack.
 	// All of the current configstrings are sent to clients when
 	// they connect, and changes are sent to all connected clients.
-	const char *(*get_configstring)(int num);
+	const char* (*get_configstring)(int num);
 
-	void (*Com_Error)(const char *message);
+	void (*Com_Error)(const char* message);
 
 	// managed memory allocation
-	void *(*TagMalloc)(size_t size, int tag);
-	void (*TagFree)(void *block);
+	void* (*TagMalloc)(size_t size, int tag);
+	void (*TagFree)(void* block);
 	void (*FreeTags)(int tag);
 
 	// console variable interaction
-	cvar_t *(*cvar)(const char *var_name, const char *value, cvar_flags_t flags);
-	cvar_t *(*cvar_set)(const char *var_name, const char *value);
-	cvar_t *(*cvar_forceset)(const char *var_name, const char *value);
+	cvar_t* (*cvar)(const char* var_name, const char* value, cvar_flags_t flags);
+	cvar_t* (*cvar_set)(const char* var_name, const char* value);
+	cvar_t* (*cvar_forceset)(const char* var_name, const char* value);
 
 	// add commands to the server console as if they were typed in
 	// for map changing, etc
-	void (*AddCommandString)(const char *text);
+	void (*AddCommandString)(const char* text);
 
 	// Fetch named extension from engine.
-	void *(*GetExtension)(const char *name);
+	void* (*GetExtension)(const char* name);
 
 	// Check whether current frame is valid
 	bool (*CL_FrameValid) ();
@@ -2154,34 +2150,34 @@ struct cgame_import_t {
 	uint64_t(*CL_ClientRealTime) ();
 	int32_t(*CL_ServerFrame) ();
 	int32_t(*CL_ServerProtocol) ();
-	const char *(*CL_GetClientName) (int32_t index);
-	const char *(*CL_GetClientPic) (int32_t index);
-	const char *(*CL_GetClientDogtag) (int32_t index);
-	const char *(*CL_GetKeyBinding) (const char *binding); // fetch key bind for key, or empty string
-	bool (*Draw_RegisterPic) (const char *name);
-	void (*Draw_GetPicSize) (int *w, int *h, const char *name); // will return 0 0 if not found
+	const char* (*CL_GetClientName) (int32_t index);
+	const char* (*CL_GetClientPic) (int32_t index);
+	const char* (*CL_GetClientDogtag) (int32_t index);
+	const char* (*CL_GetKeyBinding) (const char* binding); // fetch key bind for key, or empty string
+	bool (*Draw_RegisterPic) (const char* name);
+	void (*Draw_GetPicSize) (int* w, int* h, const char* name); // will return 0 0 if not found
 	void (*SCR_DrawChar)(int x, int y, int scale, int num, bool shadow);
-	void (*SCR_DrawPic) (int x, int y, int w, int h, const char *name);
-	void (*SCR_DrawColorPic)(int x, int y, int w, int h, const char *name, const rgba_t &color);
+	void (*SCR_DrawPic) (int x, int y, int w, int h, const char* name);
+	void (*SCR_DrawColorPic)(int x, int y, int w, int h, const char* name, const rgba_t& color);
 
 	// [Paril-KEX] kfont stuff
 	void(*SCR_SetAltTypeface)(bool enabled);
-	void (*SCR_DrawFontString)(const char *str, int x, int y, int scale, const rgba_t &color, bool shadow, text_align_t align);
-	vec2_t(*SCR_MeasureFontString)(const char *str, int scale);
+	void (*SCR_DrawFontString)(const char* str, int x, int y, int scale, const rgba_t& color, bool shadow, text_align_t align);
+	vec2_t(*SCR_MeasureFontString)(const char* str, int scale);
 	float (*SCR_FontLineHeight)(int scale);
 
 	// [Paril-KEX] for legacy text input (not used in lobbies)
-	bool (*CL_GetTextInput)(const char **msg, bool *is_team);
+	bool (*CL_GetTextInput)(const char** msg, bool* is_team);
 
 	// [Paril-KEX] FIXME this probably should be an export instead...
 	int32_t(*CL_GetWarnAmmoCount)(int32_t weapon_id);
 
 	// === [KEX] Additional APIs ===
 	// returns a *temporary string* ptr to a localized input
-	const char *(*Localize) (const char *base, const char **args, size_t num_args);
+	const char* (*Localize) (const char* base, const char** args, size_t num_args);
 
 	// [Paril-KEX] Draw binding, for centerprint; returns y offset
-	int32_t(*SCR_DrawBind) (int32_t isplit, const char *binding, const char *purpose, int x, int y, int scale);
+	int32_t(*SCR_DrawBind) (int32_t isplit, const char* binding, const char* purpose, int x, int y, int scale);
 
 	// [Paril-KEX]
 	bool (*CL_InAutoDemoLoop) ();
@@ -2199,36 +2195,36 @@ struct cgame_export_t {
 	void (*Shutdown)();
 
 	// [Paril-KEX] hud drawing
-	void (*DrawHUD) (int32_t isplit, const cg_server_data_t *data, vrect_t hud_vrect, vrect_t hud_safe, int32_t scale, int32_t playernum, const player_state_t *ps);
+	void (*DrawHUD) (int32_t isplit, const cg_server_data_t* data, vrect_t hud_vrect, vrect_t hud_safe, int32_t scale, int32_t playernum, const player_state_t* ps);
 	// [Paril-KEX] precache special pics used by hud
 	void (*TouchPics) ();
 
 	// [Paril-KEX] layout flags; see layout_flags_t
-	layout_flags_t(*LayoutFlags) (const player_state_t *ps);
+	layout_flags_t(*LayoutFlags) (const player_state_t* ps);
 
 	// [Paril-KEX] fetch the current wheel weapon ID in use
-	int32_t(*GetActiveWeaponWheelWeapon) (const player_state_t *ps);
+	int32_t(*GetActiveWeaponWheelWeapon) (const player_state_t* ps);
 
 	// [Paril-KEX] fetch owned weapon IDs
-	uint32_t(*GetOwnedWeaponWheelWeapons) (const player_state_t *ps);
+	uint32_t(*GetOwnedWeaponWheelWeapons) (const player_state_t* ps);
 
 	// [Paril-KEX] fetch ammo count for given ammo id
-	int16_t(*GetWeaponWheelAmmoCount)(const player_state_t *ps, int32_t ammo_id);
+	int16_t(*GetWeaponWheelAmmoCount)(const player_state_t* ps, int32_t ammo_id);
 
 	// [Paril-KEX] fetch powerup count for given powerup id
-	int16_t(*GetPowerupWheelCount)(const player_state_t *ps, int32_t powerup_id);
+	int16_t(*GetPowerupWheelCount)(const player_state_t* ps, int32_t powerup_id);
 
 	// [Paril-KEX] fetch how much damage was registered by these stats
-	int16_t(*GetHitMarkerDamage)(const player_state_t *ps);
+	int16_t(*GetHitMarkerDamage)(const player_state_t* ps);
 
 	// [KEX]: Pmove as export
-	void (*Pmove)(pmove_t *pmove); // player movement code called by server & client
+	void (*Pmove)(pmove_t* pmove); // player movement code called by server & client
 
 	// [Paril-KEX] allow cgame to react to configstring changes
-	void (*ParseConfigString)(int32_t i, const char *s);
+	void (*ParseConfigString)(int32_t i, const char* s);
 
 	// [Paril-KEX] parse centerprint-like messages
-	void (*ParseCenterPrint)(const char *str, int isplit, bool instant);
+	void (*ParseCenterPrint)(const char* str, int isplit, bool instant);
 
 	// [Paril-KEX] tell the cgame to clear notify stuff
 	void (*ClearNotify)(int32_t isplit);
@@ -2237,13 +2233,13 @@ struct cgame_export_t {
 	void (*ClearCenterprint)(int32_t isplit);
 
 	// [Paril-KEX] be notified by the game DLL of a message of some sort
-	void (*NotifyMessage)(int32_t isplit, const char *msg, bool is_chat);
+	void (*NotifyMessage)(int32_t isplit, const char* msg, bool is_chat);
 
 	// [Paril-KEX]
 	void (*GetMonsterFlashOffset)(monster_muzzleflash_id_t id, gvec3_ref_t offset);
 
 	// Fetch named extension from cgame DLL.
-	void *(*GetExtension)(const char *name);
+	void* (*GetExtension)(const char* name);
 };
 
 // EOF
