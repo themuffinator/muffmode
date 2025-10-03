@@ -4,6 +4,35 @@
 
 #include "g_local.h"
 
+#include <algorithm>
+#include <array>
+
+namespace {
+
+[[nodiscard]] vec3_t EntityCenter(const gentity_t &entity)
+{
+        if (entity.linked)
+                return (entity.absmin + entity.absmax) * 0.5f;
+
+        return entity.s.origin;
+}
+
+void ClearMedicState(gentity_t &monster)
+{
+        if (!(monster.svflags & SVF_MONSTER))
+                return;
+
+        if (!(monster.monsterinfo.aiflags & AI_MEDIC))
+                return;
+
+        if (monster.enemy && monster.enemy->inuse && (monster.enemy->svflags & SVF_MONSTER))
+                cleanupHealTarget(monster.enemy);
+
+        monster.monsterinfo.aiflags &= ~AI_MEDIC;
+}
+
+} // namespace
+
 /*
 ============
 CanDamage
@@ -12,64 +41,36 @@ Returns true if the inflictor can directly damage the target.  Used for
 explosions and melee attacks.
 ============
 */
-bool CanDamage(gentity_t *targ, gentity_t *inflictor) {
-	vec3_t	dest;
-	trace_t trace;
+[[nodiscard]] bool CanDamage(const gentity_t *targ, const gentity_t *inflictor) {
+	if (!targ || !inflictor)
+		return false;
 
-	// bmodels need special checking because their origin is 0,0,0
-	vec3_t inflictor_center;
-
-	if (inflictor->linked)
-		inflictor_center = (inflictor->absmin + inflictor->absmax) * 0.5f;
-	else
-		inflictor_center = inflictor->s.origin;
+	const vec3_t inflictor_center = EntityCenter(*inflictor);
 
 	if (targ->solid == SOLID_BSP) {
-		dest = closest_point_to_box(inflictor_center, targ->absmin, targ->absmax);
+		const vec3_t dest = closest_point_to_box(inflictor_center, targ->absmin, targ->absmax);
+		const trace_t trace = gi.traceline(inflictor_center, dest, inflictor, MASK_SOLID);
 
-		trace = gi.traceline(inflictor_center, dest, inflictor, MASK_SOLID);
 		if (trace.fraction == 1.0f)
 			return true;
 	}
 
-	vec3_t targ_center;
+	const vec3_t targ_center = EntityCenter(*targ);
+	constexpr std::array<vec3_t, 5> kOffsets{{
+		{ 0.0f,  0.0f, 0.0f },
+		{ 15.0f, 15.0f, 0.0f },
+		{ 15.0f,-15.0f, 0.0f },
+		{-15.0f, 15.0f, 0.0f },
+		{-15.0f,-15.0f, 0.0f },
+	}};
 
-	if (targ->linked)
-		targ_center = (targ->absmin + targ->absmax) * 0.5f;
-	else
-		targ_center = targ->s.origin;
+	for (const vec3_t &offset : kOffsets) {
+		const vec3_t dest = targ_center + offset;
+		const trace_t trace = gi.traceline(inflictor_center, dest, inflictor, MASK_SOLID);
 
-	trace = gi.traceline(inflictor_center, targ_center, inflictor, MASK_SOLID);
-	if (trace.fraction == 1.0f)
-		return true;
-
-	dest = targ_center;
-	dest[0] += 15.0f;
-	dest[1] += 15.0f;
-	trace = gi.traceline(inflictor_center, dest, inflictor, MASK_SOLID);
-	if (trace.fraction == 1.0f)
-		return true;
-
-	dest = targ_center;
-	dest[0] += 15.0f;
-	dest[1] -= 15.0f;
-	trace = gi.traceline(inflictor_center, dest, inflictor, MASK_SOLID);
-	if (trace.fraction == 1.0f)
-		return true;
-
-	dest = targ_center;
-	dest[0] -= 15.0f;
-	dest[1] += 15.0f;
-	trace = gi.traceline(inflictor_center, dest, inflictor, MASK_SOLID);
-	if (trace.fraction == 1.0f)
-		return true;
-
-	dest = targ_center;
-	dest[0] -= 15.0f;
-	dest[1] -= 15.0f;
-	trace = gi.traceline(inflictor_center, dest, inflictor, MASK_SOLID);
-	if (trace.fraction == 1.0f)
-		return true;
+		if (trace.fraction == 1.0f)
+			return true;
+	}
 
 	return false;
 }
@@ -84,13 +85,7 @@ void Killed(gentity_t *targ, gentity_t *inflictor, gentity_t *attacker, int dama
 		targ->health = -999;
 
 	// [Paril-KEX]
-	if ((targ->svflags & SVF_MONSTER) && targ->monsterinfo.aiflags & AI_MEDIC) {
-		if (targ->enemy && targ->enemy->inuse && (targ->enemy->svflags & SVF_MONSTER)) // god, I hope so
-			cleanupHealTarget(targ->enemy);
-
-		// clean up self
-		targ->monsterinfo.aiflags &= ~AI_MEDIC;
-	}
+	ClearMedicState(*targ);
 
 	targ->enemy = attacker;
 	targ->lastMOD = mod;
@@ -111,8 +106,7 @@ SpawnDamage
 ================
 */
 void SpawnDamage(int type, const vec3_t &origin, const vec3_t &normal, int damage) {
-	if (damage > 255)
-		damage = 255;
+	damage = std::clamp(damage, 0, 255);
 	gi.WriteByte(svc_temp_entity);
 	gi.WriteByte(type);
 	gi.WritePosition(origin);
@@ -300,6 +294,9 @@ static int CheckArmor(gentity_t *ent, const vec3_t &point, const vec3_t &normal,
 }
 
 static void M_ReactToDamage(gentity_t *targ, gentity_t *attacker, gentity_t *inflictor) {
+	if (!attacker)
+		return;
+
 	if (!(attacker->client) && !(attacker->svflags & SVF_MONSTER))
 		return;
 
@@ -352,8 +349,7 @@ static void M_ReactToDamage(gentity_t *targ, gentity_t *attacker, gentity_t *inf
 			return;
 
 		// remove the medic flag
-		cleanupHealTarget(targ->enemy);
-		targ->monsterinfo.aiflags &= ~AI_MEDIC;
+		ClearMedicState(*targ);
 	}
 
 	// we now know that we are not both good guys
@@ -375,15 +371,7 @@ static void M_ReactToDamage(gentity_t *targ, gentity_t *attacker, gentity_t *inf
 			}
 
 			// [Paril-KEX]
-			if ((targ->svflags & SVF_MONSTER) && targ->monsterinfo.aiflags & AI_MEDIC) {
-				if (targ->enemy && targ->enemy->inuse && (targ->enemy->svflags & SVF_MONSTER)) // god, I hope so
-				{
-					cleanupHealTarget(targ->enemy);
-				}
-
-				// clean up self
-				targ->monsterinfo.aiflags &= ~AI_MEDIC;
-			}
+			ClearMedicState(*targ);
 
 			targ->enemy = attacker;
 			if (!(targ->monsterinfo.aiflags & AI_DUCKED))
@@ -400,14 +388,7 @@ static void M_ReactToDamage(gentity_t *targ, gentity_t *attacker, gentity_t *inf
 			!(targ->monsterinfo.aiflags & AI_IGNORE_SHOTS))) {
 		if (targ->enemy != attacker) {
 			// [Paril-KEX]
-			if ((targ->svflags & SVF_MONSTER) && targ->monsterinfo.aiflags & AI_MEDIC) {
-				if (targ->enemy && targ->enemy->inuse && (targ->enemy->svflags & SVF_MONSTER)) { // god, I hope so
-					cleanupHealTarget(targ->enemy);
-				}
-
-				// clean up self
-				targ->monsterinfo.aiflags &= ~AI_MEDIC;
-			}
+			ClearMedicState(*targ);
 
 			if (targ->enemy && targ->enemy->client)
 				targ->oldenemy = targ->enemy;
@@ -420,15 +401,7 @@ static void M_ReactToDamage(gentity_t *targ, gentity_t *attacker, gentity_t *inf
 	else if (attacker->enemy && attacker->enemy != targ && targ->enemy != attacker->enemy) {
 		if (targ->enemy != attacker->enemy) {
 			// [Paril-KEX]
-			if ((targ->svflags & SVF_MONSTER) && targ->monsterinfo.aiflags & AI_MEDIC) {
-				if (targ->enemy && targ->enemy->inuse && (targ->enemy->svflags & SVF_MONSTER)) // god, I hope so
-				{
-					cleanupHealTarget(targ->enemy);
-				}
-
-				// clean up self
-				targ->monsterinfo.aiflags &= ~AI_MEDIC;
-			}
+			ClearMedicState(*targ);
 
 			if (targ->enemy && targ->enemy->client)
 				targ->oldenemy = targ->enemy;
@@ -440,38 +413,38 @@ static void M_ReactToDamage(gentity_t *targ, gentity_t *attacker, gentity_t *inf
 }
 
 // check if the two given entities are on the same team
-bool OnSameTeam(gentity_t *ent1, gentity_t *ent2) {
-	// monsters are never on our team atm
-	if (!ent1->client || !ent2->client)
-		return false;
-
-	// we're never on our own team
-	else if (ent1 == ent2)
+[[nodiscard]] bool OnSameTeam(const gentity_t *ent1, const gentity_t *ent2) {
+	if (!ent1 || !ent2)
 		return false;
 
 	if (!ent1->client || !ent2->client)
+		return false;
+
+	if (ent1 == ent2)
 		return false;
 
 	if (g_quadhog->integer) {
-		if (ent1->client->pu_time_quad > level.time || ent2->client->pu_time_quad > level.time)
+		const bool ent1HasQuad = ent1->client->pu_time_quad > level.time;
+		const bool ent2HasQuad = ent2->client->pu_time_quad > level.time;
+
+		if (ent1HasQuad || ent2HasQuad)
 			return false;
+
 		return true;
 	}
 
-	// [Paril-KEX] coop 'team' support
 	if (InCoopStyle())
-		return ent1->client && ent2->client;
-	else if (Teams() && ent1->client && ent2->client) {
-		if (ent1->client->sess.team == ent2->client->sess.team)
-			return true;
-	}
+		return true;
+
+	if (Teams() && ent1->client->sess.team == ent2->client->sess.team)
+		return true;
 
 	return false;
 }
 
 // check if the two entities are on a team and that
 // they wouldn't damage each other
-bool CheckTeamDamage(gentity_t *targ, gentity_t *attacker) {
+[[nodiscard]] bool CheckTeamDamage(const gentity_t *targ, const gentity_t *attacker) {
 	// always damage teammates if friendly fire is enabled
 	if (g_friendly_fire->integer)
 		return false;

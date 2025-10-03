@@ -1676,6 +1676,9 @@ struct level_locals_t {
 
 	// saved gravity
 	float		gravity;
+	gtime_t		gravity_lotto_next;
+	float		gravity_lotto_base;
+	bool		gravity_lotto_active;
 	// level is a hub map, and shouldn't be included in EOU stuff
 	bool		hub_map;
 	// active health bar entities
@@ -2603,9 +2606,9 @@ MAKE_ENUM_BITFLAGS(damageflags_t);
 //
 // g_combat.cpp
 //
-bool OnSameTeam(gentity_t *ent1, gentity_t *ent2);
-bool CanDamage(gentity_t *targ, gentity_t *inflictor);
-bool CheckTeamDamage(gentity_t *targ, gentity_t *attacker);
+[[nodiscard]] bool OnSameTeam(const gentity_t *ent1, const gentity_t *ent2);
+[[nodiscard]] bool CanDamage(const gentity_t *targ, const gentity_t *inflictor);
+[[nodiscard]] bool CheckTeamDamage(const gentity_t *targ, const gentity_t *attacker);
 void T_Damage(gentity_t *targ, gentity_t *inflictor, gentity_t *attacker, const vec3_t &dir, const vec3_t &point,
 	const vec3_t &normal, int damage, int knockback, damageflags_t dflags, mod_t mod);
 void T_RadiusDamage(gentity_t *inflictor, gentity_t *attacker, float damage, gentity_t *ignore, float radius, damageflags_t dflags, mod_t mod);

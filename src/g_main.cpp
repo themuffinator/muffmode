@@ -67,6 +67,11 @@ void G_PrepFrame();
 void InitSave();
 
 #include <chrono>
+#include <fstream>
+#include <limits>
+#include <algorithm>
+#include <cmath>
+#include <cstring>
 
 int _gt[] = {
         /* GT_NONE */ 0,
@@ -101,19 +106,14 @@ static void GT_SetLegacyCvars(gametype_t gt) {
 // =================================================
 
 static gentity_t *FindClosestPlayerToPoint(vec3_t point) {
-	float	bestplayerdistance;
-	vec3_t	v;
-	float	playerdistance;
 	gentity_t *closest = nullptr;
-
-	bestplayerdistance = 9999999;
+	float bestplayerdistance = std::numeric_limits<float>::max();
 
 	for (auto ec : active_clients()) {
 		if (ec->health <= 0 || ec->client->eliminated)
 			continue;
 
-		v = point - ec->s.origin;
-		playerdistance = v.length();
+		const float playerdistance = (point - ec->s.origin).length();
 
 		if (playerdistance < bestplayerdistance) {
 			bestplayerdistance = playerdistance;
@@ -259,7 +259,7 @@ static gitem_t *Horde_PickItem() {
 
 static const char *Horde_PickMonster() {
 	// collect valid monsters
-	static std::array<picked_item_t, q_countof(items)> picked_monsters;
+	static std::array<picked_item_t, q_countof(monsters)> picked_monsters;
 	static size_t num_picked_monsters;
 
 	num_picked_monsters = 0;
@@ -379,53 +379,46 @@ static bool Horde_AllMonstersDead() {
 
 void G_LoadMOTD() {
 	// load up ent override
-	const char *name = G_Fmt("baseq2/{}", g_motd_filename->string[0] ? g_motd_filename->string : "motd.txt").data();
-	FILE *f = fopen(name, "rb");
-	bool valid = true;
-	if (f != NULL) {
-		char *buffer = nullptr;
-		size_t length;
-		size_t read_length = 0;
+	const auto name_view = G_Fmt("baseq2/{}", g_motd_filename->string[0] ? g_motd_filename->string : "motd.txt");
+	const std::string name{name_view};
+	std::ifstream file{name, std::ios::binary};
 
-		fseek(f, 0, SEEK_END);
-		length = ftell(f);
-		fseek(f, 0, SEEK_SET);
+	if (!file.is_open())
+		return;
 
-		if (length > 0x40000) {
-			gi.Com_PrintFmt("{}: MoTD file length exceeds maximum: \"{}\"\n", __FUNCTION__, name);
-			valid = false;
-		}
-		if (valid) {
-			buffer = (char *)gi.TagMalloc(length + 1, '\0');
-			if (buffer) {
-				if (length) {
-					read_length = fread(buffer, 1, length, f);
-
-					if (length != read_length) {
-						gi.Com_PrintFmt("{}: MoTD file read error: \"{}\"\n", __FUNCTION__, name);
-						valid = false;
-					}
-				}
-			} else {
-				valid = false;
-			}
-		}
-		fclose(f);
-		
-		if (valid) {
-			buffer[length ? length : 0] = '\0';
-			game.motd.assign(buffer, length);
-			game.motd_mod_count++;
-			if (g_verbose->integer)
-				gi.Com_PrintFmt("{}: MotD file verified and loaded: \"{}\"\n", __FUNCTION__, name);
-		} else {
-			gi.Com_PrintFmt("{}: MotD file load error for \"{}\", discarding.\n", __FUNCTION__, name);
-		}
-
-		if (buffer)
-			gi.TagFree(buffer);
+	file.seekg(0, std::ios::end);
+	const auto end_pos = file.tellg();
+	if (end_pos == std::streampos(-1)) {
+		gi.Com_PrintFmt("{}: MotD file read error: \"{}\"\n", __FUNCTION__, name.c_str());
+		gi.Com_PrintFmt("{}: MotD file load error for \"{}\", discarding.\n", __FUNCTION__, name.c_str());
+		return;
 	}
+
+	const std::streamsize length = static_cast<std::streamsize>(end_pos);
+	if (length > static_cast<std::streamsize>(0x40000)) {
+		gi.Com_PrintFmt("{}: MoTD file length exceeds maximum: \"{}\"\n", __FUNCTION__, name.c_str());
+		gi.Com_PrintFmt("{}: MotD file load error for \"{}\", discarding.\n", __FUNCTION__, name.c_str());
+		return;
+	}
+
+	file.seekg(0, std::ios::beg);
+
+	std::string buffer(static_cast<size_t>(length), '\0');
+	if (!buffer.empty()) {
+		file.read(buffer.data(), length);
+		if (!file || file.gcount() != length) {
+			gi.Com_PrintFmt("{}: MotD file read error: \"{}\"\n", __FUNCTION__, name.c_str());
+			gi.Com_PrintFmt("{}: MotD file load error for \"{}\", discarding.\n", __FUNCTION__, name.c_str());
+			return;
+		}
+	}
+
+	game.motd = std::move(buffer);
+	game.motd_mod_count++;
+	if (g_verbose->integer)
+		gi.Com_PrintFmt("{}: MotD file verified and loaded: \"{}\"\n", __FUNCTION__, name.c_str());
 }
+
 
 int check_ruleset = -1;
 static void CheckRuleset() {
@@ -1017,7 +1010,6 @@ SetMatchID
 static void SetMatchID() {
 	//level.match_id = gt_short_name_upper[g_gametype->integer];
 	//level.match_id += "-";
-	level.match_id = stime();
 	level.match_id = stime();
 }
 
@@ -3138,6 +3130,173 @@ void ExitLevel() {
 CheckPowerups
 =============
 */
+static void G_UpdateTargetPushVelocity(gentity_t *ent, float gravity) {
+        if (!ent->target || gravity <= 0.f)
+                return;
+
+        gentity_t *target = ent->target_ent;
+
+        if (!target || !target->inuse)
+                target = G_PickTarget(ent->target);
+
+        if (!target)
+                return;
+
+        ent->target_ent = target;
+
+        vec3_t origin = ent->absmin + ent->absmax;
+        origin *= 0.5f;
+
+        float height = target->s.origin[2] - origin[2];
+
+        if (height <= 0.f)
+                return;
+
+        float time = std::sqrt(height / (0.5f * gravity));
+
+        if (!std::isfinite(time) || time <= 0.f)
+                return;
+
+        vec3_t push = target->s.origin - origin;
+        push[2] = 0.f;
+
+        float dist = push.normalize();
+
+        if (!std::isfinite(dist))
+                return;
+
+        float forward = dist / time;
+        push *= forward;
+        push[2] = time * gravity;
+
+        ent->origin2 = push;
+}
+
+static void G_UpdatePendulumSwing(gentity_t *ent, float gravity) {
+        if (gravity <= 0.f)
+                return;
+
+        float length = std::fabs(ent->mins[2]);
+
+        if (length < 8.f)
+                length = 8.f;
+
+        float freq = (1.f / (PIf * 2.f)) * std::sqrt(gravity / (3.f * length));
+
+        if (!std::isfinite(freq) || freq <= 0.f)
+                return;
+
+        int duration = std::max(1, static_cast<int>(1000.f / freq));
+
+        int base_time = static_cast<int>(level.time.milliseconds());
+        float phase = ent->phase;
+        int offset = static_cast<int>(duration * phase);
+
+        ent->s.pos.trDuration = duration;
+        ent->s.pos.trTime = base_time + offset;
+        ent->s.apos.trDuration = duration;
+        ent->s.apos.trTime = base_time + offset;
+}
+
+static void G_UpdateGravityDerivedData(float gravity) {
+        if (gravity <= 0.f)
+                return;
+
+        for (size_t i = 0; i < globals.num_entities; ++i) {
+                gentity_t *ent = &g_entities[i];
+
+                if (!ent->inuse || !ent->classname)
+                        continue;
+
+                if ((!std::strcmp(ent->classname, "trigger_push") || !std::strcmp(ent->classname, "target_push")) && ent->target) {
+                        G_UpdateTargetPushVelocity(ent, gravity);
+                } else if (!std::strcmp(ent->classname, "func_pendulum")) {
+                        G_UpdatePendulumSwing(ent, gravity);
+                }
+        }
+}
+
+static void G_ApplyGravityChange(float gravity) {
+        level.gravity = gravity;
+        G_UpdateGravityDerivedData(gravity);
+}
+
+static void CheckGravityLotto() {
+        if (!g_gravity_lotto->integer) {
+                if (level.gravity_lotto_active) {
+                        level.gravity_lotto_active = false;
+                        level.gravity_lotto_next = 0_ms;
+
+                        if (level.gravity_lotto_base > 0.f && std::fabs(level.gravity - level.gravity_lotto_base) > 0.01f) {
+                                gi.cvar_set("g_gravity", G_Fmt("{}", level.gravity_lotto_base).data());
+                                game.gravity_modified = g_gravity->modified_count;
+                                G_ApplyGravityChange(level.gravity_lotto_base);
+                        }
+                }
+
+                return;
+        }
+
+        float interval_value = g_gravity_lotto_interval->value;
+
+        if (!std::isfinite(interval_value) || interval_value <= 0.f)
+                interval_value = 30.f;
+
+        gtime_t interval = gtime_t::from_sec(interval_value);
+
+        float min_val = g_gravity_lotto_min->value;
+        float max_val = g_gravity_lotto_max->value;
+
+        if (!std::isfinite(min_val))
+                min_val = 400.f;
+
+        if (!std::isfinite(max_val))
+                max_val = 1200.f;
+
+        constexpr float MIN_GRAVITY = 100.f;
+        constexpr float MAX_GRAVITY = 2000.f;
+
+        min_val = std::clamp(min_val, MIN_GRAVITY, MAX_GRAVITY);
+        max_val = std::clamp(max_val, MIN_GRAVITY, MAX_GRAVITY);
+
+        if (max_val < min_val)
+                std::swap(min_val, max_val);
+
+        if (std::fabs(max_val - min_val) < 1.f)
+                max_val = min_val + 1.f;
+
+        if (!level.gravity_lotto_active) {
+                level.gravity_lotto_active = true;
+                level.gravity_lotto_base = level.gravity;
+                level.gravity_lotto_next = level.time;
+        }
+
+        gtime_t desired_next = level.time + interval;
+
+        if (!level.gravity_lotto_next || level.time >= level.gravity_lotto_next) {
+                float new_gravity = frandom(min_val, max_val);
+
+                if (!std::isfinite(new_gravity))
+                        new_gravity = min_val;
+
+                if (std::fabs(new_gravity - level.gravity) < 1.f) {
+                        new_gravity = (new_gravity < (min_val + max_val) * 0.5f) ? max_val : min_val;
+                }
+
+                new_gravity = std::clamp(new_gravity, MIN_GRAVITY, MAX_GRAVITY);
+
+                gi.cvar_set("g_gravity", G_Fmt("{}", new_gravity).data());
+                game.gravity_modified = g_gravity->modified_count;
+                G_ApplyGravityChange(new_gravity);
+
+                gi.bprintf(PRINT_HIGH, "Gravity lotto rolls %.0f\n", new_gravity);
+
+                level.gravity_lotto_next = level.time + interval;
+        } else if (level.gravity_lotto_next > desired_next) {
+                level.gravity_lotto_next = desired_next;
+        }
+}
+
 static int powerup_minplayers_mod_count = -1;
 static int numplayers_check = -1;
 
@@ -3219,8 +3378,8 @@ static void CheckCvars() {
 		pm_config.airaccel = g_airaccelerate->integer;
 	}
 
-	if (Cvar_WasModified(g_gravity, game.gravity_modified))
-		level.gravity = g_gravity->value;
+        if (Cvar_WasModified(g_gravity, game.gravity_modified))
+                G_ApplyGravityChange(g_gravity->value);
 
 	CheckMinMaxPlayers();
 }
@@ -3288,7 +3447,8 @@ static inline void G_RunFrame_(bool main_loop) {
 		CheckVote();
 
 		// for tracking changes
-		CheckCvars();
+                CheckCvars();
+                CheckGravityLotto();
 
 		CheckPowerups();
 
