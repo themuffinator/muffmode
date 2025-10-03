@@ -64,6 +64,10 @@ inline const char *DefaultCheatsValue()
         _(game_cvar_stage::INIT, g_owner_push_scores, "g_owner_push_scores", CVAR_LITERAL("0"), CVAR_NOFLAGS) \
         _(game_cvar_stage::INIT, g_gametype_cfg, "g_gametype_cfg", CVAR_LITERAL("1"), CVAR_NOFLAGS) \
         _(game_cvar_stage::INIT, g_quadhog, "g_quadhog", CVAR_LITERAL("0"), CVAR_SERVERINFO | CVAR_LATCH) \
+        _(game_cvar_stage::INIT, g_gravity_lotto, "g_gravity_lotto", CVAR_LITERAL("0"), CVAR_SERVERINFO | CVAR_LATCH) \
+        _(game_cvar_stage::INIT, g_gravity_lotto_interval, "g_gravity_lotto_interval", CVAR_LITERAL("30"), CVAR_NOFLAGS) \
+        _(game_cvar_stage::INIT, g_gravity_lotto_min, "g_gravity_lotto_min", CVAR_LITERAL("400"), CVAR_NOFLAGS) \
+        _(game_cvar_stage::INIT, g_gravity_lotto_max, "g_gravity_lotto_max", CVAR_LITERAL("1200"), CVAR_NOFLAGS) \
         _(game_cvar_stage::INIT, g_nadefest, "g_nadefest", CVAR_LITERAL("0"), CVAR_SERVERINFO | CVAR_LATCH) \
         _(game_cvar_stage::INIT, g_frenzy, "g_frenzy", CVAR_LITERAL("0"), CVAR_SERVERINFO | CVAR_LATCH) \
         _(game_cvar_stage::INIT, g_vampiric_damage, "g_vampiric_damage", CVAR_LITERAL("0"), CVAR_NOFLAGS) \

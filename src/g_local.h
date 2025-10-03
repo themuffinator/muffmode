@@ -1676,6 +1676,9 @@ struct level_locals_t {
 
 	// saved gravity
 	float		gravity;
+	gtime_t		gravity_lotto_next;
+	float		gravity_lotto_base;
+	bool		gravity_lotto_active;
 	// level is a hub map, and shouldn't be included in EOU stuff
 	bool		hub_map;
 	// active health bar entities

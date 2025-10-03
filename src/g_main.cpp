@@ -69,6 +69,9 @@ void InitSave();
 #include <chrono>
 #include <fstream>
 #include <limits>
+#include <algorithm>
+#include <cmath>
+#include <cstring>
 
 int _gt[] = {
         /* GT_NONE */ 0,
@@ -3127,6 +3130,173 @@ void ExitLevel() {
 CheckPowerups
 =============
 */
+static void G_UpdateTargetPushVelocity(gentity_t *ent, float gravity) {
+        if (!ent->target || gravity <= 0.f)
+                return;
+
+        gentity_t *target = ent->target_ent;
+
+        if (!target || !target->inuse)
+                target = G_PickTarget(ent->target);
+
+        if (!target)
+                return;
+
+        ent->target_ent = target;
+
+        vec3_t origin = ent->absmin + ent->absmax;
+        origin *= 0.5f;
+
+        float height = target->s.origin[2] - origin[2];
+
+        if (height <= 0.f)
+                return;
+
+        float time = std::sqrt(height / (0.5f * gravity));
+
+        if (!std::isfinite(time) || time <= 0.f)
+                return;
+
+        vec3_t push = target->s.origin - origin;
+        push[2] = 0.f;
+
+        float dist = push.normalize();
+
+        if (!std::isfinite(dist))
+                return;
+
+        float forward = dist / time;
+        push *= forward;
+        push[2] = time * gravity;
+
+        ent->origin2 = push;
+}
+
+static void G_UpdatePendulumSwing(gentity_t *ent, float gravity) {
+        if (gravity <= 0.f)
+                return;
+
+        float length = std::fabs(ent->mins[2]);
+
+        if (length < 8.f)
+                length = 8.f;
+
+        float freq = (1.f / (PIf * 2.f)) * std::sqrt(gravity / (3.f * length));
+
+        if (!std::isfinite(freq) || freq <= 0.f)
+                return;
+
+        int duration = std::max(1, static_cast<int>(1000.f / freq));
+
+        int base_time = static_cast<int>(level.time.milliseconds());
+        float phase = ent->phase;
+        int offset = static_cast<int>(duration * phase);
+
+        ent->s.pos.trDuration = duration;
+        ent->s.pos.trTime = base_time + offset;
+        ent->s.apos.trDuration = duration;
+        ent->s.apos.trTime = base_time + offset;
+}
+
+static void G_UpdateGravityDerivedData(float gravity) {
+        if (gravity <= 0.f)
+                return;
+
+        for (size_t i = 0; i < globals.num_entities; ++i) {
+                gentity_t *ent = &g_entities[i];
+
+                if (!ent->inuse || !ent->classname)
+                        continue;
+
+                if ((!std::strcmp(ent->classname, "trigger_push") || !std::strcmp(ent->classname, "target_push")) && ent->target) {
+                        G_UpdateTargetPushVelocity(ent, gravity);
+                } else if (!std::strcmp(ent->classname, "func_pendulum")) {
+                        G_UpdatePendulumSwing(ent, gravity);
+                }
+        }
+}
+
+static void G_ApplyGravityChange(float gravity) {
+        level.gravity = gravity;
+        G_UpdateGravityDerivedData(gravity);
+}
+
+static void CheckGravityLotto() {
+        if (!g_gravity_lotto->integer) {
+                if (level.gravity_lotto_active) {
+                        level.gravity_lotto_active = false;
+                        level.gravity_lotto_next = 0_ms;
+
+                        if (level.gravity_lotto_base > 0.f && std::fabs(level.gravity - level.gravity_lotto_base) > 0.01f) {
+                                gi.cvar_set("g_gravity", G_Fmt("{}", level.gravity_lotto_base).data());
+                                game.gravity_modified = g_gravity->modified_count;
+                                G_ApplyGravityChange(level.gravity_lotto_base);
+                        }
+                }
+
+                return;
+        }
+
+        float interval_value = g_gravity_lotto_interval->value;
+
+        if (!std::isfinite(interval_value) || interval_value <= 0.f)
+                interval_value = 30.f;
+
+        gtime_t interval = gtime_t::from_sec(interval_value);
+
+        float min_val = g_gravity_lotto_min->value;
+        float max_val = g_gravity_lotto_max->value;
+
+        if (!std::isfinite(min_val))
+                min_val = 400.f;
+
+        if (!std::isfinite(max_val))
+                max_val = 1200.f;
+
+        constexpr float MIN_GRAVITY = 100.f;
+        constexpr float MAX_GRAVITY = 2000.f;
+
+        min_val = std::clamp(min_val, MIN_GRAVITY, MAX_GRAVITY);
+        max_val = std::clamp(max_val, MIN_GRAVITY, MAX_GRAVITY);
+
+        if (max_val < min_val)
+                std::swap(min_val, max_val);
+
+        if (std::fabs(max_val - min_val) < 1.f)
+                max_val = min_val + 1.f;
+
+        if (!level.gravity_lotto_active) {
+                level.gravity_lotto_active = true;
+                level.gravity_lotto_base = level.gravity;
+                level.gravity_lotto_next = level.time;
+        }
+
+        gtime_t desired_next = level.time + interval;
+
+        if (!level.gravity_lotto_next || level.time >= level.gravity_lotto_next) {
+                float new_gravity = frandom(min_val, max_val);
+
+                if (!std::isfinite(new_gravity))
+                        new_gravity = min_val;
+
+                if (std::fabs(new_gravity - level.gravity) < 1.f) {
+                        new_gravity = (new_gravity < (min_val + max_val) * 0.5f) ? max_val : min_val;
+                }
+
+                new_gravity = std::clamp(new_gravity, MIN_GRAVITY, MAX_GRAVITY);
+
+                gi.cvar_set("g_gravity", G_Fmt("{}", new_gravity).data());
+                game.gravity_modified = g_gravity->modified_count;
+                G_ApplyGravityChange(new_gravity);
+
+                gi.bprintf(PRINT_HIGH, "Gravity lotto rolls %.0f\n", new_gravity);
+
+                level.gravity_lotto_next = level.time + interval;
+        } else if (level.gravity_lotto_next > desired_next) {
+                level.gravity_lotto_next = desired_next;
+        }
+}
+
 static int powerup_minplayers_mod_count = -1;
 static int numplayers_check = -1;
 
@@ -3208,8 +3378,8 @@ static void CheckCvars() {
 		pm_config.airaccel = g_airaccelerate->integer;
 	}
 
-	if (Cvar_WasModified(g_gravity, game.gravity_modified))
-		level.gravity = g_gravity->value;
+        if (Cvar_WasModified(g_gravity, game.gravity_modified))
+                G_ApplyGravityChange(g_gravity->value);
 
 	CheckMinMaxPlayers();
 }
@@ -3277,7 +3447,8 @@ static inline void G_RunFrame_(bool main_loop) {
 		CheckVote();
 
 		// for tracking changes
-		CheckCvars();
+                CheckCvars();
+                CheckGravityLotto();
 
 		CheckPowerups();
 
