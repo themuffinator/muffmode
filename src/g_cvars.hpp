@@ -221,6 +221,31 @@ enum class game_cvar_stage : uint8_t {
 GAME_CVAR_ENTRIES(DECLARE_GAME_CVAR)
 #undef DECLARE_GAME_CVAR
 
+struct game_cvar_descriptor {
+        game_cvar_stage stage;
+        cvar_t **storage;
+        const char *name;
+        const char *(*default_supplier)();
+        cvar_flags_t flags;
+};
+
+#define DEFINE_GAME_CVAR_DESCRIPTOR(stage, identifier, name, default_fn, flags) \
+        game_cvar_descriptor{ stage, &identifier, name, default_fn, flags },
+
+inline const game_cvar_descriptor game_cvar_descriptors[] = {
+        GAME_CVAR_ENTRIES(DEFINE_GAME_CVAR_DESCRIPTOR)
+};
+
+#undef DEFINE_GAME_CVAR_DESCRIPTOR
+
+template <typename Func>
+inline void ForEachGameCvar(game_cvar_stage stage, Func &&func) {
+        for (const auto &descriptor : game_cvar_descriptors) {
+                if (descriptor.stage == stage)
+                        func(descriptor);
+        }
+}
+
 #undef GAME_CVAR_ENTRIES
 #undef CVAR_LITERAL
 #undef CVAR_VALUE
