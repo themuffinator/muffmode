@@ -3,6 +3,8 @@
 
 #include "g_local.hpp"
 
+#include <cstdint>
+
 struct spawn_t {
 	const char *name;
 	void (*spawn)(gentity_t *ent);
@@ -1169,14 +1171,32 @@ static void G_FindTeams() {
 }
 
 // inhibit entities from game based on cvars & spawnflags
+static bool ValidEntityStringPointer(const char *value) {
+	if (!value)
+		return false;
+
+	return reinterpret_cast<std::uintptr_t>(value) != std::uintptr_t(-1);
+}
+
 static inline bool G_InhibitEntity(gentity_t *ent) {
-	if (ent->gametype) {
+	if (ValidEntityStringPointer(ent->gametype)) {
 		const char *s = strstr(ent->gametype, gt_spawn_string[g_gametype->integer]);
 		if (!s)
 			return true;
 	}
-	if (ent->not_gametype) {
+	if (ValidEntityStringPointer(ent->not_gametype)) {
 		const char *s = strstr(ent->not_gametype, gt_spawn_string[g_gametype->integer]);
+		if (s)
+			return true;
+	}
+
+	if (ValidEntityStringPointer(ent->ruleset)) {
+		const char *s = strstr(ent->ruleset, rs_short_name[game.ruleset]);
+		if (!s)
+			return true;
+	}
+	if (ValidEntityStringPointer(ent->not_ruleset)) {
+		const char *s = strstr(ent->not_ruleset, rs_short_name[game.ruleset]);
 		if (s)
 			return true;
 	}
@@ -1208,20 +1228,9 @@ static inline bool G_InhibitEntity(gentity_t *ent) {
 	if (ent->plasmabeam_off && !g_mapspawn_no_plasmabeam->integer)
 		return true;
 
-	if (ent->ruleset) {
-		const char *s = strstr(ent->ruleset, rs_short_name[game.ruleset]);
-		if (!s)
-			return true;
-	}
-	if (ent->not_ruleset) {
-		const char *s = strstr(ent->not_ruleset, rs_short_name[game.ruleset]);
-		if (s)
-			return true;
-	}
-
-	// dm-only
-	if (deathmatch->integer)
-		return ent->spawnflags.has(SPAWNFLAG_NOT_DEATHMATCH);
+        // dm-only
+        if (deathmatch->integer)
+                return ent->spawnflags.has(SPAWNFLAG_NOT_DEATHMATCH);
 
 	// coop flags
 	if (coop->integer && ent->spawnflags.has(SPAWNFLAG_NOT_COOP))
