@@ -639,8 +639,8 @@ static void InitGame() {
 
 	*level.weapon_count = { 0 };
 
-	level.vote = nullptr;
-	level.vote_arg = '\n';
+        level.vote = nullptr;
+        level.vote_arg.clear();
 
 	level.total_player_deaths = 0;
 

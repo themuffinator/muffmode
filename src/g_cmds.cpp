@@ -2738,7 +2738,8 @@ void VoteCommandStore(gentity_t *ent) {
 	level.vote_yes = 1;
 	level.vote_no = 0;
 	
-	gi.LocBroadcast_Print(PRINT_CENTER, "{} called a vote:\n{}{}\n", level.vote_client->resp.netname, level.vote->name, level.vote_arg[0] ? G_Fmt(" {}", level.vote_arg).data() : "");
+        const char *vote_suffix = level.vote_arg.empty() ? "" : G_Fmt(" {}", level.vote_arg).data();
+        gi.LocBroadcast_Print(PRINT_CENTER, "{} called a vote:\n{}{}\n", level.vote_client->resp.netname, level.vote->name, vote_suffix);
 
 	for (auto ec : active_clients())
 		ec->client->pers.voted = ec == ent ? 1 : 0;
