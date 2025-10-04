@@ -1671,16 +1671,22 @@ static bool Pickup_Powerup(gentity_t *ent, gentity_t *other) {
 	
 	bool is_dropped_from_death = ent->spawnflags.has(SPAWNFLAG_ITEM_DROPPED_PLAYER) && !ent->spawnflags.has(SPAWNFLAG_ITEM_DROPPED);
 
-	if (IsInstantItemsEnabled() || is_dropped_from_death) {
-		const gtime_t t = (((RS(RS_MM) || RS(RS_Q3A)) && deathmatch->integer) || !is_dropped_from_death) ? gtime_t::from_sec(ent->count) : (ent->nextthink - level.time);
+        const auto slot = LookupDropTimeoutSlot(ent->item->id);
 
-		if (auto slot = LookupDropTimeoutSlot(ent->item->id)) {
-			StoreDropTimeout(*slot, t);
+        if (IsInstantItemsEnabled() || is_dropped_from_death) {
+                const gtime_t t = (((RS(RS_MM) || RS(RS_Q3A)) && deathmatch->integer) || !is_dropped_from_death) ? gtime_t::from_sec(ent->count) : (ent->nextthink - level.time);
 
-			if (ent->item->use)
-				ent->item->use(other, ent->item);
-		}
-	}
+                if (slot)
+                        StoreDropTimeout(*slot, t);
+
+                if (ent->item->use)
+                        ent->item->use(other, ent->item);
+        } else if (ent->item->use) {
+                if (slot)
+                        StoreDropTimeout(*slot, gtime_t::from_sec(ent->item->quantity));
+
+                ent->item->use(other, ent->item);
+        }
 
 	for (auto ec : active_clients()) {
 		if (!ClientIsPlaying(ec->client) && ec->client->sess.pc.follow_powerup) {
