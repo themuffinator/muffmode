@@ -4139,7 +4139,7 @@ struct fmt::formatter<gentity_t> {
 	}
 
 	template<typename FormatContext>
-	auto format(const gentity_t &p, FormatContext &ctx) -> decltype(ctx.out()) {
+        auto format(const gentity_t &p, FormatContext &ctx) const -> decltype(ctx.out()) {
 		if (p.linked)
 			return fmt::format_to(ctx.out(), FMT_STRING("{} @ {}"), p.classname, (p.absmax + p.absmin) * 0.5f);
 		return fmt::format_to(ctx.out(), FMT_STRING("{} @ {}"), p.classname, p.s.origin);
