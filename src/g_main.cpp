@@ -561,10 +561,7 @@ void GT_Changes() {
 		gt_check = (gametype_t)g_gametype->integer;
 	} else return;
 
-	//TODO: save ent string so we can simply reload it and Match_Reset
-	//gi.AddCommandString("map_restart");
-
-	gi.AddCommandString(G_Fmt("gamemap {}\n", level.mapname).data());
+        gi.AddCommandString(G_Fmt("gamemap {}\n", level.mapname).data());
 
 	GT_PrecacheAssets();
 	GT_SetLongName();
@@ -944,10 +941,12 @@ Starts a match
 ============
 */
 void Match_Start() {
-	if (!deathmatch->integer)
-		return;
+        if (!deathmatch->integer)
+                return;
 
-	level.match_time = level.time;
+        Entities_ReloadFromEntstring();
+
+        level.match_time = level.time;
 	level.match_start_time = level.time;
 	level.overtime = 0_sec;
 
@@ -963,10 +962,10 @@ void Match_Start() {
 
 	level.total_player_deaths = 0;
 
-	memset(level.ghosts, 0, sizeof(level.ghosts));
+        memset(level.ghosts, 0, sizeof(level.ghosts));
 
-	Entities_Reset(true, true, true);
-	UnReadyAll();
+        Entities_Reset(true, true, true);
+        UnReadyAll();
 
 	SetMatchID();
 
@@ -993,6 +992,8 @@ void Match_Reset() {
 	//	Match_Start();
 	//	return;
 	//}
+
+	Entities_ReloadFromEntstring();
 
 	Entities_Reset(true, true, true);
 	UnReadyAll();

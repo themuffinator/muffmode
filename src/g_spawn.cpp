@@ -1698,17 +1698,134 @@ static void ParseWorldEntities() {
 }
 
 void ClearWorldEntities() {
-	gentity_t *ent = nullptr;
-	//memset(g_entities, 0, game.maxentities * sizeof(g_entities[0]));
+        gentity_t *ent = nullptr;
+        //memset(g_entities, 0, game.maxentities * sizeof(g_entities[0]));
 
-	for (size_t i = MAX_CLIENTS; i < game.maxentities; i++) {
-		ent = &g_entities[i];
+        for (size_t i = MAX_CLIENTS; i < game.maxentities; i++) {
+                ent = &g_entities[i];
 
-		if (!ent || !ent->inuse || ent->client)
-			continue;
+                if (!ent || !ent->inuse || ent->client)
+                        continue;
 
-		memset(&g_entities[i], 0, sizeof(g_entities[i]));
-	}
+                memset(&g_entities[i], 0, sizeof(g_entities[i]));
+        }
+}
+
+void Entities_ReloadFromEntstring() {
+        if (level.entstring.empty())
+                return;
+
+        std::string entity_text = level.entstring;
+
+        gi.FreeTags(TAG_LEVEL);
+
+        level.entstring = entity_text;
+
+        const char *entities = level.entstring.c_str();
+
+        // clear world entity and any non-client entities
+        gi.unlinkentity(&g_entities[0]);
+        memset(&g_entities[0], 0, sizeof(g_entities[0]));
+
+        level.changemap = nullptr;
+        level.achievement = nullptr;
+        level.timeout_ent = nullptr;
+
+        for (size_t i = game.maxclients + 1; i < globals.num_entities; ++i) {
+                gentity_t *ent = &g_entities[i];
+
+                if (ent->client)
+                        continue;
+
+                gi.unlinkentity(ent);
+                memset(ent, 0, sizeof(*ent));
+        }
+
+        // ensure client slots still reference their clients
+        for (size_t i = 0; i < game.maxclients; ++i)
+                g_entities[i + 1].client = game.clients + i;
+
+        // reset entity count to the first free slot after clients
+        globals.num_entities = game.maxclients + 1;
+
+        // rebuild the body queue used for corpses
+        InitBodyQue();
+
+        // reset cached spawn information so it can be rebuilt by the parser
+        level.spawn_spots[SPAWN_SPOT_INTERMISSION] = nullptr;
+        level.num_spawn_spots = 0;
+        level.num_spawn_spots_free = 0;
+        level.num_spawn_spots_team = 0;
+
+        gentity_t *ent = nullptr;
+        int inhibit = 0;
+        const char *com_token;
+        const char *parse = entities;
+
+        while (true) {
+                com_token = COM_Parse(&parse);
+                if (!parse)
+                        break;
+
+                if (com_token[0] != '{')
+                        gi.Com_ErrorFmt("{}: Found \"{}\" when expecting {{ in entity string.\n", __FUNCTION__, com_token);
+
+                if (!ent)
+                        ent = g_entities;
+                else
+                        ent = G_Spawn();
+
+                parse = ED_ParseEntity(parse, ent);
+
+                if (ent != g_entities) {
+                        if (G_InhibitEntity(ent)) {
+                                G_FreeEntity(ent);
+                                inhibit++;
+                                continue;
+                        }
+
+                        ent->spawnflags &= ~SPAWNFLAG_EDITOR_MASK;
+                }
+
+                ent->gravityVector = { 0.0, 0.0, -1.0 };
+
+                ED_CallSpawn(ent);
+
+                ent->s.renderfx |= RF_IR_VISIBLE;
+        }
+
+        if (inhibit && g_verbose->integer)
+                gi.Com_PrintFmt("{} entities inhibited.\n", inhibit);
+
+        PrecacheStartItems();
+        PrecacheInventoryItems();
+
+        G_FindTeams();
+
+        QuadHog_SetupSpawn(5_sec);
+        Tech_SetupSpawn();
+
+        if (deathmatch->integer) {
+                if (g_dm_random_items->integer)
+                        PrecacheForRandomRespawn();
+
+                game.item_inhibit_pu = 0;
+                game.item_inhibit_pa = 0;
+                game.item_inhibit_ht = 0;
+                game.item_inhibit_ar = 0;
+                game.item_inhibit_am = 0;
+                game.item_inhibit_wp = 0;
+        } else {
+                InitHintPaths();
+        }
+
+        G_LocateSpawnSpots();
+
+        SetIntermissionPoint();
+
+        setup_shadow_lights();
+
+        level.init = true;
 }
 
 /*
