@@ -536,7 +536,7 @@ template<>
 struct fmt::formatter<vec3_t> : fmt::formatter<float>
 {
     template<typename FormatContext>
-    auto format(const vec3_t &p, FormatContext &ctx) -> decltype(ctx.out())
+    auto format(const vec3_t &p, FormatContext &ctx) const -> decltype(ctx.out())
     {
 		auto out = fmt::formatter<float>::format(p.x, ctx);
         out = fmt::format_to(out, " ");
