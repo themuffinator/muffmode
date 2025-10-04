@@ -1791,8 +1791,7 @@ void SpawnEntities(const char *mapname, const char *entities, const char *spawnp
 			//gi.Com_PrintFmt("{}: Entities override file not saved as file already exists: \"{}\"\n", __FUNCTION__, name);
 		}
 	}
-	level.entstring = entities;
-//#endif
+	std::string entity_text{ entities ? entities : "" };
 	//ParseWorldEntityString(mapname, RS(RS_Q3A));
 
 	// clear cached indices
@@ -1808,7 +1807,10 @@ void SpawnEntities(const char *mapname, const char *entities, const char *spawnp
 
 	gi.FreeTags(TAG_LEVEL);
 
-	memset(&level, 0, sizeof(level));
+	level = level_locals_t{};
+	level.entstring = std::move(entity_text);
+	entities = level.entstring.c_str();
+
 	memset(g_entities, 0, game.maxentities * sizeof(g_entities[0]));
 	
 	// all other flags are not important atm
