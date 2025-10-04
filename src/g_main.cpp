@@ -2298,9 +2298,17 @@ void CalculateRanks() {
 		}
 	}
 
-	int lead_score = game.clients[level.sorted_clients[0]].resp.score;
+        bool have_connected_clients = level.num_connected_clients > 0;
+        int lead_score = 0;
 
-	qsort(level.sorted_clients, level.num_connected_clients, sizeof(level.sorted_clients[0]), SortRanks);
+        if (have_connected_clients) {
+                lead_score = game.clients[level.sorted_clients[0]].resp.score;
+
+                qsort(level.sorted_clients, level.num_connected_clients, sizeof(level.sorted_clients[0]), SortRanks);
+        } else {
+                level.follow1 = -1;
+                level.follow2 = -1;
+        }
 
 	// set the rank value for all clients that are connected and not spectators
 	if (teams && notGT(GT_RR)) {
@@ -2344,7 +2352,7 @@ void CalculateRanks() {
 	
 	level.warmup_notice_time = level.time;
 
-	if (level.match_state == MATCH_IN_PROGRESS) {
+        if (level.match_state == MATCH_IN_PROGRESS && have_connected_clients) {
 		if (GTF(GTF_FRAGS)) {
 			//gi.Com_PrintFmt("new={} old={}\n", game.clients[level.sorted_clients[0]].resp.score, old_first_score);
 			if (fraglimit->integer > 3) {
@@ -2633,6 +2641,16 @@ static void ClientEndServerFrames() {
 		ClientEndServerFrame(ec);
 }
 
+static const char *ChangeLevelDebugValue(const char *value) {
+	if (!value)
+		return "<null>";
+
+	if (!*value)
+		return "<empty>";
+
+	return value;
+}
+
 /*
 =================
 CreateTargetChangeLevel
@@ -2645,6 +2663,12 @@ gentity_t *CreateTargetChangeLevel(const char *map) {
 
 	ent = G_Spawn();
 	ent->classname = "target_changelevel";
+	if (!map || !*map) {
+		gi.Com_PrintFmt("WARNING: CreateTargetChangeLevel received {} map value; defaulting to current map \'{}\'\n",
+			map ? "an empty" : "a null", ChangeLevelDebugValue(level.mapname));
+		map = level.mapname;
+	}
+
 	Q_strlcpy(level.nextmap, map, sizeof(level.nextmap));
 	ent->map = level.nextmap;
 	return ent;
@@ -3101,7 +3125,42 @@ void BeginIntermission(gentity_t *targ) {
 	}
 
 	level.intermission_server_frame = gi.ServerFrame();
-	level.changemap = targ->map;
+	level.changemap_context[0] = '\0';
+
+	if (!targ) {
+		gi.Com_PrintFmt("WARNING: BeginIntermission invoked without a changelevel target; synthesizing fallback for \'{}\'\n",
+			ChangeLevelDebugValue(level.mapname));
+		targ = CreateTargetChangeLevel(level.mapname);
+	}
+
+	const bool has_changemap_value = targ && targ->map && targ->map[0];
+	if (targ && !has_changemap_value)
+		gi.Com_PrintFmt("WARNING: BeginIntermission target {} provided {} changemap value; defaulting to current map \'{}\'\n",
+			*targ, targ->map ? "an empty" : "a null", ChangeLevelDebugValue(level.mapname));
+
+	const char *resolved_changemap = has_changemap_value ? targ->map : (level.mapname[0] ? level.mapname : nullptr);
+	level.changemap = resolved_changemap;
+
+	if (targ) {
+		Q_strlcpy(level.changemap_context,
+			G_Fmt("target={} requested_map={} resolved_map={} nextmap_hint={} current_map={}",
+				*targ,
+				ChangeLevelDebugValue(targ->map),
+				ChangeLevelDebugValue(resolved_changemap),
+				ChangeLevelDebugValue(level.nextmap[0] ? level.nextmap : nullptr),
+				ChangeLevelDebugValue(level.mapname))
+				.data(),
+			sizeof(level.changemap_context));
+	} else {
+		Q_strlcpy(level.changemap_context,
+			G_Fmt("target=<null> requested_map=<null> resolved_map={} nextmap_hint={} current_map={}",
+				ChangeLevelDebugValue(resolved_changemap),
+				ChangeLevelDebugValue(level.nextmap[0] ? level.nextmap : nullptr),
+				ChangeLevelDebugValue(level.mapname))
+				.data(),
+			sizeof(level.changemap_context));
+	}
+
 	level.intermission_clear = targ->spawnflags.has(SPAWNFLAG_CHANGELEVEL_CLEAR_INVENTORY);
 	level.intermission_eou = false;
 	level.intermission_fade = targ->spawnflags.has(SPAWNFLAG_CHANGELEVEL_FADE_OUT);
@@ -3112,7 +3171,7 @@ void BeginIntermission(gentity_t *targ) {
 	// [Paril-KEX] update game level entry
 	G_UpdateLevelEntry();
 
-	if (strstr(level.changemap, "*")) {
+	if (level.changemap && strstr(level.changemap, "*")) {
 		if (coop->integer) {
 			for (auto ec : active_clients()) {
 				// strip players of all keys between units
@@ -3246,9 +3305,21 @@ void ExitLevel() {
 				player->client->pers.lives = g_coop_num_lives->integer + 1;
 	}
 
-	if (level.changemap == nullptr) {
-		gi.Com_Error("Got null changemap when trying to exit level. Was a trigger_changelevel configured correctly?");
-		return;
+	if (!level.changemap || !level.changemap[0]) {
+		const char *context = level.changemap_context[0] ? level.changemap_context : "<no context available>";
+		gi.Com_PrintFmt(
+			"WARNING: Missing changemap when exiting level \'{}\'. Context: {}\n",
+			ChangeLevelDebugValue(level.mapname), context);
+
+		if (level.mapname[0]) {
+			gi.Com_PrintFmt("WARNING: Defaulting to reload current map \'{}\'\n",
+				ChangeLevelDebugValue(level.mapname));
+			level.changemap = level.mapname;
+		} else {
+			gi.Com_PrintFmt(
+				"ERROR: Current level name is empty; aborting level transition to prevent a crash.\n");
+			return;
+		}
 	}
 
 	// for N64 mainly, but if we're directly changing to "victorXXX.pcx" then
@@ -3266,6 +3337,7 @@ void ExitLevel() {
 		gi.AddCommandString(G_Fmt("gamemap \"{}\"\n", level.changemap).data());
 
 	level.changemap = nullptr;
+	level.changemap_context[0] = '\0';
 }
 
 /*

@@ -267,37 +267,58 @@ static USE(trigger_key_use) (gentity_t *self, gentity_t *other, gentity_t *activ
 	}
 
 	gi.sound(activator, CHAN_AUTO, gi.soundindex("misc/keyuse.wav"), 1, ATTN_NORM, 0);
-	if (coop->integer) {
-		if (self->item->id == IT_KEY_POWER_CUBE || self->item->id == IT_KEY_EXPLOSIVE_CHARGES) {
-			int cube;
+        if (coop->integer) {
+                const bool instanced_items = P_UseCoopInstancedItems();
 
-			for (cube = 0; cube < 8; cube++)
-				if (activator->client->pers.power_cubes & (1 << cube))
-					break;
+                if (self->item->id == IT_KEY_POWER_CUBE || self->item->id == IT_KEY_EXPLOSIVE_CHARGES) {
+                        int cube;
 
-			for (auto ce : active_clients()) {
-				if (ce->client->pers.power_cubes & (1 << cube)) {
-					ce->client->pers.inventory[index]--;
-					ce->client->pers.power_cubes &= ~(1 << cube);
+                        for (cube = 0; cube < 8; cube++)
+                                if (activator->client->pers.power_cubes & (1 << cube))
+                                        break;
 
-					// [Paril-KEX] don't allow respawning players to keep
-					// used keys
-					if (!P_UseCoopInstancedItems()) {
-						ce->client->resp.coop_respawn.inventory[index] = 0;
-						ce->client->resp.coop_respawn.power_cubes &= ~(1 << cube);
-					}
-				}
-			}
-		} else {
-			for (auto ce : active_clients()) {
-				ce->client->pers.inventory[index] = 0;
+                        const bool has_cube = cube < 8;
 
-				// [Paril-KEX] don't allow respawning players to keep
-				// used keys
-				if (!P_UseCoopInstancedItems())
-					ce->client->resp.coop_respawn.inventory[index] = 0;
-			}
-		}
+                        if (instanced_items) {
+                                if (activator->client->pers.inventory[index] > 0)
+                                        activator->client->pers.inventory[index]--;
+
+                                if (has_cube) {
+                                        activator->client->pers.power_cubes &= ~(1 << cube);
+                                        activator->client->resp.coop_respawn.power_cubes &= ~(1 << cube);
+                                }
+
+                                activator->client->resp.coop_respawn.inventory[index] = 0;
+                        } else {
+                                for (auto ce : active_clients()) {
+                                        if (has_cube && !(ce->client->pers.power_cubes & (1 << cube)))
+                                                continue;
+
+                                        if (ce->client->pers.inventory[index] > 0)
+                                                ce->client->pers.inventory[index]--;
+
+                                        if (has_cube)
+                                                ce->client->pers.power_cubes &= ~(1 << cube);
+
+                                        // [Paril-KEX] don't allow respawning players to keep
+                                        // used keys
+                                        ce->client->resp.coop_respawn.inventory[index] = 0;
+
+                                        if (has_cube)
+                                                ce->client->resp.coop_respawn.power_cubes &= ~(1 << cube);
+                                }
+                        }
+                } else {
+                        if (instanced_items) {
+                                activator->client->pers.inventory[index] = 0;
+                                activator->client->resp.coop_respawn.inventory[index] = 0;
+                        } else {
+                                for (auto ce : active_clients()) {
+                                        ce->client->pers.inventory[index] = 0;
+                                        ce->client->resp.coop_respawn.inventory[index] = 0;
+                                }
+                        }
+                }
 	} else {
 		// don't remove keys in DM
 		if (!deathmatch->integer)

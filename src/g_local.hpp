@@ -1595,6 +1595,7 @@ struct level_locals_t {
 										// kills during this delay
 
 	const char	*changemap;
+	char		changemap_context[256];
 	const char	*achievement;
 	bool		intermission_exit;
 	bool		intermission_eou;
