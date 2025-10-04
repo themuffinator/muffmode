@@ -2298,9 +2298,17 @@ void CalculateRanks() {
 		}
 	}
 
-	int lead_score = game.clients[level.sorted_clients[0]].resp.score;
+        bool have_connected_clients = level.num_connected_clients > 0;
+        int lead_score = 0;
 
-	qsort(level.sorted_clients, level.num_connected_clients, sizeof(level.sorted_clients[0]), SortRanks);
+        if (have_connected_clients) {
+                lead_score = game.clients[level.sorted_clients[0]].resp.score;
+
+                qsort(level.sorted_clients, level.num_connected_clients, sizeof(level.sorted_clients[0]), SortRanks);
+        } else {
+                level.follow1 = -1;
+                level.follow2 = -1;
+        }
 
 	// set the rank value for all clients that are connected and not spectators
 	if (teams && notGT(GT_RR)) {
@@ -2344,7 +2352,7 @@ void CalculateRanks() {
 	
 	level.warmup_notice_time = level.time;
 
-	if (level.match_state == MATCH_IN_PROGRESS) {
+        if (level.match_state == MATCH_IN_PROGRESS && have_connected_clients) {
 		if (GTF(GTF_FRAGS)) {
 			//gi.Com_PrintFmt("new={} old={}\n", game.clients[level.sorted_clients[0]].resp.score, old_first_score);
 			if (fraglimit->integer > 3) {
