@@ -4,9 +4,62 @@
 #include "monsters/m_player.h"
 
 #include <assert.h>
+#include <algorithm>
+#include <cstring>
+#include <string_view>
 #include <utility>
 
 constexpr const char *BREAKER = "\35\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\37";
+
+namespace {
+
+#if USE_CPP20_FORMAT
+template<typename... Args>
+using menu_format_string_t = std::format_string<Args...>;
+#else
+template<typename... Args>
+using menu_format_string_t = fmt::format_string<Args...>;
+#endif
+
+template<typename... Args>
+void MenuAddFormattedLine(menu_t *entries, int &index, int max_entries,
+        menu_format_string_t<Args...> fmt, Args &&... args)
+{
+        if (index >= max_entries)
+                return;
+
+        G_FmtTo_(entries[index].text, fmt, std::forward<Args>(args)...);
+        ++index;
+}
+
+void MenuAddLine(menu_t *entries, int &index, int max_entries, std::string_view text)
+{
+        if (index >= max_entries)
+                return;
+
+        const size_t copy_len = std::min(text.size(), sizeof(entries[index].text) - 1);
+
+        if (copy_len > 0)
+                std::memcpy(entries[index].text, text.data(), copy_len);
+
+        entries[index].text[copy_len] = '\0';
+        ++index;
+}
+
+void MenuAddLine(menu_t *entries, int &index, int max_entries, const char *text)
+{
+        if (!text)
+                text = "";
+
+        MenuAddLine(entries, index, max_entries, std::string_view(text));
+}
+
+void MenuAddBlank(menu_t *entries, int &index, int max_entries)
+{
+        MenuAddLine(entries, index, max_entries, std::string_view{});
+}
+
+} // namespace
 
 bool Vote_Menu_Active(gentity_t *ent) {
 	if (level.vote_time <= 0_sec)
@@ -314,7 +367,8 @@ const menu_t pmstatsmenu[] = {
 
 static void G_Menu_PMStats_Update(gentity_t *ent) {
 
-        if (!g_matchstats->integer) return;
+        if (!g_matchstats->integer)
+                return;
 
         menu_t *entries = ent->client->menu->entries;
         client_match_stats_t *st = &ent->client->mstats;
@@ -323,70 +377,49 @@ static void G_Menu_PMStats_Update(gentity_t *ent) {
         char value[MAX_INFO_VALUE] = { 0 };
         gi.Info_ValueForKey(ent->client->pers.userinfo, "name", value, sizeof(value));
 
-        auto add_line = [&](std::string_view text) {
-                if (i >= max_entries)
-                        return;
-                Q_strlcpy(entries[i].text, text.data(), sizeof(entries[i].text));
-                ++i;
-        };
-
-        auto add_fmt = [&](const auto &format_str, auto &&... args) {
-                if (i >= max_entries)
-                        return;
-                G_FmtTo_(entries[i].text, format_str, std::forward<decltype(args)>(args)...);
-                ++i;
-        };
-
-        auto add_blank = [&]() {
-                if (i >= max_entries)
-                        return;
-                entries[i].text[0] = '\0';
-                ++i;
-        };
-
-        add_line("Player Stats for Match");
+        MenuAddLine(entries, i, max_entries, "Player Stats for Match");
 
         if (value[0])
-                add_line(value);
+                MenuAddLine(entries, i, max_entries, value);
 
-        add_line(BREAKER);
+        MenuAddLine(entries, i, max_entries, BREAKER);
 
-        add_fmt("kills: {}", st->total_kills);
-        add_fmt("deaths: {}", st->total_deaths);
+        MenuAddFormattedLine(entries, i, max_entries, FMT_STRING("kills: {}"), st->total_kills);
+        MenuAddFormattedLine(entries, i, max_entries, FMT_STRING("deaths: {}"), st->total_deaths);
 
         if (st->total_kills > 0 && st->total_deaths > 0) {
-                float kd_ratio = static_cast<float>(st->total_kills) / static_cast<float>(st->total_deaths);
-                add_fmt("k/d ratio: {:.2f}", kd_ratio);
+                const float kd_ratio = static_cast<float>(st->total_kills) / static_cast<float>(st->total_deaths);
+                MenuAddFormattedLine(entries, i, max_entries, FMT_STRING("k/d ratio: {:.2f}"), kd_ratio);
         } else if (st->total_kills > 0 && st->total_deaths == 0) {
-                add_line("k/d ratio: \xE2\x88\x9E");
+                MenuAddLine(entries, i, max_entries, "k/d ratio: \xE2\x88\x9E");
         } else {
-                add_line("k/d ratio: N/A");
+                MenuAddLine(entries, i, max_entries, "k/d ratio: N/A");
         }
 
-        add_blank();
+        MenuAddBlank(entries, i, max_entries);
 
-        add_fmt("dmg dealt: {}", st->total_dmg_dealt);
-        add_fmt("dmg received: {}", st->total_dmg_received);
+        MenuAddFormattedLine(entries, i, max_entries, FMT_STRING("dmg dealt: {}"), st->total_dmg_dealt);
+        MenuAddFormattedLine(entries, i, max_entries, FMT_STRING("dmg received: {}"), st->total_dmg_received);
 
         if (st->total_dmg_dealt > 0 && st->total_dmg_received > 0) {
-                float dmg_ratio = static_cast<float>(st->total_dmg_dealt) / static_cast<float>(st->total_dmg_received);
-                add_fmt("dmg ratio: {:.2f}", dmg_ratio);
+                const float dmg_ratio = static_cast<float>(st->total_dmg_dealt) / static_cast<float>(st->total_dmg_received);
+                MenuAddFormattedLine(entries, i, max_entries, FMT_STRING("dmg ratio: {:.2f}"), dmg_ratio);
         } else if (st->total_dmg_dealt > 0 && st->total_dmg_received == 0) {
-                add_line("dmg ratio: \xE2\x88\x9E");
+                MenuAddLine(entries, i, max_entries, "dmg ratio: \xE2\x88\x9E");
         } else {
-                add_line("dmg ratio: N/A");
+                MenuAddLine(entries, i, max_entries, "dmg ratio: N/A");
         }
 
-        add_blank();
+        MenuAddBlank(entries, i, max_entries);
 
-        add_fmt("shots fired: {}", st->total_shots);
-        add_fmt("shots on target: {}", st->total_hits);
+        MenuAddFormattedLine(entries, i, max_entries, FMT_STRING("shots fired: {}"), st->total_shots);
+        MenuAddFormattedLine(entries, i, max_entries, FMT_STRING("shots on target: {}"), st->total_hits);
 
         if (st->total_shots > 0) {
-                float accuracy = (static_cast<float>(st->total_hits) / static_cast<float>(st->total_shots)) * 100.0f;
-                add_fmt("total accuracy: {:.1f}%", accuracy);
+                const float accuracy = (static_cast<float>(st->total_hits) / static_cast<float>(st->total_shots)) * 100.0f;
+                MenuAddFormattedLine(entries, i, max_entries, FMT_STRING("total accuracy: {:.1f}%"), accuracy);
         } else {
-                add_line("total accuracy: N/A");
+                MenuAddLine(entries, i, max_entries, "total accuracy: N/A");
         }
 
         while (i < max_entries) {
@@ -540,17 +573,17 @@ void G_Menu_CallVote_Map(gentity_t *ent, menu_hnd_t *p) {
 }
 
 void G_Menu_CallVote_NextMap(gentity_t *ent, menu_hnd_t *p) {
-	level.vote = FindVoteCmdByName("nextmap");
-	level.vote_arg = nullptr;
-	VoteCommandStore(ent);
-	P_Menu_Close(ent);
+        level.vote = FindVoteCmdByName("nextmap");
+        level.vote_arg.clear();
+        VoteCommandStore(ent);
+        P_Menu_Close(ent);
 }
 
 void G_Menu_CallVote_Restart(gentity_t *ent, menu_hnd_t *p) {
-	level.vote = FindVoteCmdByName("restart");
-	level.vote_arg = nullptr;
-	VoteCommandStore(ent);
-	P_Menu_Close(ent);
+        level.vote = FindVoteCmdByName("restart");
+        level.vote_arg.clear();
+        VoteCommandStore(ent);
+        P_Menu_Close(ent);
 }
 
 void G_Menu_CallVote_GameType(gentity_t *ent, menu_hnd_t *p) {
@@ -559,15 +592,15 @@ void G_Menu_CallVote_GameType(gentity_t *ent, menu_hnd_t *p) {
 
 void G_Menu_CallVote_TimeLimit_Update(gentity_t *ent) {
 
-	level.vote_arg = nullptr;
+        level.vote_arg.clear();
 }
 
 void G_Menu_CallVote_TimeLimit(gentity_t *ent, menu_hnd_t *p) {
-	//level.vote = FindVoteCmdByName("timelimit");
-	//level.vote_arg = nullptr;
-	//VoteCommandStore(ent);
-	P_Menu_Close(ent);
-	P_Menu_Open(ent, pmcallvotemenu_timelimit, -1, sizeof(pmcallvotemenu_timelimit) / sizeof(menu_t), nullptr, G_Menu_CallVote_TimeLimit_Update);
+        //level.vote = FindVoteCmdByName("timelimit");
+        //level.vote_arg.clear();
+        //VoteCommandStore(ent);
+        P_Menu_Close(ent);
+        P_Menu_Open(ent, pmcallvotemenu_timelimit, -1, sizeof(pmcallvotemenu_timelimit) / sizeof(menu_t), nullptr, G_Menu_CallVote_TimeLimit_Update);
 }
 
 void G_Menu_CallVote_ScoreLimit(gentity_t *ent, menu_hnd_t *p) {
@@ -575,17 +608,17 @@ void G_Menu_CallVote_ScoreLimit(gentity_t *ent, menu_hnd_t *p) {
 }
 
 void G_Menu_CallVote_ShuffleTeams(gentity_t *ent, menu_hnd_t *p) {
-	level.vote = FindVoteCmdByName("shuffle");
-	level.vote_arg = nullptr;
-	VoteCommandStore(ent);
-	P_Menu_Close(ent);
+        level.vote = FindVoteCmdByName("shuffle");
+        level.vote_arg.clear();
+        VoteCommandStore(ent);
+        P_Menu_Close(ent);
 }
 
 void G_Menu_CallVote_BalanceTeams(gentity_t *ent, menu_hnd_t *p) {
-	level.vote = FindVoteCmdByName("balance");
-	level.vote_arg = nullptr;
-	VoteCommandStore(ent);
-	P_Menu_Close(ent);
+        level.vote = FindVoteCmdByName("balance");
+        level.vote_arg.clear();
+        VoteCommandStore(ent);
+        P_Menu_Close(ent);
 
 }
 
@@ -594,10 +627,10 @@ void G_Menu_CallVote_Unlagged(gentity_t *ent, menu_hnd_t *p) {
 }
 
 void G_Menu_CallVote_Cointoss(gentity_t *ent, menu_hnd_t *p) {
-	level.vote = FindVoteCmdByName("cointoss");
-	level.vote_arg = nullptr;
-	VoteCommandStore(ent);
-	P_Menu_Close(ent);
+        level.vote = FindVoteCmdByName("cointoss");
+        level.vote_arg.clear();
+        VoteCommandStore(ent);
+        P_Menu_Close(ent);
 }
 
 void G_Menu_CallVote_Random(gentity_t *ent, menu_hnd_t *p) {
