@@ -279,9 +279,6 @@ size_t Q_strlcat(char *dst, const char *src, size_t siz)
     return (dlen + (s - src)); /* count does not include NUL */
 }
 
-#if !defined(USE_CPP20_FORMAT) && !defined(NO_FMT_SOURCE)
-// fmt ugliness because we haven't figured out FMT_INCLUDE_ONLY
-#include "../src/format.cc"
-#endif
+// fmt is compiled as a dedicated translation unit; nothing to include here.
 #endif
 //====================================================================
