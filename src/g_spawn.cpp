@@ -3,7 +3,12 @@
 
 #include "g_local.hpp"
 
+#include <algorithm>
+#include <bitset>
+#include <cctype>
 #include <cstdint>
+#include <string_view>
+#include <vector>
 
 struct spawn_t {
 	const char *name;
@@ -969,6 +974,200 @@ static constexpr const char *gt_spawn_string[GT_NUM_GAMETYPES] = {
         "ball"
 };
 
+namespace {
+
+struct entity_spawn_filter_data {
+        bool has_gametype_includes = false;
+        bool has_gametype_excludes = false;
+        std::bitset<GT_NUM_GAMETYPES> gametype_includes{};
+        std::bitset<GT_NUM_GAMETYPES> gametype_excludes{};
+
+        bool has_ruleset_includes = false;
+        bool has_ruleset_excludes = false;
+        std::bitset<RS_NUM_RULESETS> ruleset_includes{};
+        std::bitset<RS_NUM_RULESETS> ruleset_excludes{};
+};
+
+static std::vector<entity_spawn_filter_data> s_entity_spawn_filters;
+
+constexpr std::string_view kSpawnFilterDelimiters = " \t\r\n,;|+/";
+
+inline size_t EntityIndex(const gentity_t *ent) {
+        return static_cast<size_t>(ent - g_entities);
+}
+
+entity_spawn_filter_data &EnsureSpawnFilterData(size_t index) {
+        if (s_entity_spawn_filters.size() <= index)
+                s_entity_spawn_filters.resize(index + 1);
+
+        return s_entity_spawn_filters[index];
+}
+
+entity_spawn_filter_data &EnsureSpawnFilterData(gentity_t *ent) {
+        return EnsureSpawnFilterData(EntityIndex(ent));
+}
+
+entity_spawn_filter_data &ResetSpawnFilterDataForEntity(gentity_t *ent) {
+        auto &filters = EnsureSpawnFilterData(ent);
+        filters = {};
+        return filters;
+}
+
+void ResetAllSpawnFilterData() {
+        s_entity_spawn_filters.clear();
+        s_entity_spawn_filters.resize(game.maxentities);
+}
+
+bool EqualsIgnoreCase(std::string_view lhs, std::string_view rhs) {
+        if (lhs.size() != rhs.size())
+                return false;
+
+        for (size_t i = 0; i < lhs.size(); ++i) {
+                const auto a = static_cast<unsigned char>(lhs[i]);
+                const auto b = static_cast<unsigned char>(rhs[i]);
+
+                if (std::tolower(a) != std::tolower(b))
+                        return false;
+        }
+
+        return true;
+}
+
+bool TryParsePositiveInteger(std::string_view token, size_t &value) {
+        if (token.empty())
+                return false;
+
+        size_t result = 0;
+        for (const char ch : token) {
+                if (!std::isdigit(static_cast<unsigned char>(ch)))
+                        return false;
+
+                result = result * 10 + (static_cast<size_t>(ch) - static_cast<size_t>('0'));
+        }
+
+        value = result;
+        return true;
+}
+
+bool TryParseGametypeToken(std::string_view token, size_t &index_out) {
+        if (token.empty())
+                return false;
+
+        for (size_t i = 0; i < GT_NUM_GAMETYPES; ++i) {
+                if (EqualsIgnoreCase(token, gt_spawn_string[i]) ||
+                    EqualsIgnoreCase(token, gt_short_name[i])) {
+                        index_out = i;
+                        return true;
+                }
+        }
+
+        size_t numeric_value = 0;
+        if (TryParsePositiveInteger(token, numeric_value) && numeric_value < GT_NUM_GAMETYPES) {
+                index_out = numeric_value;
+                return true;
+        }
+
+        return false;
+}
+
+bool TryParseRulesetToken(std::string_view token, size_t &index_out) {
+        if (token.empty())
+                return false;
+
+        if (EqualsIgnoreCase(token, "none") || EqualsIgnoreCase(token, "default")) {
+                index_out = static_cast<size_t>(RS_NONE);
+                return true;
+        }
+
+        for (size_t i = 0; i < RS_NUM_RULESETS; ++i) {
+                if (!rs_short_name[i] || !rs_short_name[i][0])
+                        continue;
+
+                if (EqualsIgnoreCase(token, rs_short_name[i])) {
+                        index_out = i;
+                        return true;
+                }
+        }
+
+        size_t numeric_value = 0;
+        if (TryParsePositiveInteger(token, numeric_value) && numeric_value < RS_NUM_RULESETS) {
+                index_out = numeric_value;
+                return true;
+        }
+
+        return false;
+}
+
+template<typename TFunc>
+void ForEachFilterToken(std::string_view value, TFunc &&func) {
+        size_t start = 0;
+
+        while (start < value.size()) {
+                start = value.find_first_not_of(kSpawnFilterDelimiters, start);
+                if (start == std::string_view::npos)
+                        break;
+
+                const size_t end = value.find_first_of(kSpawnFilterDelimiters, start);
+                const auto token = value.substr(start, end == std::string_view::npos ? value.size() - start : end - start);
+
+                if (!token.empty())
+                        func(token);
+
+                if (end == std::string_view::npos)
+                        break;
+
+                start = end + 1;
+        }
+}
+
+void StoreGametypeTokens(entity_spawn_filter_data &filters, std::string_view value, bool inclusive) {
+        bool found = false;
+
+        ForEachFilterToken(value, [&](std::string_view token) {
+                size_t index = 0;
+
+                if (!TryParseGametypeToken(token, index))
+                        return;
+
+                if (inclusive)
+                        filters.gametype_includes.set(index);
+                else
+                        filters.gametype_excludes.set(index);
+
+                found = true;
+        });
+
+        if (inclusive)
+                filters.has_gametype_includes |= found;
+        else
+                filters.has_gametype_excludes |= found;
+}
+
+void StoreRulesetTokens(entity_spawn_filter_data &filters, std::string_view value, bool inclusive) {
+        bool found = false;
+
+        ForEachFilterToken(value, [&](std::string_view token) {
+                size_t index = 0;
+
+                if (!TryParseRulesetToken(token, index))
+                        return;
+
+                if (inclusive)
+                        filters.ruleset_includes.set(index);
+                else
+                        filters.ruleset_excludes.set(index);
+
+                found = true;
+        });
+
+        if (inclusive)
+                filters.has_ruleset_includes |= found;
+        else
+                filters.has_ruleset_excludes |= found;
+}
+
+} // namespace
+
 /*
 ===============
 ED_ParseField
@@ -979,24 +1178,46 @@ in an entity
 */
 void ED_ParseField(const char *key, const char *value, gentity_t *ent) {
 
-	// check st first
-	for (auto &f : temp_fields) {
-		if (Q_strcasecmp(f.name, key))
-			continue;
+        if (!Q_strcasecmp(key, "gametype")) {
+                st.keys_specified.emplace(key);
+                auto &filters = EnsureSpawnFilterData(ent);
+                StoreGametypeTokens(filters, value ? std::string_view(value) : std::string_view{}, true);
+                return;
+        }
 
-		st.keys_specified.emplace(f.name);
+        if (!Q_strcasecmp(key, "not_gametype")) {
+                st.keys_specified.emplace(key);
+                auto &filters = EnsureSpawnFilterData(ent);
+                StoreGametypeTokens(filters, value ? std::string_view(value) : std::string_view{}, false);
+                return;
+        }
 
-		// found it
-		if (f.load_func)
-			f.load_func(&st, value);
+        if (!Q_strcasecmp(key, "ruleset")) {
+                auto &filters = EnsureSpawnFilterData(ent);
+                StoreRulesetTokens(filters, value ? std::string_view(value) : std::string_view{}, true);
+        } else if (!Q_strcasecmp(key, "not_ruleset")) {
+                auto &filters = EnsureSpawnFilterData(ent);
+                StoreRulesetTokens(filters, value ? std::string_view(value) : std::string_view{}, false);
+        }
 
-		return;
-	}
+        // check st first
+        for (auto &f : temp_fields) {
+                if (Q_strcasecmp(f.name, key))
+                        continue;
 
-	// now entity
-	for (auto &f : entity_fields) {
-		if (Q_strcasecmp(f.name, key))
-			continue;
+                st.keys_specified.emplace(f.name);
+
+                // found it
+                if (f.load_func)
+                        f.load_func(&st, value);
+
+                return;
+        }
+
+        // now entity
+        for (auto &f : entity_fields) {
+                if (Q_strcasecmp(f.name, key))
+                        continue;
 
 		st.keys_specified.emplace(f.name);
 
@@ -1029,6 +1250,7 @@ static const char *ED_ParseEntity(const char *data, gentity_t *ent) {
 
 	init = false;
 	st = {};
+	ResetSpawnFilterDataForEntity(ent);
 
 	// go through all the dictionary pairs
 	while (1) {
@@ -1170,39 +1392,29 @@ static void G_FindTeams() {
 		gi.Com_PrintFmt("{}: {} entity team{} found with a total of {} entit{}.\n", __FUNCTION__, c1, c1 != 1 ? "s" : "", c2, c2 != 1 ? "ies" : "y");
 }
 
-// inhibit entities from game based on cvars & spawnflags
-static bool ValidEntityStringPointer(const char *value) {
-	if (!value)
-		return false;
-
-	return reinterpret_cast<std::uintptr_t>(value) != std::uintptr_t(-1);
-}
-
 static inline bool G_InhibitEntity(gentity_t *ent) {
-	if (ValidEntityStringPointer(ent->gametype)) {
-		const char *s = strstr(ent->gametype, gt_spawn_string[g_gametype->integer]);
-		if (!s)
-			return true;
-	}
-	if (ValidEntityStringPointer(ent->not_gametype)) {
-		const char *s = strstr(ent->not_gametype, gt_spawn_string[g_gametype->integer]);
-		if (s)
-			return true;
-	}
+        const size_t index = EntityIndex(ent);
 
-	if (ValidEntityStringPointer(ent->ruleset)) {
-		const char *s = strstr(ent->ruleset, rs_short_name[game.ruleset]);
-		if (!s)
-			return true;
-	}
-	if (ValidEntityStringPointer(ent->not_ruleset)) {
-		const char *s = strstr(ent->not_ruleset, rs_short_name[game.ruleset]);
-		if (s)
-			return true;
-	}
+        if (index < s_entity_spawn_filters.size()) {
+                const auto &filters = s_entity_spawn_filters[index];
+                const auto current_gt = static_cast<size_t>(std::clamp(g_gametype->integer, 0, GT_NUM_GAMETYPES - 1));
+                const auto current_ruleset = static_cast<size_t>(std::clamp<int>(static_cast<int>(game.ruleset), static_cast<int>(RS_NONE), static_cast<int>(RS_NUM_RULESETS - 1)));
 
-	if (ent->notteam && Teams())
-		return true;
+                if (filters.has_gametype_includes && !filters.gametype_includes.test(current_gt))
+                        return true;
+
+                if (filters.has_gametype_excludes && filters.gametype_excludes.test(current_gt))
+                        return true;
+
+                if (filters.has_ruleset_includes && !filters.ruleset_includes.test(current_ruleset))
+                        return true;
+
+                if (filters.has_ruleset_excludes && filters.ruleset_excludes.test(current_ruleset))
+                        return true;
+        }
+
+        if (ent->notteam && Teams())
+                return true;
 	if (ent->notfree && !Teams())
 		return true;
 
@@ -1649,6 +1861,8 @@ static void ParseWorldEntities() {
 	const char	*com_token;
 	const char	*entities = level.entstring.c_str();
 
+	ResetAllSpawnFilterData();
+
 	// parse entities
 	while (1) {
 		// parse the opening brace
@@ -1700,6 +1914,8 @@ static void ParseWorldEntities() {
 void ClearWorldEntities() {
         gentity_t *ent = nullptr;
         //memset(g_entities, 0, game.maxentities * sizeof(g_entities[0]));
+
+        ResetAllSpawnFilterData();
 
         for (size_t i = MAX_CLIENTS; i < game.maxentities; i++) {
                 ent = &g_entities[i];
@@ -1756,6 +1972,8 @@ void Entities_ReloadFromEntstring() {
         level.num_spawn_spots = 0;
         level.num_spawn_spots_free = 0;
         level.num_spawn_spots_team = 0;
+
+        ResetAllSpawnFilterData();
 
         gentity_t *ent = nullptr;
         int inhibit = 0;
@@ -1963,6 +2181,7 @@ void SpawnEntities(const char *mapname, const char *entities, const char *spawnp
 	//const char *entities = level.entstring.c_str();
 
 	// parse entities
+	ResetAllSpawnFilterData();
 	while (1) {
 		// parse the opening brace
 		com_token = COM_Parse(&entities);
