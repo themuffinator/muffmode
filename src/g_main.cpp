@@ -29,6 +29,16 @@ cached_soundindex		snd_fry;
 
 gentity_t *g_entities;
 
+const char *DefaultGametypeValue()
+{
+        return G_Fmt("{}", static_cast<int>(GT_FFA)).data();
+}
+
+const char *DefaultRulesetValue()
+{
+        return G_Fmt("{}", static_cast<int>(RS_MM)).data();
+}
+
 static void RegisterCvars(game_cvar_stage stage)
 {
         ForEachGameCvar(stage, [](const game_cvar_descriptor &descriptor) {
