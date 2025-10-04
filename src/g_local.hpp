@@ -15,7 +15,7 @@ extern level_locals_t level;
 constexpr const char *GAMEVERSION = "baseq2";
 
 constexpr const char *GAMEMOD_TITLE = "Muff Mode BETA";
-constexpr const char *GAMEMOD_VERSION = "0.19.60";
+constexpr const char *GAMEMOD_VERSION = "0.30.01";
 
 //==================================================================
 
