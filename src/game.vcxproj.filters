@@ -131,7 +131,6 @@
   <ItemGroup>
     <ClCompile Include="cg_main.cpp" />
     <ClCompile Include="cg_screen.cpp" />
-    <ClCompile Include="format.cc" />
     <ClCompile Include="g_ai.cpp" />
     <ClCompile Include="g_chase.cpp" />
     <ClCompile Include="g_cmds.cpp" />
@@ -156,7 +155,6 @@
     <ClCompile Include="p_trail.cpp" />
     <ClCompile Include="p_view.cpp" />
     <ClCompile Include="p_weapon.cpp" />
-    <ClCompile Include="os.cc" />
     <ClCompile Include="q_std.cpp" />
     <ClCompile Include="bots\bot_debug.cpp">
       <Filter>bots</Filter>
