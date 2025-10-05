@@ -337,25 +337,26 @@ angles and bad trails.
 =================
 */
 gentity_t *G_Spawn() {
-	gentity_t *e = &g_entities[game.maxclients + 1];
-	size_t i;
+        gentity_t *e;
+        size_t i;
 
-	for (i = game.maxclients + 1; i < globals.num_entities; i++, e++) {
-		// the first couple seconds of server time can involve a lot of
-		// freeing and allocating, so relax the replacement policy
-		if (!e->inuse && (e->freetime < 2_sec || level.time - e->freetime > 500_ms)) {
-			G_InitGentity(e);
-			return e;
-		}
-	}
+        for (i = game.maxclients + 1; i < globals.num_entities; i++) {
+                e = &g_entities[i];
+                // the first couple seconds of server time can involve a lot of
+                // freeing and allocating, so relax the replacement policy
+                if (!e->inuse && (e->freetime < 2_sec || level.time - e->freetime > 500_ms)) {
+                        G_InitGentity(e);
+                        return e;
+                }
+        }
 
-	if (i == game.maxentities)
-		gi.Com_ErrorFmt("{}: no free entities.", __FUNCTION__);
+        if (globals.num_entities == game.maxentities)
+                gi.Com_ErrorFmt("{}: no free entities.", __FUNCTION__);
 
-	globals.num_entities++;
-	G_InitGentity(e);
-	//gi.Com_PrintFmt("{}: total:{}\n", __FUNCTION__, i);
-	return e;
+        e = &g_entities[globals.num_entities++];
+        G_InitGentity(e);
+        //gi.Com_PrintFmt("{}: total:{}\n", __FUNCTION__, i);
+        return e;
 }
 
 /*
