@@ -1395,8 +1395,19 @@ static void G_FindTeams() {
 static inline bool G_InhibitEntity(gentity_t *ent) {
         const size_t index = EntityIndex(ent);
 
-        if (index < s_entity_spawn_filters.size()) {
-                const auto &filters = s_entity_spawn_filters[index];
+        bool has_filters = true;
+
+        if (index >= s_entity_spawn_filters.size()) {
+                EnsureSpawnFilterData(index);
+
+                if (index >= s_entity_spawn_filters.size()) {
+                        // Defensive: skip spawn-filter checks if the cache remains undersized.
+                        has_filters = false;
+                }
+        }
+
+        if (has_filters) {
+                const auto &filters = EnsureSpawnFilterData(index);
                 const auto current_gt = static_cast<size_t>(std::clamp(g_gametype->integer, 0, GT_NUM_GAMETYPES - 1));
                 const auto current_ruleset = static_cast<size_t>(std::clamp<int>(static_cast<int>(game.ruleset), static_cast<int>(RS_NONE), static_cast<int>(RS_NUM_RULESETS - 1)));
 
