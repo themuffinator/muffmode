@@ -6,7 +6,9 @@
 #include <algorithm>
 #include <bitset>
 #include <cctype>
+#include <cmath>
 #include <cstdint>
+#include <cstdlib>
 #include <string_view>
 #include <vector>
 
@@ -2720,12 +2722,21 @@ void SP_worldspawn(gentity_t *ent) {
 
 	//---------------
 
-	if (!st.gravity) {
+	if (!st.gravity || !st.gravity[0]) {
 		level.gravity = 800.f;
 		gi.cvar_set("g_gravity", "800");
 	} else {
-		level.gravity = atof(st.gravity);
-		gi.cvar_set("g_gravity", st.gravity);
+		char *end{};
+		const float parsed_gravity = std::strtof(st.gravity, &end);
+
+		if (end == st.gravity || !std::isfinite(parsed_gravity)) {
+			gi.Com_PrintFmt("Ignoring invalid worldspawn gravity value '{}'\n", st.gravity);
+			level.gravity = 800.f;
+			gi.cvar_set("g_gravity", "800");
+		} else {
+			level.gravity = parsed_gravity;
+			gi.cvar_set("g_gravity", st.gravity);
+		}
 	}
 
 	level.gravity_lotto_base = level.gravity;
