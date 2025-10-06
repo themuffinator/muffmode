@@ -172,6 +172,7 @@ void SP_misc_flare(gentity_t *ent); // [Sam-KEX]
 void SP_misc_hologram(gentity_t *ent);
 void SP_misc_lavaball(gentity_t *ent);
 void SP_misc_nuke_core(gentity_t *self);
+void SP_misc_prox(gentity_t* self);
 
 void SP_monster_berserk(gentity_t *self);
 void SP_monster_gladiator(gentity_t *self);
@@ -395,6 +396,7 @@ static const std::initializer_list<spawn_t> spawns = {
 	{ "misc_transport", SP_misc_transport },
 	{ "misc_nuke", SP_misc_nuke },
 	{ "misc_nuke_core", SP_misc_nuke_core },
+	{ "misc_prox", SP_misc_prox },
 
 	{ "monster_berserk", SP_monster_berserk },
 	{ "monster_gladiator", SP_monster_gladiator },

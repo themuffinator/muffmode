@@ -3611,14 +3611,25 @@ void ClientCommand(gentity_t *ent) {
 	cmds_t		*cc;
 	const char	*cmd;
 
+	if (!ent->inuse)
+		return; // not fully in game yet
+
 	if (!ent->client)
 		return; // not fully in game yet
 
-	// check if client is 888, print what is being sent and prevent any further processing
-	if (ent->client->sess.is_888) {
-		gi.Com_PrintFmt("Sneaky little snake Dalude/888 (%s) sent the following command:\n{}\n", ent->client->pers.netname, gi.args());
+	if (ent->client->sess.is_banned && level.time > ent->client->sess.ban_msg_debounce_time) {
+		gi.Client_Print(ent, PRINT_HIGH, "You are banned from this mod, you naughty little sausage.\nYou should reflect on your behaviour towards other players.\n");
+
+		// ban message debounce time
+		ent->client->sess.ban_msg_debounce_time = level.time + 5_sec;
 		return;
 	}
+
+	// check if client is 888, print what is being sent and prevent any further processing
+	//if (ent->client->sess.is_888) {
+	//	gi.Com_PrintFmt("Sneaky little snake Dalude/888 ({}) sent the following command:\n{}\n", ent->client->pers.netname, gi.args());
+	//	return;
+	//}
 
 	cmd = gi.argv(0);
 	cc = FindClientCmdByName(cmd);

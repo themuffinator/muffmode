@@ -1746,7 +1746,7 @@ constexpr float	  PROX_DAMAGE_RADIUS = 192;
 constexpr int32_t PROX_HEALTH = 20;
 constexpr int32_t PROX_DAMAGE = 90;
 
-static THINK(Prox_Explode) (gentity_t *ent) -> void {
+THINK(Prox_Explode) (gentity_t *ent) -> void {
 	vec3_t	 origin;
 	gentity_t *owner;
 
@@ -1781,7 +1781,7 @@ static THINK(Prox_Explode) (gentity_t *ent) -> void {
 	G_FreeEntity(ent);
 }
 
-static DIE(prox_die) (gentity_t *self, gentity_t *inflictor, gentity_t *attacker, int damage, const vec3_t &point, const mod_t &mod) -> void {
+DIE(prox_die) (gentity_t *self, gentity_t *inflictor, gentity_t *attacker, int damage, const vec3_t &point, const mod_t &mod) -> void {
 	// if set off by another prox, delay a little (chained explosions)
 	if (strcmp(inflictor->classname, "prox_mine")) {
 		self->takedamage = false;

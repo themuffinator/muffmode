@@ -3434,6 +3434,8 @@ struct client_session_t {
 	bool			admin;
 	bool			is_888;
 	bool			is_a_bot;
+	bool			is_banned = false;
+	gtime_t			ban_msg_debounce_time = 0_sec;
 
 	// inactivity timer
 	bool			inactive;

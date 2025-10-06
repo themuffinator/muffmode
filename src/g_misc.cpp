@@ -2609,3 +2609,105 @@ void SP_misc_nuke_core(gentity_t *ent) {
 
 	ent->use = misc_nuke_core_use;
 }
+
+/*
+=================
+misc_prox
+=================
+*/
+
+constexpr gtime_t PROX_TIME_DELAY = 500_ms;
+constexpr float	  PROX_DAMAGE_RADIUS = 192;
+constexpr int32_t PROX_HEALTH = 20;
+constexpr int32_t PROX_DAMAGE = 60;
+
+void Prox_Explode(gentity_t* ent);
+void prox_die(gentity_t* self, gentity_t* inflictor, gentity_t* attacker, int damage, const vec3_t& point, const mod_t& mod);
+
+THINK(misc_prox_seek) (gentity_t* ent) -> void
+{
+	gentity_t* target = nullptr;
+	gentity_t* best = nullptr;
+	vec3_t	 vec;
+	float	 len;
+	float	 oldlen = 8000;
+
+	while ((target = findradius(target, ent->s.origin, PROX_DAMAGE_RADIUS)) != nullptr) {
+		if (target == ent)
+			continue;
+
+		if (!target->client && !(target->monsterinfo.aiflags & AI_GOOD_GUY))
+			continue;
+
+		if (target->health <= 0)
+			continue;
+
+		if (!visible(ent, target))
+			continue;
+
+		vec = ent->s.origin - target->s.origin;
+		len = vec.length();
+
+		if (!best) {
+			best = target;
+			oldlen = len;
+			continue;
+		}
+		if (len < oldlen) {
+			oldlen = len;
+			best = target;
+		}
+	}
+
+	if (best) {
+		gi.sound(ent, CHAN_VOICE, gi.soundindex("weapons/proxwarn.wav"), 1, ATTN_NORM, 0);
+		ent->think = Prox_Explode;
+		ent->nextthink = level.time + PROX_TIME_DELAY;
+		return;
+	}
+
+	ent->nextthink = level.time + 10_hz;
+}
+
+THINK(misc_prox_activate) (gentity_t* ent) -> void
+{
+	gi.Com_Print("check 3!\n");
+	ent->s.frame = 9;
+	ent->s.skinnum = 3;
+	ent->think = misc_prox_seek;
+	ent->nextthink = level.time + 10_hz;
+}
+
+void SP_misc_prox(gentity_t* ent)
+{
+	gi.Com_Print("check 1!\n");
+	if (deathmatch->integer) {
+		G_FreeEntity(ent);
+		return;
+	}
+
+	if (!ent->health)
+		ent->health = PROX_HEALTH;
+
+	if (!ent->dmg)
+		ent->dmg = PROX_DAMAGE;
+
+	gi.Com_Print("check 2!\n");
+	ent->s.modelindex = gi.modelindex("models/weapons/g_prox/tris.md2");
+	ent->s.frame = 9;
+	ent->s.skinnum = 3;
+	ent->mins = { -6, -6, -6 };
+	ent->maxs = { 6, 6, 6 };
+	ent->movetype = MOVETYPE_NONE;
+	ent->solid = SOLID_BBOX;
+	ent->takedamage = true;
+	ent->die = prox_die;
+	ent->classname = "prox_mine";
+	ent->flags |= (FL_DAMAGEABLE | FL_TRAP | FL_MECHANICAL);
+	ent->s.renderfx |= RF_IR_VISIBLE;
+
+	ent->think = misc_prox_activate;
+	ent->nextthink = level.time + 1_sec;
+
+	gi.linkentity(ent);
+}

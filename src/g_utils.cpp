@@ -616,6 +616,9 @@ G_AdjustPlayerScore
 void G_AdjustPlayerScore(gclient_t *cl, int32_t offset, bool adjust_team, int32_t team_offset) {
 	if (!cl) return;
 
+	if (cl->sess.is_banned)
+		return;
+
 	if (IsScoringDisabled())
 		return;
 
