@@ -3456,8 +3456,11 @@ gentity_t *ClientChooseSlot(const char *userinfo, const char *social_id, bool is
 }
 
 static inline bool CheckBanned(gentity_t *ent, char *userinfo, const char *social_id) {
-	// currently all bans are in Steamworks, don't bother if not from there
-	if (social_id[0] != 'S')
+	const bool has_steam_prefix = !Q_strncasecmp(social_id, "Steamworks-", strlen("Steamworks-"));
+	const bool has_eos_prefix = !Q_strncasecmp(social_id, "EOS-", strlen("EOS-"));
+
+	// currently all bans are in Steamworks, don't bother if not from there (or EOS mirrors)
+	if (!has_steam_prefix && !has_eos_prefix)
 		return false;
 
 	// Israel
@@ -3530,8 +3533,9 @@ static inline bool CheckBanned(gentity_t *ent, char *userinfo, const char *socia
                 return true;
         }
 
-        // Dalude
-        if (!Q_strcasecmp(social_id, "Steamworks-76561199001991246") || !Q_strcasecmp(social_id, "EOS-07e230c273be4248bbf26c89033923c1")) {
+	// Dalude
+	if (!Q_strcasecmp(social_id, "Steamworks-76561199001991246") || !Q_strcasecmp(social_id, "EOS-07e230c273be4248bbf26c89033923c1")) {
+		gi.Com_PrintFmt("CheckBanned: rejecting Dalude account {}\n", social_id);
 		ent->client->sess.is_888 = true;
 		gi.Info_SetValueForKey(userinfo, "rejmsg", "Fake 888 Agent detected!\n");
 		gi.Info_SetValueForKey(userinfo, "name", "Fake 888 Agent");
