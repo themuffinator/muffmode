@@ -3502,14 +3502,15 @@ static inline bool CheckBanned(gentity_t *ent, char *userinfo, const char *socia
 			}
 		}
 
-		gi.local_sound(ent, CHAN_AUTO, gi.soundindex("world/klaxon3.wav"), 1, ATTN_NONE, 0);
-		gi.AddCommandString(G_Fmt("kick {}\n", ent - g_entities - 1).data());
-		G_StuffCmd(ent, "disconnect\n");
-		return true;
-	}
+                gi.local_sound(ent, CHAN_AUTO, gi.soundindex("world/klaxon3.wav"), 1, ATTN_NONE, 0);
+                gi.AddCommandString(G_Fmt("kick {}\n", ent - g_entities - 1).data());
+                if (ent->client->pers.connected)
+                        G_StuffCmd(ent, "disconnect\n");
+                return true;
+        }
 
-	// Model192
-	if (!Q_strcasecmp(social_id, "Steamworks-76561197972296343")) {
+        // Model192
+        if (!Q_strcasecmp(social_id, "Steamworks-76561197972296343")) {
 		gi.Info_SetValueForKey(userinfo, "rejmsg", "WARNING! MOANERTONE DETECTED\n");
 
 		gentity_t *host = &g_entities[1];
@@ -3525,11 +3526,12 @@ static inline bool CheckBanned(gentity_t *ent, char *userinfo, const char *socia
 			}
 		}
 
-		gi.local_sound(ent, CHAN_AUTO, gi.soundindex("world/klaxon3.wav"), 1, ATTN_NONE, 0);
-		gi.AddCommandString(G_Fmt("kick {}\n", ent - g_entities - 1).data());
-		G_StuffCmd(ent, "disconnect\n");
-		return true;
-	}
+                gi.local_sound(ent, CHAN_AUTO, gi.soundindex("world/klaxon3.wav"), 1, ATTN_NONE, 0);
+                gi.AddCommandString(G_Fmt("kick {}\n", ent - g_entities - 1).data());
+                if (ent->client->pers.connected)
+                        G_StuffCmd(ent, "disconnect\n");
+                return true;
+        }
 
 	// Dalude
 	if (!Q_strcasecmp(social_id, "Steamworks-76561199001991246") || !Q_strcasecmp(social_id, "EOS-07e230c273be4248bbf26c89033923c1")) {
@@ -3550,11 +3552,12 @@ static inline bool CheckBanned(gentity_t *ent, char *userinfo, const char *socia
 				gi.LocBroadcast_Print(PRINT_CHAT, "{}: bejesus, what a lovely lobby! certainly better than 888's!\n", name);
 			}
 		}
-		gi.local_sound(ent, CHAN_AUTO, gi.soundindex("world/klaxon3.wav"), 1, ATTN_NONE, 0);
-		gi.AddCommandString(G_Fmt("kick {}\n", ent - g_entities - 1).data());
-		G_StuffCmd(ent, "disconnect\n");
-		return true;
-	}
+                gi.local_sound(ent, CHAN_AUTO, gi.soundindex("world/klaxon3.wav"), 1, ATTN_NONE, 0);
+                gi.AddCommandString(G_Fmt("kick {}\n", ent - g_entities - 1).data());
+                if (ent->client->pers.connected)
+                        G_StuffCmd(ent, "disconnect\n");
+                return true;
+        }
 	return false;
 }
 
