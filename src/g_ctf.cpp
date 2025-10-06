@@ -1,6 +1,6 @@
 // Copyright (c) ZeniMax Media Inc.
 // Licensed under the GNU General Public License 2.0.
-#include "g_local.hpp"
+#include "g_local.h"
 
 constexpr int32_t CTF_CAPTURE_BONUS = 15;	  // what you get for capture
 constexpr int32_t CTF_TEAM_BONUS = 10;   // what your team gets for capture

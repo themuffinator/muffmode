@@ -1,21 +1,16 @@
 // Copyright (c) ZeniMax Media Inc.
 // Licensed under the GNU General Public License 2.0.
 
-// g_local.hpp -- local definitions for game module
+// g_local.h -- local definitions for game module
 #pragma once
 
 #include "bg_local.h"
-#include "g_cvars.hpp"
-
-struct gtime_t;
-struct level_locals_t;
-extern level_locals_t level;
 
 // the "gameversion" client command will print this plus compile date
 constexpr const char *GAMEVERSION = "baseq2";
 
 constexpr const char *GAMEMOD_TITLE = "Muff Mode BETA";
-constexpr const char *GAMEMOD_VERSION = "0.30.01";
+constexpr const char *GAMEMOD_VERSION = "0.19.50.4";
 
 //==================================================================
 
@@ -225,11 +220,10 @@ enum gametype_t {
 	GT_CA,
 	GT_FREEZE,
 	GT_STRIKE,
-        GT_RR,
-        GT_LMS,
-        GT_LTS,
-        GT_HORDE,
-        GT_BALL,
+	GT_RR,
+	GT_LMS,
+	GT_HORDE,
+	GT_BALL,
 	GT_NUM_GAMETYPES
 };
 constexpr gametype_t GT_FIRST = GT_FFA;
@@ -250,59 +244,48 @@ extern int _gt[GT_NUM_GAMETYPES];
 #define GT( x ) g_gametype->integer == (int)(x)
 #define notGT( x ) g_gametype->integer != (int)(x)
 
-inline int GT_Flags(gametype_t gt) {
-        return _gt[static_cast<size_t>(gt)];
-}
-
 constexpr const char *gt_short_name[GT_NUM_GAMETYPES] = {
-        "cmp",
-        "ffa",
-        "duel",
-        "tdm",
-        "ctf",
-        "ca",
-        "ft",
-        "strike",
-        "rr",
-        "lms",
-        "lts",
-        "horde",
-        "ball"
+	"cmp",
+	"ffa",
+	"duel",
+	"tdm",
+	"ctf",
+	"ca",
+	"ft",
+	"strike",
+	"rr",
+	"lms",
+	"horde",
+	"ball"
 };
 constexpr const char *gt_short_name_upper[GT_NUM_GAMETYPES] = {
-        "CMP",
-        "FFA",
-        "DUEL",
-        "TDM",
-        "CTF",
-        "CA",
-        "FT",
-        "STRIKE",
-        "REDROVER",
-        "LMS",
-        "LTS",
-        "HORDE",
-        "BALL",
+	"CMP",
+	"FFA",
+	"DUEL",
+	"TDM",
+	"CTF",
+	"CA",
+	"FT",
+	"STRIKE",
+	"REDROVER",
+	"LMS",
+	"HORDE",
+	"BALL",
 };
 constexpr const char *gt_long_name[GT_NUM_GAMETYPES] = {
-        "Campaign",
-        "Deathmatch",
-        "Duel",
-        "Team Deathmatch",
-        "Capture the Flag",
-        "Clan Arena",
-        "Freeze Tag",
-        "CaptureStrike",
-        "Red Rover",
-        "Last Man Standing",
-        "Last Team Standing",
-        "Horde Mode",
-        "ProBall"
+	"Campaign",
+	"Deathmatch",
+	"Duel",
+	"Team Deathmatch",
+	"Capture the Flag",
+	"Clan Arena",
+	"Freeze Tag",
+	"CaptureStrike",
+	"Red Rover",
+	"Last Man Standing",
+	"Horde Mode",
+	"ProBall"
 };
-
-const char *GT_CommandName(gametype_t gt);
-const char *GT_CallvoteList();
-const char *GT_CallvoteArgs();
 
 enum monflags_t {
 	MF_NONE		= 0x00,
@@ -322,58 +305,6 @@ typedef enum {
 	MATCH_IN_PROGRESS,		// match is in progress, not used in round-based gametypes
 	MATCH_ENDED				// match or final round has ended
 } matchst_t;
-
-//
-// Helper utilities for reasoning about the current match state.
-// Keeping the helpers here avoids scattering fragile enum comparisons
-// across the codebase and makes the intent of the checks clearer.
-//
-[[nodiscard]] constexpr bool Match_IsNone(matchst_t state) {
-        return state == matchst_t::MATCH_NONE;
-}
-
-[[nodiscard]] constexpr bool Match_IsDelayedWarmup(matchst_t state) {
-        return state == matchst_t::MATCH_WARMUP_DELAYED;
-}
-
-[[nodiscard]] constexpr bool Match_IsDefaultWarmup(matchst_t state) {
-        return state == matchst_t::MATCH_WARMUP_DEFAULT;
-}
-
-[[nodiscard]] constexpr bool Match_IsReadyUp(matchst_t state) {
-        return state == matchst_t::MATCH_WARMUP_READYUP;
-}
-
-[[nodiscard]] constexpr bool Match_IsActiveWarmup(matchst_t state) {
-        return Match_IsDefaultWarmup(state) || Match_IsReadyUp(state);
-}
-
-[[nodiscard]] constexpr bool Match_IsCountdown(matchst_t state) {
-        return state == matchst_t::MATCH_COUNTDOWN;
-}
-
-[[nodiscard]] constexpr bool Match_IsPreGame(matchst_t state) {
-        return state > matchst_t::MATCH_NONE && state < matchst_t::MATCH_IN_PROGRESS;
-}
-
-[[nodiscard]] constexpr bool Match_IsPreCountdown(matchst_t state) {
-        return state < matchst_t::MATCH_COUNTDOWN;
-}
-
-[[nodiscard]] constexpr bool Match_IsOngoing(matchst_t state) {
-        return state == matchst_t::MATCH_IN_PROGRESS;
-}
-
-[[nodiscard]] constexpr bool Match_HasStarted(matchst_t state) {
-        return state >= matchst_t::MATCH_IN_PROGRESS;
-}
-
-[[nodiscard]] constexpr bool Match_IsPostGame(matchst_t state) {
-        return state == matchst_t::MATCH_ENDED;
-}
-
-void Match_SetState(matchst_t new_state, gtime_t timer);
-void Match_SetState(matchst_t new_state);
 
 typedef enum {
 	WARMUP_REQ_NONE,
@@ -1595,7 +1526,6 @@ struct level_locals_t {
 										// kills during this delay
 
 	const char	*changemap;
-	char		changemap_context[256];
 	const char	*achievement;
 	bool		intermission_exit;
 	bool		intermission_eou;
@@ -1604,7 +1534,7 @@ struct level_locals_t {
 	bool		intermission_fade, intermission_fading; // [Paril-KEX] fade on exit instead of immediately leaving
 	gtime_t		intermission_fade_time;
 	vec3_t		intermission_origin;
-	vec3_t		intermission_angles;
+	vec3_t		intermission_angle;
 	bool		intermission_spot;
 	bool		respawn_intermission; // only set once for respawning players
 
@@ -1679,9 +1609,6 @@ struct level_locals_t {
 
 	// saved gravity
 	float		gravity;
-	gtime_t		gravity_lotto_next;
-	float		gravity_lotto_base;
-	bool		gravity_lotto_active;
 	// level is a hub map, and shouldn't be included in EOU stuff
 	bool		hub_map;
 	// active health bar entities
@@ -1786,15 +1713,6 @@ struct level_locals_t {
 
 	bool		prepare_to_fight;
 };
-
-inline void Match_SetState(matchst_t new_state, gtime_t timer) {
-	level.match_state = new_state;
-	level.match_state_timer = timer;
-}
-
-inline void Match_SetState(matchst_t new_state) {
-	Match_SetState(new_state, 0_sec);
-}
 
 struct shadow_light_temp_t {
 	shadow_light_data_t data;
@@ -2306,6 +2224,7 @@ using save_die_t = save_data_t<void(*)(gentity_t *self, gentity_t *inflictor, ge
 constexpr gtime_t DUCK_INTERVAL = 5000_ms;
 
 extern game_locals_t  game;
+extern level_locals_t level;
 extern game_export_t  globals;
 extern spawn_temp_t	  st;
 
@@ -2395,8 +2314,193 @@ template<typename T>
 	return irandom(2) == 0;
 }
 
+extern cvar_t *hostname;
+
+extern cvar_t *deathmatch;
+extern cvar_t *ctf;
+extern cvar_t *teamplay;
+extern cvar_t *g_gametype;
+
+extern cvar_t *coop;
+
+extern cvar_t *skill;
+extern cvar_t *fraglimit;
+extern cvar_t *capturelimit;
+extern cvar_t *timelimit;
+extern cvar_t *roundlimit;
+extern cvar_t *roundtimelimit;
+extern cvar_t *mercylimit;
+extern cvar_t *noplayerstime;
+
+extern cvar_t *g_ruleset;
+
+extern cvar_t *password;
+extern cvar_t *spectator_password;
+extern cvar_t *admin_password;
+extern cvar_t *needpass;
+extern cvar_t *filterban;
+
+extern cvar_t *maxplayers;
+extern cvar_t *minplayers;
+
+extern cvar_t *ai_allow_dm_spawn;
+extern cvar_t *ai_damage_scale;
+extern cvar_t *ai_model_scale;
+extern cvar_t *ai_movement_disabled;
+
+extern cvar_t *bot_debug_follow_actor;
+extern cvar_t *bot_debug_move_to_point;
+
+extern cvar_t *flood_msgs;
+extern cvar_t *flood_persecond;
+extern cvar_t *flood_waitdelay;
+
+extern cvar_t *bob_pitch;
+extern cvar_t *bob_roll;
+extern cvar_t *bob_up;
+extern cvar_t *gun_x, *gun_y, *gun_z;
+extern cvar_t *run_pitch;
+extern cvar_t *run_roll;
+
+extern cvar_t *g_airaccelerate;
+extern cvar_t *g_allow_admin;
+extern cvar_t *g_allow_custom_skins;
+extern cvar_t *g_allow_forfeit;
+extern cvar_t *g_allow_grapple;
+extern cvar_t *g_allow_kill;
+extern cvar_t *g_allow_mymap;
+extern cvar_t *g_allow_spec_vote;
+extern cvar_t *g_allow_techs;
+extern cvar_t *g_allow_vote_midgame;
+extern cvar_t *g_allow_voting;
+extern cvar_t *g_arena_dmg_armor;
+extern cvar_t *g_arena_start_armor;
+extern cvar_t *g_arena_start_health;
+extern cvar_t *g_cheats;
+extern cvar_t *g_coop_enable_lives;
+extern cvar_t *g_coop_health_scaling;
+extern cvar_t *g_coop_instanced_items;
+extern cvar_t *g_coop_num_lives;
+extern cvar_t *g_coop_player_collision;
+extern cvar_t *g_coop_squad_respawn;
+extern cvar_t *g_corpse_sink_time;
+extern cvar_t *g_damage_scale;
+extern cvar_t *g_debug_monster_kills;
+extern cvar_t *g_debug_monster_paths;
+extern cvar_t *g_dedicated;
+extern cvar_t *g_disable_player_collision;
+extern cvar_t *g_dm_allow_exit;
+extern cvar_t *g_dm_allow_no_humans;
+extern cvar_t *g_dm_auto_join;
+extern cvar_t *g_dm_crosshair_id;
+extern cvar_t *g_dm_do_readyup;
+extern cvar_t *g_dm_do_warmup;
+extern cvar_t *g_dm_exec_level_cfg;
+extern cvar_t *g_dm_force_join;
+extern cvar_t *g_dm_force_respawn;
+extern cvar_t *g_dm_force_respawn_time;
+extern cvar_t *g_dm_holdable_adrenaline;
+extern cvar_t *g_dm_instant_items;
+extern cvar_t *g_dm_intermission_shots;
+extern cvar_t *g_dm_item_respawn_rate;
+extern cvar_t *g_dm_no_fall_damage;
+extern cvar_t *g_dm_no_quad_drop;
+extern cvar_t *g_dm_no_self_damage;
+extern cvar_t *g_dm_no_stack_double;
+extern cvar_t *g_dm_overtime;
+extern cvar_t *g_dm_powerup_drop;
+extern cvar_t *g_dm_powerups_minplayers;
+extern cvar_t *g_dm_random_items;
+extern cvar_t *g_dm_respawn_delay_min;
+extern cvar_t *g_dm_respawn_point_min_dist;
+extern cvar_t *g_dm_respawn_point_min_dist_debug;
+extern cvar_t *g_dm_same_level;
+extern cvar_t *g_dm_spawn_farthest;
+extern cvar_t *g_dm_spawnpads;
+extern cvar_t *g_dm_strong_mines;
+extern cvar_t *g_dm_timeout_length;
+extern cvar_t *g_dm_weapons_stay;
+extern cvar_t *g_drop_cmds;
+extern cvar_t *g_entity_override_dir;
+extern cvar_t *g_entity_override_load;
+extern cvar_t *g_entity_override_save;
+extern cvar_t *g_eyecam;
+extern cvar_t *g_fast_doors;
+extern cvar_t *g_frag_messages;
+extern cvar_t *g_frenzy;
+extern cvar_t *g_friendly_fire;
+extern cvar_t *g_frozen_time;
+extern cvar_t *g_grapple_damage;
+extern cvar_t *g_grapple_fly_speed;
+extern cvar_t *g_grapple_offhand;
+extern cvar_t *g_grapple_pull_speed;
+extern cvar_t *g_gravity;
+extern cvar_t *g_huntercam;
+extern cvar_t *g_inactivity;
+extern cvar_t *g_infinite_ammo;
+extern cvar_t *g_instagib;
+extern cvar_t *g_instagib_splash;
+extern cvar_t *g_instant_weapon_switch;
+extern cvar_t *g_item_bobbing;
+extern cvar_t *g_knockback_scale;
+extern cvar_t *g_ladder_steps;
+extern cvar_t *g_lag_compensation;
+extern cvar_t *g_map_list;
+extern cvar_t *g_map_list_shuffle;
+extern cvar_t *g_map_pool;
+extern cvar_t *g_match_lock;
+extern cvar_t *g_matchstats;
+extern cvar_t *g_maxvelocity;
+extern cvar_t *g_motd_filename;
+extern cvar_t *g_mover_debug;
+extern cvar_t *g_mover_speed_scale;
+extern cvar_t *g_nadefest;
+extern cvar_t *g_no_armor;
+extern cvar_t *g_no_health;
+extern cvar_t *g_no_items;
+extern cvar_t *g_no_mines;
+extern cvar_t *g_no_nukes;
+extern cvar_t *g_no_powerups;
+extern cvar_t *g_no_spheres;
+extern cvar_t *g_owner_auto_join;
+extern cvar_t *g_owner_push_scores;
+extern cvar_t *g_gametype_cfg;
+extern cvar_t *g_quadhog;
+extern cvar_t *g_quick_weapon_switch;
+extern cvar_t *g_rollangle;
+extern cvar_t *g_rollspeed;
+extern cvar_t *g_round_countdown;
+extern cvar_t *g_select_empty;
+extern cvar_t *g_showhelp;
+extern cvar_t *g_showmotd;
+extern cvar_t *g_skip_view_modifiers;
+extern cvar_t *g_start_items;
+extern cvar_t *g_starting_health;
+extern cvar_t *g_starting_health_bonus;
+extern cvar_t *g_starting_armor;
+extern cvar_t *g_stopspeed;
+extern cvar_t *g_strict_saves;
+extern cvar_t *g_teamplay_allow_team_pick;
+extern cvar_t *g_teamplay_armor_protect;
+extern cvar_t *g_teamplay_auto_balance;
+extern cvar_t *g_teamplay_force_balance;
+extern cvar_t *g_teamplay_item_drop_notice;
+extern cvar_t *g_teleporter_freeze;
+extern cvar_t *g_vampiric_damage;
+extern cvar_t *g_vampiric_exp_min;
+extern cvar_t *g_vampiric_health_max;
+extern cvar_t *g_vampiric_percentile;
+extern cvar_t *g_verbose;
+extern cvar_t *g_vote_flags;
+extern cvar_t *g_vote_limit;
+extern cvar_t *g_warmup_countdown;
+extern cvar_t *g_warmup_ready_percentage;
+extern cvar_t *g_weapon_projection;
+extern cvar_t *g_weapon_respawn_time;
+
+extern cvar_t *bot_name_prefix;
+
 #define world (&g_entities[0])
-#define host (&g_entities[1])
 
 uint32_t GetUnicastKey();
 
@@ -2554,10 +2658,6 @@ bool IsScoringDisabled();
 void BroadcastReadyReminderMessage();
 void TeleportPlayerToRandomSpawnPoint(gentity_t *ent, bool fx);
 bool InCoopStyle();
-bool G_GametypeUsesLives();
-int G_GametypeInitialLives();
-bool G_GametypeUsesSquadRespawn();
-bool G_GametypeEliminationHUDActive();
 gentity_t *ClientEntFromString(const char *in);
 ruleset_t RS_IndexFromString(const char *in);
 void TeleporterVelocity(gentity_t *ent, gvec3_t angles);
@@ -2617,9 +2717,9 @@ MAKE_ENUM_BITFLAGS(damageflags_t);
 //
 // g_combat.cpp
 //
-[[nodiscard]] bool OnSameTeam(const gentity_t *ent1, const gentity_t *ent2);
-[[nodiscard]] bool CanDamage(const gentity_t *targ, const gentity_t *inflictor);
-[[nodiscard]] bool CheckTeamDamage(const gentity_t *targ, const gentity_t *attacker);
+bool OnSameTeam(gentity_t *ent1, gentity_t *ent2);
+bool CanDamage(gentity_t *targ, gentity_t *inflictor);
+bool CheckTeamDamage(gentity_t *targ, gentity_t *attacker);
 void T_Damage(gentity_t *targ, gentity_t *inflictor, gentity_t *attacker, const vec3_t &dir, const vec3_t &point,
 	const vec3_t &normal, int damage, int knockback, damageflags_t dflags, mod_t mod);
 void T_RadiusDamage(gentity_t *inflictor, gentity_t *attacker, float damage, gentity_t *ignore, float radius, damageflags_t dflags, mod_t mod);
@@ -2959,9 +3059,8 @@ void G_SetSpectatorStats(gentity_t *ent);
 void G_CheckChaseStats(gentity_t *ent);
 void ValidateSelectedItem(gentity_t *ent);
 void DeathmatchScoreboardMessage(gentity_t *ent, gentity_t *killer);
+void TeamsScoreboardMessage(gentity_t *ent, gentity_t *killer);
 void G_ReportMatchDetails(bool is_end);
-
-void SetMiniScoreStats(gentity_t *ent);
 
 //
 // p_weapon.cpp
@@ -3035,11 +3134,6 @@ void Round_End();
 void SetIntermissionPoint(void);
 void FindIntermissionPoint(void);
 void CalculateRanks();
-
-bool Freeze_IsFrozen(const gentity_t *ent);
-void Freeze_OnPlayerKilled(gentity_t *victim, gentity_t *attacker);
-void Freeze_UpdatePlayer(gentity_t *ent);
-void Freeze_ResetClient(gentity_t *ent);
 void CheckDMExitRules();
 int GT_ScoreLimit();
 const char *GT_ScoreLimitString();
@@ -3058,7 +3152,6 @@ bool InAMatch();
 void ChangeGametype(gametype_t gt);
 void GT_Changes();
 void SpawnEntities(const char *mapname, const char *entities, const char *spawnpoint);
-void Entities_ReloadFromEntstring();
 void G_LoadMOTD();
 
 //
@@ -3294,7 +3387,8 @@ struct client_persistant_t {
 	int32_t			vote_count;			// to prevent people from constantly calling votes
 	int				voted;
 
-	int32_t			healthBonus;
+	int32_t			health_bonus;
+	gtime_t			health_bonus_timer;
 
 	bool			timeout_used;
 
@@ -3612,12 +3706,11 @@ struct gclient_t {
 	gtime_t	 last_firing_time;
 
 	bool		eliminated;
-	bool		freeze_thawing;
 /*freeze*/
 	gentity_t		*viewed;
-	gtime_t	thaw_time;
-	gtime_t	frozen_time;
-	gtime_t	moan_time;
+	float		thaw_time;
+	float		frozen_time;
+	float		moan_time;
 /*freeze*/
 
 	bool		ready_to_exit;
@@ -3871,10 +3964,6 @@ struct gentity_t {
 	const char *not_ruleset;
 	const char *powerups_on;
 	const char *powerups_off;
-	const char *bfg_on;
-	const char *bfg_off;
-	const char *plasmabeam_on;
-	const char *plasmabeam_off;
 
 	gvec3_t		origin2;
 
@@ -4140,7 +4229,7 @@ struct fmt::formatter<gentity_t> {
 	}
 
 	template<typename FormatContext>
-        auto format(const gentity_t &p, FormatContext &ctx) const -> decltype(ctx.out()) {
+	auto format(const gentity_t &p, FormatContext &ctx) -> decltype(ctx.out()) {
 		if (p.linked)
 			return fmt::format_to(ctx.out(), FMT_STRING("{} @ {}"), p.classname, (p.absmax + p.absmin) * 0.5f);
 		return fmt::format_to(ctx.out(), FMT_STRING("{} @ {}"), p.classname, p.s.origin);

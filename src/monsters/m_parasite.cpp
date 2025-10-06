@@ -8,7 +8,7 @@ parasite
 ==============================================================================
 */
 
-#include "../g_local.hpp"
+#include "../g_local.h"
 #include "m_parasite.h"
 
 constexpr float g_athena_parasite_miss_chance = 0.1f;

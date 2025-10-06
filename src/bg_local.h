@@ -1,7 +1,7 @@
 // Copyright (c) ZeniMax Media Inc.
 // Licensed under the GNU General Public License 2.0.
 
-// bg_local.h -- shared game definitions for client and server modules
+// g_local.h -- local definitions for game module
 #pragma once
 
 #include "q_std.h"

@@ -8,7 +8,7 @@ brain
 ==============================================================================
 */
 
-#include "../g_local.hpp"
+#include "../g_local.h"
 #include "m_brain.h"
 
 static cached_soundindex sound_chest_open;

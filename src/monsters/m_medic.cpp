@@ -8,7 +8,7 @@ MEDIC
 ==============================================================================
 */
 
-#include "../g_local.hpp"
+#include "../g_local.h"
 #include "m_medic.h"
 #include "m_flash.h"
 

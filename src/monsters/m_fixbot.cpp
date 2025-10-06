@@ -4,7 +4,7 @@
 	fixbot.c
 */
 
-#include "../g_local.hpp"
+#include "../g_local.h"
 #include "m_fixbot.h"
 #include "m_flash.h"
 

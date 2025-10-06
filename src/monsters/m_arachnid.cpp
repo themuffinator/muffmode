@@ -8,7 +8,7 @@ TANK
 ==============================================================================
 */
 
-#include "../g_local.hpp"
+#include "../g_local.h"
 #include "m_arachnid.h"
 #include "m_flash.h"
 

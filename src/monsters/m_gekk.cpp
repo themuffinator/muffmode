@@ -5,7 +5,7 @@
 	gekk.c
 */
 
-#include "../g_local.hpp"
+#include "../g_local.h"
 #include "m_gekk.h"
 
 constexpr spawnflags_t SPAWNFLAG_GEKK_CHANT = 8_spawnflag;

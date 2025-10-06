@@ -3,7 +3,7 @@
 
 #include <sstream>
 
-#include "g_local.hpp"
+#include "g_local.h"
 #include <float.h>
 #ifdef __clang__
 #pragma clang diagnostic push
@@ -624,7 +624,7 @@ FIELD_LEVEL_STRING(achievement),
 FIELD_AUTO(intermission_exit),
 FIELD_AUTO(intermission_clear),
 FIELD_AUTO(intermission_origin),
-FIELD_AUTO(intermission_angles),
+FIELD_AUTO(intermission_angle),
 
 // pic_health is set by worldspawn
 // pic_ping is set by worldspawn
@@ -663,9 +663,6 @@ FIELD_LEVEL_STRING(start_items),
 FIELD_AUTO(no_grapple),
 FIELD_AUTO(no_dm_spawnpads),
 FIELD_AUTO(gravity),
-FIELD_AUTO(gravity_lotto_next),
-FIELD_AUTO(gravity_lotto_base),
-FIELD_AUTO(gravity_lotto_active),
 FIELD_AUTO(hub_map),
 FIELD_AUTO(health_bar_entities),
 FIELD_AUTO(intermission_server_frame),

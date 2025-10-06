@@ -1,11 +1,28 @@
 // Copyright (c) ZeniMax Media Inc.
 // Licensed under the GNU General Public License 2.0.
-#include "g_local.hpp"
+#include "g_local.h"
 #include "g_statusbar.h"
 
-#include <algorithm>
-#include <limits>
-#include <vector>
+/*
+======================================================================
+
+INTERMISSION
+
+======================================================================
+*/
+
+static const char *EndMatchVictorString() {
+	if (!level.intermission_time)
+		return nullptr;
+
+	const char *s = nullptr;
+
+	if (Teams() && !(GT(GT_RR))) {
+		
+		return s;
+	}
+
+}
 
 void MultiplayerScoreboard(gentity_t *ent);
 
@@ -19,10 +36,8 @@ void MoveClientToIntermission(gentity_t *ent) {
 	}
 	ent->s.origin = level.intermission_origin;
 	ent->client->ps.pmove.origin = level.intermission_origin;
-	ent->s.angles = level.intermission_angles;
-	ent->client->ps.viewangles = level.intermission_angles;
-	ent->client->ps.pmove.delta_angles = level.intermission_angles;
-	//ent->client->ps.pmove.pm_type = PM_FREEZE;
+	ent->client->ps.viewangles = level.intermission_angle;
+	ent->client->ps.pmove.pm_type = PM_FREEZE;
 	ent->client->ps.gunindex = 0;
 	ent->client->ps.gunskin = 0;
 	ent->client->ps.damage_blend[3] = ent->client->ps.screen_blend[3] = 0;
@@ -61,8 +76,6 @@ void MoveClientToIntermission(gentity_t *ent) {
 	ent->movetype = MOVETYPE_FREECAM;
 
 	gi.linkentity(ent);
-
-	SetMiniScoreStats(ent);
 
 	// add the layout
 
@@ -177,9 +190,12 @@ void G_EndOfUnitMessage() {
 //     u8 team
 // ]
 void G_ReportMatchDetails(bool is_end) {
-	std::array<uint32_t, MAX_CLIENTS> player_ranks{};
-	const bool teams = Teams() && notGT(GT_RR);
+	static std::array<uint32_t, MAX_CLIENTS> player_ranks;
 
+	player_ranks = {};
+	bool teams = Teams() && notGT(GT_RR);
+
+	// teamplay is simple
 	if (teams) {
 		Teams_CalcRankings(player_ranks);
 
@@ -187,73 +203,60 @@ void G_ReportMatchDetails(bool is_end) {
 		gi.WriteString("RED TEAM");
 		gi.WriteString("BLUE TEAM");
 	} else {
-		std::vector<gentity_t *> sorted_players;
-		sorted_players.reserve(game.maxclients);
+		// sort players by score, then match everybody to
+		// the current highest score downwards until we run out of players.
+		static std::array<gentity_t *, MAX_CLIENTS> sorted_players;
+		size_t num_active_players = 0;
 
 		for (auto player : active_clients())
-			sorted_players.push_back(player);
+			sorted_players[num_active_players++] = player;
 
-		std::sort(sorted_players.begin(), sorted_players.end(), [](const gentity_t *a, const gentity_t *b) {
-			return b->client->resp.score < a->client->resp.score;
-		});
+		std::sort(sorted_players.begin(), sorted_players.begin() + num_active_players, [](const gentity_t *a, const gentity_t *b) { return b->client->resp.score < a->client->resp.score; });
 
-		int32_t current_score = std::numeric_limits<int32_t>::min();
-		uint32_t current_rank = 0;
+		int32_t current_score = INT_MIN;
+		int32_t current_rank = 0;
 
-		for (const auto *player : sorted_players) {
-			const auto *client = player->client;
-			if (!client)
-				continue;
-
-			const int32_t score = client->resp.score;
-			if (!current_rank || score != current_score) {
-				++current_rank;
-				current_score = score;
+		for (size_t i = 0; i < num_active_players; i++) {
+			if (!current_rank || sorted_players[i]->client->resp.score != current_score) {
+				current_rank++;
+				current_score = sorted_players[i]->client->resp.score;
 			}
 
-			const auto index = static_cast<size_t>(player->s.number - 1);
-			if (index < player_ranks.size())
-				player_ranks[index] = current_rank;
+			player_ranks[sorted_players[i]->s.number - 1] = current_rank;
 		}
 
 		gi.WriteByte(0);
 	}
 
-	std::vector<gentity_t *> playing_players;
-	playing_players.reserve(level.num_playing_clients);
+	uint8_t num_players = 0;
 
 	for (auto player : active_clients()) {
-		auto *client = player->client;
-		if (!client)
-			continue;
-		if (!client->pers.spawned)
-			continue;
-		if (!ClientIsPlaying(client))
-			continue;
+		// leave spectators out of this data, they don't need to be seen.
+		if (player->client->pers.spawned && ClientIsPlaying(player->client)) {
+			// just in case...
+			if (teams && !ClientIsPlaying(player->client))
+				continue;
 
-		const auto index = static_cast<size_t>(player->s.number - 1);
-		if (index >= player_ranks.size())
-			continue;
-
-		playing_players.push_back(player);
+			num_players++;
+		}
 	}
 
-	const auto max_serialisable_players = static_cast<size_t>(std::numeric_limits<uint8_t>::max());
-	const auto num_players = static_cast<uint8_t>(std::min(playing_players.size(), max_serialisable_players));
 	gi.WriteByte(num_players);
 
-	for (size_t i = 0; i < num_players; ++i) {
-		auto *player = playing_players[i];
-		auto *client = player->client;
-		const auto index = static_cast<size_t>(player->s.number - 1);
+	for (auto player : active_clients()) {
+		// leave spectators out of this data, they don't need to be seen.
+		if (player->client->pers.spawned && ClientIsPlaying(player->client)) {
+			// just in case...
+			if (teams && !ClientIsPlaying(player->client))
+				continue;
 
-		gi.WriteByte(static_cast<uint8_t>(index));
-		gi.WriteLong(client->resp.score);
-		const auto rank = std::min<uint32_t>(player_ranks[index], std::numeric_limits<uint8_t>::max());
-		gi.WriteByte(static_cast<uint8_t>(rank));
+			gi.WriteByte(player->s.number - 1);
+			gi.WriteLong(player->client->resp.score);
+			gi.WriteByte(player_ranks[player->s.number - 1]);
 
-		if (teams)
-			gi.WriteByte(client->sess.team == TEAM_RED ? 0 : 1);
+			if (teams)
+				gi.WriteByte(player->client->sess.team == TEAM_RED ? 0 : 1);
+		}
 	}
 
 	gi.ReportMatchDetails_Multicast(is_end);
@@ -361,12 +364,12 @@ void TeamsScoreboardMessage(gentity_t *ent, gentity_t *killer) {
 		fmt::format_to(std::back_inserter(string),
 			FMT_STRING("if 25 xv -32 yv 8 pic 25 endif "
 				"xv 0 yv 28 string \"{}/{}\" "
-				"xv 58 yv 12 num 3 19 "
+				"xv 58 yv 12 num 2 19 "
 				"xv -40 yv 42 string \"SC\" "
 				"xv -12 yv 42 picn ping "
 				"if 26 xv 208 yv 8 pic 26 endif "
 				"xv 240 yv 28 string \"{}/{}\" "
-				"xv 296 yv 12 num 3 21 "
+				"xv 296 yv 12 num 2 21 "
 				"xv 200 yv 42 string \"SC\" "
 				"xv 228 yv 42 picn ping "),
 			total[0], teamsize,
@@ -375,12 +378,12 @@ void TeamsScoreboardMessage(gentity_t *ent, gentity_t *killer) {
 		fmt::format_to(std::back_inserter(string),
 			FMT_STRING("if 25 xv -32 yv 8 pic 25 endif "
 				"xv 0 yv 28 string \"{}/{}/{}\" "
-				"xv 58 yv 12 num 3 19 "
+				"xv 58 yv 12 num 2 19 "
 				"xv -40 yv 42 string \"SC\" "
 				"xv -12 yv 42 picn ping "
 				"if 26 xv 208 yv 8 pic 26 endif "
 				"xv 240 yv 28 string \"{}/{}/{}\" "
-				"xv 296 yv 12 num 3 21 "
+				"xv 296 yv 12 num 2 21 "
 				"xv 200 yv 42 string \"SC\" "
 				"xv 228 yv 42 picn ping "),
 			total_living[0], total[0], teamsize,
@@ -390,7 +393,7 @@ void TeamsScoreboardMessage(gentity_t *ent, gentity_t *killer) {
 			FMT_STRING("if 25 xv -32 yv 8 pic 25 endif "
 				"xv -123 yv 28 cstring \"{}/{}\" "
 				"xv 41 yv 12 num 3 19 "
-				"xv -40 yv 42 string \"sc\" "
+				"xv -40 yv 42 string \"SC\" "
 				"xv -12 yv 42 picn ping "
 				"if 26 xv 208 yv 8 pic 26 endif "
 				"xv 117 yv 28 cstring \"{}/{}\" "
@@ -1067,10 +1070,10 @@ void Cmd_Help_f(gentity_t *ent) {
 // even if we're spectating
 void G_SetCoopStats(gentity_t *ent) {
 
-        if (G_GametypeUsesLives())
-                ent->client->ps.stats[STAT_LIVES] = ent->client->pers.lives + 1;
-        else
-                ent->client->ps.stats[STAT_LIVES] = 0;
+	if (InCoopStyle() && g_coop_enable_lives->integer)
+		ent->client->ps.stats[STAT_LIVES] = ent->client->pers.lives + 1;
+	else
+		ent->client->ps.stats[STAT_LIVES] = 0;
 	
 	if (level.match_state == MATCH_IN_PROGRESS) {
 		if (GT(GT_HORDE))
@@ -1265,7 +1268,7 @@ static void CTF_SetStats(gentity_t *ent, bool blink) {
 			ent->client->ps.stats[STAT_MINISCORE_SECOND_PIC] = 0;
 	}
 
-	if (level.match_state >= MATCH_IN_PROGRESS || level.intermission_time) {
+	if (level.match_state == MATCH_IN_PROGRESS) {
 		ent->client->ps.stats[STAT_MINISCORE_FIRST_SCORE] = level.team_scores[TEAM_RED];
 		ent->client->ps.stats[STAT_MINISCORE_SECOND_SCORE] = level.team_scores[TEAM_BLUE];
 	}
@@ -1283,7 +1286,7 @@ static void CTF_SetStats(gentity_t *ent, bool blink) {
 }
 
 
-void SetMiniScoreStats(gentity_t *ent) {
+static void SetMiniScoreStats(gentity_t *ent) {
 	bool teams = Teams() && notGT(GT_RR);
 	int16_t	pos1_num = -1, pos2_num = -1;
 	int16_t own_num = -1;
@@ -1385,7 +1388,7 @@ void SetMiniScoreStats(gentity_t *ent) {
 		CTF_SetStats(ent, blink);
 	} else {
 		if (teams) {
-			if (level.match_state >= MATCH_IN_PROGRESS || level.intermission_time) {
+			if (level.match_state == MATCH_IN_PROGRESS) {
 				ent->client->ps.stats[STAT_MINISCORE_FIRST_PIC] = ii_teams_red_default;
 				ent->client->ps.stats[STAT_MINISCORE_FIRST_SCORE] = level.team_scores[TEAM_RED];
 				ent->client->ps.stats[STAT_MINISCORE_SECOND_PIC] = ii_teams_blue_default;
@@ -1843,7 +1846,7 @@ void G_SetStats(gentity_t *ent) {
 				break;
 			case matchst_t::MATCH_WARMUP_DEFAULT:
 			case matchst_t::MATCH_WARMUP_READYUP:
-				s1 = "WARMUP";
+							s1 = "WARMUP";
 				break;
 			case matchst_t::MATCH_COUNTDOWN:
 				s1 = "COUNTDOWN";
@@ -1863,9 +1866,9 @@ void G_SetStats(gentity_t *ent) {
 					} else {
 						s1 = "";
 					}
-				} else {
-					s1 = G_TimeString(t, false);
-				}
+						} else {
+			s1 = G_TimeString(t, false);
+		}
 				break;
 			}
 			}
@@ -1924,7 +1927,7 @@ G_SetSpectatorStats
 void G_SetSpectatorStats(gentity_t *ent) {
 	gclient_t *cl = ent->client;
 
-	if (!cl->follow_target || level.intermission_time)
+	if (!cl->follow_target)
 		G_SetStats(ent);
 
 	cl->ps.stats[STAT_SPECTATOR] = 1;

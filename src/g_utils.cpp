@@ -2,13 +2,7 @@
 // Licensed under the GNU General Public License 2.0.
 // g_utils.c -- misc utility functions for game module
 
-#include "g_local.hpp"
-
-#include <algorithm>
-#include <array>
-#include <cctype>
-#include <cstdlib>
-#include <string>
+#include "g_local.h"
 
 /*
 =============
@@ -337,26 +331,25 @@ angles and bad trails.
 =================
 */
 gentity_t *G_Spawn() {
-        gentity_t *e;
-        size_t i;
+	gentity_t *e = &g_entities[game.maxclients + 1];
+	size_t i;
 
-        for (i = game.maxclients + 1; i < globals.num_entities; i++) {
-                e = &g_entities[i];
-                // the first couple seconds of server time can involve a lot of
-                // freeing and allocating, so relax the replacement policy
-                if (!e->inuse && (e->freetime < 2_sec || level.time - e->freetime > 500_ms)) {
-                        G_InitGentity(e);
-                        return e;
-                }
-        }
+	for (i = game.maxclients + 1; i < globals.num_entities; i++, e++) {
+		// the first couple seconds of server time can involve a lot of
+		// freeing and allocating, so relax the replacement policy
+		if (!e->inuse && (e->freetime < 2_sec || level.time - e->freetime > 500_ms)) {
+			G_InitGentity(e);
+			return e;
+		}
+	}
 
-        if (globals.num_entities == game.maxentities)
-                gi.Com_ErrorFmt("{}: no free entities.", __FUNCTION__);
+	if (i == game.maxentities)
+		gi.Com_ErrorFmt("{}: no free entities.", __FUNCTION__);
 
-        e = &g_entities[globals.num_entities++];
-        G_InitGentity(e);
-        //gi.Com_PrintFmt("{}: total:{}\n", __FUNCTION__, i);
-        return e;
+	globals.num_entities++;
+	G_InitGentity(e);
+	//gi.Com_PrintFmt("{}: total:{}\n", __FUNCTION__, i);
+	return e;
 }
 
 /*
@@ -629,13 +622,13 @@ void G_AdjustPlayerScore(gclient_t *cl, int32_t offset, bool adjust_team, int32_
 	if (level.intermission_queued)
 		return;
 
-	if (adjust_team && team_offset)
-		G_AdjustTeamScore(cl->sess.team, team_offset);
-
 	if (offset || team_offset) {
 		cl->resp.score += offset;
 		CalculateRanks();
 	}
+
+	if (adjust_team && team_offset)
+		G_AdjustTeamScore(cl->sess.team, team_offset);
 }
 
 /*
@@ -679,6 +672,9 @@ G_AdjustTeamScore
 */
 void G_AdjustTeamScore(team_t team, int32_t offset) {
 	if (IsScoringDisabled())
+		return;
+
+	if (level.intermission_queued)
 		return;
 
 	if (!Teams() || GT(GT_RR))
@@ -823,8 +819,8 @@ G_TimeString
 =================
 */
 const char *G_TimeString(const int msec, bool state) {
-        if (state) {
-                if (Match_IsPreCountdown(level.match_state))
+	if (state) {
+		if (level.match_state < matchst_t::MATCH_COUNTDOWN)
 			return "WARMUP";
 
 		if (level.intermission_queued || level.intermission_time)
@@ -852,8 +848,8 @@ G_TimeStringMs
 =================
 */
 const char *G_TimeStringMs(const int msec, bool state) {
-        if (state) {
-                if (Match_IsPreCountdown(level.match_state))
+	if (state) {
+		if (level.match_state < matchst_t::MATCH_COUNTDOWN)
 			return "WARMUP";
 
 		if (level.intermission_queued || level.intermission_time)
@@ -898,7 +894,7 @@ bool InAMatch() {
 		return false;
 	if (level.intermission_queued)
 		return false;
-	if (Match_IsOngoing(level.match_state))
+	if (level.match_state == matchst_t::MATCH_IN_PROGRESS)
 		return true;
 
 	return false;
@@ -911,9 +907,9 @@ bool IsCombatDisabled() {
 		return true;
 	if (level.intermission_time)
 		return true;
-	if (Match_IsCountdown(level.match_state))
+	if (level.match_state == matchst_t::MATCH_COUNTDOWN)
 		return true;
-	if (GTF(GTF_ROUNDS) && Match_IsOngoing(level.match_state)) {
+	if (GTF(GTF_ROUNDS) && level.match_state == matchst_t::MATCH_IN_PROGRESS) {
 		// added round ended to allow gibbing etc. at end of rounds
 		// scoring to be explicitly disabled during this time
 		if (level.round_state == roundst_t::ROUND_COUNTDOWN && (notGT(GT_HORDE)))
@@ -929,129 +925,29 @@ bool IsPickupsDisabled() {
 		return true;
 	if (level.intermission_time)
 		return true;
-	if (Match_IsCountdown(level.match_state))
+	if (level.match_state == matchst_t::MATCH_COUNTDOWN)
 		return true;
 	return false;
 }
 
 bool IsScoringDisabled() {
-	if (!deathmatch->integer)
+	if (level.match_state != matchst_t::MATCH_IN_PROGRESS)
 		return true;
-	if (!Match_IsOngoing(level.match_state))
-		return true;
-	if (level.intermission_time)
+	if (IsCombatDisabled())
 		return true;
 	if (GTF(GTF_ROUNDS) && level.round_state != roundst_t::ROUND_IN_PROGRESS)
 		return true;
 	return false;
 }
 
-namespace {
-
-constexpr size_t GT_MAX_COMMAND_ALIASES = 5;
-
-constexpr std::array<std::array<const char *, GT_MAX_COMMAND_ALIASES>, static_cast<size_t>(gametype_t::GT_NUM_GAMETYPES)> gt_command_aliases = {{
-        /* GT_NONE */      std::array<const char *, GT_MAX_COMMAND_ALIASES>{ "campaign", "cmp", nullptr, nullptr, nullptr },
-        /* GT_FFA */       std::array<const char *, GT_MAX_COMMAND_ALIASES>{ "ffa", "dm", "deathmatch", nullptr, nullptr },
-        /* GT_DUEL */      std::array<const char *, GT_MAX_COMMAND_ALIASES>{ "duel", "1v1", "tourney", nullptr, nullptr },
-        /* GT_TDM */       std::array<const char *, GT_MAX_COMMAND_ALIASES>{ "tdm", "teamdm", "teamdeathmatch", nullptr, nullptr },
-        /* GT_CTF */       std::array<const char *, GT_MAX_COMMAND_ALIASES>{ "ctf", "capturetheflag", nullptr, nullptr, nullptr },
-        /* GT_CA */        std::array<const char *, GT_MAX_COMMAND_ALIASES>{ "ca", "clanarena", "arena", nullptr, nullptr },
-        /* GT_FREEZE */    std::array<const char *, GT_MAX_COMMAND_ALIASES>{ "freeze", "ft", "freezetag", nullptr, nullptr },
-        /* GT_STRIKE */    std::array<const char *, GT_MAX_COMMAND_ALIASES>{ "strike", "capturestrike", nullptr, nullptr, nullptr },
-        /* GT_RR */        std::array<const char *, GT_MAX_COMMAND_ALIASES>{ "rr", "redrover", nullptr, nullptr, nullptr },
-        /* GT_LMS */       std::array<const char *, GT_MAX_COMMAND_ALIASES>{ "lms", "lastmanstanding", "lastman", nullptr, nullptr },
-        /* GT_LTS */       std::array<const char *, GT_MAX_COMMAND_ALIASES>{ "lts", "lastteamstanding", "lastteam", nullptr, nullptr },
-        /* GT_HORDE */     std::array<const char *, GT_MAX_COMMAND_ALIASES>{ "horde", nullptr, nullptr, nullptr, nullptr },
-        /* GT_BALL */      std::array<const char *, GT_MAX_COMMAND_ALIASES>{ "ball", "proball", nullptr, nullptr, nullptr },
-}};
-
-bool GT_StringEquals(const char *lhs, const char *rhs) {
-        if (!lhs || !rhs)
-                return false;
-        return !Q_strcasecmp(lhs, rhs);
-}
-
-} // namespace
-
 gametype_t GT_IndexFromString(const char *in) {
-        if (!in)
-                return gametype_t::GT_NONE;
-
-        while (*in && isspace(*in))
-                in++;
-
-        if (!*in)
-                return gametype_t::GT_NONE;
-
-        char *end = nullptr;
-        long value = strtol(in, &end, 10);
-
-        if (end && *end == '\0') {
-                if (value >= static_cast<long>(GT_FIRST) && value <= static_cast<long>(GT_LAST))
-                        return static_cast<gametype_t>(value);
-                return gametype_t::GT_NONE;
-        }
-
-        for (size_t i = 0; i < static_cast<size_t>(gametype_t::GT_NUM_GAMETYPES); i++) {
-                if (GT_StringEquals(in, gt_short_name[i]))
-                        return static_cast<gametype_t>(i);
-                if (GT_StringEquals(in, gt_short_name_upper[i]))
-                        return static_cast<gametype_t>(i);
-                if (GT_StringEquals(in, gt_long_name[i]))
-                        return static_cast<gametype_t>(i);
-
-                for (const char *alias : gt_command_aliases[i]) {
-                        if (GT_StringEquals(in, alias))
-                                return static_cast<gametype_t>(i);
-                }
-        }
-
-        return gametype_t::GT_NONE;
-}
-
-const char *GT_CommandName(gametype_t gt) {
-        size_t index = static_cast<size_t>(gt);
-        if (index >= static_cast<size_t>(gametype_t::GT_NUM_GAMETYPES))
-                return nullptr;
-
-        for (const char *alias : gt_command_aliases[index]) {
-                if (alias && alias[0])
-                        return alias;
-        }
-
-        return gt_short_name[index];
-}
-
-const char *GT_CallvoteList() {
-        static std::string buffer;
-
-        if (buffer.empty()) {
-                for (int i = static_cast<int>(GT_FIRST); i <= static_cast<int>(GT_LAST); i++) {
-                        const char *name = GT_CommandName(static_cast<gametype_t>(i));
-                        if (!name || !name[0])
-                                continue;
-
-                        if (!buffer.empty())
-                                buffer += '|';
-
-                        buffer += name;
-                }
-        }
-
-        return buffer.c_str();
-}
-
-const char *GT_CallvoteArgs() {
-        static std::string buffer;
-
-        if (buffer.empty()) {
-                buffer = "<";
-                buffer += GT_CallvoteList();
-                buffer += ">";
-        }
-
-        return buffer.c_str();
+	for (size_t i = 0; i < gametype_t::GT_NUM_GAMETYPES; i++) {
+		if (!Q_strcasecmp(in, gt_short_name[i]))
+			return (gametype_t)i;
+		if (!Q_strcasecmp(in, gt_long_name[i]))
+			return (gametype_t)i;
+	}
+	return gametype_t::GT_NONE;
 }
 
 void BroadcastReadyReminderMessage() {
@@ -1083,53 +979,7 @@ void TeleportPlayerToRandomSpawnPoint(gentity_t *ent, bool fx) {
 }
 
 bool InCoopStyle() {
-        return coop->integer || GT(GT_HORDE);
-}
-
-bool G_GametypeUsesLives() {
-        if (InCoopStyle() && g_coop_enable_lives->integer)
-                return true;
-
-        if (GT(GT_LMS))
-                return true;
-
-        if (GT(GT_LTS))
-                return true;
-
-        return false;
-}
-
-int G_GametypeInitialLives() {
-        if (InCoopStyle() && g_coop_enable_lives->integer)
-                return std::max(0, g_coop_num_lives->integer + 1);
-
-        if (GT(GT_LMS))
-                return std::max(1, g_lms_num_lives->integer);
-
-        if (GT(GT_LTS))
-                return std::max(0, g_lts_num_lives->integer + 1);
-
-        return 0;
-}
-
-bool G_GametypeUsesSquadRespawn() {
-        if (InCoopStyle())
-                return g_coop_squad_respawn->integer != 0;
-
-        if (GT(GT_LTS))
-                return true;
-
-        return false;
-}
-
-bool G_GametypeEliminationHUDActive() {
-        if (InCoopStyle() && (g_coop_enable_lives->integer || g_coop_squad_respawn->integer))
-                return true;
-
-        if (GT(GT_LMS) || GT(GT_LTS))
-                return true;
-
-        return false;
+	return coop->integer || GT(GT_HORDE);
 }
 
 /*
@@ -1191,7 +1041,7 @@ static bool MS_Validation(gclient_t *cl, mstats_t index) {
 		return false;
 	}
 
-	if (!g_matchstats->integer || !Match_IsOngoing(level.match_state))
+	if (!g_matchstats->integer || level.match_state != matchst_t::MATCH_IN_PROGRESS)
 		return false;
 
 	if (cl->sess.is_a_bot)

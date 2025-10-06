@@ -8,7 +8,7 @@ boss3
 ==============================================================================
 */
 
-#include "../g_local.hpp"
+#include "../g_local.h"
 #include "m_boss32.h"
 
 USE(Use_Boss3) (gentity_t *self, gentity_t *other, gentity_t *activator) -> void {

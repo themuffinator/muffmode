@@ -1,6 +1,6 @@
 // Copyright (c) ZeniMax Media Inc.
 // Licensed under the GNU General Public License 2.0.
-#include "g_local.hpp"
+#include "g_local.h"
 
 /*QUAKED target_temp_entity (1 0 0) (-8 -8 -8) (8 8 8) x x x x x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
 Fire an origin based temp entity event to the clients.
@@ -373,11 +373,45 @@ static USE(use_target_changelevel) (gentity_t *self, gentity_t *other, gentity_t
 
 	// if multiplayer, let everyone know who hit the exit
 	if (deathmatch->integer) {
-		if (level.time < 10_sec)
-			return;
+		if (false) { // Race mode removed
+			if (!IsCombatDisabled()) {
+				if (level.match_state == MATCH_IN_PROGRESS) {
+					int old_score = activator->client->resp.score;
+					int new_score = (level.time - activator->client->respawn_time).milliseconds();
+					bool pb = !old_score || new_score < old_score;
+					if (pb) {
+						G_SetPlayerScore(activator->client, (level.time - activator->client->respawn_time).milliseconds());
+						gi.sound(activator, CHAN_RELIABLE | CHAN_NO_PHS_ADD | CHAN_AUX, gi.soundindex("ctf/flagcap.wav"), 1, ATTN_NONE, 0);
+					}
+					gi.LocClient_Print(activator, PRINT_CENTER, "{}{}", G_TimeStringMs(new_score, false), pb ? " (PB)" : "");
+				} else {
+					gi.LocClient_Print(activator, PRINT_CENTER, "{}", G_TimeStringMs((level.time - activator->client->respawn_time).milliseconds(), false));
+				}
+				ClientSpawn(activator);
+				G_PostRespawn(activator);
 
-		if (activator && activator->client)
-			gi.LocBroadcast_Print(PRINT_HIGH, "$g_exited_level", activator->client->pers.netname);
+				activator->client->pers.last_spawn_time = level.time;
+
+				gtime_t clock = timelimit->value ? (level.match_time + gtime_t::from_min(timelimit->value) + level.overtime - level.time) : level.time - level.match_time;
+				int	t = clock.milliseconds();
+				const char *s, *s1, *s2 = "";
+
+				int t2 = (level.time - activator->client->pers.last_spawn_time).milliseconds();
+				s1 = G_Fmt("{} ({})", G_TimeString(t, false), G_TimeStringMs(t2, false)).data();
+
+				s = G_Fmt("{}{}", s1, s2).data();
+
+				activator->client->ps.stats[STAT_MATCH_STATE] = CONFIG_MATCH_STATE;
+				gi.configstring(CONFIG_MATCH_STATE, s);
+			}
+			return;
+		} else {
+			if (level.time < 10_sec)
+				return;
+
+			if (activator && activator->client)
+				gi.LocBroadcast_Print(PRINT_HIGH, "$g_exited_level", activator->client->pers.netname);
+		}
 	}
 
 	// if going to a new unit, clear cross triggers
@@ -1059,7 +1093,7 @@ static THINK(update_target_camera) (gentity_t *self) -> void {
 			delta *= frac;
 			vec3_t newpos = self->s.origin + delta;
 
-			camera_lookat_pathtarget(self, newpos, &level.intermission_angles);
+			camera_lookat_pathtarget(self, newpos, &level.intermission_angle);
 			level.intermission_origin = newpos;
 			level.spawn_spots[SPAWN_SPOT_INTERMISSION] = self;
 			level.spawn_spots[SPAWN_SPOT_INTERMISSION]->s.origin += delta;
@@ -1157,7 +1191,7 @@ static USE(use_target_camera) (gentity_t *self, gentity_t *other, gentity_t *act
 		gi.linkentity(dummy);
 	}
 
-	camera_lookat_pathtarget(self, self->s.origin, &level.intermission_angles);
+	camera_lookat_pathtarget(self, self->s.origin, &level.intermission_angle);
 	level.intermission_origin = self->s.origin;
 	level.spawn_spots[SPAWN_SPOT_INTERMISSION] = self;
 

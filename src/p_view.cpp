@@ -1,7 +1,7 @@
 // Copyright (c) ZeniMax Media Inc.
 // Licensed under the GNU General Public License 2.0.
 
-#include "g_local.hpp"
+#include "g_local.h"
 #include "monsters/m_player.h"
 #include "bots/bot_includes.h"
 
@@ -1266,18 +1266,15 @@ void ClientEndServerFrame(gentity_t *ent) {
 	P_ForceFogTransition(ent, false);
 
 	// check goals
-        G_PlayerNotifyGoal(ent);
+	G_PlayerNotifyGoal(ent);
 
-        // mega health
-        P_RunMegaHealth(ent);
+	// mega health
+	P_RunMegaHealth(ent);
 
-        if (GT(GT_FREEZE))
-                Freeze_UpdatePlayer(ent);
-
-        // vampiric damage expiration
-        // don't expire if only 1 player in the match
-        if (g_vampiric_damage->integer && ClientIsPlaying(ent->client) && !IsCombatDisabled() && (ent->health > g_vampiric_exp_min->integer)) {
-                if (level.num_playing_clients > 1 && level.time > ent->client->vampire_expiretime) {
+	// vampiric damage expiration
+	// don't expire if only 1 player in the match
+	if (g_vampiric_damage->integer && ClientIsPlaying(ent->client) && !IsCombatDisabled() && (ent->health > g_vampiric_exp_min->integer)) {
+		if (level.num_playing_clients > 1 && level.time > ent->client->vampire_expiretime) {
 			int quantity = floor((ent->health - 1) / ent->max_health) + 1;
 			ent->health -= quantity;
 			ent->client->vampire_expiretime = level.time + 1_sec;
@@ -1314,8 +1311,6 @@ void ClientEndServerFrame(gentity_t *ent) {
 		}
 		G_SetStats(ent);
 		G_SetCoopStats(ent);
-
-		AngleVectors(ent->client->v_angle, forward, right, up);
 
 		// if the scoreboard is up, update it if a client leaves
 		if (deathmatch->integer && ent->client->showscores && ent->client->menutime) {

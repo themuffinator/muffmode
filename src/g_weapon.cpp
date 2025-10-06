@@ -1,6 +1,6 @@
 // Copyright (c) ZeniMax Media Inc.
 // Licensed under the GNU General Public License 2.0.
-#include "g_local.hpp"
+#include "g_local.h"
 
 /*
 =================
@@ -10,31 +10,27 @@ Used for all impact (hit/punch/slash) attacks
 =================
 */
 bool fire_hit(gentity_t *self, vec3_t aim, int damage, int kick) {
-	if (!self || !self->enemy)
-		return false;
-
 	trace_t tr;
 	vec3_t	forward, right, up;
 	vec3_t	v;
 	vec3_t	point;
+	float	range;
 	vec3_t	dir;
 
-	gentity_t *const enemy = self->enemy;
-
 	// see if enemy is in range
-	const float range = distance_between_boxes(enemy->absmin, enemy->absmax, self->absmin, self->absmax);
+	range = distance_between_boxes(self->enemy->absmin, self->enemy->absmax, self->absmin, self->absmax);
 	if (range > aim[0])
 		return false;
 
 	if (!(aim[1] > self->mins[0] && aim[1] < self->maxs[0])) {
 		// this is a side hit so adjust the "right" value out to the edge of their bbox
 		if (aim[1] < 0)
-			aim[1] = enemy->mins[0];
+			aim[1] = self->enemy->mins[0];
 		else
-			aim[1] = enemy->maxs[0];
+			aim[1] = self->enemy->maxs[0];
 	}
 
-	point = closest_point_to_box(self->s.origin, enemy->absmin, enemy->absmax);
+	point = closest_point_to_box(self->s.origin, self->enemy->absmin, self->enemy->absmax);
 
 	// check that we can hit the point on the bbox
 	tr = gi.traceline(self->s.origin, point, self, MASK_PROJECTILE);
@@ -44,25 +40,25 @@ bool fire_hit(gentity_t *self, vec3_t aim, int damage, int kick) {
 			return false;
 		// if it will hit any client/monster then hit the one we wanted to hit
 		if ((tr.ent->svflags & SVF_MONSTER) || (tr.ent->client))
-			tr.ent = enemy;
+			tr.ent = self->enemy;
 	}
 
 	// check that we can hit the player from the point
-	tr = gi.traceline(point, enemy->s.origin, self, MASK_PROJECTILE);
+	tr = gi.traceline(point, self->enemy->s.origin, self, MASK_PROJECTILE);
 
 	if (tr.fraction < 1) {
 		if (!tr.ent->takedamage)
 			return false;
 		// if it will hit any client/monster then hit the one we wanted to hit
 		if ((tr.ent->svflags & SVF_MONSTER) || (tr.ent->client))
-			tr.ent = enemy;
+			tr.ent = self->enemy;
 	}
 
 	AngleVectors(self->s.angles, forward, right, up);
 	point = self->s.origin + (forward * range);
 	point += (right * aim[1]);
 	point += (up * aim[2]);
-	dir = point - enemy->s.origin;
+	dir = point - self->enemy->s.origin;
 
 	// do the damage
 	T_Damage(tr.ent, self, self, dir, point, vec3_origin, damage, kick / 2, DAMAGE_NO_KNOCKBACK, MOD_HIT);
@@ -73,12 +69,12 @@ bool fire_hit(gentity_t *self, vec3_t aim, int damage, int kick) {
 	//MS_Adjust(self->owner->client, MSTAT_HITS, 1);
 
 	// do our special form of knockback here
-	v = (enemy->absmin + enemy->absmax) * 0.5f;
+	v = (self->enemy->absmin + self->enemy->absmax) * 0.5f;
 	v -= point;
 	v.normalize();
-	enemy->velocity += v * kick;
-	if (enemy->velocity[2] > 0)
-		enemy->groundentity = nullptr;
+	self->enemy->velocity += v * kick;
+	if (self->enemy->velocity[2] > 0)
+		self->enemy->groundentity = nullptr;
 	return true;
 }
 
@@ -88,22 +84,23 @@ bool fire_hit(gentity_t *self, vec3_t aim, int damage, int kick) {
 // note that you must take care in your pierce callback to mark
 // the entities that are being pierced.
 void pierce_trace(const vec3_t &start, const vec3_t &end, gentity_t *ignore, pierce_args_t &pierce, contents_t mask) {
-	vec3_t current_start = start;
-	vec3_t current_end = end;
+	int	   loop_count = MAX_ENTITIES;
+	vec3_t own_start, own_end;
+	own_start = start;
+	own_end = end;
 
-	for (int iteration = 0; iteration < MAX_ENTITIES; ++iteration) {
-		pierce.tr = gi.traceline(current_start, current_end, ignore, mask);
+	while (--loop_count) {
+		pierce.tr = gi.traceline(start, own_end, ignore, mask);
 
 		// didn't hit anything, so we're done
 		if (!pierce.tr.ent || pierce.tr.fraction == 1.0f)
 			return;
 
 		// hit callback said we're done
-		if (!pierce.hit(mask, current_end))
+		if (!pierce.hit(mask, own_end))
 			return;
 
-		current_start = pierce.tr.endpos;
-		current_start += pierce.tr.plane.normal * 0.01f;
+		own_start = pierce.tr.endpos;
 	}
 
 	gi.Com_Print("runaway pierce_trace\n");
@@ -142,16 +139,16 @@ struct fire_lead_pierce_t : pierce_args_t {
 	bool hit(contents_t &mask, vec3_t &end) override {
 		// see if we hit water
 		if (tr.contents & MASK_WATER) {
+			int color;
+
 			water = true;
 			water_start = tr.endpos;
 
 			// CHECK: is this compare ever true?
 			if (te_impact != -1 && start != tr.endpos) {
-				int color = SPLASH_UNKNOWN;
-				const csurface_t *surface = tr.surface;
 				if (tr.contents & CONTENTS_WATER) {
 					// FIXME: this effectively does nothing..
-					if (surface && strcmp(surface->name, "brwater") == 0)
+					if (strcmp(tr.surface->name, "brwater") == 0)
 						color = SPLASH_BROWN_WATER;
 					else
 						color = SPLASH_BLUE_WATER;
@@ -159,6 +156,9 @@ struct fire_lead_pierce_t : pierce_args_t {
 					color = SPLASH_SLIME;
 				else if (tr.contents & CONTENTS_LAVA)
 					color = SPLASH_LAVA;
+				else
+					color = SPLASH_UNKNOWN;
+
 				if (color != SPLASH_UNKNOWN) {
 					gi.WriteByte(svc_temp_entity);
 					gi.WriteByte(TE_SPLASH);

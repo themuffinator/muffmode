@@ -1,16 +1,7 @@
 // Copyright (c) ZeniMax Media Inc.
 // Licensed under the GNU General Public License 2.0.
 
-#include "g_local.hpp"
-
-#include <algorithm>
-#include <bitset>
-#include <cctype>
-#include <cmath>
-#include <cstdint>
-#include <cstdlib>
-#include <string_view>
-#include <vector>
+#include "g_local.h"
 
 struct spawn_t {
 	const char *name;
@@ -873,10 +864,6 @@ static const std::initializer_list<field_t> entity_fields = {
 	FIELD_AUTO(not_ruleset),
 	FIELD_AUTO(powerups_on),
 	FIELD_AUTO(powerups_off),
-	FIELD_AUTO(bfg_on),
-	FIELD_AUTO(bfg_off),
-	FIELD_AUTO(plasmabeam_on),
-	FIELD_AUTO(plasmabeam_off),
 //-muff
 
 	FIELD_AUTO_NAMED("monster_slots", monsterinfo.monster_slots)
@@ -967,208 +954,13 @@ static constexpr const char *gt_spawn_string[GT_NUM_GAMETYPES] = {
 	"team",
 	"ctf",
 	"ca",
-        "freeze",
-        "strike",
-        "rr",
-        "lms",
-        "lts",
-        "horde",
-        "ball"
+	"freeze",
+	"strike",
+	"rr",
+	"lms",
+	"horde",
+	"ball"
 };
-
-namespace {
-
-struct entity_spawn_filter_data {
-        bool has_gametype_includes = false;
-        bool has_gametype_excludes = false;
-        std::bitset<GT_NUM_GAMETYPES> gametype_includes{};
-        std::bitset<GT_NUM_GAMETYPES> gametype_excludes{};
-
-        bool has_ruleset_includes = false;
-        bool has_ruleset_excludes = false;
-        std::bitset<RS_NUM_RULESETS> ruleset_includes{};
-        std::bitset<RS_NUM_RULESETS> ruleset_excludes{};
-};
-
-static std::vector<entity_spawn_filter_data> s_entity_spawn_filters;
-
-constexpr std::string_view kSpawnFilterDelimiters = " \t\r\n,;|+/";
-
-inline size_t EntityIndex(const gentity_t *ent) {
-        return static_cast<size_t>(ent - g_entities);
-}
-
-entity_spawn_filter_data &EnsureSpawnFilterData(size_t index) {
-        if (s_entity_spawn_filters.size() <= index)
-                s_entity_spawn_filters.resize(index + 1);
-
-        return s_entity_spawn_filters[index];
-}
-
-entity_spawn_filter_data &EnsureSpawnFilterData(gentity_t *ent) {
-        return EnsureSpawnFilterData(EntityIndex(ent));
-}
-
-entity_spawn_filter_data &ResetSpawnFilterDataForEntity(gentity_t *ent) {
-        auto &filters = EnsureSpawnFilterData(ent);
-        filters = {};
-        return filters;
-}
-
-void ResetAllSpawnFilterData() {
-        s_entity_spawn_filters.clear();
-        s_entity_spawn_filters.resize(game.maxentities);
-}
-
-bool EqualsIgnoreCase(std::string_view lhs, std::string_view rhs) {
-        if (lhs.size() != rhs.size())
-                return false;
-
-        for (size_t i = 0; i < lhs.size(); ++i) {
-                const auto a = static_cast<unsigned char>(lhs[i]);
-                const auto b = static_cast<unsigned char>(rhs[i]);
-
-                if (std::tolower(a) != std::tolower(b))
-                        return false;
-        }
-
-        return true;
-}
-
-bool TryParsePositiveInteger(std::string_view token, size_t &value) {
-        if (token.empty())
-                return false;
-
-        size_t result = 0;
-        for (const char ch : token) {
-                if (!std::isdigit(static_cast<unsigned char>(ch)))
-                        return false;
-
-                result = result * 10 + (static_cast<size_t>(ch) - static_cast<size_t>('0'));
-        }
-
-        value = result;
-        return true;
-}
-
-bool TryParseGametypeToken(std::string_view token, size_t &index_out) {
-        if (token.empty())
-                return false;
-
-        for (size_t i = 0; i < GT_NUM_GAMETYPES; ++i) {
-                if (EqualsIgnoreCase(token, gt_spawn_string[i]) ||
-                    EqualsIgnoreCase(token, gt_short_name[i])) {
-                        index_out = i;
-                        return true;
-                }
-        }
-
-        size_t numeric_value = 0;
-        if (TryParsePositiveInteger(token, numeric_value) && numeric_value < GT_NUM_GAMETYPES) {
-                index_out = numeric_value;
-                return true;
-        }
-
-        return false;
-}
-
-bool TryParseRulesetToken(std::string_view token, size_t &index_out) {
-        if (token.empty())
-                return false;
-
-        if (EqualsIgnoreCase(token, "none") || EqualsIgnoreCase(token, "default")) {
-                index_out = static_cast<size_t>(RS_NONE);
-                return true;
-        }
-
-        for (size_t i = 0; i < RS_NUM_RULESETS; ++i) {
-                if (!rs_short_name[i] || !rs_short_name[i][0])
-                        continue;
-
-                if (EqualsIgnoreCase(token, rs_short_name[i])) {
-                        index_out = i;
-                        return true;
-                }
-        }
-
-        size_t numeric_value = 0;
-        if (TryParsePositiveInteger(token, numeric_value) && numeric_value < RS_NUM_RULESETS) {
-                index_out = numeric_value;
-                return true;
-        }
-
-        return false;
-}
-
-template<typename TFunc>
-void ForEachFilterToken(std::string_view value, TFunc &&func) {
-        size_t start = 0;
-
-        while (start < value.size()) {
-                start = value.find_first_not_of(kSpawnFilterDelimiters, start);
-                if (start == std::string_view::npos)
-                        break;
-
-                const size_t end = value.find_first_of(kSpawnFilterDelimiters, start);
-                const auto token = value.substr(start, end == std::string_view::npos ? value.size() - start : end - start);
-
-                if (!token.empty())
-                        func(token);
-
-                if (end == std::string_view::npos)
-                        break;
-
-                start = end + 1;
-        }
-}
-
-void StoreGametypeTokens(entity_spawn_filter_data &filters, std::string_view value, bool inclusive) {
-        bool found = false;
-
-        ForEachFilterToken(value, [&](std::string_view token) {
-                size_t index = 0;
-
-                if (!TryParseGametypeToken(token, index))
-                        return;
-
-                if (inclusive)
-                        filters.gametype_includes.set(index);
-                else
-                        filters.gametype_excludes.set(index);
-
-                found = true;
-        });
-
-        if (inclusive)
-                filters.has_gametype_includes |= found;
-        else
-                filters.has_gametype_excludes |= found;
-}
-
-void StoreRulesetTokens(entity_spawn_filter_data &filters, std::string_view value, bool inclusive) {
-        bool found = false;
-
-        ForEachFilterToken(value, [&](std::string_view token) {
-                size_t index = 0;
-
-                if (!TryParseRulesetToken(token, index))
-                        return;
-
-                if (inclusive)
-                        filters.ruleset_includes.set(index);
-                else
-                        filters.ruleset_excludes.set(index);
-
-                found = true;
-        });
-
-        if (inclusive)
-                filters.has_ruleset_includes |= found;
-        else
-                filters.has_ruleset_excludes |= found;
-}
-
-} // namespace
 
 /*
 ===============
@@ -1180,46 +972,24 @@ in an entity
 */
 void ED_ParseField(const char *key, const char *value, gentity_t *ent) {
 
-        if (!Q_strcasecmp(key, "gametype")) {
-                st.keys_specified.emplace(key);
-                auto &filters = EnsureSpawnFilterData(ent);
-                StoreGametypeTokens(filters, value ? std::string_view(value) : std::string_view{}, true);
-                return;
-        }
+	// check st first
+	for (auto &f : temp_fields) {
+		if (Q_strcasecmp(f.name, key))
+			continue;
 
-        if (!Q_strcasecmp(key, "not_gametype")) {
-                st.keys_specified.emplace(key);
-                auto &filters = EnsureSpawnFilterData(ent);
-                StoreGametypeTokens(filters, value ? std::string_view(value) : std::string_view{}, false);
-                return;
-        }
+		st.keys_specified.emplace(f.name);
 
-        if (!Q_strcasecmp(key, "ruleset")) {
-                auto &filters = EnsureSpawnFilterData(ent);
-                StoreRulesetTokens(filters, value ? std::string_view(value) : std::string_view{}, true);
-        } else if (!Q_strcasecmp(key, "not_ruleset")) {
-                auto &filters = EnsureSpawnFilterData(ent);
-                StoreRulesetTokens(filters, value ? std::string_view(value) : std::string_view{}, false);
-        }
+		// found it
+		if (f.load_func)
+			f.load_func(&st, value);
 
-        // check st first
-        for (auto &f : temp_fields) {
-                if (Q_strcasecmp(f.name, key))
-                        continue;
+		return;
+	}
 
-                st.keys_specified.emplace(f.name);
-
-                // found it
-                if (f.load_func)
-                        f.load_func(&st, value);
-
-                return;
-        }
-
-        // now entity
-        for (auto &f : entity_fields) {
-                if (Q_strcasecmp(f.name, key))
-                        continue;
+	// now entity
+	for (auto &f : entity_fields) {
+		if (Q_strcasecmp(f.name, key))
+			continue;
 
 		st.keys_specified.emplace(f.name);
 
@@ -1252,7 +1022,6 @@ static const char *ED_ParseEntity(const char *data, gentity_t *ent) {
 
 	init = false;
 	st = {};
-	ResetSpawnFilterDataForEntity(ent);
 
 	// go through all the dictionary pairs
 	while (1) {
@@ -1394,40 +1163,21 @@ static void G_FindTeams() {
 		gi.Com_PrintFmt("{}: {} entity team{} found with a total of {} entit{}.\n", __FUNCTION__, c1, c1 != 1 ? "s" : "", c2, c2 != 1 ? "ies" : "y");
 }
 
+// inhibit entities from game based on cvars & spawnflags
 static inline bool G_InhibitEntity(gentity_t *ent) {
-        const size_t index = EntityIndex(ent);
+	if (ent->gametype) {
+		const char *s = strstr(ent->gametype, gt_spawn_string[g_gametype->integer]);
+		if (!s)
+			return true;
+	}
+	if (ent->not_gametype) {
+		const char *s = strstr(ent->not_gametype, gt_spawn_string[g_gametype->integer]);
+		if (s)
+			return true;
+	}
 
-        bool has_filters = true;
-
-        if (index >= s_entity_spawn_filters.size()) {
-                EnsureSpawnFilterData(index);
-
-                if (index >= s_entity_spawn_filters.size()) {
-                        // Defensive: skip spawn-filter checks if the cache remains undersized.
-                        has_filters = false;
-                }
-        }
-
-        if (has_filters) {
-                const auto &filters = EnsureSpawnFilterData(index);
-                const auto current_gt = static_cast<size_t>(std::clamp(g_gametype->integer, 0, GT_NUM_GAMETYPES - 1));
-                const auto current_ruleset = static_cast<size_t>(std::clamp<int>(static_cast<int>(game.ruleset), static_cast<int>(RS_NONE), static_cast<int>(RS_NUM_RULESETS - 1)));
-
-                if (filters.has_gametype_includes && !filters.gametype_includes.test(current_gt))
-                        return true;
-
-                if (filters.has_gametype_excludes && filters.gametype_excludes.test(current_gt))
-                        return true;
-
-                if (filters.has_ruleset_includes && !filters.ruleset_includes.test(current_ruleset))
-                        return true;
-
-                if (filters.has_ruleset_excludes && filters.ruleset_excludes.test(current_ruleset))
-                        return true;
-        }
-
-        if (ent->notteam && Teams())
-                return true;
+	if (ent->notteam && Teams())
+		return true;
 	if (ent->notfree && !Teams())
 		return true;
 
@@ -1443,19 +1193,20 @@ static inline bool G_InhibitEntity(gentity_t *ent) {
 	if (ent->powerups_off && !g_no_powerups->integer)
 		return true;
 
-	if (ent->bfg_on && g_mapspawn_no_bfg->integer)
-		return true;
-	if (ent->bfg_off && !g_mapspawn_no_bfg->integer)
-		return true;
+	if (ent->ruleset) {
+		const char *s = strstr(ent->ruleset, rs_short_name[game.ruleset]);
+		if (!s)
+			return true;
+	}
+	if (ent->not_ruleset) {
+		const char *s = strstr(ent->not_ruleset, rs_short_name[game.ruleset]);
+		if (s)
+			return true;
+	}
 
-	if (ent->plasmabeam_on && g_mapspawn_no_plasmabeam->integer)
-		return true;
-	if (ent->plasmabeam_off && !g_mapspawn_no_plasmabeam->integer)
-		return true;
-
-        // dm-only
-        if (deathmatch->integer)
-                return ent->spawnflags.has(SPAWNFLAG_NOT_DEATHMATCH);
+	// dm-only
+	if (deathmatch->integer)
+		return ent->spawnflags.has(SPAWNFLAG_NOT_DEATHMATCH);
 
 	// coop flags
 	if (coop->integer && ent->spawnflags.has(SPAWNFLAG_NOT_COOP))
@@ -1758,11 +1509,11 @@ static void G_LocateSpawnSpots(void) {
 						if (target) {
 							vec3_t	dir = (target->s.origin - level.intermission_origin).normalized();
 							AngleVectors(dir);
-							level.intermission_angles = dir;
+							level.intermission_angle = dir;
 							return;
 						}
 					}
-					level.intermission_angles = ent->s.angles;
+					level.intermission_angle = ent->s.angles;
 				}
 				continue;
 			}
@@ -1819,15 +1570,10 @@ static void ParseWorldEntityString(const char *mapname, bool try_q3) {
 			if (length) {
 				read_length = fread(buffer, 1, length, f);
 
-				if (length == read_length)
-					buffer[length] = '\0';
-
 				if (length != read_length) {
 					//gi.Com_PrintFmt("{}: Entities override file read error: \"{}\"\n", __FUNCTION__, name);
 					ent_valid = false;
 				}
-			} else {
-				buffer[0] = '\0';
 			}
 		}
 		ent_file_exists = true;
@@ -1837,17 +1583,13 @@ static void ParseWorldEntityString(const char *mapname, bool try_q3) {
 			if (g_entity_override_load->integer && !strstr(level.mapname, ".dm2")) {
 
 				if (VerifyEntityString((const char *)buffer)) {
-					level.entstring.assign(buffer, length);
-					entities = level.entstring.c_str();
+					entities = (const char *)buffer;
 					//gi.Com_PrintFmt("Entities override: \"{}\"\n", name);
 				}
 			}
 		} else {
 			gi.Com_PrintFmt("{}: Entities override file load error for \"{}\", discarding.\n", __FUNCTION__, name);
 		}
-
-		if (buffer)
-			gi.TagFree(buffer);
 	}
 
 	// save ent override
@@ -1873,8 +1615,6 @@ static void ParseWorldEntities() {
 	int			inhibit = 0;
 	const char	*com_token;
 	const char	*entities = level.entstring.c_str();
-
-	ResetAllSpawnFilterData();
 
 	// parse entities
 	while (1) {
@@ -1925,138 +1665,17 @@ static void ParseWorldEntities() {
 }
 
 void ClearWorldEntities() {
-        gentity_t *ent = nullptr;
-        //memset(g_entities, 0, game.maxentities * sizeof(g_entities[0]));
+	gentity_t *ent = nullptr;
+	//memset(g_entities, 0, game.maxentities * sizeof(g_entities[0]));
 
-        ResetAllSpawnFilterData();
+	for (size_t i = MAX_CLIENTS; i < game.maxentities; i++) {
+		ent = &g_entities[i];
 
-        for (size_t i = MAX_CLIENTS; i < game.maxentities; i++) {
-                ent = &g_entities[i];
+		if (!ent || !ent->inuse || ent->client)
+			continue;
 
-                if (!ent || !ent->inuse || ent->client)
-                        continue;
-
-                memset(&g_entities[i], 0, sizeof(g_entities[i]));
-        }
-}
-
-void Entities_ReloadFromEntstring() {
-        if (level.entstring.empty())
-                return;
-
-        std::string entity_text = level.entstring;
-
-        gi.FreeTags(TAG_LEVEL);
-
-        level.entstring = entity_text;
-
-        const char *entities = level.entstring.c_str();
-
-        // clear world entity and any non-client entities
-        gi.unlinkentity(&g_entities[0]);
-        memset(&g_entities[0], 0, sizeof(g_entities[0]));
-
-        level.changemap = nullptr;
-        level.achievement = nullptr;
-        level.timeout_ent = nullptr;
-
-        for (size_t i = game.maxclients + 1; i < globals.num_entities; ++i) {
-                gentity_t *ent = &g_entities[i];
-
-                if (ent->client)
-                        continue;
-
-                gi.unlinkentity(ent);
-                memset(ent, 0, sizeof(*ent));
-        }
-
-        // ensure client slots still reference their clients
-        for (size_t i = 0; i < game.maxclients; ++i)
-                g_entities[i + 1].client = game.clients + i;
-
-        // reset entity count to the first free slot after clients
-        globals.num_entities = game.maxclients + 1;
-
-        // rebuild the body queue used for corpses
-        InitBodyQue();
-
-        // reset cached spawn information so it can be rebuilt by the parser
-        level.spawn_spots[SPAWN_SPOT_INTERMISSION] = nullptr;
-        level.num_spawn_spots = 0;
-        level.num_spawn_spots_free = 0;
-        level.num_spawn_spots_team = 0;
-
-        ResetAllSpawnFilterData();
-
-        gentity_t *ent = nullptr;
-        int inhibit = 0;
-        const char *com_token;
-        const char *parse = entities;
-
-        while (true) {
-                com_token = COM_Parse(&parse);
-                if (!parse)
-                        break;
-
-                if (com_token[0] != '{')
-                        gi.Com_ErrorFmt("{}: Found \"{}\" when expecting {{ in entity string.\n", __FUNCTION__, com_token);
-
-                if (!ent)
-                        ent = g_entities;
-                else
-                        ent = G_Spawn();
-
-                parse = ED_ParseEntity(parse, ent);
-
-                if (ent != g_entities) {
-                        if (G_InhibitEntity(ent)) {
-                                G_FreeEntity(ent);
-                                inhibit++;
-                                continue;
-                        }
-
-                        ent->spawnflags &= ~SPAWNFLAG_EDITOR_MASK;
-                }
-
-                ent->gravityVector = { 0.0, 0.0, -1.0 };
-
-                ED_CallSpawn(ent);
-
-                ent->s.renderfx |= RF_IR_VISIBLE;
-        }
-
-        if (inhibit && g_verbose->integer)
-                gi.Com_PrintFmt("{} entities inhibited.\n", inhibit);
-
-        PrecacheStartItems();
-        PrecacheInventoryItems();
-
-        G_FindTeams();
-
-        QuadHog_SetupSpawn(5_sec);
-        Tech_SetupSpawn();
-
-        if (deathmatch->integer) {
-                if (g_dm_random_items->integer)
-                        PrecacheForRandomRespawn();
-
-                game.item_inhibit_pu = 0;
-                game.item_inhibit_pa = 0;
-                game.item_inhibit_ht = 0;
-                game.item_inhibit_ar = 0;
-                game.item_inhibit_am = 0;
-                game.item_inhibit_wp = 0;
-        } else {
-                InitHintPaths();
-        }
-
-        G_LocateSpawnSpots();
-
-        SetIntermissionPoint();
-
-        setup_shadow_lights();
-
-        level.init = true;
+		memset(&g_entities[i], 0, sizeof(g_entities[i]));
+	}
 }
 
 /*
@@ -2093,15 +1712,10 @@ void SpawnEntities(const char *mapname, const char *entities, const char *spawnp
 			if (length) {
 				read_length = fread(buffer, 1, length, f);
 
-				if (length == read_length)
-					buffer[length] = '\0';
-
 				if (length != read_length) {
 					//gi.Com_PrintFmt("{}: Entities override file read error: \"{}\"\n", __FUNCTION__, name);
 					ent_valid = false;
 				}
-			} else {
-				buffer[0] = '\0';
 			}
 		}
 		ent_file_exists = true;
@@ -2111,8 +1725,7 @@ void SpawnEntities(const char *mapname, const char *entities, const char *spawnp
 			if (g_entity_override_load->integer && !strstr(level.mapname, ".dm2")) {
 
 				if (VerifyEntityString((const char *)buffer)) {
-					level.entstring.assign(buffer, length);
-					entities = level.entstring.c_str();
+					entities = (const char *)buffer;
 					if (g_verbose->integer)
 						gi.Com_PrintFmt("{}: Entities override file verified and loaded: \"{}\"\n", __FUNCTION__, name);
 				}
@@ -2120,9 +1733,6 @@ void SpawnEntities(const char *mapname, const char *entities, const char *spawnp
 		} else {
 			gi.Com_PrintFmt("{}: Entities override file load error for \"{}\", discarding.\n", __FUNCTION__, name);
 		}
-
-		if (buffer)
-			gi.TagFree(buffer);
 	}
 
 	// save ent override
@@ -2139,7 +1749,8 @@ void SpawnEntities(const char *mapname, const char *entities, const char *spawnp
 			//gi.Com_PrintFmt("{}: Entities override file not saved as file already exists: \"{}\"\n", __FUNCTION__, name);
 		}
 	}
-	std::string entity_text{ entities ? entities : "" };
+	level.entstring = entities;
+//#endif
 	//ParseWorldEntityString(mapname, RS(RS_Q3A));
 
 	// clear cached indices
@@ -2155,10 +1766,7 @@ void SpawnEntities(const char *mapname, const char *entities, const char *spawnp
 
 	gi.FreeTags(TAG_LEVEL);
 
-	level = level_locals_t{};
-	level.entstring = std::move(entity_text);
-	entities = level.entstring.c_str();
-
+	memset(&level, 0, sizeof(level));
 	memset(g_entities, 0, game.maxentities * sizeof(g_entities[0]));
 	
 	// all other flags are not important atm
@@ -2194,7 +1802,6 @@ void SpawnEntities(const char *mapname, const char *entities, const char *spawnp
 	//const char *entities = level.entstring.c_str();
 
 	// parse entities
-	ResetAllSpawnFilterData();
 	while (1) {
 		// parse the opening brace
 		com_token = COM_Parse(&entities);
@@ -2417,11 +2024,9 @@ void GT_SetLongName(void) {
 				s = "Frenzy CTF";
 			} else if (g_nadefest->integer) {
 				s = "NadeFest CTF";
-                        } else if (g_quadhog->integer) {
-                                s = "Quad Hog CTF";
-                        } else if (g_gravity_lotto->integer) {
-                                s = "Gravity Lotto CTF";
-                        } else {
+			} else if (g_quadhog->integer) {
+				s = "Quad Hog CTF";
+			} else {
 				s = gt_long_name[GT_CTF];
 			}
 		} else if (GT(GT_FREEZE)) {
@@ -2433,11 +2038,9 @@ void GT_SetLongName(void) {
 				s = "Frenzy Freeze";
 			} else if (g_nadefest->integer) {
 				s = "NadeFest Freeze";
-                        } else if (g_quadhog->integer) {
-                                s = "Quad Hog Freeze";
-                        } else if (g_gravity_lotto->integer) {
-                                s = "Gravity Lotto Freeze";
-                        } else {
+			} else if (g_quadhog->integer) {
+				s = "Quad Hog Freeze";
+			} else {
 				s = gt_long_name[GT_FREEZE];
 			}
 		} else if (GT(GT_CA)) {
@@ -2449,11 +2052,9 @@ void GT_SetLongName(void) {
 				s = "Frenzy CA";
 			} else if (g_nadefest->integer) {
 				s = "NadeFest CA";
-                        } else if (g_quadhog->integer) {
-                                s = "Quad Hog CA";
-                        } else if (g_gravity_lotto->integer) {
-                                s = "Gravity Lotto CA";
-                        } else {
+			} else if (g_quadhog->integer) {
+				s = "Quad Hog CA";
+			} else {
 				s = gt_long_name[GT_CA];
 			}
 		} else if (GT(GT_RR)) {
@@ -2465,11 +2066,9 @@ void GT_SetLongName(void) {
 				s = "Frenzy RR";
 			} else if (g_nadefest->integer) {
 				s = "NadeFest RR";
-                        } else if (g_quadhog->integer) {
-                                s = "Quad Hog RR";
-                        } else if (g_gravity_lotto->integer) {
-                                s = "Gravity Lotto RR";
-                        } else {
+			} else if (g_quadhog->integer) {
+				s = "Quad Hog RR";
+			} else {
 				s = gt_long_name[GT_RR];
 			}
 		} else if (GT(GT_STRIKE)) {
@@ -2481,11 +2080,9 @@ void GT_SetLongName(void) {
 				s = "Frenzy Strike";
 			} else if (g_nadefest->integer) {
 				s = "NadeFest Strike";
-                        } else if (g_quadhog->integer) {
-                                s = "Quad Hog Strike";
-                        } else if (g_gravity_lotto->integer) {
-                                s = "Gravity Lotto Strike";
-                        } else {
+			} else if (g_quadhog->integer) {
+				s = "Quad Hog Strike";
+			} else {
 				s = gt_long_name[GT_STRIKE];
 			}
 		} else if (GT(GT_TDM)) {
@@ -2497,11 +2094,9 @@ void GT_SetLongName(void) {
 				s = "Frenzy TDM";
 			} else if (g_nadefest->integer) {
 				s = "NadeFest TDM";
-                        } else if (g_quadhog->integer) {
-                                s = "Quad Hog TDM";
-                        } else if (g_gravity_lotto->integer) {
-                                s = "Gravity Lotto TDM";
-                        } else {
+			} else if (g_quadhog->integer) {
+				s = "Quad Hog TDM";
+			} else {
 				s = gt_long_name[GT_TDM];
 			}
 		} else if (GT(GT_DUEL)) {
@@ -2513,11 +2108,9 @@ void GT_SetLongName(void) {
 				s = "Frenzy Duel";
 			} else if (g_nadefest->integer) {
 				s = "NadeFest Duel";
-                        } else if (g_quadhog->integer) {
-                                s = "Quad Hog Duel";
-                        } else if (g_gravity_lotto->integer) {
-                                s = "Gravity Lotto Duel";
-                        } else {
+			} else if (g_quadhog->integer) {
+				s = "Quad Hog Duel";
+			} else {
 				s = gt_long_name[GT_DUEL];
 			}
 		} else if (GT(GT_HORDE)) {
@@ -2529,11 +2122,9 @@ void GT_SetLongName(void) {
 				s = "Frenzy Horde";
 			} else if (g_nadefest->integer) {
 				s = "NadeFest Horde";
-                        } else if (g_quadhog->integer) {
-                                s = "Quad Hog Horde";
-                        } else if (g_gravity_lotto->integer) {
-                                s = "Gravity Lotto Horde";
-                        } else {
+			} else if (g_quadhog->integer) {
+				s = "Quad Hog Horde";
+			} else {
 				s = gt_long_name[GT_HORDE];
 			}
 		} else if (GT(GT_BALL)) {
@@ -2545,11 +2136,9 @@ void GT_SetLongName(void) {
 				s = "Frenzy ProBall";
 			} else if (g_nadefest->integer) {
 				s = "NadeFest ProBall";
-                        } else if (g_quadhog->integer) {
-                                s = "Quad Hog ProBall";
-                        } else if (g_gravity_lotto->integer) {
-                                s = "Gravity Lotto ProBall";
-                        } else {
+			} else if (g_quadhog->integer) {
+				s = "Quad Hog ProBall";
+			} else {
 				s = gt_long_name[GT_BALL];
 			}
 		} else if (deathmatch->integer) {
@@ -2561,11 +2150,9 @@ void GT_SetLongName(void) {
 				s = "Frenzy FFA";
 			} else if (g_nadefest->integer) {
 				s = "NadeFest";
-                        } else if (g_quadhog->integer) {
-                                s = "Quad Hog";
-                        } else if (g_gravity_lotto->integer) {
-                                s = "Gravity Lotto";
-                        } else {
+			} else if (g_quadhog->integer) {
+				s = "Quad Hog";
+			} else {
 				s = gt_long_name[GT_FFA];
 			}
 		} else {
@@ -2722,26 +2309,13 @@ void SP_worldspawn(gentity_t *ent) {
 
 	//---------------
 
-	if (!st.gravity || !st.gravity[0]) {
+	if (!st.gravity) {
 		level.gravity = 800.f;
 		gi.cvar_set("g_gravity", "800");
 	} else {
-		char *end{};
-		const float parsed_gravity = std::strtof(st.gravity, &end);
-
-		if (end == st.gravity || !std::isfinite(parsed_gravity)) {
-			gi.Com_PrintFmt("Ignoring invalid worldspawn gravity value '{}'\n", st.gravity);
-			level.gravity = 800.f;
-			gi.cvar_set("g_gravity", "800");
-		} else {
-			level.gravity = parsed_gravity;
-			gi.cvar_set("g_gravity", st.gravity);
-		}
+		level.gravity = atof(st.gravity);
+		gi.cvar_set("g_gravity", st.gravity);
 	}
-
-	level.gravity_lotto_base = level.gravity;
-	level.gravity_lotto_next = 0_ms;
-	level.gravity_lotto_active = false;
 
 	snd_fry.assign("player/fry.wav"); // standing in lava / slime
 

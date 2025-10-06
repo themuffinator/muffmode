@@ -8,7 +8,7 @@ SHAMBLER
 ==============================================================================
 */
 
-#include "../g_local.hpp"
+#include "../g_local.h"
 #include "m_shambler.h"
 #include "m_flash.h"
 

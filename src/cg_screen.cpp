@@ -838,34 +838,41 @@ static void CG_ExecuteLayoutString(const char *s, vrect_t hud_vrect, vrect_t hud
 					cgi.Com_Error("client >= MAX_CLIENTS");
 			}
 
-			int score, ping;
+			int score, ping, time;
 
 			token = COM_Parse(&s);
 			if (!skip_depth)
 				score = atoi(token);
 
 			token = COM_Parse(&s);
-            if (!skip_depth)
-            {
-                ping = atoi(token);
+			if (!skip_depth) {
+				ping = atoi(token);
 
-                if (!scr_usekfont->integer)
-                    CG_DrawString (x + 32 * scale, y, scale, cgi.CL_GetClientName(value));
-                else
-                    cgi.SCR_DrawFontString(cgi.CL_GetClientName(value), x + 32 * scale, y - (font_y_offset * scale), scale, rgba_white, true, text_align_t::LEFT);
-                
-                if (!scr_usekfont->integer)
-                    CG_DrawString (x + 32 * scale, y + 10 * scale, scale, G_Fmt("{}", score).data(), true);
-                else
-                    cgi.SCR_DrawFontString(G_Fmt("{}", score).data(), x + 32 * scale, y + (10 - font_y_offset) * scale, scale, rgba_white, true, text_align_t::LEFT);
+				token = COM_Parse(&s);
+				time = atoi(token);
 
-                cgi.SCR_DrawPic(x + 96 * scale, y + 10 * scale, 9 * scale, 9 * scale, "ping");
-                
-                if (!scr_usekfont->integer)
-                    CG_DrawString (x + 73 * scale + 32 * scale, y + 10 * scale, scale, G_Fmt("{}", ping).data());
-                else
-                    cgi.SCR_DrawFontString (G_Fmt("{}", ping).data(), x + 107 * scale, y + (10 - font_y_offset) * scale, scale, rgba_white, true, text_align_t::LEFT);
-            }
+				// Race mode removed - always show score, never format as time
+				const char *scr = G_Fmt("{}", score).data();
+
+				cgi.SCR_SetAltTypeface(ui_acc_alttypeface->integer && true);
+				if (!scr_usekfont->integer)
+					CG_DrawString(x + 32 * scale, y, scale, cgi.CL_GetClientName(value));
+				else
+					cgi.SCR_DrawFontString(cgi.CL_GetClientName(value), x + 32 * scale, y - (font_y_offset * scale), scale, rgba_white, true, text_align_t::LEFT);
+
+				if (!scr_usekfont->integer)
+					CG_DrawString(x + 32 * scale, y + 10 * scale, scale, scr, true);
+				else
+					cgi.SCR_DrawFontString(scr, x + 32 * scale, y + (10 - font_y_offset) * scale, scale, rgba_white, true, text_align_t::LEFT);
+
+				cgi.SCR_DrawPic(x + 32 + 96 * scale, y + 10 * scale, 9 * scale, 9 * scale, "ping");
+				if (!scr_usekfont->integer)
+					CG_DrawString(x + 32 + 73 * scale + 32 * scale, y + 10 * scale, scale, G_Fmt("{}", ping).data());
+				else
+					cgi.SCR_DrawFontString(G_Fmt("{}", ping).data(), x + 32 + 107 * scale, y + (10 - font_y_offset) * scale, scale, rgba_white, true, text_align_t::LEFT);
+
+				cgi.SCR_SetAltTypeface(false);
+			}
 			continue;
 		}
 

@@ -1,7 +1,13 @@
 // Copyright (c) ZeniMax Media Inc.
 // Licensed under the GNU General Public License 2.0.
-#include "g_local.hpp"
+#include "g_local.h"
 #include "monsters/m_player.h"
+/*freeze*/
+#if 0
+#include "freeze.h"
+#endif
+/*freeze*/
+
 enum cmd_flags_t : uint32_t {
 	CF_NONE				= 0,
 	CF_ALLOW_DEAD		= bit_v<0>,
@@ -193,11 +199,16 @@ Give items to a client
 ==================
 */
 static void Cmd_Give_f(gentity_t *ent) {
-	const char *name = gi.args();
-	gitem_t *it;
-	gentity_t *it_ent;
+	const char	*name = gi.args();
+	gitem_t		*it;
+	size_t		i;
+	bool		give_all;
+	gentity_t		*it_ent;
 
-	const bool give_all = Q_strcasecmp(name, "all") == 0;
+	if (Q_strcasecmp(name, "all") == 0)
+		give_all = true;
+	else
+		give_all = false;
 
 	if (give_all || Q_strcasecmp(gi.argv(1), "health") == 0) {
 		if (gi.argc() == 3)
@@ -209,7 +220,7 @@ static void Cmd_Give_f(gentity_t *ent) {
 	}
 
 	if (give_all || Q_strcasecmp(name, "weapons") == 0) {
-		for (size_t i = 0; i < IT_TOTAL; i++) {
+		for (i = 0; i < IT_TOTAL; i++) {
 			it = itemlist + i;
 			if (!it->pickup)
 				continue;
@@ -225,7 +236,7 @@ static void Cmd_Give_f(gentity_t *ent) {
 		if (give_all)
 			SpawnAndGiveItem(ent, IT_PACK);
 
-		for (size_t i = 0; i < IT_TOTAL; i++) {
+		for (i = 0; i < IT_TOTAL; i++) {
 			it = itemlist + i;
 			if (!it->pickup)
 				continue;
@@ -247,7 +258,7 @@ static void Cmd_Give_f(gentity_t *ent) {
 	}
 
 	if (give_all || Q_strcasecmp(name, "keys") == 0) {
-		for (size_t i = 0; i < IT_TOTAL; i++) {
+		for (i = 0; i < IT_TOTAL; i++) {
 			it = itemlist + i;
 			if (!it->pickup)
 				continue;
@@ -269,7 +280,7 @@ static void Cmd_Give_f(gentity_t *ent) {
 	}
 
 	if (give_all) {
-		for (size_t i = 0; i < IT_TOTAL; i++) {
+		for (i = 0; i < IT_TOTAL; i++) {
 			it = itemlist + i;
 			if (!it->pickup)
 				continue;
@@ -391,12 +402,6 @@ argv(3+n) "value"...
 =================
 */
 static void Cmd_Spawn_f(gentity_t *ent) {
-	const int arg_count = gi.argc();
-	if (arg_count < 2) {
-		gi.LocClient_Print(ent, PRINT_HIGH, "Usage: {} <classname> [\"key\" \"value\" ...]\n", gi.argv(0));
-		return;
-	}
-
 	solid_t backup = ent->solid;
 	ent->solid = SOLID_NOT;
 	gi.linkentity(ent);
@@ -409,13 +414,9 @@ static void Cmd_Spawn_f(gentity_t *ent) {
 
 	st = {};
 
-	if (arg_count > 3) {
-		int i = 2;
-		for (; i + 1 < arg_count; i += 2)
+	if (gi.argc() > 3) {
+		for (int i = 2; i < gi.argc(); i += 2)
 			ED_ParseField(gi.argv(i), gi.argv(i + 1), other);
-
-		if (i < arg_count)
-			gi.LocClient_Print(ent, PRINT_HIGH, "Ignoring dangling spawn key without value.\n");
 	}
 
 	ED_CallSpawn(other);
@@ -475,39 +476,20 @@ argv(6) roll
 =================
 */
 static void Cmd_Teleport_f(gentity_t *ent) {
-	const int argc = gi.argc();
-	if (argc != 4 && argc != 7) {
-		gi.LocClient_Print(ent, PRINT_HIGH, "Usage: {} <x> <y> <z> [<pitch> <yaw> <roll>]\n", gi.argv(0));
+	if (gi.argc() < 4) {
+		gi.LocClient_Print(ent, PRINT_HIGH, "Usage: {} <x> <y> <z> <pitch> <yaw> <roll>\n", gi.argv(0));
 		return;
 	}
 
-	auto parse_float = [ent](const char *text, const char *label, float &out) {
-		char *end = nullptr;
-		out = std::strtof(text, &end);
-		if (end == text) {
-			gi.LocClient_Print(ent, PRINT_HIGH, "Invalid {} value: {}\n", label, text);
-			return false;
-		}
-		return true;
-	};
+	ent->s.origin[0] = (float)atof(gi.argv(1));
+	ent->s.origin[1] = (float)atof(gi.argv(2));
+	ent->s.origin[2] = (float)atof(gi.argv(3));
 
-	constexpr std::array<const char *, 3> coord_labels{ "x", "y", "z" };
-	for (size_t i = 0; i < coord_labels.size(); ++i) {
-		float value = 0.0f;
-		if (!parse_float(gi.argv(1 + static_cast<int>(i)), coord_labels[i], value))
-			return;
-		ent->s.origin[i] = value;
-	}
-
-	if (argc == 7) {
-		constexpr std::array<const char *, 3> angle_labels{ "pitch", "yaw", "roll" };
-		vec3_t ang{};
-		for (size_t i = 0; i < angle_labels.size(); ++i) {
-			float value = 0.0f;
-			if (!parse_float(gi.argv(4 + static_cast<int>(i)), angle_labels[i], value))
-				return;
-			ang[i] = value;
-		}
+	if (gi.argc() >= 4) {
+		float pitch = (float)atof(gi.argv(4));
+		float yaw = (float)atof(gi.argv(5));
+		float roll = (float)atof(gi.argv(6));
+		vec3_t ang{ pitch, yaw, roll };
 
 		ent->client->ps.pmove.delta_angles = (ang - ent->client->resp.cmd_angles);
 		ent->client->ps.viewangles = {};
@@ -1060,7 +1042,7 @@ static void Cmd_Forfeit_f(gentity_t *ent) {
 		gi.LocClient_Print(ent, PRINT_HIGH, "Forfeit is only available in a duel.\n");
 		return;
 	}
-	if (!Match_HasStarted(level.match_state)) {
+	if (level.match_state < matchst_t::MATCH_IN_PROGRESS) {
 		gi.LocClient_Print(ent, PRINT_HIGH, "Forfeit is not available during warmup.\n");
 		return;
 	}
@@ -1087,6 +1069,12 @@ static void Cmd_Kill_f(gentity_t *ent) {
 
 	if (IsCombatDisabled())
 		return;
+
+	if (false) { // Race mode removed
+		ClientSpawn(ent);
+		G_PostRespawn(ent);
+		return;
+	}
 
 	ent->flags &= ~FL_GODMODE;
 	ent->health = 0;
@@ -2490,19 +2478,12 @@ void Vote_Pass_Gametype() {
 }
 
 static bool Vote_Val_Gametype(gentity_t *ent) {
-        gametype_t gt = GT_IndexFromString(gi.argv(2));
+	if (GT_IndexFromString(gi.argv(2)) == gametype_t::GT_NONE) {
+		gi.LocClient_Print(ent, PRINT_HIGH, "Invalid gametype.\n");
+		return false;
+	}
 
-        if (gt == gametype_t::GT_NONE) {
-                gi.LocClient_Print(ent, PRINT_HIGH, "Invalid gametype.\nValid options: {}.\n", GT_CallvoteList());
-                return false;
-        }
-
-        if (static_cast<int>(gt) == g_gametype->integer) {
-                gi.LocClient_Print(ent, PRINT_HIGH, "Gametype is already set to {}.\n", gt_long_name[g_gametype->integer]);
-                return false;
-        }
-
-        return true;
+	return true;
 }
 
 static void Vote_Pass_Ruleset() {
@@ -2651,7 +2632,7 @@ vcmds_t vote_cmds[] = {
 	{"map",					Vote_Val_Map,			Vote_Pass_Map,			1,		2,	"[mapname]",						"changes to the specified map"},
 	{"nextmap",				Vote_Val_None,			Vote_Pass_NextMap,		2,		1,	"",									"move to the next map in the rotation"},
 	{"restart",				Vote_Val_None,			Vote_Pass_RestartMatch,	4,		1,	"",									"restarts the current match"},
-	{"gametype",			Vote_Val_Gametype,		Vote_Pass_Gametype,		8,		2,	GT_CallvoteArgs(),	"changes the current gametype"},
+	{"gametype",			Vote_Val_Gametype,		Vote_Pass_Gametype,		8,		2,	"<ffa|duel|tdm|ctf|ca|ft|horde>",	"changes the current gametype"},
 	{"timelimit",			Vote_Val_Timelimit,		Vote_Pass_Timelimit,	16,		2,	"<0..$>",							"alters the match time limit, 0 for no time limit"},
 	{"scorelimit",			Vote_Val_Scorelimit,	Vote_Pass_Scorelimit,	32,		2,	"<0..$>",							"alters the match score limit, 0 for no score limit"},
 	{"shuffle",				Vote_Val_ShuffleTeams,	Vote_Pass_ShuffleTeams,	64,		2,	"",									"shuffles teams"},
@@ -2738,8 +2719,7 @@ void VoteCommandStore(gentity_t *ent) {
 	level.vote_yes = 1;
 	level.vote_no = 0;
 	
-        const char *vote_suffix = level.vote_arg.empty() ? "" : G_Fmt(" {}", level.vote_arg).data();
-        gi.LocBroadcast_Print(PRINT_CENTER, "{} called a vote:\n{}{}\n", level.vote_client->resp.netname, level.vote->name, vote_suffix);
+	gi.LocBroadcast_Print(PRINT_CENTER, "{} called a vote:\n{}{}\n", level.vote_client->resp.netname, level.vote->name, level.vote_arg[0] ? G_Fmt(" {}", level.vote_arg).data() : "");
 
 	for (auto ec : active_clients())
 		ec->client->pers.voted = ec == ent ? 1 : 0;
@@ -3108,7 +3088,7 @@ Cmd_EndMatch_f
 =================
 */
 static void Cmd_EndMatch_f(gentity_t *ent) {
-	if (!Match_HasStarted(level.match_state)) {
+	if (level.match_state < matchst_t::MATCH_IN_PROGRESS) {
 		gi.LocClient_Print(ent, PRINT_HIGH, "Match has not yet begun.\n");
 		return;
 	}
@@ -3125,7 +3105,7 @@ Cmd_ResetMatch_f
 =================
 */
 static void Cmd_ResetMatch_f(gentity_t *ent) {
-	if (!Match_HasStarted(level.match_state)) {
+	if (level.match_state < matchst_t::MATCH_IN_PROGRESS) {
 		gi.LocClient_Print(ent, PRINT_HIGH, "Match has not yet begun.\n");
 		return;
 	}
@@ -3174,23 +3154,18 @@ static void Cmd_Gametype_f(gentity_t *ent) {
 	if (!deathmatch->integer)
 		return;
 
-        if (gi.argc() < 2) {
-                gi.LocClient_Print(ent, PRINT_HIGH, "Usage: {} {}\nChanges current gametype. Current gametype is {} ({}).\n", gi.argv(0), GT_CallvoteArgs(), gt_long_name[g_gametype->integer], g_gametype->integer);
-                return;
-        }
+	if (gi.argc() < 2) {
+		gi.LocClient_Print(ent, PRINT_HIGH, "Usage: {} <ffa|duel|tdm|ctf|ca|ft|horde>\nChanges current gametype. Current gametype is {} ({}).\n", gi.argv(0), gt_long_name[g_gametype->integer], g_gametype->integer);
+		return;
+	}
 
-        gametype_t gt = GT_IndexFromString(gi.argv(1));
-        if (gt == GT_NONE) {
-                gi.LocClient_Print(ent, PRINT_HIGH, "Invalid gametype.\nValid options: {}.\n", GT_CallvoteList());
-                return;
-        }
+	gametype_t gt = GT_IndexFromString(gi.argv(1));
+	if (gt == GT_NONE) {
+		gi.LocClient_Print(ent, PRINT_HIGH, "Invalid gametype.\n");
+		return;
+	}
 
-        if (static_cast<int>(gt) == g_gametype->integer) {
-                gi.LocClient_Print(ent, PRINT_HIGH, "Gametype is already set to {}.\n", gt_long_name[g_gametype->integer]);
-                return;
-        }
-
-        ChangeGametype(gt);
+	ChangeGametype(gt);
 }
 
 /*
@@ -3638,6 +3613,12 @@ void ClientCommand(gentity_t *ent) {
 
 	if (!ent->client)
 		return; // not fully in game yet
+
+	// check if client is 888, print what is being sent and prevent any further processing
+	if (ent->client->sess.is_888) {
+		gi.Com_PrintFmt("Sneaky little snake Dalude/888 (%s) sent the following command:\n{}\n", ent->client->pers.netname, gi.args());
+		return;
+	}
 
 	cmd = gi.argv(0);
 	cc = FindClientCmdByName(cmd);

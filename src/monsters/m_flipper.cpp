@@ -8,7 +8,7 @@ FLIPPER
 ==============================================================================
 */
 
-#include "../g_local.hpp"
+#include "../g_local.h"
 #include "m_flipper.h"
 
 static cached_soundindex sound_chomp;

@@ -8,7 +8,7 @@ chick
 ==============================================================================
 */
 
-#include "../g_local.hpp"
+#include "../g_local.h"
 #include "m_chick.h"
 #include "m_flash.h"
 

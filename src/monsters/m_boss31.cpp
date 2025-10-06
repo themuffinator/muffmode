@@ -8,7 +8,7 @@ jorg
 ==============================================================================
 */
 
-#include "../g_local.hpp"
+#include "../g_local.h"
 #include "m_boss31.h"
 #include "m_flash.h"
 

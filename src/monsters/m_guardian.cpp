@@ -8,7 +8,7 @@ GUARDIAN
 ==============================================================================
 */
 
-#include "../g_local.hpp"
+#include "../g_local.h"
 #include "m_guardian.h"
 #include "m_flash.h"
 

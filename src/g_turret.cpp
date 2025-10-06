@@ -2,7 +2,7 @@
 // Licensed under the GNU General Public License 2.0.
 // g_turret.c
 
-#include "g_local.hpp"
+#include "g_local.h"
 
 constexpr spawnflags_t SPAWNFLAG_TURRET_BREACH_FIRE = 65536_spawnflag;
 

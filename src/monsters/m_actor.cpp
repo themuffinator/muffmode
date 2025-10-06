@@ -2,7 +2,7 @@
 // Licensed under the GNU General Public License 2.0.
 // g_actor.c
 
-#include "../g_local.hpp"
+#include "../g_local.h"
 #include "m_actor.h"
 #include "m_flash.h"
 

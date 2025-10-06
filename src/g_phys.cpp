@@ -2,7 +2,7 @@
 // Licensed under the GNU General Public License 2.0.
 // g_phys.c
 
-#include "g_local.hpp"
+#include "g_local.h"
 
 /*
 

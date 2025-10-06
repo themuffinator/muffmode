@@ -1,9 +1,6 @@
 // Copyright (c) ZeniMax Media Inc.
 // Licensed under the GNU General Public License 2.0.
-#include "g_local.hpp"
-
-#include <cstddef>
-#include <limits>
+#include "g_local.h"
 
 /*
 ==============================================================================
@@ -25,142 +22,93 @@ The head node will always have a null "chain", the tail node
 will always have a null "enemy".
 */
 
-namespace {
-
-constexpr std::size_t TRAIL_LENGTH = 8;
-constexpr const char *PLAYER_TRAIL_CLASSNAME = "player_trail";
-
-[[nodiscard]] std::size_t PlayerTrail_Length(const gclient_t &client) {
-        std::size_t length = 0;
-        for (auto *node = client.trail_tail; node && length < TRAIL_LENGTH; node = node->chain)
-                ++length;
-
-        return length;
-}
-
-[[nodiscard]] gentity_t *DetachTrailTail(gclient_t &client) {
-        gentity_t *const tail = client.trail_tail;
-        if (!tail)
-                return nullptr;
-
-        client.trail_tail = tail->chain;
-        if (client.trail_tail)
-                client.trail_tail->enemy = nullptr;
-        else
-                client.trail_head = nullptr;
-
-        tail->chain = nullptr;
-        tail->enemy = nullptr;
-        tail->owner = nullptr;
-
-        return tail;
-}
-
-} // namespace
+constexpr size_t TRAIL_LENGTH = 8;
 
 // places a new entity at the head of the player trail.
 // the tail entity may be moved to the front if the length
 // is at the end.
 static gentity_t *PlayerTrail_Spawn(gentity_t *owner) {
-        if (!owner || !owner->client)
-                return nullptr;
+	size_t len = 0;
 
-        gentity_t *trail = nullptr;
-        auto &client = *owner->client;
+	for (gentity_t *tail = owner->client->trail_tail; tail; tail = tail->chain)
+		len++;
 
-        if (PlayerTrail_Length(client) >= TRAIL_LENGTH) {
-                trail = DetachTrailTail(client);
-        } else {
-                trail = G_Spawn();
-        }
+	gentity_t *trail;
 
-        if (!trail)
-                return nullptr;
+	// move the tail to the head
+	if (len == TRAIL_LENGTH) {
+		// unlink the old tail
+		trail = owner->client->trail_tail;
+		owner->client->trail_tail = trail->chain;
+		owner->client->trail_tail->enemy = nullptr;
+		trail->chain = trail->enemy = nullptr;
+	} else {
+		// spawn a new head
+		trail = G_Spawn();
+		trail->classname = "player_trail";
+	}
 
-        trail->classname = PLAYER_TRAIL_CLASSNAME;
-        trail->chain = nullptr;
+	// link as new head
+	if (owner->client->trail_head)
+		owner->client->trail_head->chain = trail;
+	trail->enemy = owner->client->trail_head;
+	owner->client->trail_head = trail;
 
-        if (client.trail_head)
-                client.trail_head->chain = trail;
+	// if there's no tail, we become the tail too
+	if (!owner->client->trail_tail)
+		owner->client->trail_tail = trail;
 
-        trail->enemy = client.trail_head;
-        client.trail_head = trail;
-
-        if (!client.trail_tail)
-                client.trail_tail = trail;
-
-        return trail;
+	return trail;
 }
 
 // destroys all player trail entities in the map.
 // we don't want these to stay around across level loads.
 void PlayerTrail_Destroy(gentity_t *player) {
-        for (std::size_t i = 0; i < globals.num_entities; ++i) {
-                auto &entity = g_entities[i];
-                if (!entity.classname || strcmp(entity.classname, PLAYER_TRAIL_CLASSNAME) != 0)
-                        continue;
+	for (size_t i = 0; i < globals.num_entities; i++)
+		if (g_entities[i].classname && strcmp(g_entities[i].classname, "player_trail") == 0)
+			if (!player || g_entities[i].owner == player)
+				G_FreeEntity(&g_entities[i]);
 
-                if (player && entity.owner != player)
-                        continue;
-
-                G_FreeEntity(&entity);
-        }
-
-        if (player) {
-                if (player->client) {
-                        player->client->trail_head = nullptr;
-                        player->client->trail_tail = nullptr;
-                }
-        } else {
-                for (auto *entity_client : active_clients()) {
-                        if (!entity_client->client)
-                                continue;
-
-                        entity_client->client->trail_head = nullptr;
-                        entity_client->client->trail_tail = nullptr;
-                }
-        }
+	if (player)
+		player->client->trail_head = player->client->trail_tail = nullptr;
+	else for (auto ec : active_clients())
+		ec->client->trail_head = ec->client->trail_tail = nullptr;
 }
 
 // check to see if we can add a new player trail spot
 // for this player.
 void PlayerTrail_Add(gentity_t *player) {
-        if (!player || !player->client)
-                return;
+	// if we can still see the head, we don't want a new one.
+	if (player->client->trail_head && visible(player, player->client->trail_head))
+		return;
+	// don't spawn trails in intermission, if we're dead, if we're noclipping or not on ground yet
+	else if (level.intermission_time || player->health <= 0 || player->movetype == MOVETYPE_NOCLIP || player->movetype == MOVETYPE_FREECAM ||
+		!player->groundentity)
+		return;
 
-        // if we can still see the head, we don't want a new one.
-        if (player->client->trail_head && visible(player, player->client->trail_head))
-                return;
-        // don't spawn trails in intermission, if we're dead, if we're noclipping or not on ground yet
-        else if (level.intermission_time || player->health <= 0 || player->movetype == MOVETYPE_NOCLIP || player->movetype == MOVETYPE_FREECAM ||
-                !player->groundentity)
-                return;
-
-        gentity_t *trail = PlayerTrail_Spawn(player);
-        if (!trail)
-                return;
-
-        trail->s.origin = player->s.old_origin;
-        trail->timestamp = level.time;
-        trail->owner = player;
+	gentity_t *trail = PlayerTrail_Spawn(player);
+	trail->s.origin = player->s.old_origin;
+	trail->timestamp = level.time;
+	trail->owner = player;
 }
 
 // pick a trail node that matches the player
 // we're hunting that is visible to us.
 gentity_t *PlayerTrail_Pick(gentity_t *self, bool next) {
-        if (!self || !self->enemy || !self->enemy->client || !self->enemy->client->trail_head)
-                return nullptr;
+	// not player or doesn't have a trail yet
+	if (!self->enemy->client || !self->enemy->client->trail_head)
+		return nullptr;
 
-        // find which marker head that was dropped while we
-        // were searching for this enemy
-        gentity_t *marker;
+	// find which marker head that was dropped while we
+	// were searching for this enemy
+	gentity_t *marker;
 
-        for (marker = self->enemy->client->trail_head; marker; marker = marker->enemy) {
-                if (marker->timestamp <= self->monsterinfo.trail_time)
-                        continue;
+	for (marker = self->enemy->client->trail_head; marker; marker = marker->enemy) {
+		if (marker->timestamp <= self->monsterinfo.trail_time)
+			continue;
 
-                break;
-        }
+		break;
+	}
 
 	if (next) {
 		// find the marker we're closest to

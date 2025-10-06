@@ -8,7 +8,7 @@ SOLDIER
 ==============================================================================
 */
 
-#include "../g_local.hpp"
+#include "../g_local.h"
 #include "m_soldier.h"
 #include "m_flash.h"
 

@@ -1,11 +1,8 @@
 // Copyright (c) ZeniMax Media Inc.
 // Licensed under the GNU General Public License 2.0.
-#include "g_local.hpp"
+#include "g_local.h"
 #include "bots/bot_includes.h"
 #include "monsters/m_player.h"	//doppelganger
-#include <array>
-#include <optional>
-#include <utility>
 
 bool Pickup_Weapon(gentity_t *ent, gentity_t *other);
 void Use_Weapon(gentity_t *ent, gitem_t *inv);
@@ -33,14 +30,20 @@ void Weapon_Tesla(gentity_t *ent);
 void Weapon_ProxLauncher(gentity_t *ent);
 
 void	   Use_Quad(gentity_t *ent, gitem_t *item);
+static gtime_t quad_drop_timeout_hack;
 void	   Use_Haste(gentity_t *ent, gitem_t *item);
+static gtime_t haste_drop_timeout_hack;
 void	   Use_Double(gentity_t *ent, gitem_t *item);
+static gtime_t double_drop_timeout_hack;
 void	   Use_Invisibility(gentity_t *ent, gitem_t *item);
+static gtime_t invisibility_drop_timeout_hack;
 void	   Use_Protection(gentity_t *ent, gitem_t *item);
+static gtime_t protection_drop_timeout_hack;
 void	   Use_Regeneration(gentity_t *ent, gitem_t *item);
+static gtime_t regeneration_drop_timeout_hack;
 
 static void UsedMessage(gentity_t *ent, gitem_t *item) {
-	if (!ent || !item || !ent->client)
+	if (!ent || !item)
 		return;
 
 	if (item->id == IT_ADRENALINE && !g_dm_holdable_adrenaline->integer)
@@ -48,77 +51,6 @@ static void UsedMessage(gentity_t *ent, gitem_t *item) {
 
 	gi.LocClient_Print(ent, PRINT_CENTER, "Used {}", item->pickup_name);
 }
-
-namespace {
-
-enum class powerup_drop_slot : size_t {
-	quad,
-	haste,
-	double_damage,
-	invisibility,
-	protection,
-	regeneration,
-	count
-};
-
-using powerup_drop_timeouts_t =
-	std::array<std::optional<gtime_t>, static_cast<size_t>(powerup_drop_slot::count)>;
-
-powerup_drop_timeouts_t powerup_drop_timeouts;
-
-[[nodiscard]] constexpr size_t ToIndex(powerup_drop_slot slot) noexcept {
-	return static_cast<size_t>(slot);
-}
-
-void StoreDropTimeout(powerup_drop_slot slot, gtime_t timeout) {
-	powerup_drop_timeouts[ToIndex(slot)] = timeout;
-}
-
-[[nodiscard]] gtime_t ConsumeDropTimeout(powerup_drop_slot slot, gtime_t fallback) {
-	auto &stored_timeout = powerup_drop_timeouts[ToIndex(slot)];
-	if (!stored_timeout)
-		return fallback;
-
-	gtime_t timeout = *stored_timeout;
-	stored_timeout.reset();
-	return timeout;
-}
-
-[[nodiscard]] std::optional<powerup_drop_slot> LookupDropTimeoutSlot(item_id_t id) {
-	switch (id) {
-	case IT_POWERUP_QUAD:
-		return powerup_drop_slot::quad;
-	case IT_POWERUP_HASTE:
-		return powerup_drop_slot::haste;
-	case IT_POWERUP_DOUBLE:
-		return powerup_drop_slot::double_damage;
-	case IT_POWERUP_INVISIBILITY:
-		return powerup_drop_slot::invisibility;
-	case IT_POWERUP_PROTECTION:
-		return powerup_drop_slot::protection;
-	case IT_POWERUP_REGEN:
-		return powerup_drop_slot::regeneration;
-	default:
-		return std::nullopt;
-	}
-}
-
-bool TryConsumeInventoryItem(gentity_t *ent, const gitem_t *item) {
-	if (!ent || !item)
-		return false;
-
-	if (!ent->client)
-		return false;
-
-	auto &count = ent->client->pers.inventory[item->id];
-	if (count <= 0)
-		return false;
-
-	--count;
-	return true;
-}
-
-} // namespace
 
 // ***************************
 //  DOPPELGANGER
@@ -1587,9 +1519,6 @@ void SetRespawn(gentity_t *ent, gtime_t delay, bool hide_self) {
 //======================================================================
 
 static void Use_Teleporter(gentity_t *ent, gitem_t *item) {
-	if (!TryConsumeInventoryItem(ent, item))
-		return;
-
 	gentity_t *fx = G_Spawn();
 	fx->classname = "telefx";
 	fx->s.event = EV_PLAYER_TELEPORT;
@@ -1602,6 +1531,7 @@ static void Use_Teleporter(gentity_t *ent, gitem_t *item) {
 	gi.linkentity(fx);
 	TeleportPlayerToRandomSpawnPoint(ent, true);
 
+	ent->client->pers.inventory[item->id]--;
 	UsedMessage(ent, item);
 }
 
@@ -1671,22 +1601,39 @@ static bool Pickup_Powerup(gentity_t *ent, gentity_t *other) {
 	
 	bool is_dropped_from_death = ent->spawnflags.has(SPAWNFLAG_ITEM_DROPPED_PLAYER) && !ent->spawnflags.has(SPAWNFLAG_ITEM_DROPPED);
 
-        const auto slot = LookupDropTimeoutSlot(ent->item->id);
+	if (IsInstantItemsEnabled() || is_dropped_from_death) {
+		bool use = false;
+		gtime_t t = (((RS(RS_MM) || RS(RS_Q3A)) && deathmatch->integer) || !is_dropped_from_death) ? gtime_t::from_sec(ent->count) : (ent->nextthink - level.time);
+		switch (ent->item->id) {
+		case IT_POWERUP_QUAD:
+			quad_drop_timeout_hack = t;
+			use = true;
+			break;
+		case IT_POWERUP_HASTE:
+			haste_drop_timeout_hack = t;
+			use = true;
+			break;
+		case IT_POWERUP_PROTECTION:
+			protection_drop_timeout_hack = t;
+			use = true;
+			break;
+		case IT_POWERUP_DOUBLE:
+			double_drop_timeout_hack = t;
+			use = true;
+			break;
+		case IT_POWERUP_INVISIBILITY:
+			invisibility_drop_timeout_hack = t;
+			use = true;
+			break;
+		case IT_POWERUP_REGEN:
+			regeneration_drop_timeout_hack = t;
+			use = true;
+			break;
+		}
 
-        if (IsInstantItemsEnabled() || is_dropped_from_death) {
-                const gtime_t t = (((RS(RS_MM) || RS(RS_Q3A)) && deathmatch->integer) || !is_dropped_from_death) ? gtime_t::from_sec(ent->count) : (ent->nextthink - level.time);
-
-                if (slot)
-                        StoreDropTimeout(*slot, t);
-
-                if (ent->item->use)
-                        ent->item->use(other, ent->item);
-        } else if (ent->item->use) {
-                if (slot)
-                        StoreDropTimeout(*slot, gtime_t::from_sec(ent->item->quantity));
-
-                ent->item->use(other, ent->item);
-        }
+		if (use && ent->item->use)
+			ent->item->use(other, ent->item);
+	}
 
 	for (auto ec : active_clients()) {
 		if (!ClientIsPlaying(ec->client) && ec->client->sess.pc.follow_powerup) {
@@ -1763,46 +1710,34 @@ static bool Pickup_TimedItem(gentity_t *ent, gentity_t *other) {
 //======================================================================
 
 static void Use_Defender(gentity_t *ent, gitem_t *item) {
-	if (!ent || !ent->client)
-		return;
-
-	if (ent->client->owned_sphere) {
+	if (ent->client && ent->client->owned_sphere) {
 		gi.LocClient_Print(ent, PRINT_HIGH, "$g_only_one_sphere_time");
 		return;
 	}
 
-	if (!TryConsumeInventoryItem(ent, item))
-		return;
+	ent->client->pers.inventory[item->id]--;
 
 	Defender_Launch(ent);
 }
 
 static void Use_Hunter(gentity_t *ent, gitem_t *item) {
-	if (!ent || !ent->client)
-		return;
-
-	if (ent->client->owned_sphere) {
+	if (ent->client && ent->client->owned_sphere) {
 		gi.LocClient_Print(ent, PRINT_HIGH, "$g_only_one_sphere_time");
 		return;
 	}
 
-	if (!TryConsumeInventoryItem(ent, item))
-		return;
+	ent->client->pers.inventory[item->id]--;
 
 	Hunter_Launch(ent);
 }
 
 static void Use_Vengeance(gentity_t *ent, gitem_t *item) {
-	if (!ent || !ent->client)
-		return;
-
-	if (ent->client->owned_sphere) {
+	if (ent->client && ent->client->owned_sphere) {
 		gi.LocClient_Print(ent, PRINT_HIGH, "$g_only_one_sphere_time");
 		return;
 	}
 
-	if (!TryConsumeInventoryItem(ent, item))
-		return;
+	ent->client->pers.inventory[item->id]--;
 
 	Vengeance_Launch(ent);
 }
@@ -1839,8 +1774,7 @@ static bool Pickup_Sphere(gentity_t *ent, gentity_t *other) {
 //======================================================================
 
 static void Use_IR(gentity_t *ent, gitem_t *item) {
-	if (!TryConsumeInventoryItem(ent, item))
-		return;
+	ent->client->pers.inventory[item->id]--;
 
 	ent->client->ir_time = max(level.time, ent->client->ir_time) + 60_sec;
 
@@ -1850,10 +1784,10 @@ static void Use_IR(gentity_t *ent, gitem_t *item) {
 //======================================================================
 
 static void Use_Nuke(gentity_t *ent, gitem_t *item) {
-	if (!TryConsumeInventoryItem(ent, item))
-		return;
-
 	vec3_t forward, right, start;
+
+	ent->client->pers.inventory[item->id]--;
+
 	AngleVectors(ent->client->v_angle, forward, right, nullptr);
 
 	start = ent->s.origin;
@@ -1879,9 +1813,6 @@ static bool Pickup_Nuke(gentity_t *ent, gentity_t *other) {
 //======================================================================
 
 static void Use_Doppelganger(gentity_t *ent, gitem_t *item) {
-	if (!ent || !item || !ent->client)
-		return;
-
 	vec3_t forward, right;
 	vec3_t createPt, spawnPt;
 	vec3_t ang;
@@ -1897,8 +1828,7 @@ static void Use_Doppelganger(gentity_t *ent, gitem_t *item) {
 	if (!CheckGroundSpawnPoint(spawnPt, ent->mins, ent->maxs, 64, -1))
 		return;
 
-	if (!TryConsumeInventoryItem(ent, item))
-		return;
+	ent->client->pers.inventory[item->id]--;
 	UsedMessage(ent, item);
 
 	SpawnGrow_Spawn(spawnPt, 24.f, 48.f);
@@ -1942,12 +1872,6 @@ static bool Pickup_Ball(gentity_t *ent, gentity_t *other) {
 }
 
 static void Drop_General(gentity_t *ent, gitem_t *item) {
-	if (!ent || !ent->client)
-		return;
-
-	if (ent->client->pers.inventory[item->id] <= 0)
-		return;
-
 	if (g_quadhog->integer && item->id == IT_POWERUP_QUAD)
 		return;
 
@@ -1990,9 +1914,6 @@ static void Drop_General(gentity_t *ent, gitem_t *item) {
 //======================================================================
 
 static void Use_Adrenaline(gentity_t *ent, gitem_t *item) {
-	if (!TryConsumeInventoryItem(ent, item))
-		return;
-
 	ent->max_health += deathmatch->integer ? ((RS(RS_MM)) ? 5 : 0) : 1;
 
 	if (ent->health < ent->max_health)
@@ -2001,6 +1922,8 @@ static void Use_Adrenaline(gentity_t *ent, gitem_t *item) {
 	gi.sound(ent, CHAN_ITEM, gi.soundindex("items/m_health.wav"), 1, ATTN_NORM, 0);
 
 	ent->client->pu_regen_time_blip = level.time + 100_ms;
+
+	ent->client->pers.inventory[item->id]--;
 	UsedMessage(ent, item);
 }
 
@@ -2153,75 +2076,91 @@ static void Use_Powerup_BroadcastMsg(gentity_t *ent, gitem_t *item, const char *
 }
 
 void Use_Quad(gentity_t *ent, gitem_t *item) {
-	if (!TryConsumeInventoryItem(ent, item))
-		return;
+	gtime_t timeout;
 
-	const gtime_t timeout = ConsumeDropTimeout(powerup_drop_slot::quad, 30_sec);
+	ent->client->pers.inventory[item->id]--;
+
+	if (quad_drop_timeout_hack) {
+		timeout = quad_drop_timeout_hack;
+		quad_drop_timeout_hack = 0_ms;
+	} else {
+		timeout = 30_sec;
+	}
 
 	ent->client->pu_time_quad = max(level.time, ent->client->pu_time_quad) + timeout;
 
 	Use_Powerup_BroadcastMsg(ent, item, "items/damage.wav", "quad_damage");
 }
-
 // =====================================================================
 
 void Use_Haste(gentity_t *ent, gitem_t *item) {
-	if (!TryConsumeInventoryItem(ent, item))
-		return;
+	gtime_t timeout;
 
-	const gtime_t timeout = ConsumeDropTimeout(powerup_drop_slot::haste, 30_sec);
+	ent->client->pers.inventory[item->id]--;
+
+	if (haste_drop_timeout_hack) {
+		timeout = haste_drop_timeout_hack;
+		haste_drop_timeout_hack = 0_ms;
+	} else {
+		timeout = 30_sec;
+	}
 
 	ent->client->pu_time_haste = max(level.time, ent->client->pu_time_haste) + timeout;
 
 	Use_Powerup_BroadcastMsg(ent, item, "items/quadfire1.wav", "haste");
 }
 
-
 //======================================================================
 
 static void Use_Double(gentity_t *ent, gitem_t *item) {
-	if (!TryConsumeInventoryItem(ent, item))
-		return;
+	gtime_t timeout;
 
-	const gtime_t timeout = ConsumeDropTimeout(powerup_drop_slot::double_damage, 30_sec);
+	ent->client->pers.inventory[item->id]--;
+
+	if (double_drop_timeout_hack) {
+		timeout = double_drop_timeout_hack;
+		double_drop_timeout_hack = 0_ms;
+	} else {
+		timeout = 30_sec;
+	}
 
 	ent->client->pu_time_double = max(level.time, ent->client->pu_time_double) + timeout;
 
 	Use_Powerup_BroadcastMsg(ent, item, "misc/ddamage1.wav", nullptr);
 }
 
-
 //======================================================================
 
 static void Use_Breather(gentity_t *ent, gitem_t *item) {
-	if (!TryConsumeInventoryItem(ent, item))
-		return;
-
+	ent->client->pers.inventory[item->id]--;
 	ent->client->pu_time_rebreather = max(level.time, ent->client->pu_time_rebreather) + (RS(RS_MM) ? 45_sec : 30_sec);
 }
 
 //======================================================================
 
 static void Use_Envirosuit(gentity_t *ent, gitem_t *item) {
-	if (!TryConsumeInventoryItem(ent, item))
-		return;
-
+	ent->client->pers.inventory[item->id]--;
 	ent->client->pu_time_enviro = max(level.time, ent->client->pu_time_enviro) + 30_sec;
 }
 
 //======================================================================
 
 static void Use_Protection(gentity_t *ent, gitem_t *item) {
-	if (!TryConsumeInventoryItem(ent, item))
-		return;
+	gtime_t timeout;
 
-	const gtime_t timeout = ConsumeDropTimeout(powerup_drop_slot::protection, 30_sec);
+	ent->client->pers.inventory[item->id]--;
+
+	if (protection_drop_timeout_hack) {
+		timeout = protection_drop_timeout_hack;
+		protection_drop_timeout_hack = 0_ms;
+	} else {
+		timeout = 30_sec;
+	}
 
 	ent->client->pu_time_protection = max(level.time, ent->client->pu_time_protection) + timeout;
 
 	Use_Powerup_BroadcastMsg(ent, item, "items/protect.wav", "battlesuit");
 }
-
 
 //======================================================================
 
@@ -2270,35 +2209,43 @@ void Powerup_ApplyRegeneration(gentity_t *ent) {
 }
 
 static void Use_Regeneration(gentity_t *ent, gitem_t *item) {
-	if (!TryConsumeInventoryItem(ent, item))
-		return;
+	gtime_t timeout;
 
-	const gtime_t timeout = ConsumeDropTimeout(powerup_drop_slot::regeneration, 30_sec);
+	ent->client->pers.inventory[item->id]--;
+
+	if (regeneration_drop_timeout_hack) {
+		timeout = regeneration_drop_timeout_hack;
+		regeneration_drop_timeout_hack = 0_ms;
+	} else {
+		timeout = 30_sec;
+	}
 
 	ent->client->pu_time_regeneration = max(level.time, ent->client->pu_time_regeneration) + timeout;
 
 	Use_Powerup_BroadcastMsg(ent, item, "items/protect.wav", "regeneration");
 }
 
-
 static void Use_Invisibility(gentity_t *ent, gitem_t *item) {
-	if (!TryConsumeInventoryItem(ent, item))
-		return;
+	gtime_t timeout;
 
-	const gtime_t timeout = ConsumeDropTimeout(powerup_drop_slot::invisibility, 30_sec);
+	ent->client->pers.inventory[item->id]--;
+
+	if (invisibility_drop_timeout_hack) {
+		timeout = invisibility_drop_timeout_hack;
+		invisibility_drop_timeout_hack = 0_ms;
+	} else {
+		timeout = 30_sec;
+	}
 
 	ent->client->pu_time_invisibility = max(level.time, ent->client->pu_time_invisibility) + timeout;
 
 	Use_Powerup_BroadcastMsg(ent, item, "items/protect.wav", "invisibility");
 }
 
-
 //======================================================================
 
 static void Use_Silencer(gentity_t *ent, gitem_t *item) {
-	if (!TryConsumeInventoryItem(ent, item))
-		return;
-
+	ent->client->pers.inventory[item->id]--;
 	ent->client->silencer_shots += 30;
 }
 
@@ -2710,16 +2657,14 @@ static void Use_PowerArmor(gentity_t *ent, gitem_t *item) {
 }
 
 static bool Pickup_PowerArmor(gentity_t *ent, gentity_t *other) {
-        other->client->pers.inventory[ent->item->id]++;
+	other->client->pers.inventory[ent->item->id]++;
 
-        SetRespawn(ent, gtime_t::from_sec(ent->item->quantity));
+	SetRespawn(ent, gtime_t::from_sec(ent->item->quantity));
 
-        const bool should_auto_enable = !deathmatch->integer ||
-                !ent->spawnflags.has(SPAWNFLAG_ITEM_DROPPED | SPAWNFLAG_ITEM_DROPPED_PLAYER);
-        if (should_auto_enable)
-                G_CheckPowerArmor(other);
+	if ((deathmatch->integer && !other->client->pers.inventory[ent->item->id]) || !deathmatch->integer)
+		G_CheckPowerArmor(other);
 
-        return true;
+	return true;
 }
 
 static void Drop_PowerArmor(gentity_t *ent, gitem_t *item) {
@@ -2746,6 +2691,8 @@ Touch_Item
 ===============
 */
 TOUCH(Touch_Item) (gentity_t *ent, gentity_t *other, const trace_t &tr, bool other_touching_self) -> void {
+	bool taken;
+
 	if (!other->client)
 		return;
 	if (other->health < 1)
@@ -2756,20 +2703,18 @@ TOUCH(Touch_Item) (gentity_t *ent, gentity_t *other, const trace_t &tr, bool oth
 		return; // not a grabbable item?
 
 	gitem_t *it = ent->item;
-	const bool is_coop = coop->integer != 0;
-	const bool instanced_items = is_coop && P_UseCoopInstancedItems();
-	const bool is_deathmatch = deathmatch->integer != 0;
-	const int32_t player_number = other->s.number - 1;
 
 	// already got this instanced item
-	if (instanced_items && ent->item_picked_up_by[player_number])
-		return;
+	if (coop->integer && P_UseCoopInstancedItems()) {
+		if (ent->item_picked_up_by[other->s.number - 1])
+			return;
+	}
 
 	// can't pickup during match countdown
 	if (IsPickupsDisabled())
 		return;
 
-	const bool taken = it->pickup(ent, other);
+	taken = it->pickup(ent, other);
 
 	ValidateSelectedItem(other);
 
@@ -2790,27 +2735,29 @@ TOUCH(Touch_Item) (gentity_t *ent, gentity_t *other, const trace_t &tr, bool oth
 
 		if (ent->noise_index)
 			gi.sound(other, CHAN_ITEM, ent->noise_index, 1, ATTN_NORM, 0);
-		else if (it->pickup_sound)
+		else if (it->pickup_sound) {
 			gi.sound(other, CHAN_ITEM, gi.soundindex(it->pickup_sound), 1, ATTN_NORM, 0);
+		}
+		int32_t player_number = other->s.number - 1;
 
-		if (instanced_items && !ent->item_picked_up_by[player_number]) {
+		if (coop->integer && P_UseCoopInstancedItems() && !ent->item_picked_up_by[player_number]) {
 			ent->item_picked_up_by[player_number] = true;
 
 			// [Paril-KEX] this is to fix a coop quirk where items
 			// that send a message on pick up will only print on the
-			// player that picked them up, and never anybody else;
+			// player that picked them up, and never anybody else; 
 			// when instanced items are enabled we don't need to limit
 			// ourselves to this, but it does mean that relays that trigger
 			// messages won't work, so we'll have to fix those
 			if (ent->message)
 				G_PrintActivationMessage(ent, other, false);
 		}
-		if (is_deathmatch) {
+		if (deathmatch->integer) {
 			switch (it->id) {
 			case IT_ARMOR_BODY:
 			case IT_POWER_SCREEN:
 			case IT_POWER_SHIELD:
-			case IT_ADRENALINE:
+			case IT_ADRENALINE: 
 			case IT_HEALTH_MEGA:
 			case IT_POWERUP_QUAD:
 			case IT_POWERUP_DOUBLE:
@@ -2855,42 +2802,43 @@ TOUCH(Touch_Item) (gentity_t *ent, gentity_t *other, const trace_t &tr, bool oth
 		// [Paril-KEX] see above msg; this also disables the message in DM
 		// since there's no need to print pickup messages in DM (this wasn't
 		// even a documented feature, relays were traditionally used for this)
-		const bool suppress_message = is_deathmatch || instanced_items;
-		const char *message_backup = suppress_message ? std::exchange(ent->message, nullptr) : nullptr;
+		const char *message_backup = nullptr;
+
+		if (deathmatch->integer || (coop->integer && P_UseCoopInstancedItems()))
+			std::swap(message_backup, ent->message);
 
 		G_UseTargets(ent, other);
 
-		if (suppress_message)
-			ent->message = message_backup;
+		if (deathmatch->integer || (coop->integer && P_UseCoopInstancedItems()))
+			std::swap(message_backup, ent->message);
 
 		ent->spawnflags |= SPAWNFLAG_ITEM_TARGETS_USED;
 	}
 
-	if (!taken)
-		return;
+	if (taken) {
+		bool should_remove = false;
 
-	bool should_remove = false;
+		if (coop->integer) {
+			// in coop with instanced items, *only* dropped 
+			// player items will ever get deleted permanently.
+			if (P_UseCoopInstancedItems())
+				should_remove = ent->spawnflags.has(SPAWNFLAG_ITEM_DROPPED_PLAYER);
+			// in coop without instanced items, IF_STAY_COOP items remain
+			// if not dropped
+			else
+				should_remove = ent->spawnflags.has(SPAWNFLAG_ITEM_DROPPED | SPAWNFLAG_ITEM_DROPPED_PLAYER) || !(it->flags & IF_STAY_COOP);
+		} else
+			should_remove = !deathmatch->integer || ent->spawnflags.has(SPAWNFLAG_ITEM_DROPPED | SPAWNFLAG_ITEM_DROPPED_PLAYER);
 
-	if (is_coop) {
-		// in coop with instanced items, *only* dropped
-		// player items will ever get deleted permanently.
-		if (instanced_items)
-			should_remove = ent->spawnflags.has(SPAWNFLAG_ITEM_DROPPED_PLAYER);
-		// in coop without instanced items, IF_STAY_COOP items remain
-		// if not dropped
-		else
-			should_remove = ent->spawnflags.has(SPAWNFLAG_ITEM_DROPPED | SPAWNFLAG_ITEM_DROPPED_PLAYER) || !(it->flags & IF_STAY_COOP);
-	} else {
-		should_remove = !is_deathmatch || ent->spawnflags.has(SPAWNFLAG_ITEM_DROPPED | SPAWNFLAG_ITEM_DROPPED_PLAYER);
-	}
-
-	if (should_remove) {
-		if (ent->flags & FL_RESPAWN)
-			ent->flags &= ~FL_RESPAWN;
-		else
-			G_FreeEntity(ent);
+		if (should_remove) {
+			if (ent->flags & FL_RESPAWN)
+				ent->flags &= ~FL_RESPAWN;
+			else
+				G_FreeEntity(ent);
+		}
 	}
 }
+
 //======================================================================
 
 static TOUCH(drop_temp_touch) (gentity_t *ent, gentity_t *other, const trace_t &tr, bool other_touching_self) -> void {
