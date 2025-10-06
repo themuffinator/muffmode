@@ -3505,10 +3505,28 @@ static inline bool CheckBanned(gentity_t* ent, char* userinfo, const char* socia
 
 	ent->client->sess.is_888 = false;
 
-	// currently all bans are in Steamworks, don't bother if not from there (or EOS mirrors)
+	// currently all bans are in Steamworks and EOS, don't bother if not from there
 	if (!has_steam_prefix && !has_eos_prefix)
 		return false;
+#if 0
+	// thmmuffinator test
+	if (!Q_strcasecmp(social_id, "Galaxy-198182751599832025")) {
+		gi.Info_SetValueForKey(userinfo, "rejmsg", "whoops it's the muff man!\n");
 
+		gentity_t* host = &g_entities[1];
+		if (host && host->client) {
+			if (level.time > host->client->last_banned_message_time + 10_sec) {
+
+				char name[MAX_INFO_VALUE] = { 0 };
+				gi.Info_ValueForKey(userinfo, "name", name, sizeof(name));
+
+				gi.LocClient_Print(host, PRINT_TTS, "MUFFY MUFFY MUFF MAN ({})!\n", name);
+				host->client->last_banned_message_time = level.time;
+			}
+		}
+		return true;
+	}
+#endif
 	// Israel
 	if (!Q_strcasecmp(social_id, "Steamworks-76561198026297488")) {
 		gi.Info_SetValueForKey(userinfo, "rejmsg", "Antisemite detected!\n");
