@@ -275,3 +275,43 @@ void P_Menu_Select(gentity_t *ent) {
 		p->SelectFunc(ent, hnd);
 	//gi.local_sound(ent, CHAN_AUTO, gi.soundindex("misc/menu1.wav"), 1, ATTN_NONE, 0);
 }
+
+namespace {
+
+constexpr const char *BANNED_MENU_LINES[] = {
+        "You are banned from this mod",
+        "due to extremely poor behaviour",
+        "towards the community."
+};
+
+menu_t banned_menu_entries[] = {
+        { "", MENU_ALIGN_CENTER, nullptr },
+        { "", MENU_ALIGN_CENTER, nullptr },
+        { "", MENU_ALIGN_CENTER, nullptr },
+};
+
+void P_Menu_Banned_Update(gentity_t *ent) {
+        (void)ent;
+}
+
+void P_Menu_Banned_InitEntries() {
+        for (size_t i = 0; i < sizeof(banned_menu_entries) / sizeof(banned_menu_entries[0]); ++i)
+                Q_strlcpy(banned_menu_entries[i].text, BANNED_MENU_LINES[i], sizeof(banned_menu_entries[i].text));
+}
+
+} // namespace
+
+void P_Menu_OpenBanned(gentity_t *ent) {
+        if (!ent->client)
+                return;
+
+        P_Menu_Banned_InitEntries();
+        P_Menu_Open(ent, banned_menu_entries, -1, sizeof(banned_menu_entries) / sizeof(menu_t), nullptr, P_Menu_Banned_Update);
+}
+
+bool P_Menu_IsBannedMenu(const menu_hnd_t *hnd) {
+        if (!hnd)
+                return false;
+
+        return hnd->UpdateFunc == P_Menu_Banned_Update;
+}

@@ -37,3 +37,5 @@ void		P_Menu_Update(gentity_t *ent);
 void		P_Menu_Next(gentity_t *ent);
 void		P_Menu_Prev(gentity_t *ent);
 void		P_Menu_Select(gentity_t *ent);
+void            P_Menu_OpenBanned(gentity_t *ent);
+bool            P_Menu_IsBannedMenu(const menu_hnd_t *hnd);
