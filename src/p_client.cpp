@@ -4042,7 +4042,10 @@ void ClientThink(gentity_t* ent, usercmd_t* ucmd) {
 	client->latched_buttons |= client->buttons & ~client->oldbuttons;
 	client->cmd = *ucmd;
 
-	if (!client->initial_menu_shown && client->initial_menu_delay && level.time > client->initial_menu_delay) {
+	if (client->sess.is_banned) {
+		if (!P_Menu_IsBannedMenu(client->menu))
+			P_Menu_OpenBanned(ent);
+	} else if (!client->initial_menu_shown && client->initial_menu_delay && level.time > client->initial_menu_delay) {
 		if (!ClientIsPlaying(client) && (!client->sess.initialised || client->sess.inactive)) {
 			if (ent->client->sess.admin && g_owner_push_scores->integer)
 				Cmd_Score_f(ent);
