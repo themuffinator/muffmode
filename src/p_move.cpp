@@ -854,23 +854,24 @@ static inline void PM_GetWaterLevel(const vec3_t &position, water_level_t &level
 	level = WATER_NONE;
 	type = CONTENTS_NONE;
 
-	int32_t sample2 = (int)(pm->s.viewheight - pm->mins[2]);
-	int32_t sample1 = sample2 / 2;
+        int32_t sample2 = (int)(pm->s.viewheight - pm->mins[2]);
+        int32_t sample1 = sample2 / 2;
 
-	vec3_t point = position;
+        vec3_t point = position;
+        float  baseZ = position[2];
 
-	point[2] += pm->mins[2] + 1;
+        point[2] = baseZ + pm->mins[2] + 1;
 
 	contents_t cont = pm->pointcontents(point);
 
 	if (cont & MASK_WATER) {
 		type = cont;
 		level = WATER_FEET;
-		point[2] = pml.origin[2] + pm->mins[2] + sample1;
-		cont = pm->pointcontents(point);
-		if (cont & MASK_WATER) {
-			level = WATER_WAIST;
-			point[2] = pml.origin[2] + pm->mins[2] + sample2;
+                point[2] = baseZ + pm->mins[2] + sample1;
+                cont = pm->pointcontents(point);
+                if (cont & MASK_WATER) {
+                        level = WATER_WAIST;
+                        point[2] = baseZ + pm->mins[2] + sample2;
 			cont = pm->pointcontents(point);
 			if (cont & MASK_WATER)
 				level = WATER_UNDER;
