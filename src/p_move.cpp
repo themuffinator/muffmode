@@ -429,7 +429,7 @@ static void PM_StepSlideMove() {
 	down_v = pml.velocity;
 
 	up = start_o;
-	up[2] += STEPSIZE;
+	up[2] += (pml.origin[2] < 0) ? STEPSIZE_BELOW : STEPSIZE;
 
 	trace = PM_Trace(start_o, pm->mins, pm->maxs, up);
 	if (trace.allsolid)
@@ -488,7 +488,7 @@ static void PM_StepSlideMove() {
 	if ((pm->s.pm_flags & PMF_ON_GROUND) && !(pm->s.pm_flags & PMF_ON_LADDER) &&
 		(pm->waterlevel < WATER_WAIST || (!(pm->cmd.buttons & BUTTON_JUMP) && pml.velocity.z <= 0))) {
 		down = pml.origin;
-		down[2] -= STEPSIZE;
+		down[2] -= (pml.origin[2] < 0) ? STEPSIZE_BELOW : STEPSIZE;
 		trace = PM_Trace(pml.origin, pm->mins, pm->maxs, down);
 		if (trace.fraction < 1.f) {
 			pml.origin = trace.endpos;
@@ -1011,6 +1011,9 @@ static void PM_CheckJump() {
 
 	float jump_height = 270.f;
 
+	if (pml.origin[2] < 0)
+		jump_height += 4.0f;
+
 	pml.velocity[2] = ceil(pml.velocity[2] + jump_height);
 	if (pml.velocity[2] < jump_height)
 		pml.velocity[2] = jump_height;
@@ -1095,7 +1098,7 @@ static void PM_CheckSpecialMovement() {
 
 	// we're currently standing on ground, and the snapped position
 	// is a step
-	if (pm->groundentity && fabsf(pml.origin.z - trace.endpos.z) <= STEPSIZE)
+	if (pm->groundentity && fabsf(pml.origin.z - trace.endpos.z) <= ((pml.origin[2] < 0) ? STEPSIZE_BELOW : STEPSIZE))
 		return;
 
 	water_level_t level;
@@ -1342,15 +1345,6 @@ bool PM_GoodPosition() {
 	return !trace.allsolid;
 }
 
-static vec3_t PM_SnapToLegacyGrid(const vec3_t& value) {
-	vec3_t snapped{};
-
-	for (size_t i = 0; i < 3; i++)
-		snapped[i] = (float)((int32_t)(value[i] * 8.0f)) * 0.125f;
-
-	return snapped;
-}
-
 /*
 ================
 PM_SnapPosition
@@ -1360,9 +1354,6 @@ precision of the network channel and in a valid position.
 ================
 */
 static void PM_SnapPosition() {
-	pml.origin = PM_SnapToLegacyGrid(pml.origin);
-	pml.velocity = PM_SnapToLegacyGrid(pml.velocity);
-
 	pm->s.velocity = pml.velocity;
 	pm->s.origin = pml.origin;
 
