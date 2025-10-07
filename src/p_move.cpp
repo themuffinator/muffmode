@@ -887,113 +887,92 @@ static inline void PM_GetWaterLevel(const vec3_t& position, water_level_t& level
 	}
 }
 
-struct legacy_ground_result_t {
-        bool    ramp_release = false;
-        bool    on_ground = false;
-        bool    trick_window = false;
-        float   vertical_velocity = 0.0f;
-        trace_t trace;
-};
-
-static legacy_ground_result_t PM_QueryLegacyGround(bool was_on_ground) {
-        legacy_ground_result_t result{};
-
-        result.vertical_velocity = pml.velocity[2];
-
-        if (pml.velocity[2] > 180 || pm->s.pm_type == PM_GRAPPLE) {
-                result.ramp_release = true;
-                return result;
-        }
-
-        vec3_t point = pml.origin;
-        point[2] -= 0.25f;
-
-        result.trace = PM_Trace(pml.origin, pm->mins, pm->maxs, point);
-
-        if (!result.trace.ent || (result.trace.plane.normal[2] < 0.7f && !result.trace.startsolid))
-                return result;
-
-        result.on_ground = true;
-
-        if (!was_on_ground && result.vertical_velocity > 0.0f)
-                result.trick_window = true;
-
-        return result;
-}
-
 /*
 =============
 PM_CatagorizePosition
 =============
 */
 static void PM_CatagorizePosition() {
-        bool was_on_ground = (pm->s.pm_flags & PMF_ON_GROUND);
-        legacy_ground_result_t legacy = PM_QueryLegacyGround(was_on_ground);
+	vec3_t	   point;
+	trace_t	   trace;
 
-        if (legacy.ramp_release) {
-                pm->s.pm_flags &= ~PMF_ON_GROUND;
-                pm->groundentity = nullptr;
-        } else {
-                trace_t trace = legacy.trace;
-                pm->groundplane = trace.plane;
-                pml.groundsurface = trace.surface;
-                pml.groundcontents = trace.contents;
+	// if the player hull point one unit down is solid, the player
+	// is on ground
 
-                // [Paril-KEX] to attempt to fix edge cases where you get stuck
-                // wedged between a slope and a wall (which is irrecoverable
-                // most of the time), we'll allow the player to "stand" on
-                // slopes if they are right up against a wall
-                bool slanted_ground = trace.fraction < 1.0f && trace.plane.normal[2] < 0.7f;
+	// see if standing on something solid
+	point[0] = pml.origin[0];
+	point[1] = pml.origin[1];
+	point[2] = pml.origin[2] - 0.25f;
 
-                if (slanted_ground) {
-                        trace_t slant = PM_Trace(pml.origin, pm->mins, pm->maxs, pml.origin + trace.plane.normal);
+	if (pml.velocity[2] > 180 || pm->s.pm_type == PM_GRAPPLE) //!!ZOID changed from 100 to 180 (ramp accel)
+	{
+		pm->s.pm_flags &= ~PMF_ON_GROUND;
+		pm->groundentity = nullptr;
+	}
+	else {
+		trace = PM_Trace(pml.origin, pm->mins, pm->maxs, point);
+		pm->groundplane = trace.plane;
+		pml.groundsurface = trace.surface;
+		pml.groundcontents = trace.contents;
 
-                        if (slant.fraction < 1.0f && !slant.startsolid)
-                                slanted_ground = false;
-                }
+		// [Paril-KEX] to attempt to fix edge cases where you get stuck
+		// wedged between a slope and a wall (which is irrecoverable
+		// most of the time), we'll allow the player to "stand" on
+		// slopes if they are right up against a wall
+		bool slanted_ground = trace.fraction < 1.0f && trace.plane.normal[2] < 0.7f;
+
+		if (slanted_ground) {
+			trace_t slant = PM_Trace(pml.origin, pm->mins, pm->maxs, pml.origin + trace.plane.normal);
+
+			if (slant.fraction < 1.0f && !slant.startsolid)
+				slanted_ground = false;
+		}
 
 		if (trace.fraction == 1.0f || (slanted_ground && !trace.startsolid)) {
 			pm->groundentity = nullptr;
 			pm->s.pm_flags &= ~PMF_ON_GROUND;
-		} else {
+		}
+		else {
 			pm->groundentity = trace.ent;
 
-                        // hitting solid ground will end a waterjump
-                        if (pm->s.pm_flags & PMF_TIME_WATERJUMP) {
-                                pm->s.pm_flags &= ~(PMF_TIME_WATERJUMP | PMF_TIME_LAND | PMF_TIME_TELEPORT | PMF_TIME_TRICK);
-                                pm->s.pm_time = 0;
-                        }
+			// hitting solid ground will end a waterjump
+			if (pm->s.pm_flags & PMF_TIME_WATERJUMP) {
+				pm->s.pm_flags &= ~(PMF_TIME_WATERJUMP | PMF_TIME_LAND | PMF_TIME_TELEPORT | PMF_TIME_TRICK);
+				pm->s.pm_time = 0;
+			}
 
-                        if (!was_on_ground) {
-                                if (!pm_config.n64_physics && legacy.trick_window && legacy.vertical_velocity >= 100.f && !(pm->s.pm_flags & PMF_DUCKED)) {
-                                        pm->s.pm_flags |= PMF_TIME_TRICK;
-                                        pm->s.pm_time = 64;
-                                }
+			if (!(pm->s.pm_flags & PMF_ON_GROUND)) {
+				// just hit the ground
 
-                                // [Paril-KEX] calculate impact delta; this also fixes triple jumping
-                                vec3_t clipped_velocity;
-                                PM_ClipVelocity(pml.velocity, pm->groundplane.normal, clipped_velocity, 1.01f);
+				// [Paril-KEX]
+				if (!pm_config.n64_physics && pml.velocity[2] >= 100.f && pm->groundplane.normal[2] >= 0.9f && !(pm->s.pm_flags & PMF_DUCKED)) {
+					pm->s.pm_flags |= PMF_TIME_TRICK;
+					pm->s.pm_time = 64;
+				}
 
-                                pm->impact_delta = pml.start_velocity[2] - clipped_velocity[2];
+				// [Paril-KEX] calculate impact delta; this also fixes triple jumping
+				vec3_t clipped_velocity;
+				PM_ClipVelocity(pml.velocity, pm->groundplane.normal, clipped_velocity, 1.01f);
 
-                                pm->s.pm_flags |= PMF_ON_GROUND;
+				pm->impact_delta = pml.start_velocity[2] - clipped_velocity[2];
 
-                                if (pm_config.n64_physics || (pm->s.pm_flags & PMF_DUCKED)) {
-                                        pm->s.pm_flags |= PMF_TIME_LAND;
-                                        pm->s.pm_time = 128;
-                                }
-                        }
-                }
+				pm->s.pm_flags |= PMF_ON_GROUND;
 
-                PM_RecordTrace(pm->touch, trace);
-        }
+				if (pm_config.n64_physics || (pm->s.pm_flags & PMF_DUCKED)) {
+					pm->s.pm_flags |= PMF_TIME_LAND;
+					pm->s.pm_time = 128;
+				}
+			}
+		}
 
-        //
-        // get waterlevel, accounting for ducking
-        //
-        PM_GetWaterLevel(pml.origin, pm->waterlevel, pm->watertype);
+		PM_RecordTrace(pm->touch, trace);
+	}
+
+	//
+	// get waterlevel, accounting for ducking
+	//
+	PM_GetWaterLevel(pml.origin, pm->waterlevel, pm->watertype);
 }
-
 
 /*
 =============
