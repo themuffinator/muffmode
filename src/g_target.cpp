@@ -2450,11 +2450,13 @@ static USE(target_teleporter_use) (gentity_t *ent, gentity_t *other, gentity_t *
 }
 
 void SP_target_teleporter(gentity_t *ent) {
-	
-	if (!ent->target[0]) {
-		//gi.Com_PrintFmt("{}: Couldn't find teleporter destination, removing.\n", ent);
-		//G_FreeEntity(ent);
-		//return;
+	if (ent->target && ent->target[0]) {
+		ent->target_ent = G_PickTarget(ent->target);
+		if (!ent->target_ent) {
+			gi.Com_PrintFmt("{}: Couldn't find teleporter destination, removing.\n", *ent);
+			G_FreeEntity(ent);
+			return;
+		}
 	}
 	
 	ent->target_ent = G_PickTarget(ent->target);
