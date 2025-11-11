@@ -2702,7 +2702,8 @@ static bool ValidVoteCommand(gentity_t *ent) {
 		return false;
 
 	level.vote = cc;
-	level.vote_arg = std::string(gi.argv(2));
+	const char *raw_arg = gi.argc() > 2 ? gi.argv(2) : "";
+	level.vote_arg = std::string(raw_arg);
 	//gi.Com_PrintFmt("argv={} vote_arg={}\n", gi.argv(2), level.vote_arg);
 	return true;
 }
@@ -2765,11 +2766,15 @@ static void Cmd_CallVote_f(gentity_t *ent) {
 	for (size_t i = 0; i < ARRAY_LEN(vote_cmds); i++, cc++) {
 		if (!cc->name)
 			continue;
-		
+
 		if (g_vote_flags->integer & cc->flag)
 			continue;
-			
-		strcat(vstr, G_Fmt("{} ", cc->name).data());
+
+		std::string option = std::string(G_Fmt("{} ", cc->name));
+		if (Q_strlcat(vstr, option.c_str(), sizeof(vstr)) >= sizeof(vstr)) {
+			vstr[sizeof(vstr) - 1] = '\0';
+			break;
+		}
 	}
 
 	if (!g_allow_voting->integer || strlen(vstr) <= 1) {
@@ -2900,7 +2905,7 @@ static void Cmd_Follow_f(gentity_t *ent) {
 		return;
 	}
 
-	if (ClientIsPlaying(follow_ent->client)) {
+	if (!ClientIsPlaying(follow_ent->client)) {
 		gi.Client_Print(ent, PRINT_HIGH, "Specified client is not playing.\n");
 		return;
 	}
@@ -2926,8 +2931,18 @@ Cmd_FollowLeader_f
 =================
 */
 static void Cmd_FollowLeader_f(gentity_t *ent) {
-	gentity_t *leader = &g_entities[level.sorted_clients[0] + 1];
 	ent->client->sess.pc.follow_leader ^= true;
+
+	if (ent->client->sess.pc.follow_leader) {
+		if (!level.num_playing_clients || level.sorted_clients[0] < 0) {
+			ent->client->sess.pc.follow_leader = false;
+			gi.Client_Print(ent, PRINT_HIGH, "No leader available to follow.\n");
+			gi.LocClient_Print(ent, PRINT_HIGH, "Auto-follow leader: OFF\n");
+			return;
+		}
+	}
+
+	gentity_t *leader = &g_entities[level.sorted_clients[0] + 1];
 	gi.LocClient_Print(ent, PRINT_HIGH, "Auto-follow leader: {}\n", ent->client->sess.pc.follow_leader ? "ON" : "OFF");
 
 	if (!ClientIsPlaying(ent->client) && ent->client->sess.pc.follow_leader && ent->client->follow_target != leader) {
