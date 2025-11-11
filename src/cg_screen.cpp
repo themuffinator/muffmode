@@ -694,11 +694,14 @@ static void CG_DrawTable(int x, int y, uint32_t width, uint32_t height, int32_t 
 }
 
 /*
-=================
+=============
 CG_TimeStringMs
-=================
+
+Format a client-visible timer string with millisecond precision.
+=============
 */
 static const char *CG_TimeStringMs(const int msec) {
+	static char buffer[32];
 	int hours, mins, seconds, ms = msec;
 
 	seconds = ms / 1000;
@@ -709,10 +712,12 @@ static const char *CG_TimeStringMs(const int msec) {
 	mins -= hours * 60;
 
 	if (hours > 0) {
-		return G_Fmt("{}:{:02}:{:02}.{}", hours, mins, seconds, ms).data();
+		G_FmtTo(buffer, "{}:{:02}:{:02}.{}", hours, mins, seconds, ms);
 	} else {
-		return G_Fmt("{:02}:{:02}.{}", mins, seconds, ms).data();
+		G_FmtTo(buffer, "{:02}:{:02}.{}", mins, seconds, ms);
 	}
+
+	return buffer;
 }
 
 /*
