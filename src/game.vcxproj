@@ -89,7 +89,7 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>KEX_Q2_GAME;KEX_Q2GAME_EXPORTS;NO_FMT_SOURCE;KEX_Q2GAME_DYNAMIC;_CRT_SECURE_NO_WARNINGS;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>KEX_Q2_GAME;KEX_Q2GAME_EXPORTS;NO_FMT_SOURCE;FMT_HEADER_ONLY;KEX_Q2GAME_DYNAMIC;_CRT_SECURE_NO_WARNINGS;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp17</LanguageStandard>
       <DisableSpecificWarnings>4267;4244</DisableSpecificWarnings>

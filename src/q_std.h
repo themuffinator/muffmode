@@ -33,6 +33,9 @@
 namespace fmt = std;
 #define FMT_STRING(s) s
 #else
+#ifndef FMT_HEADER_ONLY
+#define FMT_HEADER_ONLY 1
+#endif
 #include <fmt/format.h>
 #endif
 
