@@ -4238,6 +4238,30 @@ struct fmt::formatter<gentity_t> {
 	}
 };
 
+template<>
+struct fmt::formatter<gentity_t *> : fmt::formatter<gentity_t> {
+	using fmt::formatter<gentity_t>::parse;
+
+	template<typename FormatContext>
+	auto format(gentity_t *const &p, FormatContext &ctx) -> decltype(ctx.out()) {
+		if (!p)
+			return fmt::format_to(ctx.out(), FMT_STRING("null gentity_t"));
+		return fmt::formatter<gentity_t>::format(*p, ctx);
+	}
+};
+
+template<>
+struct fmt::formatter<const gentity_t *> : fmt::formatter<gentity_t> {
+	using fmt::formatter<gentity_t>::parse;
+
+	template<typename FormatContext>
+	auto format(const gentity_t *const &p, FormatContext &ctx) -> decltype(ctx.out()) {
+		if (!p)
+			return fmt::format_to(ctx.out(), FMT_STRING("null gentity_t"));
+		return fmt::formatter<gentity_t>::format(*p, ctx);
+	}
+};
+
 // POI tags used by this mod
 enum pois_t : uint16_t {
 	POI_OBJECTIVE = MAX_ENTITIES, // current objective
