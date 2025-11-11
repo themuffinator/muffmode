@@ -2584,7 +2584,7 @@ static void Weapon_PlasmaBeam_Fire(gentity_t *ent) {
 	switch (game.ruleset) {
 	case RS_MM:
 		damage = deathmatch->integer ? 10 : 15;
-		kick = deathmatch->integer ? 50 : 30;
+		kick = damage;
 		break;
 	case RS_Q3A:
 		damage = deathmatch->integer ? 8 : 15;
