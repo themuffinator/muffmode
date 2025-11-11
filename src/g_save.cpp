@@ -1454,8 +1454,9 @@ void read_save_type_json(const Json::Value &json, void *data, const save_type_t 
 				json_print_error(field, "static-length dynamic string overrun", false);
 			else {
 				size_t len = strlen(json.asCString());
-				char *str = *((char **)data) = (char *)gi.TagMalloc(type->count ? type->count : (len + 1), type->tag);
-				strcpy(str, json.asCString());
+				size_t alloc_size = type->count ? type->count : (len + 1);
+				char *str = *((char **)data) = (char *)gi.TagMalloc(alloc_size, type->tag);
+				Q_strlcpy(str, json.asCString(), alloc_size);
 				str[len] = 0;
 			}
 		} else if (json.isArray()) {
@@ -1485,8 +1486,10 @@ void read_save_type_json(const Json::Value &json, void *data, const save_type_t 
 		if (json.isString()) {
 			if (type->count && strlen(json.asCString()) >= type->count)
 				json_print_error(field, "fixed length string overrun", false);
-			else
-				strcpy((char *)data, json.asCString());
+			else {
+				size_t dest_size = type->count ? type->count : (strlen(json.asCString()) + 1);
+				Q_strlcpy((char *)data, json.asCString(), dest_size);
+			}
 		} else if (json.isArray()) {
 			if (type->count && json.size() >= type->count - 1)
 				json_print_error(field, "fixed length string overrun", false);
