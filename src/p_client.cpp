@@ -3682,8 +3682,8 @@ bool ClientConnect(gentity_t* ent, char* userinfo, const char* social_id, bool i
 			char newname[MAX_NETNAME];
 
 			gi.Info_ValueForKey(userinfo, "name", oldname, sizeof(oldname));
-			strcpy(newname, bot_name_prefix->string);
-			Q_strlcat(newname, oldname, sizeof(oldname));
+			Q_strlcpy(newname, bot_name_prefix->string, sizeof(newname));
+			Q_strlcat(newname, oldname, sizeof(newname));
 			gi.Info_SetValueForKey(userinfo, "name", newname);
 		}
 	}

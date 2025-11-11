@@ -313,52 +313,86 @@ const menu_t pmstatsmenu[] = {
 
 static void G_Menu_PMStats_Update(gentity_t *ent) {
 
-	if (!g_matchstats->integer) return;
+	if (!g_matchstats->integer)
+		return;
 
 	menu_t *entries = ent->client->menu->entries;
 	client_match_stats_t *st = &ent->client->mstats;
 	int i = 0;
 	char value[MAX_INFO_VALUE] = { 0 };
-	gi.Info_ValueForKey(g_entities[1].client->pers.userinfo, "name", value, sizeof(value));
+	if (game.maxclients > 0 && g_entities[1].client) {
+		gi.Info_ValueForKey(g_entities[1].client->pers.userinfo, "name", value, sizeof(value));
+	}
 
-	Q_strlcpy(entries[i].text, "Player Stats for Match", sizeof(entries[i].text));
+	if (i < ent->client->menu->num)
+		Q_strlcpy(entries[i].text, "Player Stats for Match", sizeof(entries[i].text));
 	i++;
 
 	if (value[0]) {
-		Q_strlcpy(entries[i].text, G_Fmt("{}", value).data(), sizeof(entries[i].text));
+		if (i < ent->client->menu->num)
+			Q_strlcpy(entries[i].text, G_Fmt("{}", value).data(), sizeof(entries[i].text));
 		i++;
 	}
 
-	Q_strlcpy(entries[i].text, BREAKER, sizeof(entries[i].text));
+	if (i < ent->client->menu->num)
+		Q_strlcpy(entries[i].text, BREAKER, sizeof(entries[i].text));
 	i++;
 
-	Q_strlcpy(entries[i].text, G_Fmt("kills: {}", st->total_kills).data(), sizeof(entries[i].text));
+	if (i < ent->client->menu->num)
+		Q_strlcpy(entries[i].text, G_Fmt("kills: {}", st->total_kills).data(), sizeof(entries[i].text));
 	i++;
-	Q_strlcpy(entries[i].text, G_Fmt("deaths: {}", st->total_deaths).data(), sizeof(entries[i].text));
+	if (i < ent->client->menu->num)
+		Q_strlcpy(entries[i].text, G_Fmt("deaths: {}", st->total_deaths).data(), sizeof(entries[i].text));
 	i++;
 	if (st->total_kills) {
-		float val = st->total_kills > 0 ? ((float)st->total_kills / (float)st->total_deaths) : 0;
-		Q_strlcpy(entries[i].text, G_Fmt("k/d ratio: {:2}", val).data(), sizeof(entries[i].text));
+		if (i < ent->client->menu->num) {
+			if (st->total_deaths > 0) {
+				float val = (float)st->total_kills / (float)st->total_deaths;
+				Q_strlcpy(entries[i].text, G_Fmt("k/d ratio: {:2}", val).data(), sizeof(entries[i].text));
+			} else {
+				Q_strlcpy(entries[i].text, "k/d ratio: N/A", sizeof(entries[i].text));
+			}
+		}
 		i++;
 	}
+	if (i < ent->client->menu->num)
+		entries[i].text[0] = '\0';
 	i++;
-	Q_strlcpy(entries[i].text, G_Fmt("dmg dealt: {}", st->total_dmg_dealt).data(), sizeof(entries[i].text));
+	if (i < ent->client->menu->num)
+		Q_strlcpy(entries[i].text, G_Fmt("dmg dealt: {}", st->total_dmg_dealt).data(), sizeof(entries[i].text));
 	i++;
-	Q_strlcpy(entries[i].text, G_Fmt("dmg received: {}", st->total_dmg_received).data(), sizeof(entries[i].text));
+	if (i < ent->client->menu->num)
+		Q_strlcpy(entries[i].text, G_Fmt("dmg received: {}", st->total_dmg_received).data(), sizeof(entries[i].text));
 	i++;
 	if (st->total_dmg_dealt) {
-		float val = st->total_dmg_dealt ? ((float)st->total_dmg_dealt / (float)st->total_dmg_received) : 0;
-		Q_strlcpy(entries[i].text, G_Fmt("dmg ratio: {:02}", val).data(), sizeof(entries[i].text));
+		if (i < ent->client->menu->num) {
+			if (st->total_dmg_received > 0) {
+				float val = (float)st->total_dmg_dealt / (float)st->total_dmg_received;
+				Q_strlcpy(entries[i].text, G_Fmt("dmg ratio: {:02}", val).data(), sizeof(entries[i].text));
+			} else {
+				Q_strlcpy(entries[i].text, "dmg ratio: N/A", sizeof(entries[i].text));
+			}
+		}
 		i++;
 	}
+	if (i < ent->client->menu->num)
+		entries[i].text[0] = '\0';
 	i++;
-	Q_strlcpy(entries[i].text, G_Fmt("shots fired: {}", st->total_shots).data(), sizeof(entries[i].text));
+	if (i < ent->client->menu->num)
+		Q_strlcpy(entries[i].text, G_Fmt("shots fired: {}", st->total_shots).data(), sizeof(entries[i].text));
 	i++;
-	Q_strlcpy(entries[i].text, G_Fmt("shots on target: {}", st->total_hits).data(), sizeof(entries[i].text));
+	if (i < ent->client->menu->num)
+		Q_strlcpy(entries[i].text, G_Fmt("shots on target: {}", st->total_hits).data(), sizeof(entries[i].text));
 	i++;
 	if (st->total_hits) {
-		int val = st->total_hits ? ((float)st->total_hits / (float)st->total_shots) * 100. : 0;
-		Q_strlcpy(entries[i].text, G_Fmt("total accuracy: {}%", val).data(), sizeof(entries[i].text));
+		if (i < ent->client->menu->num) {
+			if (st->total_shots > 0) {
+				int val = (int)(((float)st->total_hits / (float)st->total_shots) * 100.f);
+				Q_strlcpy(entries[i].text, G_Fmt("total accuracy: {}%", val).data(), sizeof(entries[i].text));
+			} else {
+				Q_strlcpy(entries[i].text, "total accuracy: N/A", sizeof(entries[i].text));
+			}
+		}
 		i++;
 	}
 }
@@ -460,11 +494,24 @@ const menu_t pmcallvotemenu_timelimit[] = {
 };
 
 void G_Menu_CallVote_Map_Selection(gentity_t *ent, menu_hnd_t *p) {
-
 	vcmds_t *cc = FindVoteCmdByName("map");
+	if (!cc) {
+		gi.Com_PrintFmt("{}: missing map vote command.\n", __FUNCTION__);
+		return;
+	}
+	if (!p || !p->entries || p->cur < 0 || p->cur >= p->num) {
+		gi.Com_PrintFmt("{}: invalid map selection index.\n", __FUNCTION__);
+		return;
+	}
+
+	const menu_t &selected = p->entries[p->cur];
+	if (!selected.text[0]) {
+		gi.Com_PrintFmt("{}: no map selected.\n", __FUNCTION__);
+		return;
+	}
 
 	level.vote = cc;
-	level.vote_arg = std::string("q2dm1");	//TODO: store selected map name for use here
+	level.vote_arg = selected.text;
 
 	VoteCommandStore(ent);
 	P_Menu_Close(ent);
@@ -472,11 +519,21 @@ void G_Menu_CallVote_Map_Selection(gentity_t *ent, menu_hnd_t *p) {
 
 inline std::vector<std::string> str_split(const std::string_view &str, char by) {
 	std::vector<std::string> out;
-	size_t start, end = 0;
+	size_t start = 0;
 
-	while ((start = str.find_first_not_of(by, end)) != std::string_view::npos) {
-		end = str.find(by, start);
-		out.push_back(std::string{ str.substr(start, end - start) });
+	while (true) {
+		start = str.find_first_not_of(by, start);
+		if (start == std::string_view::npos)
+			break;
+
+		size_t end = str.find(by, start);
+		if (end == std::string_view::npos) {
+			out.emplace_back(str.substr(start));
+			break;
+		}
+
+		out.emplace_back(str.substr(start, end - start));
+		start = end + 1;
 	}
 
 	return out;
@@ -493,10 +550,12 @@ static void G_Menu_CallVote_Map_Update(gentity_t *ent) {
 	if (!values.size())
 		return;
 
-	for (i = 2; i < 15; i++)
+	for (i = 2; i < 15; i++) {
 		entries[i].SelectFunc = nullptr;
+		entries[i].text[0] = '\0';
+	}
 
-	for (num = 0, i = 2; num < values.size(), num < 15; num++, i++) {
+	for (num = 0, i = 2; num < values.size() && num < 15; num++, i++) {
 		Q_strlcpy(entries[i].text, values[num].c_str(), sizeof(entries[i].text));
 		entries[i].SelectFunc = G_Menu_CallVote_Map_Selection;
 	}
@@ -509,14 +568,14 @@ void G_Menu_CallVote_Map(gentity_t *ent, menu_hnd_t *p) {
 
 void G_Menu_CallVote_NextMap(gentity_t *ent, menu_hnd_t *p) {
 	level.vote = FindVoteCmdByName("nextmap");
-	level.vote_arg = nullptr;
+	level.vote_arg.clear();
 	VoteCommandStore(ent);
 	P_Menu_Close(ent);
 }
 
 void G_Menu_CallVote_Restart(gentity_t *ent, menu_hnd_t *p) {
 	level.vote = FindVoteCmdByName("restart");
-	level.vote_arg = nullptr;
+	level.vote_arg.clear();
 	VoteCommandStore(ent);
 	P_Menu_Close(ent);
 }
@@ -527,12 +586,12 @@ void G_Menu_CallVote_GameType(gentity_t *ent, menu_hnd_t *p) {
 
 void G_Menu_CallVote_TimeLimit_Update(gentity_t *ent) {
 
-	level.vote_arg = nullptr;
+	level.vote_arg.clear();
 }
 
 void G_Menu_CallVote_TimeLimit(gentity_t *ent, menu_hnd_t *p) {
 	//level.vote = FindVoteCmdByName("timelimit");
-	//level.vote_arg = nullptr;
+	//level.vote_arg.clear();
 	//VoteCommandStore(ent);
 	P_Menu_Close(ent);
 	P_Menu_Open(ent, pmcallvotemenu_timelimit, -1, sizeof(pmcallvotemenu_timelimit) / sizeof(menu_t), nullptr, G_Menu_CallVote_TimeLimit_Update);
@@ -544,14 +603,14 @@ void G_Menu_CallVote_ScoreLimit(gentity_t *ent, menu_hnd_t *p) {
 
 void G_Menu_CallVote_ShuffleTeams(gentity_t *ent, menu_hnd_t *p) {
 	level.vote = FindVoteCmdByName("shuffle");
-	level.vote_arg = nullptr;
+	level.vote_arg.clear();
 	VoteCommandStore(ent);
 	P_Menu_Close(ent);
 }
 
 void G_Menu_CallVote_BalanceTeams(gentity_t *ent, menu_hnd_t *p) {
 	level.vote = FindVoteCmdByName("balance");
-	level.vote_arg = nullptr;
+	level.vote_arg.clear();
 	VoteCommandStore(ent);
 	P_Menu_Close(ent);
 
@@ -563,7 +622,7 @@ void G_Menu_CallVote_Unlagged(gentity_t *ent, menu_hnd_t *p) {
 
 void G_Menu_CallVote_Cointoss(gentity_t *ent, menu_hnd_t *p) {
 	level.vote = FindVoteCmdByName("cointoss");
-	level.vote_arg = nullptr;
+	level.vote_arg.clear();
 	VoteCommandStore(ent);
 	P_Menu_Close(ent);
 }
