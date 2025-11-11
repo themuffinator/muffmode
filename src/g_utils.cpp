@@ -3,6 +3,7 @@
 // g_utils.c -- misc utility functions for game module
 
 #include "g_local.h"
+#include <cerrno>
 
 /*
 =============
@@ -129,16 +130,41 @@ void G_PrintActivationMessage(gentity_t *ent, gentity_t *activator, bool coop_gl
 	}
 }
 
+/*
+=============
+BroadcastFriendlyMessage
+
+Broadcast a friendly message to active teammates or, in non-team modes, all
+active players.
+=============
+*/
 void BroadcastFriendlyMessage(team_t team, const char *msg) {
 	for (auto ce : active_clients()) {
-		if (!ClientIsPlaying(ce->client) || (Teams() && ce->client->sess.team == team)) {
-			gi.LocClient_Print(ce, PRINT_HIGH, G_Fmt("{}{}", ce->client->sess.team != TEAM_SPECTATOR ? "[TEAM]: " : "", msg).data());
+		const bool playing = ClientIsPlaying(ce->client);
+		if (!playing) {
+			if (!Teams())
+				continue;
+			gentity_t *follow = ce->client->follow_target;
+			if (!follow || !follow->client || follow->client->sess.team != team)
+				continue;
+		} else if (Teams() && ce->client->sess.team != team) {
+			continue;
 		}
+		gi.LocClient_Print(ce, PRINT_HIGH, G_Fmt("{}{}", playing && ce->client->sess.team != TEAM_SPECTATOR ? "[TEAM]: " : "", msg).data());
 	}
 }
 
+/*
+=============
+BroadcastTeamMessage
+
+Broadcast a message to all clients actively playing for the specified team.
+=============
+*/
 void BroadcastTeamMessage(team_t team, print_type_t level, const char *msg) {
 	for (auto ce : active_clients()) {
+		if (!ClientIsPlaying(ce->client))
+			continue;
 		if (ce->client->sess.team != team)
 			continue;
 
@@ -817,11 +843,14 @@ bool Teams() {
 }
 
 /*
-=================
+=============
 G_TimeString
-=================
+
+Format a match timer string with minute precision.
+=============
 */
 const char *G_TimeString(const int msec, bool state) {
+	static char buffer[32];
 	if (state) {
 		if (level.match_state < matchst_t::MATCH_COUNTDOWN)
 			return "WARMUP";
@@ -840,17 +869,22 @@ const char *G_TimeString(const int msec, bool state) {
 	mins -= hours * 60;
 
 	if (hours > 0) {
-		return G_Fmt("{}{}:{:02}:{:02}", msec < 1000 ? "-" : "", hours, mins, seconds).data();
+		G_FmtTo(buffer, "{}{}:{:02}:{:02}", msec < 1000 ? "-" : "", hours, mins, seconds);
 	} else {
-		return G_Fmt("{}{:02}:{:02}", msec < 1000 ? "-" : "", mins, seconds).data();
+		G_FmtTo(buffer, "{}{:02}:{:02}", msec < 1000 ? "-" : "", mins, seconds);
 	}
+
+	return buffer;
 }
 /*
-=================
+=============
 G_TimeStringMs
-=================
+
+Format a match timer string with millisecond precision.
+=============
 */
 const char *G_TimeStringMs(const int msec, bool state) {
+	static char buffer[32];
 	if (state) {
 		if (level.match_state < matchst_t::MATCH_COUNTDOWN)
 			return "WARMUP";
@@ -869,10 +903,12 @@ const char *G_TimeStringMs(const int msec, bool state) {
 	mins -= hours * 60;
 
 	if (hours > 0) {
-		return G_Fmt("{}:{:02}:{:02}.{}", hours, mins, seconds, ms).data();
+		G_FmtTo(buffer, "{}:{:02}:{:02}.{}", hours, mins, seconds, ms);
 	} else {
-		return G_Fmt("{:02}:{:02}.{}", mins, seconds, ms).data();
+		G_FmtTo(buffer, "{:02}:{:02}.{}", mins, seconds, ms);
 	}
+
+	return buffer;
 }
 
 team_t StringToTeamNum(const char *in) {
@@ -986,22 +1022,26 @@ bool InCoopStyle() {
 }
 
 /*
-=================
+=============
 ClientEntFromString
-=================
+
+Resolve a client entity from a name or validated numeric identifier string.
+=============
 */
 gentity_t *ClientEntFromString(const char *in) {
-	// check by nick first
 	for (auto ec : active_clients())
 		if (!strcmp(in, ec->client->resp.netname))
 			return ec;
 
-	// otherwise check client num
-	uint32_t num = strtoul(in, nullptr, 10);
-	if (num >= 0 && num < game.maxclients)
-		return &g_entities[&game.clients[num] - game.clients + 1];
+	char *end = nullptr;
+	errno = 0;
+	const unsigned long num = strtoul(in, &end, 10);
+	if (errno == ERANGE || !end || *end != '\0')
+		return nullptr;
+	if (num >= static_cast<unsigned long>(game.maxclients))
+		return nullptr;
 
-	return nullptr;
+	return &g_entities[&game.clients[num] - game.clients + 1];
 }
 
 /*
@@ -1082,19 +1122,31 @@ void MS_Set(gclient_t *cl, mstats_t index, int value) {
 	cl->resp.mstats[index] = value;
 }
 
+/*
+=============
+stime
+
+Return a stable timestamp string for file naming.
+=============
+*/
 const char *stime() {
 	struct tm *ltime;
 	time_t gmtime;
+	static char buffer[32];
 
 	time(&gmtime);
 	ltime = localtime(&gmtime);
 
-	const char *s;
-	s = G_Fmt("{}{:02}{:02}{:02}{:02}{:02}",
-		1900 + ltime->tm_year, ltime->tm_mon + 1, ltime->tm_mday, ltime->tm_hour, ltime->tm_min, ltime->tm_sec
-	).data();
+	if (!ltime) {
+		buffer[0] = '\0';
+		return buffer;
+	}
 
-	return s;
+	G_FmtTo(buffer, "{}{:02}{:02}{:02}{:02}{:02}",
+		1900 + ltime->tm_year, ltime->tm_mon + 1, ltime->tm_mday,
+		ltime->tm_hour, ltime->tm_min, ltime->tm_sec);
+
+	return buffer;
 }
 
 void AnnouncerSound(gentity_t *ent, const char *announcer_sound, const char *backup_sound, bool use_backup) {
