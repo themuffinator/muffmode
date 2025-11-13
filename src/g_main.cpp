@@ -2994,7 +2994,8 @@ void Match_End() {
 							if (values[0] == level.mapname)
 								std::swap(values[0], values[values.size() - 1]);
 
-							gi.cvar_forceset("g_map_list", fmt::format("{}", join_strings(values, " ")).data());
+						auto shuffled_map_list = join_strings(values, " ");
+						gi.cvar_forceset("g_map_list", shuffled_map_list.c_str());
 
 							BeginIntermission(CreateTargetChangeLevel(values[0].c_str()));
 							return;
