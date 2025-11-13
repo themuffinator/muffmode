@@ -717,7 +717,7 @@ void T_Damage(gentity_t *targ, gentity_t *inflictor, gentity_t *attacker, const 
 		}
 	}
 
-	if (targ != attacker && attacker->client && targ->health > 0 && !targ->client->sess.is_banned) {
+	if (targ != attacker && targ->client && attacker->client && targ->health > 0 && !targ->client->sess.is_banned) {
 		int stat_take = take;
 		if (stat_take > targ->health)
 			stat_take = targ->health;
