@@ -3430,33 +3430,62 @@ ExitLevel
 */
 void ExitLevel() {
 	if (deathmatch->integer && g_dm_intermission_shots->integer && level.num_playing_human_clients > 0) {
-		struct tm *ltime;
-		time_t gmtime;
+		time_t	current_time;
+		struct tm	local_time {};
+		bool	have_time = time(&current_time) != static_cast<time_t>(-1);
 
-		time(&gmtime);
-		ltime = localtime(&gmtime);
-		time(&gmtime);
-		ltime = localtime(&gmtime);
-
-		const char *s = "";
-
-		if (GT(GT_DUEL)) {
-			gentity_t *e1 = &g_entities[level.sorted_clients[0] + 1];
-			gentity_t *e2 = &g_entities[level.sorted_clients[1] + 1];
-			const char *n1 = e1 ? e1->client->resp.netname : "";
-			const char *n2 = e2 ? e2->client->resp.netname : "";
-
-			s = G_Fmt("screenshot {}-vs-{}-{}-{}_{:02}_{:02}-{:02}_{:02}_{:02}\n",
-				n1, n2, level.mapname, 1900 + ltime->tm_year, ltime->tm_mon + 1, ltime->tm_mday, ltime->tm_hour, ltime->tm_min, ltime->tm_sec).data();
-			gi.Com_Print(s);
-		} else {
-			gentity_t *ent = &g_entities[1];
-			const char *name = ent->client->follow_target ? ent->client->follow_target->client->resp.netname : ent->client->resp.netname;
-
-			s = G_Fmt("screenshot {}-{}-{}-{}_{:02}_{:02}-{:02}_{:02}_{:02}\n", gt_short_name_upper[g_gametype->integer],
-				name, level.mapname, 1900 + ltime->tm_year, ltime->tm_mon + 1, ltime->tm_mday, ltime->tm_hour, ltime->tm_min, ltime->tm_sec).data();
+		if (have_time) {
+#if defined(_WIN32)
+			have_time = localtime_s(&local_time, &current_time) == 0;
+#else
+			have_time = localtime_r(&current_time, &local_time) != nullptr;
+#endif
 		}
-		gi.AddCommandString(s);
+
+		if (!have_time) {
+			gi.Com_Print("Failed to resolve local time for intermission screenshot.\n");
+		} else {
+			std::string	screenshot_command;
+
+			const auto first_index = level.sorted_clients[0];
+			const auto second_index = level.sorted_clients[1];
+			const bool have_first = first_index >= 0 && first_index < static_cast<int>(MAX_CLIENTS);
+			const bool have_second = second_index >= 0 && second_index < static_cast<int>(MAX_CLIENTS);
+
+			if (GT(GT_DUEL) && level.num_playing_human_clients > 1 && have_first && have_second) {
+				gentity_t *e1 = &g_entities[first_index + 1];
+				gentity_t *e2 = &g_entities[second_index + 1];
+				const char *n1 = (e1 && e1->client) ? e1->client->resp.netname : "";
+				const char *n2 = (e2 && e2->client) ? e2->client->resp.netname : "";
+
+				screenshot_command = std::string(G_Fmt("screenshot {}-vs-{}-{}-{}_{:02}_{:02}-{:02}_{:02}_{:02\n",
+					n1, n2, level.mapname, 1900 + local_time.tm_year, local_time.tm_mon + 1, local_time.tm_mday, local_time.tm_hour, local_time.tm_min, local_time.tm_sec));
+				gi.Com_Print(screenshot_command.c_str());
+			} else if (have_first) {
+				gentity_t *ent = &g_entities[first_index + 1];
+				const bool has_follow_target = ent && ent->client && ent->client->follow_target && ent->client->follow_target->client;
+				const char *name = has_follow_target ? ent->client->follow_target->client->resp.netname :
+					(ent && ent->client ? ent->client->resp.netname : "");
+
+				screenshot_command = std::string(G_Fmt("screenshot {}-{}-{}-{}_{:02}_{:02}-{:02}_{:02}_{:02\n", gt_short_name_upper[g_gametype->integer],
+					name, level.mapname, 1900 + local_time.tm_year, local_time.tm_mon + 1, local_time.tm_mday, local_time.tm_hour, local_time.tm_min, local_time.tm_sec));
+			} else {
+				for (auto player : active_clients()) {
+					if (!player->client || !ClientIsPlaying(player->client))
+						continue;
+
+					const bool has_follow_target = player->client->follow_target && player->client->follow_target->client;
+					const char *name = has_follow_target ? player->client->follow_target->client->resp.netname : player->client->resp.netname;
+
+					screenshot_command = std::string(G_Fmt("screenshot {}-{}-{}-{}_{:02}_{:02}-{:02}_{:02}_{:02\n", gt_short_name_upper[g_gametype->integer],
+						name, level.mapname, 1900 + local_time.tm_year, local_time.tm_mon + 1, local_time.tm_mday, local_time.tm_hour, local_time.tm_min, local_time.tm_sec));
+					break;
+				}
+			}
+
+			if (!screenshot_command.empty())
+				gi.AddCommandString(screenshot_command.c_str());
+		}
 	}
 
 	// [Paril-KEX] N64 fade
