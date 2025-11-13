@@ -3459,7 +3459,7 @@ void ExitLevel() {
 				const char *n1 = (e1 && e1->client) ? e1->client->resp.netname : "";
 				const char *n2 = (e2 && e2->client) ? e2->client->resp.netname : "";
 
-				screenshot_command = std::string(G_Fmt("screenshot {}-vs-{}-{}-{}_{:02}_{:02}-{:02}_{:02}_{:02\n",
+				screenshot_command = std::string(G_Fmt("screenshot {}-vs-{}-{}-{}_{:02}_{:02}-{:02}_{:02}_{:02}\n",
 					n1, n2, level.mapname, 1900 + local_time.tm_year, local_time.tm_mon + 1, local_time.tm_mday, local_time.tm_hour, local_time.tm_min, local_time.tm_sec));
 				gi.Com_Print(screenshot_command.c_str());
 			} else if (have_first) {
@@ -3468,7 +3468,7 @@ void ExitLevel() {
 				const char *name = has_follow_target ? ent->client->follow_target->client->resp.netname :
 					(ent && ent->client ? ent->client->resp.netname : "");
 
-				screenshot_command = std::string(G_Fmt("screenshot {}-{}-{}-{}_{:02}_{:02}-{:02}_{:02}_{:02\n", gt_short_name_upper[g_gametype->integer],
+				screenshot_command = std::string(G_Fmt("screenshot {}-{}-{}-{}_{:02}_{:02}-{:02}_{:02}_{:02}\n", gt_short_name_upper[g_gametype->integer],
 					name, level.mapname, 1900 + local_time.tm_year, local_time.tm_mon + 1, local_time.tm_mday, local_time.tm_hour, local_time.tm_min, local_time.tm_sec));
 			} else {
 				for (auto player : active_clients()) {
@@ -3478,7 +3478,7 @@ void ExitLevel() {
 					const bool has_follow_target = player->client->follow_target && player->client->follow_target->client;
 					const char *name = has_follow_target ? player->client->follow_target->client->resp.netname : player->client->resp.netname;
 
-					screenshot_command = std::string(G_Fmt("screenshot {}-{}-{}-{}_{:02}_{:02}-{:02}_{:02}_{:02\n", gt_short_name_upper[g_gametype->integer],
+					screenshot_command = std::string(G_Fmt("screenshot {}-{}-{}-{}_{:02}_{:02}-{:02}_{:02}_{:02}\n", gt_short_name_upper[g_gametype->integer],
 						name, level.mapname, 1900 + local_time.tm_year, local_time.tm_mon + 1, local_time.tm_mday, local_time.tm_hour, local_time.tm_min, local_time.tm_sec));
 					break;
 				}
