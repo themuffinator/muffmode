@@ -1751,7 +1751,7 @@ void SpawnEntities(const char *mapname, const char *entities, const char *spawnp
 			//gi.Com_PrintFmt("{}: Entities override file not saved as file already exists: \"{}\"\n", __FUNCTION__, name);
 		}
 	}
-	level.entstring = entities;
+	std::string incoming_entstring = entities ? std::string(entities) : std::string();
 //#endif
 	//ParseWorldEntityString(mapname, RS(RS_Q3A));
 
@@ -1770,6 +1770,8 @@ void SpawnEntities(const char *mapname, const char *entities, const char *spawnp
 
 	memset(&level, 0, sizeof(level));
 	memset(g_entities, 0, game.maxentities * sizeof(g_entities[0]));
+	level.entstring = incoming_entstring;
+	entities = level.entstring.c_str();
 	
 	// all other flags are not important atm
 	globals.server_flags &= SERVER_FLAG_LOADING;
