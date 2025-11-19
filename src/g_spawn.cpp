@@ -1780,7 +1780,7 @@ memset(g_entities, 0, game.maxentities * sizeof(g_entities[0]));
 globals.num_entities = game.maxclients + 1;
 	
 	// all other flags are not important atm
-	globals.server_flags &= SERVER_FLAG_LOADING;
+	globals.server_flags |= SERVER_FLAG_LOADING;
 
 	level.is_n64 = strncmp(level.mapname, "q64/", 4) == 0;
 
@@ -2433,4 +2433,6 @@ void SP_worldspawn(gentity_t *ent) {
 		gi.configstring(CONFIG_COOP_RESPAWN_STRING + 3, "$g_coop_respawn_waiting");
 		gi.configstring(CONFIG_COOP_RESPAWN_STRING + 4, "$g_coop_respawn_no_lives");
 	}
+
+	globals.server_flags &= ~SERVER_FLAG_LOADING;
 }
