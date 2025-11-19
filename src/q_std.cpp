@@ -28,22 +28,35 @@ COM_ParseEx
 Parse a token out of a string
 ==============
 */
-char *COM_ParseEx(const char **data_p, const char *seps, char *buffer, size_t buffer_size)
+char *COM_ParseEx(const char **data_p, const char *seps, char *buffer, size_t buffer_size, bool *overflowed)
 {
 	static char com_token[MAX_TOKEN_CHARS];
+
+	bool overflow_flag = false;
+
+	if (overflowed)
+		*overflowed = false;
 
 	if (!buffer)
 	{
 		buffer = com_token;
 		buffer_size = MAX_TOKEN_CHARS;
 	}
+	else if (!buffer_size)
+	{
+		overflow_flag = true;
+		buffer = com_token;
+		buffer_size = MAX_TOKEN_CHARS;
+	}
 
-	int			c;
-	int			len;
+	int					c;
+	size_t				len;
+	size_t				stored_len;
 	const char *data;
 
 	data = *data_p;
 	len = 0;
+	stored_len = 0;
 	buffer[0] = '\0';
 
 	if (!data)
@@ -56,19 +69,19 @@ char *COM_ParseEx(const char **data_p, const char *seps, char *buffer, size_t bu
 skipwhite:
 	while (COM_IsSeparator(c = *data, seps))
 	{
-		if (c == '\0')
-		{
-			*data_p = nullptr;
-			return buffer;
-		}
-		data++;
+			if (c == '\0')
+			{
+					*data_p = nullptr;
+					return buffer;
+			}
+			data++;
 	}
 
 	// skip // comments
 	if (c == '/' && data[1] == '/')
 	{
 		while (*data && *data != '\n')
-			data++;
+				data++;
 		goto skipwhite;
 	}
 
@@ -78,45 +91,49 @@ skipwhite:
 		data++;
 		while (1)
 		{
-			c = *data++;
-			if (c == '\"' || !c)
-			{
-				const size_t endpos = std::min<size_t>(len, buffer_size - 1); // [KEX] avoid overflow
-				buffer[endpos] = '\0';
-				*data_p = data;
-				return buffer;
-			}
-			if (len < buffer_size)
-			{
-				buffer[len] = c;
+				c = *data++;
+				if (c == '\"' || !c)
+				{
+						const bool token_overflowed = len >= buffer_size;
+						overflow_flag = overflow_flag || token_overflowed;
+						buffer[stored_len] = '\0';
+						*data_p = data;
+						if (overflowed)
+							*overflowed = overflow_flag;
+						return buffer;
+				}
+				if (stored_len + 1 < buffer_size)
+				{
+						buffer[stored_len++] = c;
+				}
 				len++;
-			}
 		}
 	}
 
 	// parse a regular word
 	do
 	{
-		if (len < buffer_size)
-		{
-			buffer[len] = c;
+			if (stored_len + 1 < buffer_size)
+			{
+					buffer[stored_len++] = c;
+			}
 			len++;
-		}
-		data++;
-		c = *data;
+			data++;
+			c = *data;
 	} while (!COM_IsSeparator(c, seps));
 
-	if (len == buffer_size)
-	{
-		gi.Com_PrintFmt("Token exceeded {} chars, discarded.\n", buffer_size);
-		len = 0;
-	}
-	buffer[len] = '\0';
+	const bool token_overflowed = len >= buffer_size;
+	overflow_flag = overflow_flag || token_overflowed;
+	buffer[stored_len] = '\0';
+
+	if (token_overflowed)
+			gi.Com_PrintFmt("Token exceeded {} chars, truncated.\n", buffer_size);
+	if (overflowed)
+			*overflowed = overflow_flag;
 
 	*data_p = data;
 	return buffer;
 }
-
 /*
 ============================================================================
 
