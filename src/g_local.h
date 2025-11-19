@@ -2400,6 +2400,7 @@ extern cvar_t *g_dm_force_join;
 extern cvar_t *g_dm_force_respawn;
 extern cvar_t *g_dm_force_respawn_time;
 extern cvar_t *g_dm_holdable_adrenaline;
+extern cvar_t *g_dm_holdable_doppel_max;
 extern cvar_t *g_dm_instant_items;
 extern cvar_t *g_dm_intermission_shots;
 extern cvar_t *g_dm_item_respawn_rate;
