@@ -2,8 +2,11 @@
 // Licensed under the GNU General Public License 2.0.
 // g_utils.c -- misc utility functions for game module
 
+#include "g_activation.h"
 #include "g_local.h"
 #include <cerrno>
+#include <vector>
+#include "g_utils_target_selection.h"
 
 /*
 =============
@@ -76,12 +79,9 @@ nullptr will be returned if the end of the list is reached.
 
 =============
 */
-constexpr size_t MAXCHOICES = 8;
-
 gentity_t *G_PickTarget(const char *targetname) {
-	gentity_t	*choice[MAXCHOICES];
+	std::vector<gentity_t *> choices;
 	gentity_t	*ent = nullptr;
-	int		num_choices = 0;
 
 	if (!targetname) {
 		gi.Com_PrintFmt("{}: called with nullptr targetname.\n", __FUNCTION__);
@@ -92,17 +92,16 @@ gentity_t *G_PickTarget(const char *targetname) {
 		ent = G_FindByString<&gentity_t::targetname>(ent, targetname);
 		if (!ent)
 			break;
-		choice[num_choices++] = ent;
-		if (num_choices == MAXCHOICES)
-			break;
+		choices.emplace_back(ent);
 	}
 
-	if (!num_choices) {
+	if (choices.empty()) {
 		gi.Com_PrintFmt("{}: target {} not found\n", __FUNCTION__, targetname);
+		assert(!choices.empty());
 		return nullptr;
 	}
 
-	return choice[irandom(num_choices)];
+	return G_SelectRandomTarget(choices, irandom<size_t>);
 }
 
 static THINK(Think_Delay) (gentity_t *ent) -> void {
@@ -110,23 +109,38 @@ static THINK(Think_Delay) (gentity_t *ent) -> void {
 	G_FreeEntity(ent);
 }
 
-void G_PrintActivationMessage(gentity_t *ent, gentity_t *activator, bool coop_global) {
-	//
-	// print the message
-	//
-	if ((ent->message) && !(activator->svflags & SVF_MONSTER)) {
-		if (coop_global && coop->integer)
-			gi.LocBroadcast_Print(PRINT_CENTER, "{}", ent->message);
-		else
-			gi.LocCenter_Print(activator, "{}", ent->message);
+/*
+=============
+G_PrintActivationMessage
 
-		// [Paril-KEX] allow non-noisy centerprints
-		if (ent->noise_index >= 0) {
-			if (ent->noise_index)
-				gi.sound(activator, CHAN_AUTO, ent->noise_index, 1, ATTN_NORM, 0);
-			else
-				gi.sound(activator, CHAN_AUTO, gi.soundindex("misc/talk1.wav"), 1, ATTN_NORM, 0);
-		}
+Prints activation messaging and plays optional sounds when an entity is used.
+=============
+*/
+void G_PrintActivationMessage(gentity_t *ent, gentity_t *activator, bool coop_global) {
+	if (!ent || !ent->message)
+		return;
+
+	const bool has_activator = activator != nullptr;
+	const bool activator_is_monster = has_activator && (activator->svflags & SVF_MONSTER);
+	const activation_message_plan_t plan = BuildActivationMessagePlan(true, has_activator, activator_is_monster, coop_global, coop->integer, ent->noise_index);
+
+	if (!plan.broadcast_global && !plan.center_on_activator)
+		return;
+
+	if (plan.broadcast_global)
+		gi.LocBroadcast_Print(PRINT_CENTER, "{}", ent->message);
+
+	if (!has_activator || !plan.center_on_activator)
+		return;
+
+	gi.LocCenter_Print(activator, "{}", ent->message);
+
+	// [Paril-KEX] allow non-noisy centerprints
+	if (plan.play_sound) {
+		if (plan.sound_index)
+			gi.sound(activator, CHAN_AUTO, plan.sound_index, 1, ATTN_NORM, 0);
+		else
+			gi.sound(activator, CHAN_AUTO, gi.soundindex("misc/talk1.wav"), 1, ATTN_NORM, 0);
 	}
 }
 
