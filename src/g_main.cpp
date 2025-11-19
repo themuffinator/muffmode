@@ -2246,8 +2246,7 @@ void FindIntermissionPoint(void) {
 			if (target) {
 				gi.Com_Print("FindIntermissionPoint target 2\n");
 				dir = (target->s.origin - level.intermission_origin).normalized();
-				AngleVectors(dir);
-				level.intermission_angle = dir;
+				level.intermission_angle = vectoangles(dir);
 			}
 		}
 	}
@@ -2304,8 +2303,7 @@ void SetIntermissionPoint(void) {
 				if (target) {
 					//gi.Com_Print("HAS TARGET\n");
 					vec3_t	dir = (target->s.origin - level.intermission_origin).normalized();
-					AngleVectors(dir);
-					level.intermission_angle = dir;
+					level.intermission_angle = vectoangles(dir);
 				}
 			}
 			if (!level.intermission_angle)
