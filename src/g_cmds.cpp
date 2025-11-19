@@ -199,7 +199,8 @@ Give items to a client
 ==================
 */
 static void Cmd_Give_f(gentity_t *ent) {
-	const char	*name = gi.args();
+	int				argc = gi.argc();
+	const char	*name = (argc >= 2) ? gi.args() : "";
 	gitem_t		*it;
 	size_t		i;
 	bool		give_all;
@@ -210,8 +211,8 @@ static void Cmd_Give_f(gentity_t *ent) {
 	else
 		give_all = false;
 
-	if (give_all || Q_strcasecmp(gi.argv(1), "health") == 0) {
-		if (gi.argc() == 3)
+	if (give_all || (argc >= 2 && Q_strcasecmp(gi.argv(1), "health") == 0)) {
+		if (argc == 3)
 			ent->health = atoi(gi.argv(2));
 		else
 			ent->health = ent->max_health;
@@ -299,7 +300,7 @@ static void Cmd_Give_f(gentity_t *ent) {
 	}
 
 	it = FindItem(name);
-	if (!it) {
+	if (!it && argc >= 2) {
 		name = gi.argv(1);
 		it = FindItem(name);
 	}
@@ -324,7 +325,7 @@ static void Cmd_Give_f(gentity_t *ent) {
 	it_ent = G_Spawn();
 	it_ent->classname = it->classname;
 	SpawnItem(it_ent, it);
-	if (it->flags & IF_AMMO && gi.argc() == 3)
+	if (it->flags & IF_AMMO && argc == 3)
 		it_ent->count = atoi(gi.argv(2));
 
 	// since some items don't actually spawn when you say to ..
