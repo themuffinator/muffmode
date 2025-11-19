@@ -4,6 +4,7 @@
 #include "g_local.h"
 #include "bots/bot_includes.h"
 #include "monsters/m_player.h"	// match starts
+#include <algorithm>
 
 CHECK_GCLIENT_INTEGRITY;
 CHECK_ENTITY_INTEGRITY;
@@ -1053,6 +1054,8 @@ static void InitGame() {
 
 	game = {};
 
+	const int32_t clamped_maxclients = std::clamp(maxclients->integer, 1, MAX_CLIENTS);
+
 	// initialize all entities for this game
 	game.maxentities = maxentities->integer;
 	g_entities = (gentity_t *)gi.TagMalloc(game.maxentities * sizeof(g_entities[0]), TAG_GAME);
@@ -1060,13 +1063,13 @@ static void InitGame() {
 	globals.max_entities = game.maxentities;
 
 	// initialize all clients for this game
-	game.maxclients = maxclients->integer;
-	game.clients = (gclient_t *)gi.TagMalloc(game.maxclients * sizeof(game.clients[0]), TAG_GAME);
-	globals.num_entities = game.maxclients + 1;
+	game.maxclients = clamped_maxclients;
+	game.clients = (gclient_t *)gi.TagMalloc(clamped_maxclients * sizeof(game.clients[0]), TAG_GAME);
+	globals.num_entities = clamped_maxclients + 1;
 
 	// how far back we should support lag origins for
 	game.max_lag_origins = 20 * (0.1f / gi.frame_time_s);
-	game.lag_origins = (vec3_t *)gi.TagMalloc(game.maxclients * sizeof(vec3_t) * game.max_lag_origins, TAG_GAME);
+	game.lag_origins = (vec3_t *)gi.TagMalloc(clamped_maxclients * sizeof(vec3_t) * game.max_lag_origins, TAG_GAME);
 
 	level.start_time = level.time;
 
