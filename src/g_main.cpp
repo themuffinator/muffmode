@@ -2286,31 +2286,31 @@ void SetIntermissionPoint(void) {
 	if (ent) {
 		level.intermission_origin = ent->s.origin;
 		level.spawn_spots[SPAWN_SPOT_INTERMISSION] = ent;
-	}
-	
-	// ugly hax!
-	if (!Q_strncasecmp(level.mapname, "campgrounds", 11)) {
-		gvec3_t v = { -320, -96, 503 };
-		if (ent->s.origin == v)
-			level.intermission_angle[PITCH] = -30;
-	} else if (!Q_strncasecmp(level.mapname, "rdm10", 5)) {
-		gvec3_t v = { -1256, -1672, -136 };
-		if (ent->s.origin == v)
-			level.intermission_angle = { 15, 135, 0 };
-	} else {
-		// if it has a target, look towards it
-		if (ent && ent->target) {
-			gentity_t *target = G_PickTarget(ent->target);
 
-			if (target) {
-				//gi.Com_Print("HAS TARGET\n");
-				vec3_t	dir = (target->s.origin - level.intermission_origin).normalized();
-				AngleVectors(dir);
-				level.intermission_angle = dir;
+		// ugly hax!
+		if (!Q_strncasecmp(level.mapname, "campgrounds", 11)) {
+			gvec3_t v = { -320, -96, 503 };
+			if (ent->s.origin == v)
+				level.intermission_angle[PITCH] = -30;
+		} else if (!Q_strncasecmp(level.mapname, "rdm10", 5)) {
+			gvec3_t v = { -1256, -1672, -136 };
+			if (ent->s.origin == v)
+				level.intermission_angle = { 15, 135, 0 };
+		} else {
+			// if it has a target, look towards it
+			if (ent->target) {
+				gentity_t *target = G_PickTarget(ent->target);
+
+				if (target) {
+					//gi.Com_Print("HAS TARGET\n");
+					vec3_t	dir = (target->s.origin - level.intermission_origin).normalized();
+					AngleVectors(dir);
+					level.intermission_angle = dir;
+				}
 			}
+			if (!level.intermission_angle)
+				level.intermission_angle = ent->s.angles;
 		}
-		if (ent && !level.intermission_angle)
-			level.intermission_angle = ent->s.angles;
 	}
 	
 	//gi.Com_PrintFmt("{}: origin={} angles={}\n", __FUNCTION__, level.intermission_origin, level.intermission_angle);
