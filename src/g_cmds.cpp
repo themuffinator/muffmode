@@ -1889,6 +1889,14 @@ bool AllowClientTeamSwitch(gentity_t *ent) {
 	return true;
 }
 
+struct team_balance_request_t {
+	int client_index;
+	team_t team;
+};
+
+static team_balance_request_t balance_queue[MAX_CLIENTS_KEX];
+static size_t balance_queue_count = 0;
+
 /*
 ================
 TeamBalance
@@ -1897,6 +1905,50 @@ Balance the teams without shuffling.
 Switch last joined player(s) from stacked team.
 ================
 */
+/*
+=============
+FindBalanceRequest
+
+Finds an existing queued balance request for the supplied client index
+=============
+*/
+static team_balance_request_t *FindBalanceRequest(int client_index) {
+	for (size_t i = 0; i < balance_queue_count; i++) {
+		if (balance_queue[i].client_index == client_index)
+			return &balance_queue[i];
+	}
+
+	return nullptr;
+}
+
+/*
+=============
+EnqueueBalanceRequest
+
+Queues a balance change for the supplied client index
+=============
+*/
+static void EnqueueBalanceRequest(int client_index, team_t team) {
+	team_balance_request_t *existing_request = FindBalanceRequest(client_index);
+
+	if (existing_request) {
+		existing_request->team = team;
+		return;
+	}
+
+	if (balance_queue_count >= MAX_CLIENTS_KEX)
+		return;
+
+	balance_queue[balance_queue_count].client_index = client_index;
+	balance_queue[balance_queue_count].team = team;
+	balance_queue_count++;
+}
+
+/*
+=============
+TeamBalance
+=============
+*/
 int TeamBalance(bool force) {
 	if (!Teams())
 		return 0;
@@ -1904,15 +1956,48 @@ int TeamBalance(bool force) {
 	if (GT(GT_RR))
 		return 0;
 
-	int delta = abs(level.num_playing_red - level.num_playing_blue);
+	bool queue_changes = GTF(GTF_ROUNDS) && level.round_state == roundst_t::ROUND_IN_PROGRESS;
+
+	int red_count = level.num_playing_red;
+	int blue_count = level.num_playing_blue;
+
+	if (queue_changes) {
+		for (size_t i = 0; i < balance_queue_count; i++) {
+			gclient_t *queued_client = &game.clients[balance_queue[i].client_index];
+
+			switch (queued_client->sess.team) {
+			case TEAM_RED:
+				red_count--;
+				break;
+			case TEAM_BLUE:
+				blue_count--;
+				break;
+			default:
+				break;
+			}
+
+			switch (balance_queue[i].team) {
+			case TEAM_RED:
+				red_count++;
+				break;
+			case TEAM_BLUE:
+				blue_count++;
+				break;
+			default:
+				break;
+			}
+		}
+	}
+
+	int delta = abs(red_count - blue_count);
 
 	if (delta < 2)
 		return level.num_playing_red - level.num_playing_blue;
 
-	team_t stack_team = level.num_playing_red > level.num_playing_blue ? TEAM_RED : TEAM_BLUE;
+	team_t stack_team = red_count > blue_count ? TEAM_RED : TEAM_BLUE;
 
-	size_t	count = 0;
-	int		index[MAX_CLIENTS_KEX/2];
+	size_t count = 0;
+	int index[MAX_CLIENTS_KEX/2];
 	memset(index, 0, sizeof(index));
 
 	// assemble list of client nums of everyone on stacked team
@@ -1927,11 +2012,16 @@ int TeamBalance(bool force) {
 	qsort(index, count, sizeof(index[0]), PlayerSortByJoinTime);
 
 	//run through sort list, switching from stack_team until teams are even
+	if (!count) {
+		gi.LocBroadcast_Print(PRINT_HIGH, "Team balance skipped: no stacked players available.\n");
+		return 0;
+	}
+
 	if (count) {
-		size_t	i;
+		size_t i;
 		int switched = 0;
 		gclient_t *cl = nullptr;
-		for (i = 0; i < count, delta > 1; i++) {
+		for (i = 0; i < count && delta > 1; i++) {
 			cl = &game.clients[index[i]];
 
 			if (!cl)
@@ -1943,22 +2033,78 @@ int TeamBalance(bool force) {
 			if (cl->sess.team != stack_team)
 				continue;
 
-			cl->sess.team = stack_team == TEAM_RED ? TEAM_BLUE : TEAM_RED;
+			if (queue_changes) {
+				team_balance_request_t *queued_request = FindBalanceRequest(cl - game.clients);
 
-			//TODO: queue this change in round-based games
-			ClientRespawn(&g_entities[cl - game.clients + 1]);
-			gi.LocClient_Print(&g_entities[cl - game.clients + 1], PRINT_CENTER, "You have changed teams to rebalance the game.\n");
+				if (queued_request && queued_request->team != stack_team)
+					continue;
+			}
+
+			team_t target_team = stack_team == TEAM_RED ? TEAM_BLUE : TEAM_RED;
+
+			if (queue_changes) {
+				EnqueueBalanceRequest(cl - game.clients, target_team);
+				gi.LocClient_Print(&g_entities[cl - game.clients + 1], PRINT_CENTER, "You will change teams after this round ends to rebalance the game.\n");
+			} else {
+				cl->sess.team = target_team;
+
+				ClientRespawn(&g_entities[cl - game.clients + 1]);
+				gi.LocClient_Print(&g_entities[cl - game.clients + 1], PRINT_CENTER, "You have changed teams to rebalance the game.\n");
+			}
 
 			delta--;
 			switched++;
 		}
 
 		if (switched) {
-			gi.LocBroadcast_Print(PRINT_HIGH, "Teams have been balanced.\n");
+			gi.LocBroadcast_Print(PRINT_HIGH, queue_changes ? "Team balance queued for end of round.\n" : "Teams have been balanced.\n");
 			return switched;
 		}
 	}
 	return 0;
+}
+
+/*
+=============
+ProcessBalanceQueue
+
+Applies queued team balance changes once the round has ended
+=============
+*/
+void ProcessBalanceQueue(void) {
+	if (!balance_queue_count)
+		return;
+
+	if (GTF(GTF_ROUNDS) && level.round_state == roundst_t::ROUND_IN_PROGRESS)
+		return;
+
+	size_t applied = 0;
+
+	for (size_t i = 0; i < balance_queue_count; i++) {
+		if (balance_queue[i].client_index < 0 || balance_queue[i].client_index >= MAX_CLIENTS_KEX)
+			continue;
+
+		gclient_t *cl = &game.clients[balance_queue[i].client_index];
+		gentity_t *ent = &g_entities[balance_queue[i].client_index + 1];
+
+		if (!cl->pers.connected || !ent->inuse || !ent->client)
+			continue;
+
+		if (cl->sess.team == balance_queue[i].team)
+			continue;
+
+		cl->sess.team = balance_queue[i].team;
+
+		ClientRespawn(ent);
+		gi.LocClient_Print(ent, PRINT_CENTER, "You have changed teams to rebalance the game.\n");
+
+		applied++;
+	}
+
+	balance_queue_count = 0;
+
+	if (applied)
+		gi.LocBroadcast_Print(PRINT_HIGH, "Teams have been balanced.\n");
 }
 
 /*
@@ -3206,13 +3352,50 @@ static void Cmd_Ruleset_f(gentity_t *ent) {
 	gi.cvar_forceset("g_ruleset", G_Fmt("{}", (int)rs).data());
 }
 
+/*
+=============
+G_MapListContains
+
+Checks if the provided map name is present in g_map_list as a discrete entry.
+=============
+*/
+static bool G_MapListContains(const char *mapname) {
+	if (!mapname || !mapname[0])
+		return false;
+
+	if (!g_map_list->string[0])
+		return true;
+
+	const char *map_list = g_map_list->string;
+	char *token;
+
+	while (true) {
+		token = COM_ParseEx(&map_list, " ");
+
+		if (!*token)
+			break;
+
+		if (!strcmp(token, mapname) || !Q_strcasecmp(token, mapname))
+			return true;
+	}
+
+	return false;
+}
+
+/*
+=============
+Cmd_SetMap_f
+
+Changes to a map within the map list.
+=============
+*/
 static void Cmd_SetMap_f(gentity_t *ent) {
 	if (gi.argc() < 2) {
 		gi.LocClient_Print(ent, PRINT_HIGH, "Usage: {} [mapname]\nChanges to a map within the map list.", gi.argv(0));
 		return;
 	}
 
-	if (g_map_list->string[0] && !strstr(g_map_list->string, gi.argv(1))) {
+	if (!G_MapListContains(gi.argv(1))) {
 		gi.Client_Print(ent, PRINT_HIGH, "Map name is not valid.\n");
 		return;
 	}
@@ -3222,13 +3405,20 @@ static void Cmd_SetMap_f(gentity_t *ent) {
 }
 
 extern void ClearWorldEntities();
+
+/*
+=============
+Cmd_MapRestart_f
+
+Reset the match and world state before reloading the current map.
+=============
+*/
 static void Cmd_MapRestart_f(gentity_t *ent) {
 	gi.Broadcast_Print(PRINT_HIGH, "[ADMIN]: Session reset.\n");
 
-	//TODO: reset match variables, clear world entities, reload world entities
-	//SpawnEntities(level.mapname, level.entstring.c_str(), nullptr);
-	//Match_Reset();
-	//ClearWorldEntities();
+	Match_Reset();
+	ClearWorldEntities();
+	SpawnEntities(level.mapname, level.entstring.c_str(), nullptr);
 	gi.AddCommandString(G_Fmt("gamemap {}\n", level.mapname).data());
 }
 

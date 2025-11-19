@@ -2531,6 +2531,7 @@ team_t PickTeam(int ignoreClientNum);
 void BroadcastTeamChange(gentity_t *ent, int old_team, bool inactive, bool silent);
 bool AllowClientTeamSwitch(gentity_t *ent);
 int TeamBalance(bool force);
+void ProcessBalanceQueue(void);
 void Cmd_ReadyUp_f(gentity_t *ent);
 
 void VoteCommandStore(gentity_t *ent);

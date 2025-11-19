@@ -6,6 +6,7 @@
     <ClInclude Include="g_local.h" />
     <ClInclude Include="g_statusbar.h" />
     <ClInclude Include="game.h" />
+    <ClInclude Include="g_activation.h" />
     <ClInclude Include="q_std.h" />
     <ClInclude Include="q_vec3.h" />
     <ClInclude Include="bots\bot_debug.h">
@@ -145,6 +146,7 @@
     <ClCompile Include="g_svcmds.cpp" />
     <ClCompile Include="g_target.cpp" />
     <ClCompile Include="g_trigger.cpp" />
+    <ClCompile Include="g_activation.cpp" />
     <ClCompile Include="g_turret.cpp" />
     <ClCompile Include="g_utils.cpp" />
     <ClCompile Include="g_weapon.cpp" />
