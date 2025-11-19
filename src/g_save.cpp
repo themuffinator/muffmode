@@ -60,6 +60,13 @@ static std::unordered_map<std::tuple<const void *, save_data_tag_t>, const save_
 
 #include <cassert>
 
+/*
+=============
+InitSave
+
+Initializes the save registry and reports duplicate entries to keep hash tables consistent.
+=============
+*/
 void InitSave() {
 	if (save_data_initialized)
 		return;
@@ -67,32 +74,32 @@ void InitSave() {
 	for (const save_data_list_t *link = list_head; link; link = link->next) {
 		const void *link_ptr = link;
 
-		if (list_hash.find(link_ptr) != list_hash.end()) {
-			auto existing = *list_hash.find(link_ptr);
-
-			// [0] is just to silence warning
-			assert(false || "invalid save pointer; break here to find which pointer it is"[0]);
+		auto existing_ptr = list_hash.find(link_ptr);
+		if (existing_ptr != list_hash.end()) {
+			const save_data_list_t *existing = existing_ptr->second;
 
 			if (!deathmatch->integer) {
 				if (g_strict_saves->integer)
-					gi.Com_ErrorFmt("link pointer {} already linked as {}; fatal error", link_ptr, existing.second->name);
+					gi.Com_ErrorFmt("duplicate save link pointer {} for type {} (tag {}) already mapped to {} (tag {})", link_ptr, link->name, (int32_t)link->tag, existing->name, (int32_t)existing->tag);
 				else
-					gi.Com_PrintFmt("link pointer {} already linked as {}; fatal error", link_ptr, existing.second->name);
+					gi.Com_PrintFmt("duplicate save link pointer {} for type {} (tag {}) already mapped to {} (tag {})", link_ptr, link->name, (int32_t)link->tag, existing->name, (int32_t)existing->tag);
 			}
+
+			continue;
 		}
 
-		if (list_str_hash.find(link->name) != list_str_hash.end()) {
-			auto existing = *list_str_hash.find(link->name);
-
-			// [0] is just to silence warning
-			assert(false || "invalid save pointer; break here to find which pointer it is"[0]);
+		auto existing_name = list_str_hash.find(link->name);
+		if (existing_name != list_str_hash.end()) {
+			const save_data_list_t *existing = existing_name->second;
 
 			if (!deathmatch->integer) {
 				if (g_strict_saves->integer)
-					gi.Com_ErrorFmt("link pointer {} already linked as {}; fatal error", link_ptr, existing.second->name);
+					gi.Com_ErrorFmt("duplicate save type name {} (tag {}) already linked to pointer {}, cannot add pointer {}", link->name, (int32_t)link->tag, existing, link_ptr);
 				else
-					gi.Com_PrintFmt("link pointer {} already linked as {}; fatal error", link_ptr, existing.second->name);
+					gi.Com_PrintFmt("duplicate save type name {} (tag {}) already linked to pointer {}, cannot add pointer {}", link->name, (int32_t)link->tag, existing, link_ptr);
 			}
+
+			continue;
 		}
 
 		list_hash.emplace(link_ptr, link);
@@ -102,10 +109,9 @@ void InitSave() {
 
 	save_data_initialized = true;
 }
-
 // initializer for save data
 save_data_list_t::save_data_list_t(const char *name_in, save_data_tag_t tag_in, const void *ptr_in) :
-	name(name_in),
+        name(name_in),
 	tag(tag_in),
 	ptr(ptr_in) {
 	if (save_data_initialized)
