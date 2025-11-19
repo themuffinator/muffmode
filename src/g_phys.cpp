@@ -2,7 +2,7 @@
 // Licensed under the GNU General Public License 2.0.
 // g_phys.c
 
-#include "g_local.h"
+#include "g_runthink.h"
 
 /*
 
@@ -93,19 +93,16 @@ Runs thinking code for this frame if necessary
 =============
 */
 bool G_RunThink(gentity_t *ent) {
-	gtime_t thinktime = ent->nextthink;
-	if (thinktime <= 0_ms)
-		return true;
-	if (thinktime > level.time)
-		return true;
-
-	ent->nextthink = 0_ms;
-	if (!ent->think)
-		//gi.Com_Error("nullptr ent->think");
-		return false;	//true;
-	ent->think(ent);
-
-	return false;
+	return G_RunThinkImpl(
+		ent,
+		level.time,
+		[](gentity_t *warn_ent) {
+			const char *name = warn_ent->classname ? warn_ent->classname : "<unknown>";
+			gi.Com_PrintFmt("G_RunThink: null think function for entity \"{}\"\n", name);
+		},
+		[](gentity_t *warn_ent) {
+			G_FreeEntity(warn_ent);
+		});
 }
 
 /*
