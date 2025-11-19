@@ -1979,15 +1979,34 @@ good colors to use:
 232 - blood
 */
 
+
+/*
+=============
+GetNextSteamEffectID
+
+Returns the next steam effect identifier for this level, wrapping to avoid
+overflowing the protocol limit.
+=============
+*/
+static int GetNextSteamEffectID() {
+	if (level.steam_effect_next_id > 20000)
+		level.steam_effect_next_id %= 20000;
+
+	level.steam_effect_next_id++;
+
+	return level.steam_effect_next_id;
+}
+
+/*
+=============
+use_target_steam
+
+Activates the steam effect and sends the configured temp entity to clients.
+=============
+*/
 static USE(use_target_steam) (gentity_t *self, gentity_t *other, gentity_t *activator) -> void {
-	// FIXME - this needs to be a global
-	static int nextid;
-	vec3_t	   point;
-
-	if (nextid > 20000)
-		nextid = nextid % 20000;
-
-	nextid++;
+	const int steam_id = GetNextSteamEffectID();
+	vec3_t	 point;
 
 	// automagically set wait from func_timer unless they set it already, or
 	// default to 1000 if not called by a func_timer (eek!)
@@ -2008,7 +2027,7 @@ static USE(use_target_steam) (gentity_t *self, gentity_t *other, gentity_t *acti
 	if (self->wait > 100) {
 		gi.WriteByte(svc_temp_entity);
 		gi.WriteByte(TE_STEAM);
-		gi.WriteShort(nextid);
+		gi.WriteShort(steam_id);
 		gi.WriteByte(self->count);
 		gi.WritePosition(self->s.origin);
 		gi.WriteDir(self->movedir);
@@ -2029,6 +2048,13 @@ static USE(use_target_steam) (gentity_t *self, gentity_t *other, gentity_t *acti
 	}
 }
 
+/*
+=============
+target_steam_start
+
+Initializes steam parameters and prepares the entity for activation.
+=============
+*/
 static THINK(target_steam_start) (gentity_t *self) -> void {
 	gentity_t *ent;
 
@@ -2061,6 +2087,13 @@ static THINK(target_steam_start) (gentity_t *self) -> void {
 	gi.linkentity(self);
 }
 
+/*
+=============
+SP_target_steam
+
+Spawns a steam target and defers initialization if linked to a target.
+=============
+*/
 void SP_target_steam(gentity_t *self) {
 	self->style = (int)self->speed;
 
