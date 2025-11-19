@@ -598,7 +598,7 @@ void ED_CallSpawn(gentity_t *ent) {
 		if (GT(GT_BALL)) {
 			ent->s.effects |= EF_COLOR_SHELL;
 			ent->s.renderfx |= RF_SHELL_RED | RF_SHELL_GREEN;
-		} else {
+			} else {
 			G_FreeEntity(ent);
 		}
 		return;
@@ -1225,7 +1225,7 @@ static inline bool G_InhibitEntity(gentity_t *ent) {
 		((skill->integer >= 2) && ent->spawnflags.has(SPAWNFLAG_NOT_HARD));
 }
 
-void setup_shadow_lights();
+void 	setup_shadow_lights();
 
 // [Paril-KEX]
 void PrecacheInventoryItems() {
@@ -1600,7 +1600,7 @@ static void ParseWorldEntityString(const char *mapname, bool try_q3) {
 					//gi.Com_PrintFmt("Entities override: \"{}\"\n", name);
 				}
 			}
-		} else {
+			} else {
 			gi.Com_PrintFmt("{}: Entities override file load error for \"{}\", discarding.\n", __FUNCTION__, name);
 		}
 	}
@@ -1615,7 +1615,7 @@ static void ParseWorldEntityString(const char *mapname, bool try_q3) {
 					gi.Com_PrintFmt("{}: Entities override file written to: \"{}\"\n", __FUNCTION__, name);
 				fclose(f);
 			}
-		} else {
+			} else {
 			if (g_verbose->integer)
 				gi.Com_PrintFmt("{}: Entities override file not saved as file already exists: \"{}\"\n", __FUNCTION__, name);
 		}
@@ -1713,6 +1713,31 @@ static void ResetLevelState() {
 }
 
 /*
+=============
+G_TestCTFSpawnPoints
+
+Ensure Capture the Flag spawn points remain linked and usable after
+entity parsing.
+=============
+*/
+static void G_TestCTFSpawnPoints() {
+	if (!GTF(GTF_CTF))
+		return;
+
+	auto ensure_linked = [](const char *classname) {
+		gentity_t *spot = nullptr;
+
+		while ((spot = G_FindByString<&gentity_t::classname>(spot, classname)) != nullptr) {
+			if (!spot->linkcount)
+				gi.linkentity(spot);
+		}
+	};
+
+	ensure_linked("info_player_team_red");
+	ensure_linked("info_player_team_blue");
+}
+
+/*
 ==============
 SpawnEntities
 
@@ -1773,7 +1798,7 @@ void SpawnEntities(const char *mapname, const char *entities, const char *spawnp
 						gi.Com_PrintFmt("{}: Entities override file verified and loaded: \"{}\"\n", __FUNCTION__, name);
 				}
 			}
-		} else {
+			} else {
 			gi.Com_PrintFmt("{}: Entities override file load error for \"{}\", discarding.\n", __FUNCTION__, name);
 		}
 	}
@@ -1788,7 +1813,7 @@ void SpawnEntities(const char *mapname, const char *entities, const char *spawnp
 					gi.Com_PrintFmt("{}: Entities override file written to: \"{}\"\n", __FUNCTION__, name);
 				fclose(f);
 			}
-		} else {
+			} else {
 			//gi.Com_PrintFmt("{}: Entities override file not saved as file already exists: \"{}\"\n", __FUNCTION__, name);
 		}
 	}
@@ -1851,6 +1876,8 @@ globals.num_entities = game.maxclients + 1;
 	QuadHog_SetupSpawn(5_sec);
 	Tech_SetupSpawn();
 
+	G_TestCTFSpawnPoints();
+
 	if (deathmatch->integer) {
 		if (g_dm_random_items->integer)
 			PrecacheForRandomRespawn();
@@ -1863,7 +1890,7 @@ globals.num_entities = game.maxclients + 1;
 		game.item_inhibit_wp = 0;
 	} else {
 		InitHintPaths(); // if there aren't hintpaths on this map, enable quick aborts
-	}
+}
 
 	G_LocateSpawnSpots();
 
@@ -1964,7 +1991,7 @@ static void G_InitStatusbar() {
 		sb.ifstat(STAT_HEALTH_BARS).yt(24).health_bars().endifstat();
 
 		sb.story();
-	} else {
+		} else {
 		if (Teams()) {
 			// flag carrier indicator
 			if (GTF(GTF_CTF))
@@ -2006,7 +2033,7 @@ static void G_InitStatusbar() {
 
 void GT_SetLongName(void) {
 	const char *s;
-	if (deathmatch->integer) {
+		if (deathmatch->integer) {
 		if (GT(GT_CTF)) {
 			if (g_instagib->integer) {
 				s = "Insta-CTF";
@@ -2018,7 +2045,7 @@ void GT_SetLongName(void) {
 				s = "NadeFest CTF";
 			} else if (g_quadhog->integer) {
 				s = "Quad Hog CTF";
-			} else {
+				} else {
 				s = gt_long_name[GT_CTF];
 			}
 		} else if (GT(GT_FREEZE)) {
@@ -2032,7 +2059,7 @@ void GT_SetLongName(void) {
 				s = "NadeFest Freeze";
 			} else if (g_quadhog->integer) {
 				s = "Quad Hog Freeze";
-			} else {
+				} else {
 				s = gt_long_name[GT_FREEZE];
 			}
 		} else if (GT(GT_CA)) {
@@ -2046,7 +2073,7 @@ void GT_SetLongName(void) {
 				s = "NadeFest CA";
 			} else if (g_quadhog->integer) {
 				s = "Quad Hog CA";
-			} else {
+				} else {
 				s = gt_long_name[GT_CA];
 			}
 		} else if (GT(GT_RR)) {
@@ -2060,7 +2087,7 @@ void GT_SetLongName(void) {
 				s = "NadeFest RR";
 			} else if (g_quadhog->integer) {
 				s = "Quad Hog RR";
-			} else {
+				} else {
 				s = gt_long_name[GT_RR];
 			}
 		} else if (GT(GT_STRIKE)) {
@@ -2074,7 +2101,7 @@ void GT_SetLongName(void) {
 				s = "NadeFest Strike";
 			} else if (g_quadhog->integer) {
 				s = "Quad Hog Strike";
-			} else {
+				} else {
 				s = gt_long_name[GT_STRIKE];
 			}
 		} else if (GT(GT_TDM)) {
@@ -2088,7 +2115,7 @@ void GT_SetLongName(void) {
 				s = "NadeFest TDM";
 			} else if (g_quadhog->integer) {
 				s = "Quad Hog TDM";
-			} else {
+				} else {
 				s = gt_long_name[GT_TDM];
 			}
 		} else if (GT(GT_DUEL)) {
@@ -2102,7 +2129,7 @@ void GT_SetLongName(void) {
 				s = "NadeFest Duel";
 			} else if (g_quadhog->integer) {
 				s = "Quad Hog Duel";
-			} else {
+				} else {
 				s = gt_long_name[GT_DUEL];
 			}
 		} else if (GT(GT_HORDE)) {
@@ -2116,7 +2143,7 @@ void GT_SetLongName(void) {
 				s = "NadeFest Horde";
 			} else if (g_quadhog->integer) {
 				s = "Quad Hog Horde";
-			} else {
+				} else {
 				s = gt_long_name[GT_HORDE];
 			}
 		} else if (GT(GT_BALL)) {
@@ -2130,10 +2157,10 @@ void GT_SetLongName(void) {
 				s = "NadeFest ProBall";
 			} else if (g_quadhog->integer) {
 				s = "Quad Hog ProBall";
-			} else {
+				} else {
 				s = gt_long_name[GT_BALL];
 			}
-		} else if (deathmatch->integer) {
+		} else 	if (deathmatch->integer) {
 			if (g_instagib->integer) {
 				s = "InstaGib";
 			} else if (g_vampiric_damage->integer) {
@@ -2144,16 +2171,16 @@ void GT_SetLongName(void) {
 				s = "NadeFest";
 			} else if (g_quadhog->integer) {
 				s = "Quad Hog";
-			} else {
+				} else {
 				s = gt_long_name[GT_FFA];
 			}
-		} else {
+			} else {
 			s = "Unknown Gametype";
 		}
-	} else {
+		} else {
 		if (coop->integer) {
 			s = "Co-op";
-		} else {
+			} else {
 			s = "Single Player";
 		}
 	}
@@ -2245,7 +2272,7 @@ void SP_worldspawn(gentity_t *ent) {
 
 	if (st.music && st.music[0]) {
 		gi.configstring(CS_CDTRACK, st.music);
-	} else {
+		} else {
 		gi.configstring(CS_CDTRACK, G_Fmt("{}", ent->sounds).data());
 	}
 
@@ -2304,7 +2331,7 @@ void SP_worldspawn(gentity_t *ent) {
 	if (!st.gravity) {
 		level.gravity = 800.f;
 		gi.cvar_set("g_gravity", "800");
-	} else {
+		} else {
 		level.gravity = atof(st.gravity);
 		gi.cvar_set("g_gravity", st.gravity);
 	}

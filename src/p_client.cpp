@@ -61,15 +61,60 @@ void SP_info_player_deathmatch(gentity_t* self) {
 	deathmatch_spawn_flags(self);
 }
 
+/*
+=============
+CTF_TeamSpawnSetup
+
+Initialize CTF team spawn points with deathmatch gating, stuck resolution
+and spawnpad linking.
+=============
+*/
+static void CTF_TeamSpawnSetup(gentity_t* self) {
+	if (!deathmatch->integer) {
+		G_FreeEntity(self);
+		return;
+	}
+
+	if (gi.trace(self->s.origin, PLAYER_MINS, PLAYER_MAXS, self->s.origin, self, MASK_SOLID).startsolid)
+		G_FixStuckObject(self, self->s.origin);
+
+	if (level.is_n64) {
+		self->think = info_player_start_drop;
+		self->nextthink = level.time + FRAME_TIME_S;
+	}
+
+	SP_misc_teleporter_dest(self);
+
+	deathmatch_spawn_flags(self);
+}
+
 /*QUAKED info_player_team_red (1 0 0) (-16 -16 -24) (16 16 32) x x x x x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
 A potential Red Team spawning position for CTF games.
 */
-void SP_info_player_team_red(gentity_t* self) {}
+/*
+=============
+SP_info_player_team_red
+
+Set up red team CTF spawn points.
+=============
+*/
+void SP_info_player_team_red(gentity_t* self) {
+	CTF_TeamSpawnSetup(self);
+}
 
 /*QUAKED info_player_team_blue (0 0 1) (-16 -16 -24) (16 16 32) x x x x x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
 A potential Blue Team spawning position for CTF games.
 */
-void SP_info_player_team_blue(gentity_t* self) {}
+/*
+=============
+SP_info_player_team_blue
+
+Set up blue team CTF spawn points.
+=============
+*/
+void SP_info_player_team_blue(gentity_t* self) {
+	CTF_TeamSpawnSetup(self);
+}
 
 /*QUAKED info_player_coop (1 0 1) (-16 -16 -24) (16 16 32) x x x x x x x x NOT_EASY NOT_MEDIUM NOT_HARD NOT_DM NOT_COOP
 A potential spawning position for coop games.
