@@ -60,6 +60,13 @@ static std::unordered_map<std::tuple<const void *, save_data_tag_t>, const save_
 
 #include <cassert>
 
+/*
+=============
+InitSave
+
+Initializes the save data lists and validates for duplicates.
+=============
+*/
 void InitSave() {
 	if (save_data_initialized)
 		return;
@@ -102,19 +109,31 @@ void InitSave() {
 
 	save_data_initialized = true;
 }
-
 // initializer for save data
-save_data_list_t::save_data_list_t(const char *name_in, save_data_tag_t tag_in, const void *ptr_in) :
+/*
+=============
+save_data_list_t::save_data_list_t(const char *name_in, save_data_tag_t tag_in, const void *ptr_in, bool link, bool valid_in) :
 	name(name_in),
 	tag(tag_in),
-	ptr(ptr_in) {
-	if (save_data_initialized)
+	ptr(ptr_in),
+	next(nullptr),
+	valid(valid_in) {
+	if (save_data_initialized && link)
 		gi.Com_Error("attempted to create save_data_list at runtime");
 
-	next = list_head;
-	list_head = this;
+	if (link) {
+		next = list_head;
+		list_head = this;
+	}
 }
 
+/*
+=============
+save_data_list_t::fetch
+
+Fetches a save data entry for a pointer/tag pair, returning a sentinel when missing.
+=============
+*/
 const save_data_list_t *save_data_list_t::fetch(const void *ptr, save_data_tag_t tag) {
 	auto link = list_from_ptr_hash.find(std::make_tuple(ptr, tag));
 
@@ -129,7 +148,12 @@ const save_data_list_t *save_data_list_t::fetch(const void *ptr, save_data_tag_t
 	else
 		gi.Com_PrintFmt("value pointer {} was not linked to save tag {}\n", ptr, (int32_t)tag);
 
-	return nullptr;
+	static save_data_list_t invalid_save_data("<invalid save data>", SAVE_DATA_MMOVE, nullptr, false, false);
+
+	invalid_save_data.tag = tag;
+	invalid_save_data.ptr = ptr;
+
+	return &invalid_save_data;
 }
 
 std::string json_error_stack;
