@@ -3,6 +3,7 @@
 // g_utils.c -- misc utility functions for game module
 
 #include "g_local.h"
+#include "g_broadcast_utils.h"
 #include <cerrno>
 
 /*
@@ -15,7 +16,7 @@ Searches beginning at the entity after from, or the beginning if nullptr
 nullptr will be returned if the end of the list is reached.
 =============
 */
-gentity_t *G_Find(gentity_t *from, std::function<bool(gentity_t *e)> matcher) {
+		gentity_t *G_Find(gentity_t *from, std::function<bool(gentity_t *e)> matcher) {
 	if (!from)
 		from = g_entities;
 	else
@@ -40,7 +41,7 @@ Returns entities that have origins within a spherical area
 findradius (origin, radius)
 =================
 */
-gentity_t *findradius(gentity_t *from, const vec3_t &org, float rad) {
+		gentity_t *findradius(gentity_t *from, const vec3_t &org, float rad) {
 	vec3_t eorg;
 	int	   j;
 
@@ -78,7 +79,7 @@ nullptr will be returned if the end of the list is reached.
 */
 constexpr size_t MAXCHOICES = 8;
 
-gentity_t *G_PickTarget(const char *targetname) {
+		gentity_t *G_PickTarget(const char *targetname) {
 	gentity_t	*choice[MAXCHOICES];
 	gentity_t	*ent = nullptr;
 	int		num_choices = 0;
@@ -139,6 +140,10 @@ active players.
 =============
 */
 void BroadcastFriendlyMessage(team_t team, const char *msg) {
+	const char *resolved_msg = ResolveFriendlyMessage(msg);
+	if (!resolved_msg)
+		return;
+
 	for (auto ce : active_clients()) {
 		const bool playing = ClientIsPlaying(ce->client);
 		if (!playing) {
@@ -150,9 +155,10 @@ void BroadcastFriendlyMessage(team_t team, const char *msg) {
 		} else if (Teams() && ce->client->sess.team != team) {
 			continue;
 		}
-		gi.LocClient_Print(ce, PRINT_HIGH, G_Fmt("{}{}", playing && ce->client->sess.team != TEAM_SPECTATOR ? "[TEAM]: " : "", msg).data());
+		gi.LocClient_Print(ce, PRINT_HIGH, G_Fmt("{}{}", playing && ce->client->sess.team != TEAM_SPECTATOR ? "[TEAM]: " : "", resolved_msg).data());
 	}
 }
+
 
 /*
 =============
@@ -356,7 +362,7 @@ instead of being removed and recreated, which can cause interpolated
 angles and bad trails.
 =================
 */
-gentity_t *G_Spawn() {
+		gentity_t *G_Spawn() {
 	gentity_t *e = &g_entities[game.maxclients + 1];
 	size_t i;
 
@@ -566,7 +572,7 @@ bool KillBox(gentity_t *ent, bool from_spawning, mod_id_t mod, bool bsp_clipping
 
 /*--------------------------------------------------------------------------*/
 
-const char *Teams_TeamName(team_t team) {
+	const char *Teams_TeamName(team_t team) {
 	switch (team) {
 	case TEAM_RED:
 		return "RED";
@@ -580,7 +586,7 @@ const char *Teams_TeamName(team_t team) {
 	return "NONE";
 }
 
-const char *Teams_OtherTeamName(team_t team) {
+	const char *Teams_OtherTeamName(team_t team) {
 	switch (team) {
 	case TEAM_RED:
 		return "BLUE";
@@ -747,7 +753,7 @@ G_PlaceString
 Adapted from Quake III
 ===================
 */
-const char *G_PlaceString(int rank) {
+	const char *G_PlaceString(int rank) {
 	static char	str[64];
 	const char *s, *t;
 
@@ -849,7 +855,7 @@ G_TimeString
 Format a match timer string with minute precision.
 =============
 */
-const char *G_TimeString(const int msec, bool state) {
+	const char *G_TimeString(const int msec, bool state) {
 	static char buffer[32];
 	if (state) {
 		if (level.match_state < matchst_t::MATCH_COUNTDOWN)
@@ -883,7 +889,7 @@ G_TimeStringMs
 Format a match timer string with millisecond precision.
 =============
 */
-const char *G_TimeStringMs(const int msec, bool state) {
+	const char *G_TimeStringMs(const int msec, bool state) {
 	static char buffer[32];
 	if (state) {
 		if (level.match_state < matchst_t::MATCH_COUNTDOWN)
@@ -1028,7 +1034,7 @@ ClientEntFromString
 Resolve a client entity from a name or validated numeric identifier string.
 =============
 */
-gentity_t *ClientEntFromString(const char *in) {
+		gentity_t *ClientEntFromString(const char *in) {
 	for (auto ec : active_clients())
 		if (!strcmp(in, ec->client->resp.netname))
 			return ec;
@@ -1129,7 +1135,7 @@ stime
 Return a stable timestamp string for file naming.
 =============
 */
-const char *stime() {
+	const char *stime() {
 	struct tm *ltime;
 	time_t gmtime;
 	static char buffer[32];
