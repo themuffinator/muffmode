@@ -1698,6 +1698,20 @@ void ClearWorldEntities() {
 }
 
 /*
+=============
+ResetLevelState
+
+Value-initializes the global level state and reapplies defaults for
+non-trivial members.
+=============
+*/
+static void ResetLevelState() {
+	level = level_locals_t{};
+	level.monsters_registered.fill(nullptr);
+	level.health_bar_entities.fill(nullptr);
+}
+
+/*
 ==============
 SpawnEntities
 
@@ -1707,6 +1721,78 @@ parsing textual entity definitions out of an ent file.
 */
 void SpawnEntities(const char *mapname, const char *entities, const char *spawnpoint) {
 	std::string new_entstring = entities ? entities : "";
+	bool		ent_file_exists = false, ent_valid = true;
+	//const char	*entities = level.entstring.c_str();
+
+	Q_strlcpy(level.mapname, mapname, sizeof(level.mapname));
+	// Paril: fixes a bug where autosaves will start you at
+	// the wrong spawnpoint if they happen to be non-empty
+	// (mine2 -> mine3)
+	if (!game.autosaved)
+		Q_strlcpy(game.spawnpoint, spawnpoint, sizeof(game.spawnpoint));
+//#if 0
+	// load up ent override
+	//const char *name = G_Fmt("baseq2/maps/{}.ent", mapname).data();
+	const char *name = G_Fmt("baseq2/{}/{}.ent", g_entity_override_dir->string[0] ? g_entity_override_dir->string : "maps", mapname).data();
+	FILE *f = fopen(name, "rb");
+	if (f != NULL) {
+		char *buffer = nullptr;
+		size_t length;
+		size_t read_length;
+
+		fseek(f, 0, SEEK_END);
+		length = ftell(f);
+		fseek(f, 0, SEEK_SET);
+
+		if (length > 0x40000) {
+			//gi.Com_PrintFmt("{}: Entities override file length exceeds maximum: \"{}\"\n", __FUNCTION__, name);
+			ent_valid = false;
+		}
+		if (ent_valid) {
+			buffer = (char *)gi.TagMalloc(length + 1, '\0');
+			if (length) {
+				read_length = fread(buffer, 1, length, f);
+
+				if (length != read_length) {
+					//gi.Com_PrintFmt("{}: Entities override file read error: \"{}\"\n", __FUNCTION__, name);
+					ent_valid = false;
+				}
+			}
+		}
+		ent_file_exists = true;
+		fclose(f);
+
+		if (ent_valid) {
+			if (g_entity_override_load->integer && !strstr(level.mapname, ".dm2")) {
+
+				if (VerifyEntityString((const char *)buffer)) {
+					entities = (const char *)buffer;
+					if (g_verbose->integer)
+						gi.Com_PrintFmt("{}: Entities override file verified and loaded: \"{}\"\n", __FUNCTION__, name);
+				}
+			}
+		} else {
+			gi.Com_PrintFmt("{}: Entities override file load error for \"{}\", discarding.\n", __FUNCTION__, name);
+		}
+	}
+
+	// save ent override
+	if (g_entity_override_save->integer && !strstr(level.mapname, ".dm2")) {
+		if (!ent_file_exists) {
+			f = fopen(name, "w");
+			if (f) {
+				fwrite(entities, 1, strlen(entities), f);
+				if (g_verbose->integer)
+					gi.Com_PrintFmt("{}: Entities override file written to: \"{}\"\n", __FUNCTION__, name);
+				fclose(f);
+			}
+		} else {
+			//gi.Com_PrintFmt("{}: Entities override file not saved as file already exists: \"{}\"\n", __FUNCTION__, name);
+		}
+	}
+	level.entstring = entities;
+//#endif
+	//ParseWorldEntityString(mapname, RS(RS_Q3A));
 
 	// clear cached indices
 	cached_soundindex::clear_all();
@@ -1722,17 +1808,11 @@ void SpawnEntities(const char *mapname, const char *entities, const char *spawnp
 	gi.FreeTags(TAG_LEVEL);
 
 	memset(&level, 0, sizeof(level));
-	memset(g_entities, 0, game.maxentities * sizeof(g_entities[0]));
-
+memset(g_entities, 0, game.maxentities * sizeof(g_entities[0]));
+globals.num_entities = game.maxclients + 1;
+	
 	// all other flags are not important atm
-	globals.server_flags &= SERVER_FLAG_LOADING;
-
-	Q_strlcpy(level.mapname, mapname, sizeof(level.mapname));
-	// Paril: fixes a bug where autosaves will start you at
-	// the wrong spawnpoint if they happen to be non-empty
-	// (mine2 -> mine3)
-	if (!game.autosaved)
-		Q_strlcpy(game.spawnpoint, spawnpoint, sizeof(game.spawnpoint));
+	globals.server_flags |= SERVER_FLAG_LOADING;
 
 	level.entstring = new_entstring;
 	ParseWorldEntityString(mapname, RS(RS_Q3A));
@@ -2338,4 +2418,6 @@ void SP_worldspawn(gentity_t *ent) {
 		gi.configstring(CONFIG_COOP_RESPAWN_STRING + 3, "$g_coop_respawn_waiting");
 		gi.configstring(CONFIG_COOP_RESPAWN_STRING + 4, "$g_coop_respawn_no_lives");
 	}
+
+	globals.server_flags &= ~SERVER_FLAG_LOADING;
 }
