@@ -1,6 +1,7 @@
 // Copyright (c) ZeniMax Media Inc.
 // Licensed under the GNU General Public License 2.0.
 #include "g_local.h"
+#include "spawn_gravity.h"
 #include "bots/bot_includes.h"
 
 //
@@ -307,24 +308,22 @@ void M_WorldEffects(gentity_t *ent) {
 	}
 }
 
-bool M_droptofloor_generic(vec3_t &origin, const vec3_t &mins, const vec3_t &maxs, bool ceiling, gentity_t *ignore, contents_t mask, bool allow_partial) {
-	vec3_t	end;
+/*
+=============
+M_droptofloor_generic
+
+Drops a bounding box along the provided gravity vector until it contacts
+geometry or reaches the maximum distance.
+=============
+*/
+bool M_droptofloor_generic(vec3_t &origin, const vec3_t &mins, const vec3_t &maxs, const vec3_t &gravityVector, gentity_t *ignore, contents_t mask, bool allow_partial) {
 	trace_t trace;
+	const vec3_t gravityDir = SpawnGravityDirection(gravityVector);
 
-	if (gi.trace(origin, mins, maxs, origin, ignore, mask).startsolid) {
-		if (!ceiling)
-			origin[2] += 1;
-		else
-			origin[2] -= 1;
-	}
+	if (gi.trace(origin, mins, maxs, origin, ignore, mask).startsolid)
+		origin = SpawnClearanceOrigin(origin, gravityDir, 1.f);
 
-	if (!ceiling) {
-		end = origin;
-		end[2] -= 256;
-	} else {
-		end = origin;
-		end[2] += 256;
-	}
+	const vec3_t end = SpawnDropEndpoint(origin, gravityDir, 256.f);
 
 	trace = gi.trace(origin, mins, maxs, end, ignore, mask);
 
@@ -340,7 +339,7 @@ bool M_droptofloor(gentity_t *ent) {
 	contents_t mask = G_GetClipMask(ent);
 
 	if (!ent->spawnflags.has(SPAWNFLAG_MONSTER_NO_DROP)) {
-		if (!M_droptofloor_generic(ent->s.origin, ent->mins, ent->maxs, ent->gravityVector[2] > 0, ent, mask, true))
+		if (!M_droptofloor_generic(ent->s.origin, ent->mins, ent->maxs, ent->gravityVector, ent, mask, true))
 			return false;
 	} else {
 		if (gi.trace(ent->s.origin, ent->mins, ent->maxs, ent->s.origin, ent, mask).startsolid)

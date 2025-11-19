@@ -3,6 +3,7 @@
 // m_move.c -- monster movement
 
 #include "../g_local.h"
+#include "../spawn_gravity.h"
 
 // this is used for communications out of g_movestep to say what entity
 // is blocking us
@@ -15,6 +16,14 @@ M_CheckBottom
 Returns false if any part of the bottom of the entity is off an edge that
 is not a staircase.
 
+=============
+*/
+/*
+=============
+M_CheckBottom_Fast_Generic
+
+Quickly checks whether an entity is resting on solid ground when gravity is
+aligned to a ceiling or floor.
 =============
 */
 bool M_CheckBottom_Fast_Generic(const vec3_t &absmins, const vec3_t &absmaxs, bool ceiling) {
@@ -36,6 +45,14 @@ bool M_CheckBottom_Fast_Generic(const vec3_t &absmins, const vec3_t &absmaxs, bo
 	return true; // we got out easy
 }
 
+/*
+=============
+M_CheckBottom_Slow_Generic
+
+Performs a detailed ground check for an entity, optionally allowing taller
+steps and supporting ceiling gravity.
+=============
+*/
 bool M_CheckBottom_Slow_Generic(const vec3_t &origin, const vec3_t &mins, const vec3_t &maxs, gentity_t *ignore, contents_t mask, bool ceiling, bool allow_any_step_height) {
 	vec3_t start;
 
@@ -112,6 +129,13 @@ bool M_CheckBottom_Slow_Generic(const vec3_t &origin, const vec3_t &mins, const 
 	return true;
 }
 
+/*
+=============
+M_CheckBottom
+
+Determines whether an entity is positioned on valid ground.
+=============
+*/
 bool M_CheckBottom(gentity_t *ent) {
 	// if all of the points under the corners are solid world, don't bother
 	// with the tougher checks

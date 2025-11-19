@@ -1822,10 +1822,10 @@ static void Use_Doppelganger(gentity_t *ent, gitem_t *item) {
 
 	createPt = ent->s.origin + (forward * 48);
 
-	if (!FindSpawnPoint(createPt, ent->mins, ent->maxs, spawnPt, 32))
+	if (!FindSpawnPoint(createPt, ent->mins, ent->maxs, spawnPt, 32, true, ent->gravityVector))
 		return;
 
-	if (!CheckGroundSpawnPoint(spawnPt, ent->mins, ent->maxs, 64, -1))
+	if (!CheckGroundSpawnPoint(spawnPt, ent->mins, ent->maxs, 64, ent->gravityVector))
 		return;
 
 	ent->client->pers.inventory[item->id]--;

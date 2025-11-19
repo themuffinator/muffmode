@@ -2775,7 +2775,7 @@ void monster_fire_bfg(gentity_t *self, const vec3_t &start, const vec3_t &aimdir
 bool M_CheckClearShot(gentity_t *self, const vec3_t &offset);
 bool M_CheckClearShot(gentity_t *self, const vec3_t &offset, vec3_t &start);
 vec3_t M_ProjectFlashSource(gentity_t *self, const vec3_t &offset, const vec3_t &forward, const vec3_t &right);
-bool M_droptofloor_generic(vec3_t &origin, const vec3_t &mins, const vec3_t &maxs, bool ceiling, gentity_t *ignore, contents_t mask, bool allow_partial);
+bool M_droptofloor_generic(vec3_t &origin, const vec3_t &mins, const vec3_t &maxs, const vec3_t &gravityVector, gentity_t *ignore, contents_t mask, bool allow_partial);
 bool M_droptofloor(gentity_t *ent);
 void monster_think(gentity_t *self);
 void monster_dead_think(gentity_t *self);
@@ -3209,16 +3209,16 @@ void plat2_spawn_danger_area(gentity_t *ent);
 void plat2_kill_danger_area(gentity_t *ent);
 
 // g_rogue_spawn
-gentity_t *CreateMonster(const vec3_t &origin, const vec3_t &angles, const char *classname);
+gentity_t *CreateMonster(const vec3_t &origin, const vec3_t &angles, const char *classname, const vec3_t &gravityVector = vec3_origin);
 gentity_t *CreateFlyMonster(const vec3_t &origin, const vec3_t &angles, const vec3_t &mins, const vec3_t &maxs,
-	const char *classname);
+const char *classname, const vec3_t &gravityVector = vec3_origin);
 gentity_t *CreateGroundMonster(const vec3_t &origin, const vec3_t &angles, const vec3_t &mins, const vec3_t &maxs,
-	const char *classname, float height);
+const char *classname, float height, const vec3_t &gravityVector = vec3_origin);
 bool	 FindSpawnPoint(const vec3_t &startpoint, const vec3_t &mins, const vec3_t &maxs, vec3_t &spawnpoint,
-	float maxMoveUp, bool drop = true);
-bool	 CheckSpawnPoint(const vec3_t &origin, const vec3_t &mins, const vec3_t &maxs);
+	float maxMoveUp, bool drop = true, const vec3_t &gravityVector = vec3_origin);
+bool	 CheckSpawnPoint(const vec3_t &origin, const vec3_t &mins, const vec3_t &maxs, const vec3_t &gravityVector = vec3_origin);
 bool	 CheckGroundSpawnPoint(const vec3_t &origin, const vec3_t &entMins, const vec3_t &entMaxs, float height,
-	float gravity);
+	const vec3_t &gravityVector = vec3_origin);
 void	 SpawnGrow_Spawn(const vec3_t &startpos, float start_size, float end_size);
 void	 Widowlegs_Spawn(const vec3_t &startpos, const vec3_t &angles);
 
