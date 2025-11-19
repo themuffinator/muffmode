@@ -2420,6 +2420,7 @@ extern cvar_t *g_dm_spawnpads;
 extern cvar_t *g_dm_strong_mines;
 extern cvar_t *g_dm_timeout_length;
 extern cvar_t *g_dm_weapons_stay;
+extern cvar_t *g_doppelganger_max;
 extern cvar_t *g_drop_cmds;
 extern cvar_t *g_entity_override_dir;
 extern cvar_t *g_entity_override_load;

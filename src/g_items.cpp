@@ -1812,6 +1812,13 @@ static bool Pickup_Nuke(gentity_t *ent, gentity_t *other) {
 
 //======================================================================
 
+/*
+=============
+Use_Doppelganger
+
+Spawns and launches a doppelganger from the player's position.
+=============
+*/
 static void Use_Doppelganger(gentity_t *ent, gitem_t *item) {
 	vec3_t forward, right;
 	vec3_t createPt, spawnPt;
@@ -1835,15 +1842,34 @@ static void Use_Doppelganger(gentity_t *ent, gitem_t *item) {
 	fire_doppelganger(ent, spawnPt, forward);
 }
 
+/*
+=============
+Pickup_Doppelganger
+
+Attempts to pick up a doppelganger while respecting the configured limit.
+=============
+*/
 static bool Pickup_Doppelganger(gentity_t *ent, gentity_t *other) {
 	int quantity;
+	int max_doppelgangers;
 
 	if (!deathmatch->integer)
 		return false;
 
-	quantity = other->client->pers.inventory[ent->item->id];
-	if (quantity >= 1) // FIXME - apply max to doppelgangers
+	max_doppelgangers = g_doppelganger_max->integer;
+	if (max_doppelgangers < 0)
+		max_doppelgangers = 0;
+
+	if (!max_doppelgangers) {
+		gi.LocClient_Print(other, PRINT_HIGH, "Doppelganger pickups are disabled.");
 		return false;
+	}
+
+	quantity = other->client->pers.inventory[ent->item->id];
+	if (quantity >= max_doppelgangers) {
+		gi.LocClient_Print(other, PRINT_HIGH, "You can only carry {} doppelgangers.", max_doppelgangers);
+		return false;
+	}
 
 	other->client->pers.inventory[ent->item->id]++;
 

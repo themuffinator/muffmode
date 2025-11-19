@@ -138,6 +138,7 @@ cvar_t *g_dm_strong_mines;
 cvar_t *g_dm_timeout_length;
 cvar_t *g_dm_weapons_stay;
 cvar_t *g_drop_cmds;
+cvar_t *g_doppelganger_max;
 cvar_t *g_entity_override_dir;
 cvar_t *g_entity_override_load;
 cvar_t *g_entity_override_save;
@@ -869,6 +870,7 @@ static void InitGame() {
 	g_huntercam = gi.cvar("g_huntercam", "1", CVAR_SERVERINFO | CVAR_LATCH);
 	g_dm_strong_mines = gi.cvar("g_dm_strong_mines", "0", CVAR_NOFLAGS);
 	g_dm_random_items = gi.cvar("g_dm_random_items", "0", CVAR_NOFLAGS);
+	g_doppelganger_max = gi.cvar("g_doppelganger_max", "1", CVAR_NOFLAGS);
 
 	// game modifications
 	g_instagib = gi.cvar("g_instagib", "0", CVAR_SERVERINFO | CVAR_LATCH);
