@@ -6,6 +6,8 @@
 
 #include "bg_local.h"
 
+#include <vector>
+
 // the "gameversion" client command will print this plus compile date
 constexpr const char *GAMEVERSION = "baseq2";
 
@@ -2683,6 +2685,7 @@ void G_StuffCmd(gentity_t *e, const char *fmt, ...);
 //
 // g_spawn.cpp
 //
+const std::vector<const char *> &G_GetSpawnClassnameConstants();
 void  ED_CallSpawn(gentity_t *ent);
 char *ED_NewString(char *string);
 void GT_SetLongName(void);
