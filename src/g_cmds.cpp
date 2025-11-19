@@ -1927,11 +1927,16 @@ int TeamBalance(bool force) {
 	qsort(index, count, sizeof(index[0]), PlayerSortByJoinTime);
 
 	//run through sort list, switching from stack_team until teams are even
+	if (!count) {
+		gi.LocBroadcast_Print(PRINT_HIGH, "Team balance skipped: no stacked players available.\n");
+		return 0;
+	}
+
 	if (count) {
 		size_t	i;
 		int switched = 0;
 		gclient_t *cl = nullptr;
-		for (i = 0; i < count, delta > 1; i++) {
+		for (i = 0; i < count && delta > 1; i++) {
 			cl = &game.clients[index[i]];
 
 			if (!cl)
