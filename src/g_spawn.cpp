@@ -1547,9 +1547,19 @@ static void G_LocateSpawnSpots(void) {
 	level.num_spawn_spots = n;
 }
 
+/*
+=============
+ParseWorldEntityString
+
+Loads the base entity string for the level and optionally overrides it with
+an external .ent file.
+=============
+*/
 static void ParseWorldEntityString(const char *mapname, bool try_q3) {
 	bool	ent_file_exists = false, ent_valid = true;
 	const char *entities = level.entstring.c_str();
+
+	(void)try_q3;
 
 	// load up ent override
 	const char *name = G_Fmt("baseq2/{}/{}.ent", g_entity_override_dir->string[0] ? g_entity_override_dir->string : "maps", mapname).data();
@@ -1612,6 +1622,13 @@ static void ParseWorldEntityString(const char *mapname, bool try_q3) {
 	level.entstring = entities;
 }
 
+/*
+=============
+ParseWorldEntities
+
+Creates runtime entities from the currently loaded entity string.
+=============
+*/
 static void ParseWorldEntities() {
 	gentity_t		*ent = nullptr;
 	int			inhibit = 0;
@@ -1689,71 +1706,7 @@ parsing textual entity definitions out of an ent file.
 ==============
 */
 void SpawnEntities(const char *mapname, const char *entities, const char *spawnpoint) {
-	bool		ent_file_exists = false, ent_valid = true;
-	//const char	*entities = level.entstring.c_str();
-//#if 0
-	// load up ent override
-	//const char *name = G_Fmt("baseq2/maps/{}.ent", mapname).data();
-	const char *name = G_Fmt("baseq2/{}/{}.ent", g_entity_override_dir->string[0] ? g_entity_override_dir->string : "maps", mapname).data();
-	FILE *f = fopen(name, "rb");
-	if (f != NULL) {
-		char *buffer = nullptr;
-		size_t length;
-		size_t read_length;
-
-		fseek(f, 0, SEEK_END);
-		length = ftell(f);
-		fseek(f, 0, SEEK_SET);
-
-		if (length > 0x40000) {
-			//gi.Com_PrintFmt("{}: Entities override file length exceeds maximum: \"{}\"\n", __FUNCTION__, name);
-			ent_valid = false;
-		}
-		if (ent_valid) {
-			buffer = (char *)gi.TagMalloc(length + 1, '\0');
-			if (length) {
-				read_length = fread(buffer, 1, length, f);
-
-				if (length != read_length) {
-					//gi.Com_PrintFmt("{}: Entities override file read error: \"{}\"\n", __FUNCTION__, name);
-					ent_valid = false;
-				}
-			}
-		}
-		ent_file_exists = true;
-		fclose(f);
-
-		if (ent_valid) {
-			if (g_entity_override_load->integer && !strstr(level.mapname, ".dm2")) {
-
-				if (VerifyEntityString((const char *)buffer)) {
-					entities = (const char *)buffer;
-					if (g_verbose->integer)
-						gi.Com_PrintFmt("{}: Entities override file verified and loaded: \"{}\"\n", __FUNCTION__, name);
-				}
-			}
-		} else {
-			gi.Com_PrintFmt("{}: Entities override file load error for \"{}\", discarding.\n", __FUNCTION__, name);
-		}
-	}
-
-	// save ent override
-	if (g_entity_override_save->integer && !strstr(level.mapname, ".dm2")) {
-		if (!ent_file_exists) {
-			f = fopen(name, "w");
-			if (f) {
-				fwrite(entities, 1, strlen(entities), f);
-				if (g_verbose->integer)
-					gi.Com_PrintFmt("{}: Entities override file written to: \"{}\"\n", __FUNCTION__, name);
-				fclose(f);
-			}
-		} else {
-			//gi.Com_PrintFmt("{}: Entities override file not saved as file already exists: \"{}\"\n", __FUNCTION__, name);
-		}
-	}
-	level.entstring = entities;
-//#endif
-	//ParseWorldEntityString(mapname, RS(RS_Q3A));
+	std::string new_entstring = entities ? entities : "";
 
 	// clear cached indices
 	cached_soundindex::clear_all();
@@ -1770,7 +1723,7 @@ void SpawnEntities(const char *mapname, const char *entities, const char *spawnp
 
 	memset(&level, 0, sizeof(level));
 	memset(g_entities, 0, game.maxentities * sizeof(g_entities[0]));
-	
+
 	// all other flags are not important atm
 	globals.server_flags &= SERVER_FLAG_LOADING;
 
@@ -1780,6 +1733,9 @@ void SpawnEntities(const char *mapname, const char *entities, const char *spawnp
 	// (mine2 -> mine3)
 	if (!game.autosaved)
 		Q_strlcpy(game.spawnpoint, spawnpoint, sizeof(game.spawnpoint));
+
+	level.entstring = new_entstring;
+	ParseWorldEntityString(mapname, RS(RS_Q3A));
 
 	level.is_n64 = strncmp(level.mapname, "q64/", 4) == 0;
 
@@ -1798,57 +1754,7 @@ void SpawnEntities(const char *mapname, const char *entities, const char *spawnp
 	// reserve some spots for dead player bodies for coop / deathmatch
 	InitBodyQue();
 
-	gentity_t *ent = nullptr;
-	int			inhibit = 0;
-	const char *com_token;
-	//const char *entities = level.entstring.c_str();
-
-	// parse entities
-	while (1) {
-		// parse the opening brace
-		com_token = COM_Parse(&entities);
-		if (!entities)
-			break;
-		if (com_token[0] != '{')
-			gi.Com_ErrorFmt("{}: Found \"{}\" when expecting {{ in entity string.\n", __FUNCTION__, com_token);
-
-		if (!ent)
-			ent = g_entities;
-		else
-			ent = G_Spawn();
-		entities = ED_ParseEntity(entities, ent);
-
-		// nasty hacks time!
-		if (!strcmp(level.mapname, "bunk1")) {
-			if (!strcmp(ent->classname, "func_button") && !Q_strcasecmp(ent->model, "*36")) {
-				ent->wait = -1;
-			}
-		}
-
-		// remove things (except the world) from different skill levels or deathmatch
-		if (ent != g_entities) {
-			if (G_InhibitEntity(ent)) {
-				G_FreeEntity(ent);
-				inhibit++;
-				continue;
-			}
-
-			ent->spawnflags &= ~SPAWNFLAG_EDITOR_MASK;
-		}
-
-		if (!ent)
-			gi.Com_ErrorFmt("{}: Invalid or empty entity string.", __FUNCTION__);
-
-		// do this before calling the spawn function so it can be overridden.
-		ent->gravityVector = { 0.0, 0.0, -1.0 };
-
-		ED_CallSpawn(ent);
-
-		ent->s.renderfx |= RF_IR_VISIBLE;
-	}
-
-	if (inhibit && g_verbose->integer)
-		gi.Com_PrintFmt("{} entities inhibited.\n", inhibit);
+	ParseWorldEntities();
 
 	// precache start_items
 	PrecacheStartItems();
