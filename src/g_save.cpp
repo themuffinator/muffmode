@@ -68,6 +68,10 @@ Initializes the save registry and reports duplicate entries to keep hash tables 
 =============
 */
 void InitSave() {
+#ifndef NDEBUG
+	json_run_stack_tests();
+#endif
+
 	if (save_data_initialized)
 		return;
 
@@ -140,23 +144,80 @@ const save_data_list_t *save_data_list_t::fetch(const void *ptr, save_data_tag_t
 
 std::string json_error_stack;
 
+/*
+=============
+json_push_stack
+
+Pushes a new context onto the JSON error stack.
+=============
+*/
 void json_push_stack(const std::string &stack) {
 	json_error_stack += "::" + stack;
 }
 
-void json_pop_stack() {
-	size_t o = json_error_stack.find_last_of("::");
+/*
+=============
+json_pop_stack
 
-	if (o != std::string::npos)
-		json_error_stack.resize(o - 1);
+Removes the most recent context, including its preceding delimiter, from the JSON error stack.
+=============
+*/
+void json_pop_stack() {
+	const size_t delimiter = json_error_stack.rfind("::");
+
+	if (delimiter != std::string::npos)
+		json_error_stack.erase(delimiter);
 }
 
+/*
+=============
+json_print_error
+
+Prints JSON load errors with the current stack context, optionally treating them as fatal.
+=============
+*/
 void json_print_error(const char *field, const char *message, bool fatal) {
 	if (fatal || g_strict_saves->integer)
 		gi.Com_ErrorFmt("Error loading JSON\n{}.{}: {}", json_error_stack, field, message);
 
 	gi.Com_PrintFmt("Warning loading JSON\n{}.{}: {}\n", json_error_stack, field, message);
 }
+
+#ifndef NDEBUG
+/*
+=============
+json_run_stack_tests
+
+Verifies nested JSON stack push/pop calls restore the stack without leaving delimiters behind.
+=============
+*/
+static void json_run_stack_tests() {
+	const std::string original_stack = json_error_stack;
+
+	json_error_stack.clear();
+	json_push_stack("outer");
+	json_push_stack("inner");
+	assert(json_error_stack == "::outer::inner");
+
+	json_pop_stack();
+	assert(json_error_stack == "::outer");
+
+	json_pop_stack();
+	assert(json_error_stack.empty());
+
+	json_error_stack = "::root";
+	json_push_stack("child");
+	json_push_stack("grandchild");
+	json_pop_stack();
+	assert(json_error_stack == "::root::child");
+	json_pop_stack();
+	assert(json_error_stack == "::root");
+	json_pop_stack();
+	assert(json_error_stack.empty());
+
+	json_error_stack = original_stack;
+}
+#endif
 
 using save_void_t = save_data_t<void, UINT_MAX>;
 
