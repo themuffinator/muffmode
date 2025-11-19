@@ -58,7 +58,12 @@ void carrier_reattack_gren(gentity_t *self);
 
 void carrier_start_spawn(gentity_t *self);
 void carrier_spawn_check(gentity_t *self);
-void carrier_prep_spawn(gentity_t *self);
+void carrier_prep_spawn(gentity_t *self) {
+	CarrierCoopCheck(self);
+	self->monsterinfo.aiflags |= AI_MANUAL_STEERING;
+	self->timestamp = level.time;
+	self->yaw_speed = 10;
+}
 
 void CarrierMachineGunHold(gentity_t *self);
 void CarrierRocket(gentity_t *self);
@@ -311,7 +316,7 @@ static void CarrierSpawn(gentity_t *self) {
 
 	auto &reinforcement = self->monsterinfo.reinforcements.reinforcements[self->monsterinfo.chosen_reinforcements[0]];
 
-	if (FindSpawnPoint(startpoint, reinforcement.mins, reinforcement.maxs, spawnpoint, 32, false)) {
+	if (FindSpawnPoint(startpoint, reinforcement.mins, reinforcement.maxs, spawnpoint, 32, false, self->gravityVector)) {
 		ent = CreateFlyMonster(spawnpoint, self->s.angles, reinforcement.mins, reinforcement.maxs, reinforcement.classname);
 
 		if (!ent)
@@ -357,7 +362,7 @@ void carrier_prep_spawn(gentity_t *self) {
 	self->monsterinfo.aiflags |= AI_MANUAL_STEERING;
 	self->timestamp = level.time;
 	self->yaw_speed = 10;
-}
+	if (FindSpawnPoint(startpoint, reinforcement.mins, reinforcement.maxs, spawnpoint, 32, false, self->gravityVector)) {
 
 void carrier_spawn_check(gentity_t *self) {
 	CarrierCoopCheck(self);
@@ -398,7 +403,7 @@ static void carrier_ready_spawn(gentity_t *self) {
 	offset = { 105, 0, -58 };
 	AngleVectors(self->s.angles, f, r, nullptr);
 	startpoint = M_ProjectFlashSource(self, offset, f, r);
-	if (FindSpawnPoint(startpoint, reinforcement.mins, reinforcement.maxs, spawnpoint, 32, false)) {
+	if (FindSpawnPoint(startpoint, reinforcement.mins, reinforcement.maxs, spawnpoint, 32, false, self->gravityVector)) {
 		float radius = (reinforcement.maxs - reinforcement.mins).length() * 0.5f;
 
 		SpawnGrow_Spawn(spawnpoint + (reinforcement.mins + reinforcement.maxs), radius, radius * 2.f);
