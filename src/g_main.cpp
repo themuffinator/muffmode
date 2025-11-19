@@ -1469,6 +1469,8 @@ void Round_End() {
 	level.round_state = roundst_t::ROUND_ENDED;
 	level.round_state_timer = level.time + 3_sec;
 	level.horde_all_spawned = false;
+
+	ProcessBalanceQueue();
 }
 
 /*
