@@ -26,6 +26,13 @@ static const char *EndMatchVictorString() {
 
 void MultiplayerScoreboard(gentity_t *ent);
 
+/*
+=============
+MoveClientToIntermission
+
+Move a client into the intermission state and set HUD visibility.
+=============
+*/
 void MoveClientToIntermission(gentity_t *ent) {
 	// [Paril-KEX]
 	if (ent->client->ps.pmove.pm_type != PM_FREEZE)
@@ -57,7 +64,9 @@ void MoveClientToIntermission(gentity_t *ent) {
 	ent->client->grenade_time = 0_ms;
 
 	ent->client->showhelp = false;
-	ent->client->showscores = false;
+
+	if (!deathmatch->integer)
+		ent->client->showscores = false;
 
 	globals.server_flags &= ~SERVER_FLAG_SLOW_TIME;
 
