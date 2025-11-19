@@ -134,6 +134,7 @@ The basic solid body movement clip that slides along multiple planes
 */
 void G_FlyMove(gentity_t *ent, float time, contents_t mask) {
 	ent->groundentity = nullptr;
+	ent->groundentity_linkcount = 0;
 
 	touch_list_t touch;
 	PM_StepSlideMove_Generic(ent->s.origin, ent->velocity, time, ent->mins, ent->maxs, touch, false, [&](const vec3_t &start, const vec3_t &mins, const vec3_t &maxs, const vec3_t &end) {
@@ -144,8 +145,13 @@ void G_FlyMove(gentity_t *ent, float time, contents_t mask) {
 		auto &trace = touch.traces[i];
 
 		if (trace.plane.normal[2] > 0.7f) {
-			ent->groundentity = trace.ent;
-			ent->groundentity_linkcount = trace.ent->linkcount;
+			if (trace.ent && trace.ent->inuse) {
+				ent->groundentity = trace.ent;
+				ent->groundentity_linkcount = trace.ent->linkcount;
+			} else {
+				ent->groundentity = nullptr;
+				ent->groundentity_linkcount = 0;
+			}
 		}
 
 		//
