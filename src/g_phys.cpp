@@ -367,9 +367,30 @@ static bool G_Push(gentity_t *pusher, vec3_t &move, vec3_t &amove) {
 	}
 
 	// FIXME: is there a better way to handle this?
-	//  see if anything we moved has touched a trigger
-	for (p = pushed_p - 1; p >= pushed; p--)
+	//  see if anything we moved has touched a trigger, but avoid
+	//  invoking callbacks multiple times for the same entity in a
+	//  single push.
+	gentity_t *touched[MAX_ENTITIES];
+	uint32_t num_touched = 0;
+
+	for (p = pushed_p - 1; p >= pushed; p--) {
+		bool already_touched = false;
+
+		for (uint32_t i = 0; i < num_touched; i++) {
+			if (touched[i] == p->ent) {
+				already_touched = true;
+				break;
+			}
+		}
+
+		if (already_touched)
+			continue;
+
+		if (num_touched < lengthof(touched))
+			touched[num_touched++] = p->ent;
+
 		G_TouchTriggers(p->ent);
+	}
 
 	return true;
 }
