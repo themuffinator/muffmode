@@ -3222,13 +3222,20 @@ static void Cmd_SetMap_f(gentity_t *ent) {
 }
 
 extern void ClearWorldEntities();
+
+/*
+=============
+Cmd_MapRestart_f
+
+Reset the match and world state before reloading the current map.
+=============
+*/
 static void Cmd_MapRestart_f(gentity_t *ent) {
 	gi.Broadcast_Print(PRINT_HIGH, "[ADMIN]: Session reset.\n");
 
-	//TODO: reset match variables, clear world entities, reload world entities
-	//SpawnEntities(level.mapname, level.entstring.c_str(), nullptr);
-	//Match_Reset();
-	//ClearWorldEntities();
+	Match_Reset();
+	ClearWorldEntities();
+	SpawnEntities(level.mapname, level.entstring.c_str(), nullptr);
 	gi.AddCommandString(G_Fmt("gamemap {}\n", level.mapname).data());
 }
 
