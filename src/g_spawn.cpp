@@ -1776,7 +1776,8 @@ void SpawnEntities(const char *mapname, const char *entities, const char *spawnp
 	gi.FreeTags(TAG_LEVEL);
 
 	memset(&level, 0, sizeof(level));
-	memset(g_entities, 0, game.maxentities * sizeof(g_entities[0]));
+memset(g_entities, 0, game.maxentities * sizeof(g_entities[0]));
+globals.num_entities = game.maxclients + 1;
 	
 	// all other flags are not important atm
 	globals.server_flags &= SERVER_FLAG_LOADING;
