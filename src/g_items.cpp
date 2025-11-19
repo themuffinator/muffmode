@@ -1857,10 +1857,10 @@ static bool Pickup_Doppelganger(gentity_t *ent, gentity_t *other) {
 	if (!deathmatch->integer)
 		return false;
 
-	max_allowed = G_GetHoldableMax(g_dm_holdable_doppel_max->integer, ent->item->quantity_warn, 1);
+	max_allowed = G_GetHoldableMax(g_dm_holdable_doppel_max->integer, ent->item->quantity_max, 1);
 	quantity = other->client->pers.inventory[ent->item->id];
 	if (quantity >= max_allowed) {
-		gi.cprintf(other, PRINT_LOW, "You can't carry more %s\n", ent->item->pickup_name);
+		gi.cprintf(other, PRINT_LOW, "You can only carry %d %s\n", max_allowed, ent->item->pickup_name);
 		return false;
 	}
 
@@ -5078,7 +5078,8 @@ model="models/items/dopple/tris.md2"
 /* tag */ POWERUP_DOPPELGANGER,
 /* precaches */ "models/objects/dopplebase/tris.md2 models/items/spawngro3/tris.md2 medic_commander/monsterspawn1.wav models/items/hunter/tris.md2 models/items/vengnce/tris.md2",
 /* sort_id */ 0,
-/* quantity_warn */ 1
+/* quantity_warn */ 1,
+/* quantity_max */ 1
 },
 
 /* Tag Token */

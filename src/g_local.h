@@ -1303,6 +1303,7 @@ struct gitem_t {
 
 	int32_t			sort_id = 0; // used by some items to control their sorting
 	int32_t			quantity_warn = 5; // when to warn on low ammo
+	int32_t			quantity_max = 0; // maximum quantity a holdable can stack to (0 = use fallback)
 
 	// set in InitItems, don't set by hand
 	// circular list of chained weapons
