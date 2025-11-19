@@ -780,6 +780,7 @@ FIELD_AUTO(killed_monsters),
 FIELD_AUTO(body_que),
 
 FIELD_AUTO(power_cubes),
+FIELD_AUTO(steam_effect_next_id),
 
 FIELD_AUTO(disguise_violator),
 FIELD_AUTO(disguise_violation_time),

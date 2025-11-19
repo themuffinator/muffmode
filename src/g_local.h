@@ -1571,6 +1571,7 @@ struct level_locals_t {
 	int32_t		body_que;		 // dead bodies
 
 	int32_t		power_cubes; // ugly necessity for coop
+	int32_t		steam_effect_next_id;
 
 	gentity_t	*disguise_violator;
 	gtime_t		disguise_violation_time;
