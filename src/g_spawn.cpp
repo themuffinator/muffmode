@@ -1770,9 +1770,9 @@ void SpawnEntities(const char *mapname, const char *entities, const char *spawnp
 
 	memset(&level, 0, sizeof(level));
 	memset(g_entities, 0, game.maxentities * sizeof(g_entities[0]));
-	
+
 	// all other flags are not important atm
-	globals.server_flags &= SERVER_FLAG_LOADING;
+	globals.server_flags |= SERVER_FLAG_LOADING;
 
 	Q_strlcpy(level.mapname, mapname, sizeof(level.mapname));
 	// Paril: fixes a bug where autosaves will start you at
@@ -2432,4 +2432,6 @@ void SP_worldspawn(gentity_t *ent) {
 		gi.configstring(CONFIG_COOP_RESPAWN_STRING + 3, "$g_coop_respawn_waiting");
 		gi.configstring(CONFIG_COOP_RESPAWN_STRING + 4, "$g_coop_respawn_no_lives");
 	}
+
+	globals.server_flags &= ~SERVER_FLAG_LOADING;
 }
