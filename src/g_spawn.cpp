@@ -1705,6 +1705,13 @@ parsing textual entity definitions out of an ent file.
 void SpawnEntities(const char *mapname, const char *entities, const char *spawnpoint) {
 	bool		ent_file_exists = false, ent_valid = true;
 	//const char	*entities = level.entstring.c_str();
+
+	Q_strlcpy(level.mapname, mapname, sizeof(level.mapname));
+	// Paril: fixes a bug where autosaves will start you at
+	// the wrong spawnpoint if they happen to be non-empty
+	// (mine2 -> mine3)
+	if (!game.autosaved)
+		Q_strlcpy(game.spawnpoint, spawnpoint, sizeof(game.spawnpoint));
 //#if 0
 	// load up ent override
 	//const char *name = G_Fmt("baseq2/maps/{}.ent", mapname).data();
@@ -1782,18 +1789,12 @@ void SpawnEntities(const char *mapname, const char *entities, const char *spawnp
 
 	gi.FreeTags(TAG_LEVEL);
 
-	ResetLevelState();
-	memset(g_entities, 0, game.maxentities * sizeof(g_entities[0]));
+	memset(&level, 0, sizeof(level));
+memset(g_entities, 0, game.maxentities * sizeof(g_entities[0]));
+globals.num_entities = game.maxclients + 1;
 	
 	// all other flags are not important atm
-	globals.server_flags &= SERVER_FLAG_LOADING;
-
-	Q_strlcpy(level.mapname, mapname, sizeof(level.mapname));
-	// Paril: fixes a bug where autosaves will start you at
-	// the wrong spawnpoint if they happen to be non-empty
-	// (mine2 -> mine3)
-	if (!game.autosaved)
-		Q_strlcpy(game.spawnpoint, spawnpoint, sizeof(game.spawnpoint));
+	globals.server_flags |= SERVER_FLAG_LOADING;
 
 	level.is_n64 = strncmp(level.mapname, "q64/", 4) == 0;
 
@@ -2446,4 +2447,6 @@ void SP_worldspawn(gentity_t *ent) {
 		gi.configstring(CONFIG_COOP_RESPAWN_STRING + 3, "$g_coop_respawn_waiting");
 		gi.configstring(CONFIG_COOP_RESPAWN_STRING + 4, "$g_coop_respawn_no_lives");
 	}
+
+	globals.server_flags &= ~SERVER_FLAG_LOADING;
 }
