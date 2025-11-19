@@ -246,7 +246,7 @@ static void WidowSpawn(gentity_t *self) {
 
 		startpoint = G_ProjectSource2(self->s.origin, offset, f, r, u);
 
-		if (FindSpawnPoint(startpoint, stalker_mins, stalker_maxs, spawnpoint, 64)) {
+		if (FindSpawnPoint(startpoint, stalker_mins, stalker_maxs, spawnpoint, 64, true, self->gravityVector)) {
 			ent = CreateGroundMonster(spawnpoint, self->s.angles, stalker_mins, stalker_maxs, "monster_stalker", 256);
 
 			if (!ent)
@@ -299,7 +299,7 @@ static void widow_ready_spawn(gentity_t *self) {
 	for (i = 0; i < 2; i++) {
 		offset = spawnpoints[i];
 		startpoint = G_ProjectSource2(self->s.origin, offset, f, r, u);
-		if (FindSpawnPoint(startpoint, stalker_mins, stalker_maxs, spawnpoint, 64)) {
+		if (FindSpawnPoint(startpoint, stalker_mins, stalker_maxs, spawnpoint, 64, true, self->gravityVector)) {
 			float radius = (stalker_maxs - stalker_mins).length() * 0.5f;
 
 			SpawnGrow_Spawn(spawnpoint + (stalker_mins + stalker_maxs), radius, radius * 2.f);

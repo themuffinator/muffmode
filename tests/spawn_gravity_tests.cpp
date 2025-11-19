@@ -1,0 +1,198 @@
+#include "../src/g_local.h"
+#include <cassert>
+
+// Limit g_monster_spawn.cpp surface area for unit tests
+#define MONSTER_SPAWN_TESTS
+#include "../src/g_monster_spawn.cpp"
+
+// Stub globals expected by the included code
+local_game_import_t gi{};
+gentity_t *world = reinterpret_cast<gentity_t *>(0x1);
+
+static int g_trace_calls = 0;
+static vec3_t g_last_trace_start;
+static vec3_t g_last_trace_end;
+static vec3_t g_last_bottom_fast;
+static vec3_t g_last_bottom_slow;
+
+/*
+=============
+TestTrace
+
+Provides deterministic trace behavior for spawn validation tests.
+=============
+*/
+static trace_t TestTrace(const vec3_t &start, const vec3_t &, const vec3_t &, const vec3_t &end, gentity_t *, contents_t)
+{
+	trace_t tr{};
+
+	g_last_trace_start = start;
+	g_last_trace_end = end;
+	g_trace_calls++;
+
+	tr.ent = world;
+	tr.endpos = end;
+	tr.fraction = 0.5f;
+	tr.startsolid = false;
+	tr.allsolid = false;
+
+	return tr;
+}
+
+/*
+=============
+G_FixStuckObject_Generic
+
+Trivial stub to satisfy FindSpawnPoint dependency.
+=============
+*/
+stuck_result_t G_FixStuckObject_Generic(vec3_t &origin, const vec3_t &, const vec3_t &, std::function<stuck_object_trace_fn_t>)
+{
+	(void)origin;
+	return stuck_result_t::GOOD_POSITION;
+}
+
+/*
+=============
+M_CheckBottom_Fast_Generic
+
+Records the provided gravity vector for verification.
+=============
+*/
+bool M_CheckBottom_Fast_Generic(const vec3_t &, const vec3_t &, const vec3_t &gravityVector)
+{
+	g_last_bottom_fast = gravityVector;
+	return false;
+}
+
+/*
+=============
+M_CheckBottom_Slow_Generic
+
+Records the provided gravity vector for verification.
+=============
+*/
+bool M_CheckBottom_Slow_Generic(const vec3_t &, const vec3_t &, const vec3_t &, gentity_t *, contents_t, const vec3_t &gravityVector, bool)
+{
+	g_last_bottom_slow = gravityVector;
+	return true;
+}
+
+/*
+=============
+M_droptofloor_generic
+
+Drops an origin along the provided gravity vector until contact is made or a blocking volume is found.
+=============
+*/
+bool M_droptofloor_generic(vec3_t &origin, const vec3_t &mins, const vec3_t &maxs, const vec3_t &gravityVector, gentity_t *ignore, contents_t mask, bool allow_partial)
+{
+	vec3_t gravity_dir = gravityVector.normalized();
+
+	if (!gravity_dir)
+		gravity_dir = { 0.0f, 0.0f, -1.0f };
+
+	trace_t trace = gi.trace(origin, mins, maxs, origin, ignore, mask);
+
+	if (trace.startsolid)
+		origin -= gravity_dir;
+
+	vec3_t end = origin + (gravity_dir * 256.0f);
+
+	trace = gi.trace(origin, mins, maxs, end, ignore, mask);
+
+	if (trace.fraction == 1 || trace.allsolid || (!allow_partial && trace.startsolid))
+		return false;
+
+	origin = trace.endpos;
+
+	return true;
+}
+
+/*
+=============
+TestCeilingDropUsesGravity
+
+Verifies FindSpawnPoint drops along positive gravity vectors.
+=============
+*/
+static void TestCeilingDropUsesGravity()
+{
+	gi.trace = TestTrace;
+	g_trace_calls = 0;
+
+	vec3_t start{ 0.0f, 0.0f, 0.0f };
+	vec3_t mins{ -1.0f, -1.0f, -1.0f };
+	vec3_t maxs{ 1.0f, 1.0f, 1.0f };
+	vec3_t spawn{};
+
+	bool found = FindSpawnPoint(start, mins, maxs, spawn, 32.0f, true, { 0.0f, 0.0f, 1.0f });
+
+	assert(found);
+	assert(g_trace_calls >= 2);
+	assert(spawn[0] == 0.0f && spawn[1] == 0.0f && spawn[2] == 256.0f);
+	assert(g_last_trace_end[2] == 256.0f);
+}
+
+/*
+=============
+TestWallGravityProjectsSpawnVolume
+
+Ensures CheckSpawnPoint traces along the supplied gravity vector.
+=============
+*/
+static void TestWallGravityProjectsSpawnVolume()
+{
+	gi.trace = TestTrace;
+	g_trace_calls = 0;
+
+	vec3_t origin{ 5.0f, 5.0f, 5.0f };
+	vec3_t mins{ -2.0f, -2.0f, -2.0f };
+	vec3_t maxs{ 2.0f, 2.0f, 2.0f };
+	vec3_t gravity{ 1.0f, 0.0f, 0.0f };
+
+	bool clear = CheckSpawnPoint(origin, mins, maxs, gravity);
+
+	assert(clear);
+	assert(g_trace_calls >= 2);
+	vec3_t delta = g_last_trace_end - g_last_trace_start;
+	assert(delta[0] == gravity[0] && delta[1] == gravity[1] && delta[2] == gravity[2]);
+}
+
+/*
+=============
+TestGroundChecksUseGravityVector
+
+Confirms bottom checks receive the supplied gravity vector.
+=============
+*/
+static void TestGroundChecksUseGravityVector()
+{
+	gi.trace = TestTrace;
+	g_last_bottom_fast = { 0.0f, 0.0f, 0.0f };
+	g_last_bottom_slow = { 0.0f, 0.0f, 0.0f };
+
+	vec3_t origin{ 0.0f, 0.0f, 0.0f };
+	vec3_t mins{ -8.0f, -8.0f, -8.0f };
+	vec3_t maxs{ 8.0f, 8.0f, 8.0f };
+	vec3_t gravity{ 0.0f, 1.0f, 0.0f };
+
+	bool grounded = CheckGroundSpawnPoint(origin, mins, maxs, 128.0f, gravity);
+
+	assert(grounded);
+	assert(g_last_bottom_fast == gravity);
+	assert(g_last_bottom_slow == gravity);
+}
+
+/*
+=============
+main
+=============
+*/
+int main()
+{
+	TestCeilingDropUsesGravity();
+	TestWallGravityProjectsSpawnVolume();
+	TestGroundChecksUseGravityVector();
+	return 0;
+}
