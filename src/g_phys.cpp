@@ -189,6 +189,7 @@ Does not change the entities velocity at all
 static trace_t G_PushEntity(gentity_t *ent, const vec3_t &push) {
 	vec3_t start = ent->s.origin;
 	vec3_t end = start + push;
+	float saved_gravity = ent->gravity;
 
 	trace_t trace = gi.trace(start, ent->mins, ent->maxs, end, ent, G_GetClipMask(ent));
 
@@ -207,8 +208,8 @@ static trace_t G_PushEntity(gentity_t *ent, const vec3_t &push) {
 		}
 	}
 
-	// FIXME - is this needed?
-	ent->gravity = 1.0;
+	if (ent->gravity != saved_gravity)
+		ent->gravity = saved_gravity;
 
 	if (ent->inuse)
 		G_TouchTriggers(ent);
