@@ -122,25 +122,29 @@ bool CheckSpawnPoint(const vec3_t &origin, const vec3_t &mins, const vec3_t &max
 	return true;
 }
 
-//
-// CheckGroundSpawnPoint
-//
-// PMM - used for walking monsters
-//  checks:
-//		1)	is there a ground within the specified height of the origin?
-//		2)	is the ground non-water?
-//		3)	is the ground flat enough to walk on?
-//
+/*
+=============
+CheckGroundSpawnPoint
+
+PMM - used for walking monsters
+checks:
+	1)	is there a ground within the specified height of the origin?
+	2)	is the ground non-water?
+	3)	is the ground flat enough to walk on?
+=============
+*/
 
 bool CheckGroundSpawnPoint(const vec3_t &origin, const vec3_t &entMins, const vec3_t &entMaxs, float height, float gravity)
 {
 	if (!CheckSpawnPoint(origin, entMins, entMaxs))
 		return false;
 
-	if (M_CheckBottom_Fast_Generic(origin + entMins, origin + entMaxs, false))
+	vec3_t gravityVector{ 0.0f, 0.0f, gravity };
+
+	if (M_CheckBottom_Fast_Generic(origin + entMins, origin + entMaxs, gravityVector))
 		return true;
 
-	if (M_CheckBottom_Slow_Generic(origin, entMins, entMaxs, nullptr, MASK_MONSTERSOLID, false, false))
+	if (M_CheckBottom_Slow_Generic(origin, entMins, entMaxs, nullptr, MASK_MONSTERSOLID, gravityVector, false))
 		return true;
 
 	return false;

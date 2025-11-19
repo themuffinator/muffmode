@@ -3111,8 +3111,8 @@ extern byte damage_multiplier;
 //
 // m_move.cpp
 //
-bool M_CheckBottom_Fast_Generic(const vec3_t &absmins, const vec3_t &absmaxs, bool ceiling);
-bool M_CheckBottom_Slow_Generic(const vec3_t &origin, const vec3_t &absmins, const vec3_t &absmaxs, gentity_t *ignore, contents_t mask, bool ceiling, bool allow_any_step_height);
+bool M_CheckBottom_Fast_Generic(const vec3_t &absmins, const vec3_t &absmaxs, const vec3_t &gravityVector);
+bool M_CheckBottom_Slow_Generic(const vec3_t &origin, const vec3_t &absmins, const vec3_t &absmaxs, gentity_t *ignore, contents_t mask, const vec3_t &gravityVector, bool allow_any_step_height);
 bool M_CheckBottom(gentity_t *ent);
 bool G_CloseEnough(gentity_t *ent, gentity_t *goal, float dist);
 bool M_walkmove(gentity_t *ent, float yaw, float dist);
