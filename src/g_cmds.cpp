@@ -3206,13 +3206,50 @@ static void Cmd_Ruleset_f(gentity_t *ent) {
 	gi.cvar_forceset("g_ruleset", G_Fmt("{}", (int)rs).data());
 }
 
+/*
+=============
+G_MapListContains
+
+Checks if the provided map name is present in g_map_list as a discrete entry.
+=============
+*/
+static bool G_MapListContains(const char *mapname) {
+	if (!mapname || !mapname[0])
+		return false;
+
+	if (!g_map_list->string[0])
+		return true;
+
+	const char *map_list = g_map_list->string;
+	char *token;
+
+	while (true) {
+		token = COM_ParseEx(&map_list, " ");
+
+		if (!*token)
+			break;
+
+		if (!strcmp(token, mapname) || !Q_strcasecmp(token, mapname))
+			return true;
+	}
+
+	return false;
+}
+
+/*
+=============
+Cmd_SetMap_f
+
+Changes to a map within the map list.
+=============
+*/
 static void Cmd_SetMap_f(gentity_t *ent) {
 	if (gi.argc() < 2) {
 		gi.LocClient_Print(ent, PRINT_HIGH, "Usage: {} [mapname]\nChanges to a map within the map list.", gi.argv(0));
 		return;
 	}
 
-	if (g_map_list->string[0] && !strstr(g_map_list->string, gi.argv(1))) {
+	if (!G_MapListContains(gi.argv(1))) {
 		gi.Client_Print(ent, PRINT_HIGH, "Map name is not valid.\n");
 		return;
 	}
