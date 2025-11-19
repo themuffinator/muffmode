@@ -1681,6 +1681,20 @@ void ClearWorldEntities() {
 }
 
 /*
+=============
+ResetLevelState
+
+Value-initializes the global level state and reapplies defaults for
+non-trivial members.
+=============
+*/
+static void ResetLevelState() {
+	level = level_locals_t{};
+	level.monsters_registered.fill(nullptr);
+	level.health_bar_entities.fill(nullptr);
+}
+
+/*
 ==============
 SpawnEntities
 
