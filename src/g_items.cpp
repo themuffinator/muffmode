@@ -3,6 +3,7 @@
 #include "g_local.h"
 #include "bots/bot_includes.h"
 #include "monsters/m_player.h"	//doppelganger
+#include "g_items_limits.h"
 
 bool Pickup_Weapon(gentity_t *ent, gentity_t *other);
 void Use_Weapon(gentity_t *ent, gitem_t *inv);
@@ -1812,6 +1813,13 @@ static bool Pickup_Nuke(gentity_t *ent, gentity_t *other) {
 
 //======================================================================
 
+/*
+=============
+Use_Doppelganger
+
+Spawns a doppelganger at a nearby valid location and consumes the item.
+=============
+*/
 static void Use_Doppelganger(gentity_t *ent, gitem_t *item) {
 	vec3_t forward, right;
 	vec3_t createPt, spawnPt;
@@ -1835,15 +1843,26 @@ static void Use_Doppelganger(gentity_t *ent, gitem_t *item) {
 	fire_doppelganger(ent, spawnPt, forward);
 }
 
+/*
+=============
+Pickup_Doppelganger
+
+Checks for doppelganger limits, granting the pickup when allowed.
+=============
+*/
 static bool Pickup_Doppelganger(gentity_t *ent, gentity_t *other) {
-	int quantity;
+	int	quantity;
+	int	max_allowed;
 
 	if (!deathmatch->integer)
 		return false;
 
+	max_allowed = G_GetHoldableMax(g_dm_holdable_doppel_max->integer, ent->item->quantity_warn, 1);
 	quantity = other->client->pers.inventory[ent->item->id];
-	if (quantity >= 1) // FIXME - apply max to doppelgangers
+	if (quantity >= max_allowed) {
+		gi.cprintf(other, PRINT_LOW, "You can't carry more %s\n", ent->item->pickup_name);
 		return false;
+	}
 
 	other->client->pers.inventory[ent->item->id]++;
 
@@ -5053,12 +5072,14 @@ model="models/items/dopple/tris.md2"
 		/* quantity */ 90,
 		/* ammo */ IT_NULL,
 		/* chain */ IT_NULL,
-		/* flags */ IF_TIMED | IF_POWERUP_WHEEL,
-		/* vwep_model */ nullptr,
-		/* armor_info */ nullptr,
-		/* tag */ POWERUP_DOPPELGANGER,
-		/* precaches */ "models/objects/dopplebase/tris.md2 models/items/spawngro3/tris.md2 medic_commander/monsterspawn1.wav models/items/hunter/tris.md2 models/items/vengnce/tris.md2",
-	},
+/* flags */ IF_TIMED | IF_POWERUP_WHEEL,
+/* vwep_model */ nullptr,
+/* armor_info */ nullptr,
+/* tag */ POWERUP_DOPPELGANGER,
+/* precaches */ "models/objects/dopplebase/tris.md2 models/items/spawngro3/tris.md2 medic_commander/monsterspawn1.wav models/items/hunter/tris.md2 models/items/vengnce/tris.md2",
+/* sort_id */ 0,
+/* quantity_warn */ 1
+},
 
 /* Tag Token */
 	{
