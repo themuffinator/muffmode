@@ -3602,6 +3602,7 @@ struct gclient_t {
 	bool			anim_duck;
 	bool			anim_run;
 	gtime_t			anim_time;
+	int32_t			pain_anim_index;
 
 	// powerup timers
 	gtime_t pu_time_quad;

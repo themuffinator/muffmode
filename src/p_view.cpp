@@ -106,15 +106,15 @@ void P_DamageFeedback(gentity_t *player) {
 
 	// start a pain animation if still in the player model
 	if (client->anim_priority < ANIM_PAIN && player->s.modelindex == MODELINDEX_PLAYER) {
-		static int i;
+		int &pain_anim_index = client->pain_anim_index;
 
 		client->anim_priority = ANIM_PAIN;
 		if (client->ps.pmove.pm_flags & PMF_DUCKED) {
 			player->s.frame = FRAME_crpain1 - 1;
 			client->anim_end = FRAME_crpain4;
 		} else {
-			i = (i + 1) % 3;
-			switch (i) {
+			pain_anim_index = (pain_anim_index + 1) % 3;
+			switch (pain_anim_index) {
 			case 0:
 				player->s.frame = FRAME_pain101 - 1;
 				client->anim_end = FRAME_pain104;
@@ -132,7 +132,6 @@ void P_DamageFeedback(gentity_t *player) {
 
 		client->anim_time = 0_ms;
 	}
-
 	realcount = count;
 
 	// if we took health damage, do a minimum clamp
