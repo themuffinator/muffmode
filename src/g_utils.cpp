@@ -4,6 +4,7 @@
 
 #include "g_activation.h"
 #include "g_local.h"
+#include "g_utils_friendly_message.h"
 #include <cerrno>
 #include <vector>
 #include "g_utils_target_selection.h"
@@ -153,6 +154,9 @@ active players.
 =============
 */
 void BroadcastFriendlyMessage(team_t team, const char *msg) {
+	if (!FriendlyMessageHasText(msg))
+		return;
+
 	for (auto ce : active_clients()) {
 		const bool playing = ClientIsPlaying(ce->client);
 		if (!playing) {
