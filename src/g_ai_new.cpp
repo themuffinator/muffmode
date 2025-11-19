@@ -363,20 +363,59 @@ void hintpath_stop(gentity_t *self) {
 }
 
 // =============
-// monsterlost_checkhint - the monster (self) will check around for valid hintpaths.
-//		a valid hintpath is one where the two endpoints can see both the monster
-//		and the monster's enemy. if only one person is visible from the endpoints,
-//		it will not go for it.
-// =============
+static bool hint_path_chain_dirty = true;
+static int32_t cached_num_hint_paths;
+static std::vector<gentity_t *> cached_hint_path_chain;
+
+/*
+=============
+InvalidateHintPathChains
+
+Marks the cached hint path chains as dirty so they will be rebuilt on next use.
+=============
+*/
+static void InvalidateHintPathChains() {
+	hint_path_chain_dirty = true;
+}
+
+/*
+=============
+BuildCachedHintPathChain
+
+Populates the flattened hint path chain cache when the cache is dirty or the path layout changed.
+=============
+*/
+static void BuildCachedHintPathChain() {
+	if (!hint_path_chain_dirty && cached_num_hint_paths == num_hint_paths)
+		return;
+
+	cached_hint_path_chain.clear();
+	cached_num_hint_paths = num_hint_paths;
+
+	for (int i = 0; i < num_hint_paths; i++) {
+		for (gentity_t *node = hint_path_start[i]; node; node = node->hint_chain)
+			cached_hint_path_chain.push_back(node);
+	}
+
+	hint_path_chain_dirty = false;
+}
+
+/*
+=============
+monsterlost_checkhint
+
+The monster (self) will check around for valid hintpaths. A valid hintpath is one where the two endpoints can see both the monster
+and the monster's enemy. If only one person is visible from the endpoints, it will not go for it.
+=============
+*/
 bool monsterlost_checkhint(gentity_t *self) {
-	gentity_t *e, *monster_pathchain, *target_pathchain, *checkpoint = nullptr;
-	gentity_t *closest;
-	float	 closest_range = 1000000;
+	std::vector<gentity_t *> monster_pathchain;
+	std::vector<gentity_t *> target_pathchain;
+	float		closest_range = 1000000;
 	gentity_t *start, *destination;
-	int		 count5 = 0;
-	float	 r;
-	int		 i;
-	bool	 hint_path_represented[MAX_HINT_CHAINS];
+	float		r;
+	int		i;
+	bool		 hint_path_represented[MAX_HINT_CHAINS];
 
 	// if there are no hint paths on this map, exit immediately.
 	if (!hint_paths_present)
@@ -392,75 +431,17 @@ bool monsterlost_checkhint(gentity_t *self) {
 	if (!strcmp(self->classname, "monster_turret"))
 		return false;
 
-	monster_pathchain = nullptr;
+	BuildCachedHintPathChain();
 
-	// find all the hint_paths.
-	// FIXME - can we not do this every time?
-	for (i = 0; i < num_hint_paths; i++) {
-		e = hint_path_start[i];
-		while (e) {
-			if (e->monster_hint_chain)
-				e->monster_hint_chain = nullptr;
+	for (gentity_t *node : cached_hint_path_chain) {
+		r = realrange(self, node);
 
-			if (monster_pathchain) {
-				checkpoint->monster_hint_chain = e;
-				checkpoint = e;
-			} else {
-				monster_pathchain = e;
-				checkpoint = e;
-			}
-			e = e->hint_chain;
-		}
-	}
+		if (r > 512)
+			continue;
+		if (!visible(self, node))
+			continue;
 
-	// filter them by distance and visibility to the monster
-	e = monster_pathchain;
-	checkpoint = nullptr;
-	while (e) {
-		r = realrange(self, e);
-
-		if (r > 512) {
-			if (checkpoint) {
-				checkpoint->monster_hint_chain = e->monster_hint_chain;
-				e->monster_hint_chain = nullptr;
-				e = checkpoint->monster_hint_chain;
-				continue;
-			} else {
-				// use checkpoint as temp pointer
-				checkpoint = e;
-				e = e->monster_hint_chain;
-				checkpoint->monster_hint_chain = nullptr;
-				// and clear it again
-				checkpoint = nullptr;
-				// since we have yet to find a valid one (or else checkpoint would be set) move the
-				// start of monster_pathchain
-				monster_pathchain = e;
-				continue;
-			}
-		}
-		if (!visible(self, e)) {
-			if (checkpoint) {
-				checkpoint->monster_hint_chain = e->monster_hint_chain;
-				e->monster_hint_chain = nullptr;
-				e = checkpoint->monster_hint_chain;
-				continue;
-			} else {
-				// use checkpoint as temp pointer
-				checkpoint = e;
-				e = e->monster_hint_chain;
-				checkpoint->monster_hint_chain = nullptr;
-				// and clear it again
-				checkpoint = nullptr;
-				// since we have yet to find a valid one (or else checkpoint would be set) move the
-				// start of monster_pathchain
-				monster_pathchain = e;
-				continue;
-			}
-		}
-
-		count5++;
-		checkpoint = e;
-		e = e->monster_hint_chain;
+		monster_pathchain.push_back(node);
 	}
 
 	// at this point, we have a list of all of the eligible hint nodes for the monster
@@ -468,95 +449,41 @@ bool monsterlost_checkhint(gentity_t *self) {
 	// seeing whether any can see the player
 	//
 	// first, we figure out which hint chains we have represented in monster_pathchain
-	if (count5 == 0)
+	if (monster_pathchain.empty())
 		return false;
 
 	for (i = 0; i < num_hint_paths; i++)
 		hint_path_represented[i] = false;
 
-	e = monster_pathchain;
-	checkpoint = nullptr;
-	while (e) {
-		if ((e->hint_chain_id < 0) || (e->hint_chain_id > num_hint_paths))
+	for (gentity_t *node : monster_pathchain) {
+		if ((node->hint_chain_id < 0) || (node->hint_chain_id > num_hint_paths))
 			return false;
 
-		hint_path_represented[e->hint_chain_id] = true;
-		e = e->monster_hint_chain;
+		hint_path_represented[node->hint_chain_id] = true;
 	}
-
-	count5 = 0;
 
 	// now, build the target_pathchain which contains all of the hint_path nodes we need to check for
 	// validity (within range, visibility)
-	target_pathchain = nullptr;
-	checkpoint = nullptr;
 	for (i = 0; i < num_hint_paths; i++) {
 		// if this hint chain is represented in the monster_hint_chain, add all of it's nodes to the target_pathchain
 		// for validity checking
 		if (hint_path_represented[i]) {
-			e = hint_path_start[i];
-			while (e) {
-				if (target_pathchain) {
-					checkpoint->target_hint_chain = e;
-					checkpoint = e;
-				} else {
-					target_pathchain = e;
-					checkpoint = e;
-				}
-				e = e->hint_chain;
+			for (gentity_t *node = hint_path_start[i]; node; node = node->hint_chain) {
+				r = realrange(self->enemy, node);
+
+				if (r > 512)
+					continue;
+				if (!visible(self->enemy, node))
+					continue;
+
+				target_pathchain.push_back(node);
 			}
 		}
-	}
-
-	// target_pathchain is a list of all of the hint_path nodes we need to check for validity relative to the target
-	e = target_pathchain;
-	checkpoint = nullptr;
-	while (e) {
-		r = realrange(self->enemy, e);
-
-		if (r > 512) {
-			if (checkpoint) {
-				checkpoint->target_hint_chain = e->target_hint_chain;
-				e->target_hint_chain = nullptr;
-				e = checkpoint->target_hint_chain;
-				continue;
-			} else {
-				// use checkpoint as temp pointer
-				checkpoint = e;
-				e = e->target_hint_chain;
-				checkpoint->target_hint_chain = nullptr;
-				// and clear it again
-				checkpoint = nullptr;
-				target_pathchain = e;
-				continue;
-			}
-		}
-		if (!visible(self->enemy, e)) {
-			if (checkpoint) {
-				checkpoint->target_hint_chain = e->target_hint_chain;
-				e->target_hint_chain = nullptr;
-				e = checkpoint->target_hint_chain;
-				continue;
-			} else {
-				// use checkpoint as temp pointer
-				checkpoint = e;
-				e = e->target_hint_chain;
-				checkpoint->target_hint_chain = nullptr;
-				// and clear it again
-				checkpoint = nullptr;
-				target_pathchain = e;
-				continue;
-			}
-		}
-
-		count5++;
-		checkpoint = e;
-		e = e->target_hint_chain;
 	}
 
 	// at this point we should have:
-	// monster_pathchain - a list of "monster valid" hint_path nodes linked together by monster_hint_chain
-	// target_pathcain - a list of "target valid" hint_path nodes linked together by target_hint_chain.  these
+	// monster_pathchain - a list of "monster valid" hint_path nodes
+	// target_pathcain - a list of "target valid" hint_path nodes.  these
 	//                   are filtered such that only nodes which are on the same chain as "monster valid" nodes
 	//
 	// Now, we figure out which "monster valid" node we want to use
@@ -568,40 +495,27 @@ bool monsterlost_checkhint(gentity_t *self) {
 	//
 	// Once this filter is finished, we select the closest "monster valid" node, and go to it.
 
-	if (count5 == 0)
+	if (target_pathchain.empty())
 		return false;
 
 	// reuse the hint_chain_represented array, this time to see which chains are represented by the target
 	for (i = 0; i < num_hint_paths; i++)
 		hint_path_represented[i] = false;
 
-	e = target_pathchain;
-	checkpoint = nullptr;
-	while (e) {
-		if ((e->hint_chain_id < 0) || (e->hint_chain_id > num_hint_paths))
+	for (gentity_t *node : target_pathchain) {
+		if ((node->hint_chain_id < 0) || (node->hint_chain_id > num_hint_paths))
 			return false;
 
-		hint_path_represented[e->hint_chain_id] = true;
-		e = e->target_hint_chain;
+		hint_path_represented[node->hint_chain_id] = true;
 	}
 
-	// traverse the monster_pathchain - if the hint_node isn't represented in the "target valid" chain list,
-	// remove it
-	// if it is on the list, check it for range from the monster.  If the range is the closest, keep it
-	//
-	closest = nullptr;
-	e = monster_pathchain;
-	while (e) {
-		if (!(hint_path_represented[e->hint_chain_id])) {
-			checkpoint = e->monster_hint_chain;
-			e->monster_hint_chain = nullptr;
-			e = checkpoint;
+	gentity_t *closest = nullptr;
+	for (gentity_t *node : monster_pathchain) {
+		if (!hint_path_represented[node->hint_chain_id])
 			continue;
-		}
-		r = realrange(self, e);
+		r = realrange(self, node);
 		if (r < closest_range)
-			closest = e;
-		e = e->monster_hint_chain;
+			closest = node;
 	}
 
 	if (!closest)
@@ -614,14 +528,12 @@ bool monsterlost_checkhint(gentity_t *self) {
 
 	closest = nullptr;
 	closest_range = 10000000;
-	e = target_pathchain;
-	while (e) {
-		if (start->hint_chain_id == e->hint_chain_id) {
-			r = realrange(self, e);
+	for (gentity_t *node : target_pathchain) {
+		if (start->hint_chain_id == node->hint_chain_id) {
+			r = realrange(self, node);
 			if (r < closest_range)
-				closest = e;
+				closest = node;
 		}
-		e = e->target_hint_chain;
 	}
 
 	if (!closest)
@@ -634,7 +546,6 @@ bool monsterlost_checkhint(gentity_t *self) {
 
 	return true;
 }
-
 //
 // Path code
 //
@@ -726,6 +637,7 @@ void InitHintPaths() {
 	int		 i;
 
 	hint_paths_present = 0;
+	InvalidateHintPathChains();
 
 	// check all the hint_paths.
 	e = G_FindByString<&gentity_t::classname>(nullptr, "hint_path");
