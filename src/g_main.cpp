@@ -545,6 +545,13 @@ static bool Horde_AllMonstersDead() {
 // =================================================
 
 
+/*
+=============
+G_LoadMOTD
+
+Loads the server message of the day text into persistent memory.
+=============
+*/
 void G_LoadMOTD() {
 	// load up ent override
 	const char *name = G_Fmt("baseq2/{}", g_motd_filename->string[0] ? g_motd_filename->string : "motd.txt").data();
@@ -564,7 +571,7 @@ void G_LoadMOTD() {
 			valid = false;
 		}
 		if (valid) {
-			buffer = (char *)gi.TagMalloc(length + 1, '\0');
+			buffer = (char *)gi.TagMalloc(length + 1, TAG_GAME);
 			if (length) {
 				read_length = fread(buffer, 1, length, f);
 
@@ -573,9 +580,10 @@ void G_LoadMOTD() {
 					valid = false;
 				}
 			}
+			buffer[length] = '\0';
 		}
 		fclose(f);
-		
+
 		if (valid) {
 			game.motd = (const char *)buffer;
 			game.motd_mod_count++;
@@ -583,9 +591,12 @@ void G_LoadMOTD() {
 				gi.Com_PrintFmt("{}: MotD file verified and loaded: \"{}\"\n", __FUNCTION__, name);
 		} else {
 			gi.Com_PrintFmt("{}: MotD file load error for \"{}\", discarding.\n", __FUNCTION__, name);
+			if (buffer)
+				gi.TagFree(buffer);
 		}
 	}
 }
+
 
 int check_ruleset = -1;
 static void CheckRuleset() {
