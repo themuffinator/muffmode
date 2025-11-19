@@ -948,12 +948,41 @@ USE(monster_use) (gentity_t *self, gentity_t *other, gentity_t *activator) -> vo
 
 void monster_start_go(gentity_t *self);
 
+/*
+=============
+monster_clear_trigger_spawn_state
+
+Clears trigger-spawn state so the monster behaves like a standard spawn.
+=============
+*/
+static void monster_clear_trigger_spawn_state(gentity_t *self) {
+	self->svflags &= ~SVF_NOCLIENT;
+
+	if (self->spawnflags.has(SPAWNFLAG_MONSTER_TRIGGER_SPAWN))
+		self->spawnflags &= ~SPAWNFLAG_MONSTER_TRIGGER_SPAWN;
+
+	if (self->monsterinfo.aiflags & AI_DO_NOT_COUNT) {
+		self->monsterinfo.aiflags &= ~AI_DO_NOT_COUNT;
+
+		if (!self->spawnflags.has(SPAWNFLAG_MONSTER_DEAD)) {
+			if (g_debug_monster_kills->integer)
+				level.monsters_registered[level.total_monsters] = self;
+			level.total_monsters++;
+		}
+	}
+}
+
+/*
+=============
+monster_triggered_spawn
+=============
+*/
 static THINK(monster_triggered_spawn) (gentity_t *self) -> void {
 	self->s.origin[2] += 1;
 
 	self->solid = SOLID_BBOX;
 	self->movetype = MOVETYPE_STEP;
-	self->svflags &= ~SVF_NOCLIENT;
+	monster_clear_trigger_spawn_state(self);
 	self->air_finished = level.time + 12_sec;
 	gi.linkentity(self);
 
@@ -1620,17 +1649,21 @@ void monster_fire_heatbeam(gentity_t *self, const vec3_t &start, const vec3_t &d
 
 void stationarymonster_start_go(gentity_t *self);
 
+/*
+=============
+stationarymonster_triggered_spawn
+
+Activates a trigger-spawned stationary monster and converts it to standard behavior.
+=============
+*/
 static THINK(stationarymonster_triggered_spawn) (gentity_t *self) -> void {
 	self->solid = SOLID_BBOX;
 	self->movetype = MOVETYPE_NONE;
-	self->svflags &= ~SVF_NOCLIENT;
+	monster_clear_trigger_spawn_state(self);
 	self->air_finished = level.time + 12_sec;
 	gi.linkentity(self);
 
 	KillBox(self, false);
-
-	// FIXME - why doesn't this happen with real monsters?
-	self->spawnflags &= ~SPAWNFLAG_MONSTER_TRIGGER_SPAWN;
 
 	stationarymonster_start_go(self);
 
@@ -1644,6 +1677,13 @@ static THINK(stationarymonster_triggered_spawn) (gentity_t *self) -> void {
 	}
 }
 
+/*
+=============
+stationarymonster_triggered_spawn_use
+
+Entry point when a trigger fires a stationary monster.
+=============
+*/
 static USE(stationarymonster_triggered_spawn_use) (gentity_t *self, gentity_t *other, gentity_t *activator) -> void {
 	// we have a one frame delay here so we don't telefrag the guy who activated us
 	self->think = stationarymonster_triggered_spawn;
