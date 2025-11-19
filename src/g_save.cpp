@@ -208,8 +208,9 @@ struct save_type_t {
 	bool				 never_empty = false;	  // this should be persisted even if all empty
 	bool (*is_empty)(const void *data) = nullptr; // override default check
 
-	void (*read)(void *data, const Json::Value &json, const char *field) = nullptr; // for custom reading
-	bool (*write)(const void *data, bool null_for_empty, Json::Value &output) = nullptr; // for custom writing
+void (*read)(void *data, const Json::Value &json, const char *field) = nullptr; // for custom reading
+bool (*write)(const void *data, bool null_for_empty, Json::Value &output) = nullptr; // for custom writing
+const char *(*string_resolver)(const char *value) = nullptr;
 };
 
 struct save_field_t {
@@ -225,10 +226,10 @@ struct save_field_t {
 };
 
 struct save_struct_t {
-	const char *name;
-	const std::initializer_list<save_field_t> fields; // field list
+const char *name;
+const std::initializer_list<save_field_t> fields; // field list
 
-	std::string debug() const {
+std::string debug() const {
 		std::stringstream s;
 
 		for (auto &field : fields)
@@ -236,8 +237,53 @@ struct save_struct_t {
 			<< field.type.count << '\n';
 
 		return s.str();
-	}
+}
 };
+
+static std::unordered_map<std::string, const char *> classname_constants;
+
+/*
+=============
+InitClassnameConstants
+
+Builds a mapping of known classnames to their canonical pointers.
+=============
+*/
+static void InitClassnameConstants() {
+	if (!classname_constants.empty())
+		return;
+
+	for (const char *classname : G_GetSpawnClassnameConstants())
+		classname_constants.emplace(classname, classname);
+
+	for (item_id_t i = static_cast<item_id_t>(IT_NULL + 1); i < IT_TOTAL; i = static_cast<item_id_t>(i + 1)) {
+		const gitem_t *item = GetItemByIndex(i);
+
+		if (item && item->classname)
+			classname_constants.emplace(item->classname, item->classname);
+	}
+}
+
+/*
+=============
+Save_ResolveClassname
+
+Returns the canonical classname pointer for persisted entities.
+=============
+*/
+static const char *Save_ResolveClassname(const char *classname) {
+	if (!classname)
+		return nullptr;
+
+	InitClassnameConstants();
+
+	auto classname_it = classname_constants.find(classname);
+
+	if (classname_it != classname_constants.end())
+		return classname_it->second;
+
+	return nullptr;
+}
 
 // field header macro
 #define SAVE_FIELD(n, f) #f, offsetof(n, f)
@@ -557,6 +603,14 @@ struct save_type_deducer<std::bitset<N>> {
 		FIELD(f),                                                                                                      \
 		{                                                                                                              \
 			t                                                                                                          \
+		}                                                                                                              \
+	}
+
+#define FIELD_CLASSNAME(f)                                                                                             \
+	{                                                                                                                  \
+		FIELD(f),                                                                                                      \
+		{                                                                                                              \
+			ST_STRING, TAG_LEVEL, 0, nullptr, nullptr, false, nullptr, nullptr, nullptr, Save_ResolveClassname         \
 		}                                                                                                              \
 	}
 
@@ -919,7 +973,7 @@ FIELD_LEVEL_STRING(model),
 FIELD_AUTO(freetime),
 
 FIELD_LEVEL_STRING(message),
-FIELD_LEVEL_STRING(classname), // FIXME: should allow loading from constants
+FIELD_CLASSNAME(classname),
 FIELD_AUTO(spawnflags),
 
 FIELD_AUTO(timestamp),
@@ -1453,6 +1507,15 @@ void read_save_type_json(const Json::Value &json, void *data, const save_type_t 
 			if (type->count && strlen(json.asCString()) >= type->count)
 				json_print_error(field, "static-length dynamic string overrun", false);
 			else {
+				if (type->string_resolver) {
+					const char *resolved = type->string_resolver(json.asCString());
+
+					if (resolved) {
+						*((const char **)data) = resolved;
+						return;
+					}
+				}
+
 				size_t len = strlen(json.asCString());
 				size_t alloc_size = type->count ? type->count : (len + 1);
 				char *str = *((char **)data) = (char *)gi.TagMalloc(alloc_size, type->tag);

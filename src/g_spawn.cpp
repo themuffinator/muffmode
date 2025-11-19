@@ -3,6 +3,8 @@
 
 #include "g_local.h"
 
+#include <vector>
+
 struct spawn_t {
 	const char *name;
 	void (*spawn)(gentity_t *ent);
@@ -456,6 +458,27 @@ static const std::initializer_list<spawn_t> spawns = {
 };
 // clang-format on
 
+
+/*
+=============
+G_GetSpawnClassnameConstants
+
+Provides canonical spawn classname pointers.
+=============
+*/
+const std::vector<const char *> &G_GetSpawnClassnameConstants() {
+	static std::vector<const char *> classnames;
+
+	if (!classnames.empty())
+		return classnames;
+
+	classnames.reserve(spawns.size());
+
+	for (const spawn_t &spawn : spawns)
+		classnames.push_back(spawn.name);
+
+	return classnames;
+}
 
 static void SpawnEnt_MapFixes(gentity_t *ent) {
 	if (!Q_strcasecmp(level.mapname, "bunk1")) {
