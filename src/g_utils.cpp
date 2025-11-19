@@ -4,6 +4,8 @@
 
 #include "g_local.h"
 #include <cerrno>
+#include <vector>
+#include "g_utils_target_selection.h"
 
 /*
 =============
@@ -76,12 +78,9 @@ nullptr will be returned if the end of the list is reached.
 
 =============
 */
-constexpr size_t MAXCHOICES = 8;
-
 gentity_t *G_PickTarget(const char *targetname) {
-	gentity_t	*choice[MAXCHOICES];
+	std::vector<gentity_t *> choices;
 	gentity_t	*ent = nullptr;
-	int		num_choices = 0;
 
 	if (!targetname) {
 		gi.Com_PrintFmt("{}: called with nullptr targetname.\n", __FUNCTION__);
@@ -92,17 +91,16 @@ gentity_t *G_PickTarget(const char *targetname) {
 		ent = G_FindByString<&gentity_t::targetname>(ent, targetname);
 		if (!ent)
 			break;
-		choice[num_choices++] = ent;
-		if (num_choices == MAXCHOICES)
-			break;
+		choices.emplace_back(ent);
 	}
 
-	if (!num_choices) {
+	if (choices.empty()) {
 		gi.Com_PrintFmt("{}: target {} not found\n", __FUNCTION__, targetname);
+		assert(!choices.empty());
 		return nullptr;
 	}
 
-	return choice[irandom(num_choices)];
+	return G_SelectRandomTarget(choices, irandom<size_t>);
 }
 
 static THINK(Think_Delay) (gentity_t *ent) -> void {
