@@ -829,8 +829,9 @@ struct save_data_list_t {
 	save_data_tag_t			tag;
 	const void *ptr; // pointer to raw data
 	const save_data_list_t *next; // next in list
+	bool		valid;
 
-	save_data_list_t(const char *name, save_data_tag_t tag, const void *ptr);
+	save_data_list_t(const char *name, save_data_tag_t tag, const void *ptr, bool link = true, bool valid = true);
 
 	static const save_data_list_t *fetch(const void *link_ptr, save_data_tag_t tag);
 };
@@ -859,12 +860,16 @@ public:
 		save_data_t() {}
 
 	constexpr save_data_t(const save_data_list_t *list_in) :
-		value(list_in->ptr),
+		value(list_in && list_in->valid ? list_in->ptr : nullptr),
 		list(list_in) {}
 
 	inline save_data_t(value_type ptr_in) :
 		value(ptr_in),
-		list(ptr_in ? save_data_list_t::fetch(reinterpret_cast<const void *>(ptr_in), static_cast<save_data_tag_t>(Tag)) : nullptr) {}
+		list(ptr_in ? save_data_list_t::fetch(reinterpret_cast<const void *>(ptr_in), static_cast<save_data_tag_t>(Tag)) : nullptr) {
+		if (list && !list->valid)
+			value = nullptr;
+	}
+
 
 	inline save_data_t(const save_data_t<T, Tag> &ref_in) :
 		save_data_t(ref_in.value) {}
@@ -873,6 +878,9 @@ public:
 		if (value != ptr_in) {
 			value = ptr_in;
 			list = value ? save_data_list_t::fetch(reinterpret_cast<const void *>(ptr_in), static_cast<save_data_tag_t>(Tag)) : nullptr;
+
+			if (list && !list->valid)
+				value = nullptr;
 		}
 
 		return *this;
@@ -880,7 +888,7 @@ public:
 
 	constexpr const value_type pointer() const { return value; }
 	constexpr const save_data_list_t *save_list() const { return list; }
-	constexpr const char *name() const { return value ? list->name : "null"; }
+	constexpr const char *name() const { return list ? list->name : "null"; }
 	constexpr const value_type operator->() const { return value; }
 	constexpr explicit operator bool() const { return value; }
 	constexpr bool operator==(value_type ptr_in) const { return value == ptr_in; }
