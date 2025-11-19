@@ -558,22 +558,33 @@ constexpr spawnflags_t SPAWNFLAG_GRENADE_HAND = 1_spawnflag;
 constexpr spawnflags_t SPAWNFLAG_GRENADE_HELD = 2_spawnflag;
 
 /*
-=================
-fire_grenade
-=================
+=============
+Grenade_Explode
+
+Handle grenade detonation damage and visual effects.
+=============
 */
 static THINK(Grenade_Explode) (gentity_t *ent) -> void {
-	vec3_t origin;
-	mod_t  mod;
+	vec3_t	explosion_origin;
+	vec3_t	origin;
+	mod_t	mod;
+
+	explosion_origin = ent->s.origin;
+	if (ent->groundentity) {
+		explosion_origin[2] += 4.f;
+		vec3_t delta = explosion_origin - ent->s.origin;
+		ent->s.origin = explosion_origin;
+		ent->absmin += delta;
+		ent->absmax += delta;
+	}
 
 	if (ent->owner->client)
 		PlayerNoise(ent->owner, ent->s.origin, PNOISE_IMPACT);
 
-	// FIXME: if we are onground then raise our Z just a bit since we are a point?
 	if (ent->enemy) {
-		float  points;
-		vec3_t v;
-		vec3_t dir;
+		float	points;
+		vec3_t	v;
+		vec3_t	dir;
 
 		v = ent->enemy->mins + ent->enemy->maxs;
 		v = ent->enemy->s.origin + (v * 0.5f);
@@ -616,6 +627,7 @@ static THINK(Grenade_Explode) (gentity_t *ent) -> void {
 
 	G_FreeEntity(ent);
 }
+
 
 static TOUCH(Grenade_Touch) (gentity_t *ent, gentity_t *other, const trace_t &tr, bool other_touching_self) -> void {
 	if (other == ent->owner)
