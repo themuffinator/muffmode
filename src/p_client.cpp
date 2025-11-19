@@ -273,7 +273,7 @@ static void PCfg_ClientInitPConfig(gentity_t* ent) {
 			cfg_valid = false;
 		}
 		if (cfg_valid) {
-			buffer = (char*)gi.TagMalloc(length + 1, '\0');
+			buffer = (char*)gi.TagMalloc(length + 1, TAG_GAME);
 			if (length) {
 				read_length = fread(buffer, 1, length, f);
 
@@ -281,6 +281,7 @@ static void PCfg_ClientInitPConfig(gentity_t* ent) {
 					cfg_valid = false;
 				}
 			}
+			buffer[length] = '\0';
 		}
 		file_exists = true;
 		fclose(f);
