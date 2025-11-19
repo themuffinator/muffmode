@@ -10,25 +10,43 @@ gentity_t *new_bad; // pmm
 
 /*
 =============
-M_CheckBottom
+M_CheckBottom_Fast_Generic
 
-Returns false if any part of the bottom of the entity is off an edge that
-is not a staircase.
-
+Quickly checks whether the entity bounds have support along the provided gravity direction.
 =============
 */
-bool M_CheckBottom_Fast_Generic(const vec3_t &absmins, const vec3_t &absmaxs, bool ceiling) {
-	//  FIXME - this will only handle 0,0,1 and 0,0,-1 gravity vectors
-	vec3_t start;
+bool M_CheckBottom_Fast_Generic(const vec3_t &absmins, const vec3_t &absmaxs, const vec3_t &gravityVector) {
+	vec3_t gravity_dir = gravityVector.normalized();
 
-	start[2] = absmins[2] - 1;
-	if (ceiling)
-		start[2] = absmaxs[2] + 1;
+	if (!gravity_dir)
+		gravity_dir = { 0.0f, 0.0f, -1.0f };
 
-	for (int x = 0; x <= 1; x++)
-		for (int y = 0; y <= 1; y++) {
-			start[0] = x ? absmaxs[0] : absmins[0];
-			start[1] = y ? absmaxs[1] : absmins[1];
+	int gravity_axis = 0;
+	float gravity_axis_abs = fabsf(gravity_dir[0]);
+
+	for (int axis = 1; axis < 3; axis++) {
+		float abs_val = fabsf(gravity_dir[axis]);
+
+		if (abs_val > gravity_axis_abs) {
+			gravity_axis = axis;
+			gravity_axis_abs = abs_val;
+		}
+	}
+
+	int axis_a = (gravity_axis + 1) % 3;
+	int axis_b = (gravity_axis + 2) % 3;
+	float gravity_sign = gravity_dir[gravity_axis] >= 0.0f ? 1.0f : -1.0f;
+
+	vec3_t start = {};
+
+	start[axis_a] = absmins[axis_a];
+	start[axis_b] = absmins[axis_b];
+	start[gravity_axis] = (gravity_sign < 0.0f ? absmins[gravity_axis] : absmaxs[gravity_axis]) + gravity_sign;
+
+	for (int axis_a_val = 0; axis_a_val <= 1; axis_a_val++)
+		for (int axis_b_val = 0; axis_b_val <= 1; axis_b_val++) {
+			start[axis_a] = axis_a_val ? absmaxs[axis_a] : absmins[axis_a];
+			start[axis_b] = axis_b_val ? absmaxs[axis_b] : absmins[axis_b];
 			if (gi.pointcontents(start) != CONTENTS_SOLID)
 				return false;
 		}
@@ -36,36 +54,53 @@ bool M_CheckBottom_Fast_Generic(const vec3_t &absmins, const vec3_t &absmaxs, bo
 	return true; // we got out easy
 }
 
-bool M_CheckBottom_Slow_Generic(const vec3_t &origin, const vec3_t &mins, const vec3_t &maxs, gentity_t *ignore, contents_t mask, bool ceiling, bool allow_any_step_height) {
-	vec3_t start;
+/*
+=============
+M_CheckBottom_Slow_Generic
 
-	//
-	// check it for real...
-	//
+Full bottom support check that allows for step heights along the gravity axis.
+=============
+*/
+bool M_CheckBottom_Slow_Generic(const vec3_t &origin, const vec3_t &mins, const vec3_t &maxs, gentity_t *ignore, contents_t mask, const vec3_t &gravityVector, bool allow_any_step_height) {
+vec3_t gravity_dir = gravityVector.normalized();
+
+	if (!gravity_dir)
+		gravity_dir = { 0.0f, 0.0f, -1.0f };
+
+	int gravity_axis = 0;
+	float gravity_axis_abs = fabsf(gravity_dir[0]);
+
+	for (int axis = 1; axis < 3; axis++) {
+		float abs_val = fabsf(gravity_dir[axis]);
+
+		if (abs_val > gravity_axis_abs) {
+			gravity_axis = axis;
+			gravity_axis_abs = abs_val;
+		}
+	}
+
+	int axis_a = (gravity_axis + 1) % 3;
+	int axis_b = (gravity_axis + 2) % 3;
+	float gravity_sign = gravity_dir[gravity_axis] >= 0.0f ? 1.0f : -1.0f;
+
+	vec3_t start = origin;
+	vec3_t stop = origin;
+
+	start[gravity_axis] += gravity_sign < 0.0f ? mins[gravity_axis] : maxs[gravity_axis];
+	stop[gravity_axis] = start[gravity_axis] + (gravity_sign * STEPSIZE * 2);
+
 	vec3_t step_quadrant_size = (maxs - mins) * 0.5f;
-	step_quadrant_size.z = 0;
+	step_quadrant_size[gravity_axis] = 0.0f;
 
 	vec3_t half_step_quadrant = step_quadrant_size * 0.5f;
 	vec3_t half_step_quadrant_mins = -half_step_quadrant;
 
-	vec3_t stop;
+	vec3_t mins_no_gravity = mins;
+	vec3_t maxs_no_gravity = maxs;
+	mins_no_gravity[gravity_axis] = 0.0f;
+	maxs_no_gravity[gravity_axis] = 0.0f;
 
-	start[0] = stop[0] = origin.x;
-	start[1] = stop[1] = origin.y;
-
-	if (!ceiling) {
-		start[2] = origin.z + mins.z;
-		stop[2] = start[2] - STEPSIZE * 2;
-	} else {
-		start[2] = origin.z + maxs.z;
-		stop[2] = start[2] + STEPSIZE * 2;
-	}
-
-	vec3_t mins_no_z = mins;
-	vec3_t maxs_no_z = maxs;
-	mins_no_z.z = maxs_no_z.z = 0;
-
-	trace_t trace = gi.trace(start, mins_no_z, maxs_no_z, stop, ignore, mask);
+	trace_t trace = gi.trace(start, mins_no_gravity, maxs_no_gravity, stop, ignore, mask);
 
 	if (trace.fraction == 1.0f)
 		return false;
@@ -74,53 +109,54 @@ bool M_CheckBottom_Slow_Generic(const vec3_t &origin, const vec3_t &mins, const 
 	if (allow_any_step_height)
 		return true;
 
-	start[0] = stop[0] = origin.x + ((mins.x + maxs.x) * 0.5f);
-	start[1] = stop[1] = origin.y + ((mins.y + maxs.y) * 0.5f);
+	start[axis_a] = stop[axis_a] = origin[axis_a] + ((mins[axis_a] + maxs[axis_a]) * 0.5f);
+	start[axis_b] = stop[axis_b] = origin[axis_b] + ((mins[axis_b] + maxs[axis_b]) * 0.5f);
 
-	float mid = trace.endpos[2];
+	float mid = trace.endpos[gravity_axis];
 
 	// the corners must be within 16 of the midpoint
-	for (int32_t x = 0; x <= 1; x++)
-		for (int32_t y = 0; y <= 1; y++) {
+	for (int32_t axis_a_val = 0; axis_a_val <= 1; axis_a_val++)
+		for (int32_t axis_b_val = 0; axis_b_val <= 1; axis_b_val++) {
 			vec3_t quadrant_start = start;
 
-			if (x)
-				quadrant_start.x += half_step_quadrant.x;
+			if (axis_a_val)
+				quadrant_start[axis_a] += half_step_quadrant[axis_a];
 			else
-				quadrant_start.x -= half_step_quadrant.x;
+				quadrant_start[axis_a] -= half_step_quadrant[axis_a];
 
-			if (y)
-				quadrant_start.y += half_step_quadrant.y;
+			if (axis_b_val)
+				quadrant_start[axis_b] += half_step_quadrant[axis_b];
 			else
-				quadrant_start.y -= half_step_quadrant.y;
+				quadrant_start[axis_b] -= half_step_quadrant[axis_b];
 
 			vec3_t quadrant_end = quadrant_start;
-			quadrant_end.z = stop.z;
+			quadrant_end[gravity_axis] = stop[gravity_axis];
 
 			trace = gi.trace(quadrant_start, half_step_quadrant_mins, half_step_quadrant, quadrant_end, ignore, mask);
 
-			//  FIXME - this will only handle 0,0,1 and 0,0,-1 gravity vectors
-			if (ceiling) {
-				if (trace.fraction == 1.0f || trace.endpos[2] - mid > (STEPSIZE))
-					return false;
-			} else {
-				if (trace.fraction == 1.0f || mid - trace.endpos[2] > (STEPSIZE))
-					return false;
-			}
-		}
+			if (trace.fraction == 1.0f || ((trace.endpos[gravity_axis] - mid) * gravity_sign) > STEPSIZE)
+				return false;
+}
 
 	return true;
 }
 
+/*
+=============
+M_CheckBottom
+
+Returns false if any part of the bottom of the entity is off an edge that is not a staircase.
+=============
+*/
 bool M_CheckBottom(gentity_t *ent) {
 	// if all of the points under the corners are solid world, don't bother
 	// with the tougher checks
 
-	if (M_CheckBottom_Fast_Generic(ent->s.origin + ent->mins, ent->s.origin + ent->maxs, ent->gravityVector[2] > 0))
+	if (M_CheckBottom_Fast_Generic(ent->s.origin + ent->mins, ent->s.origin + ent->maxs, ent->gravityVector))
 		return true; // we got out easy
 
 	contents_t mask = (ent->svflags & SVF_MONSTER) ? MASK_MONSTERSOLID : (MASK_SOLID | CONTENTS_MONSTER | CONTENTS_PLAYER);
-	return M_CheckBottom_Slow_Generic(ent->s.origin, ent->mins, ent->maxs, ent, mask, ent->gravityVector[2] > 0, ent->spawnflags.has(SPAWNFLAG_MONSTER_SUPER_STEP));
+	return M_CheckBottom_Slow_Generic(ent->s.origin, ent->mins, ent->maxs, ent, mask, ent->gravityVector, ent->spawnflags.has(SPAWNFLAG_MONSTER_SUPER_STEP));
 }
 
 static bool IsBadAhead(gentity_t *self, gentity_t *bad, const vec3_t &move) {
