@@ -4,6 +4,7 @@
 #include "g_local.h"
 #include "bots/bot_includes.h"
 #include "monsters/m_player.h"	// match starts
+#include <algorithm>
 
 CHECK_GCLIENT_INTEGRITY;
 CHECK_ENTITY_INTEGRITY;
@@ -1064,6 +1065,8 @@ static void InitGame() {
 
 	game = {};
 
+	const int32_t clamped_maxclients = std::clamp(maxclients->integer, 1, MAX_CLIENTS);
+
 	// initialize all entities for this game
 	game.maxentities = maxentities->integer;
 	g_entities = (gentity_t *)gi.TagMalloc(game.maxentities * sizeof(g_entities[0]), TAG_GAME);
@@ -1071,13 +1074,13 @@ static void InitGame() {
 	globals.max_entities = game.maxentities;
 
 	// initialize all clients for this game
-	game.maxclients = maxclients->integer;
-	game.clients = (gclient_t *)gi.TagMalloc(game.maxclients * sizeof(game.clients[0]), TAG_GAME);
-	globals.num_entities = game.maxclients + 1;
+	game.maxclients = clamped_maxclients;
+	game.clients = (gclient_t *)gi.TagMalloc(clamped_maxclients * sizeof(game.clients[0]), TAG_GAME);
+	globals.num_entities = clamped_maxclients + 1;
 
 	// how far back we should support lag origins for
 	game.max_lag_origins = 20 * (0.1f / gi.frame_time_s);
-	game.lag_origins = (vec3_t *)gi.TagMalloc(game.maxclients * sizeof(vec3_t) * game.max_lag_origins, TAG_GAME);
+	game.lag_origins = (vec3_t *)gi.TagMalloc(clamped_maxclients * sizeof(vec3_t) * game.max_lag_origins, TAG_GAME);
 
 	level.start_time = level.time;
 
@@ -2257,8 +2260,7 @@ void FindIntermissionPoint(void) {
 			if (target) {
 				gi.Com_Print("FindIntermissionPoint target 2\n");
 				dir = (target->s.origin - level.intermission_origin).normalized();
-				AngleVectors(dir);
-				level.intermission_angle = dir;
+				level.intermission_angle = vectoangles(dir);
 			}
 		}
 	}
@@ -2297,31 +2299,30 @@ void SetIntermissionPoint(void) {
 	if (ent) {
 		level.intermission_origin = ent->s.origin;
 		level.spawn_spots[SPAWN_SPOT_INTERMISSION] = ent;
-	}
-	
-	// ugly hax!
-	if (!Q_strncasecmp(level.mapname, "campgrounds", 11)) {
-		gvec3_t v = { -320, -96, 503 };
-		if (ent->s.origin == v)
-			level.intermission_angle[PITCH] = -30;
-	} else if (!Q_strncasecmp(level.mapname, "rdm10", 5)) {
-		gvec3_t v = { -1256, -1672, -136 };
-		if (ent->s.origin == v)
-			level.intermission_angle = { 15, 135, 0 };
-	} else {
-		// if it has a target, look towards it
-		if (ent && ent->target) {
-			gentity_t *target = G_PickTarget(ent->target);
 
-			if (target) {
-				//gi.Com_Print("HAS TARGET\n");
-				vec3_t	dir = (target->s.origin - level.intermission_origin).normalized();
-				AngleVectors(dir);
-				level.intermission_angle = dir;
+		// ugly hax!
+		if (!Q_strncasecmp(level.mapname, "campgrounds", 11)) {
+			gvec3_t v = { -320, -96, 503 };
+			if (ent->s.origin == v)
+				level.intermission_angle[PITCH] = -30;
+		} else if (!Q_strncasecmp(level.mapname, "rdm10", 5)) {
+			gvec3_t v = { -1256, -1672, -136 };
+			if (ent->s.origin == v)
+				level.intermission_angle = { 15, 135, 0 };
+		} else {
+			// if it has a target, look towards it
+			if (ent->target) {
+				gentity_t *target = G_PickTarget(ent->target);
+
+				if (target) {
+					//gi.Com_Print("HAS TARGET\n");
+					vec3_t	dir = (target->s.origin - level.intermission_origin).normalized();
+					level.intermission_angle = vectoangles(dir);
+				}
 			}
+			if (!level.intermission_angle)
+				level.intermission_angle = ent->s.angles;
 		}
-		if (ent && !level.intermission_angle)
-			level.intermission_angle = ent->s.angles;
 	}
 	
 	//gi.Com_PrintFmt("{}: origin={} angles={}\n", __FUNCTION__, level.intermission_origin, level.intermission_angle);
