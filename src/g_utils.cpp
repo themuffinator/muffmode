@@ -250,23 +250,24 @@ void G_UseTargets(gentity_t* ent, gentity_t* activator) {
 	// kill killtargets
 	//
 	if (ent->killtarget) {
-		t = nullptr;
-		while ((t = G_FindByString<&gentity_t::targetname>(t, ent->killtarget))) {
-			if (t->teammaster) {
+		for (gentity_t* cursor = G_FindByString<&gentity_t::targetname>(nullptr, ent->killtarget); cursor;) {
+			gentity_t* next = G_FindByString<&gentity_t::targetname>(cursor, ent->killtarget);
+
+			if (cursor->teammaster) {
 				// if this entity is part of a chain, cleanly remove it
-				if (t->flags & FL_TEAMSLAVE) {
-					for (gentity_t* master = t->teammaster; master; master = master->teamchain) {
-						if (master->teamchain == t) {
-							master->teamchain = t->teamchain;
+				if (cursor->flags & FL_TEAMSLAVE) {
+					for (gentity_t* master = cursor->teammaster; master; master = master->teamchain) {
+						if (master->teamchain == cursor) {
+							master->teamchain = cursor->teamchain;
 							break;
 						}
 					}
 				}
 				// [Paril-KEX] remove teammaster too
-				else if (t->flags & FL_TEAMMASTER) {
-					t->teammaster->flags &= ~FL_TEAMMASTER;
+				else if (cursor->flags & FL_TEAMMASTER) {
+					cursor->teammaster->flags &= ~FL_TEAMMASTER;
 
-					gentity_t* new_master = t->teammaster->teamchain;
+					gentity_t* new_master = cursor->teammaster->teamchain;
 
 					if (new_master) {
 						new_master->flags |= FL_TEAMMASTER;
@@ -279,20 +280,21 @@ void G_UseTargets(gentity_t* ent, gentity_t* activator) {
 			}
 
 			// [Paril-KEX] if we killtarget a monster, clean up properly
-			if (t->svflags & SVF_MONSTER) {
-				if (!t->deadflag && !(t->monsterinfo.aiflags & AI_DO_NOT_COUNT) && !(t->spawnflags & SPAWNFLAG_MONSTER_DEAD))
-					G_MonsterKilled(t);
+			if (cursor->svflags & SVF_MONSTER) {
+				if (!cursor->deadflag && !(cursor->monsterinfo.aiflags & AI_DO_NOT_COUNT) && !(cursor->spawnflags & SPAWNFLAG_MONSTER_DEAD))
+					G_MonsterKilled(cursor);
 			}
 
-			G_FreeEntity(t);
+			G_FreeEntity(cursor);
 
 			if (!ent->inuse) {
 				gi.Com_PrintFmt("{}: Entity was removed while using killtargets.\n", __FUNCTION__);
 				return;
 			}
+
+			cursor = next;
 		}
 	}
-
 	//
 	// fire targets
 	//
