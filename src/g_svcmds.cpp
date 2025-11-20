@@ -2,6 +2,22 @@
 // Licensed under the GNU General Public License 2.0.
 
 #include "g_local.h"
+#include <cstdint>
+
+/*
+=============
+PackBytesToUint32
+
+Assembles four bytes into a uint32_t using little-endian order to maintain
+consistent packet filter behavior across platforms.
+=============
+*/
+static uint32_t PackBytesToUint32(const byte bytes[4]) {
+	return (static_cast<uint32_t>(bytes[0])) |
+		(static_cast<uint32_t>(bytes[1]) << 8) |
+		(static_cast<uint32_t>(bytes[2]) << 16) |
+		(static_cast<uint32_t>(bytes[3]) << 24);
+}
 
 static void Svcmd_Test_f() {
 	gi.LocClient_Print(nullptr, PRINT_HIGH, "Svcmd_Test_f()\n");
@@ -44,8 +60,8 @@ only allows players from your local network.
 */
 
 struct ipfilter_t {
-	unsigned mask;
-	unsigned compare;
+	uint32_t mask;
+	uint32_t compare;
 };
 
 constexpr size_t MAX_IPFILTERS = 1024;
@@ -60,7 +76,7 @@ StringToFilter
 */
 static bool StringToFilter(const char *s, ipfilter_t *f) {
 	char num[128];
-	int	 i, j;
+	int      i, j;
 	byte b[4];
 	byte m[4];
 
@@ -89,8 +105,8 @@ static bool StringToFilter(const char *s, ipfilter_t *f) {
 		s++;
 	}
 
-	f->mask = *(unsigned *)m;
-	f->compare = *(unsigned *)b;
+	f->mask = PackBytesToUint32(m);
+	f->compare = PackBytesToUint32(b);
 
 	return true;
 }
@@ -101,9 +117,9 @@ G_FilterPacket
 =================
 */
 bool G_FilterPacket(const char *from) {
-	int		 i;
-	unsigned in;
-	byte	 m[4];
+	int              i;
+	uint32_t in;
+	byte     m[4];
 	const char *p;
 
 	i = 0;
@@ -120,7 +136,7 @@ bool G_FilterPacket(const char *from) {
 		p++;
 	}
 
-	in = *(unsigned *)m;
+	in = PackBytesToUint32(m);
 
 	for (i = 0; i < numipfilters; i++)
 		if ((in & ipfilters[i].mask) == ipfilters[i].compare)
