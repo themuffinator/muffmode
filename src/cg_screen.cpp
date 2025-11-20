@@ -112,14 +112,29 @@ void CG_ClearNotify(int32_t isplit) {
 
 // if the top one is expired, cycle the ones ahead backwards (since
 // the times are always increasing)
+/*
+=============
+CG_Notify_CheckExpire
+
+Expire stale notify entries with bounded swapping to prevent corrupted times
+from triggering excessive iterations.
+=============
+*/
 static void CG_Notify_CheckExpire(hud_data_t &data) {
-	while (data.notify[0].is_active && data.notify[0].time < cgi.CL_ClientTime()) {
+	size_t iterations = 0;
+
+	while (data.notify[0].is_active && data.notify[0].time < cgi.CL_ClientTime() && iterations < MAX_NOTIFY) {
 		data.notify[0].is_active = false;
 
 		for (size_t i = 1; i < MAX_NOTIFY; i++)
 			if (data.notify[i].is_active)
 				std::swap(data.notify[i], data.notify[i - 1]);
+
+		iterations++;
 	}
+
+	if (iterations >= MAX_NOTIFY && data.notify[0].is_active && data.notify[0].time < cgi.CL_ClientTime())
+		data.notify[0].is_active = false;
 }
 
 // add notify to list
