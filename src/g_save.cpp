@@ -93,10 +93,12 @@ void InitSave() {
 			const save_data_list_t *existing = existing_name->second;
 
 			if (!deathmatch->integer) {
+				const void *existing_ptr = reinterpret_cast<const void *>(existing);
+
 				if (g_strict_saves->integer)
-					gi.Com_ErrorFmt("duplicate save type name {} (tag {}) already linked to pointer {}, cannot add pointer {}", link->name, (int32_t)link->tag, existing, link_ptr);
+					gi.Com_ErrorFmt("duplicate save type name {} (tag {}) already linked to pointer {}, cannot add pointer {}", link->name, (int32_t)link->tag, existing_ptr, link_ptr);
 				else
-					gi.Com_PrintFmt("duplicate save type name {} (tag {}) already linked to pointer {}, cannot add pointer {}", link->name, (int32_t)link->tag, existing, link_ptr);
+					gi.Com_PrintFmt("duplicate save type name {} (tag {}) already linked to pointer {}, cannot add pointer {}", link->name, (int32_t)link->tag, existing_ptr, link_ptr);
 			}
 
 			continue;
