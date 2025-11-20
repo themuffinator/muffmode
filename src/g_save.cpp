@@ -139,13 +139,19 @@ const save_data_list_t *save_data_list_t::fetch(const void *ptr, save_data_tag_t
 	if (link != list_from_ptr_hash.end() && link->second->tag == tag)
 		return link->second;
 
-	// [0] is just to silence warning
-	assert(false || "invalid save pointer; break here to find which pointer it is"[0]);
+	const char *tag_name = nullptr;
+
+	for (const auto &entry : list_hash) {
+		if (entry.second && entry.second->tag == tag) {
+			tag_name = entry.second->name;
+			break;
+		}
+	}
 
 	if (g_strict_saves->integer)
-		gi.Com_ErrorFmt("value pointer {} was not linked to save tag {}\n", ptr, (int32_t)tag);
+		gi.Com_ErrorFmt("value pointer {} was not linked to save tag {} ({})\n", ptr, (int32_t)tag, tag_name ? tag_name : "<unknown>");
 	else
-		gi.Com_PrintFmt("value pointer {} was not linked to save tag {}\n", ptr, (int32_t)tag);
+		gi.Com_PrintFmt("value pointer {} was not linked to save tag {} ({})\n", ptr, (int32_t)tag, tag_name ? tag_name : "<unknown>");
 
 	static save_data_list_t invalid_save_data("<invalid save data>", SAVE_DATA_MMOVE, nullptr, false, false);
 
