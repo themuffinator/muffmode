@@ -35,5 +35,8 @@ int main() {
 	}
 
 	assert(saw_ninth_entry);
+
+	std::vector<DummyTarget *> empty_choices;
+	assert(G_SelectRandomTarget(empty_choices, cycling_random) == nullptr);
 	return 0;
 }
