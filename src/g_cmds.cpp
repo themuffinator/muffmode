@@ -3022,11 +3022,9 @@ void G_RevertVote(gclient_t *client) {
 	if (client->pers.voted == 1) {
 		level.vote_yes--;
 		client->pers.voted = 0;
-		//trap_SetConfigstring(CS_VOTE_YES, va("%i", level.vote_yes));
 	} else if (client->pers.voted == -1) {
 		level.vote_no--;
 		client->pers.voted = 0;
-		//trap_SetConfigstring(CS_VOTE_NO, va("%i", level.vote_no));
 	}
 }
 

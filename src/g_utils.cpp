@@ -19,7 +19,7 @@ Searches beginning at the entity after from, or the beginning if nullptr
 nullptr will be returned if the end of the list is reached.
 =============
 */
-gentity_t *G_Find(gentity_t *from, std::function<bool(gentity_t *e)> matcher) {
+gentity_t* G_Find(gentity_t* from, std::function<bool(gentity_t* e)> matcher) {
 	if (!from)
 		from = g_entities;
 	else
@@ -44,7 +44,7 @@ Returns entities that have origins within a spherical area
 findradius (origin, radius)
 =================
 */
-gentity_t *findradius(gentity_t *from, const vec3_t &org, float rad) {
+gentity_t* findradius(gentity_t* from, const vec3_t& org, float rad) {
 	vec3_t eorg;
 	int	   j;
 
@@ -80,9 +80,9 @@ nullptr will be returned if the end of the list is reached.
 
 =============
 */
-gentity_t *G_PickTarget(const char *targetname) {
-	std::vector<gentity_t *> choices;
-	gentity_t	*ent = nullptr;
+gentity_t* G_PickTarget(const char* targetname) {
+	std::vector<gentity_t*> choices;
+	gentity_t* ent = nullptr;
 
 	if (!targetname) {
 		gi.Com_PrintFmt("{}: called with nullptr targetname.\n", __FUNCTION__);
@@ -103,13 +103,13 @@ gentity_t *G_PickTarget(const char *targetname) {
 	}
 
 	return G_SelectRandomTarget(
-	choices,
-	[](size_t max_index) {
-	return static_cast<size_t>(irandom(static_cast<int32_t>(max_index)));
-	});
+		choices,
+		[](size_t max_index) {
+			return static_cast<size_t>(irandom(static_cast<int32_t>(max_index)));
+		});
 }
 
-static THINK(Think_Delay) (gentity_t *ent) -> void {
+static THINK(Think_Delay) (gentity_t* ent) -> void {
 	G_UseTargets(ent, ent->activator);
 	G_FreeEntity(ent);
 }
@@ -121,7 +121,7 @@ G_PrintActivationMessage
 Prints activation messaging and plays optional sounds when an entity is used.
 =============
 */
-void G_PrintActivationMessage(gentity_t *ent, gentity_t *activator, bool coop_global) {
+void G_PrintActivationMessage(gentity_t* ent, gentity_t* activator, bool coop_global) {
 	if (!ent || !ent->message)
 		return;
 
@@ -157,7 +157,7 @@ Broadcast a friendly message to active teammates or, in non-team modes, all
 active players.
 =============
 */
-void BroadcastFriendlyMessage(team_t team, const char *msg) {
+void BroadcastFriendlyMessage(team_t team, const char* msg) {
 	if (!FriendlyMessageHasText(msg))
 		return;
 
@@ -166,10 +166,11 @@ void BroadcastFriendlyMessage(team_t team, const char *msg) {
 		if (!playing) {
 			if (!Teams())
 				continue;
-			gentity_t *follow = ce->client->follow_target;
+			gentity_t* follow = ce->client->follow_target;
 			if (!follow || !follow->client || follow->client->sess.team != team)
 				continue;
-		} else if (Teams() && ce->client->sess.team != team) {
+		}
+		else if (Teams() && ce->client->sess.team != team) {
 			continue;
 		}
 		gi.LocClient_Print(ce, PRINT_HIGH, G_Fmt("{}{}", playing && ce->client->sess.team != TEAM_SPECTATOR ? "[TEAM]: " : "", msg).data());
@@ -183,7 +184,7 @@ BroadcastTeamMessage
 Broadcast a message to all clients actively playing for the specified team.
 =============
 */
-void BroadcastTeamMessage(team_t team, print_type_t level, const char *msg) {
+void BroadcastTeamMessage(team_t team, print_type_t level, const char* msg) {
 	for (auto ce : active_clients()) {
 		if (!ClientIsPlaying(ce->client))
 			continue;
@@ -195,7 +196,7 @@ void BroadcastTeamMessage(team_t team, print_type_t level, const char *msg) {
 	}
 }
 
-void G_MonsterKilled(gentity_t *self);
+void G_MonsterKilled(gentity_t* self);
 
 /*
 ==============================
@@ -213,8 +214,8 @@ match (string)self.target and call their .use function
 
 ==============================
 */
-void G_UseTargets(gentity_t *ent, gentity_t *activator) {
-	gentity_t *t;
+void G_UseTargets(gentity_t* ent, gentity_t* activator) {
+	gentity_t* t;
 
 	if (!ent)
 		return;
@@ -254,7 +255,7 @@ void G_UseTargets(gentity_t *ent, gentity_t *activator) {
 			if (t->teammaster) {
 				// if this entity is part of a chain, cleanly remove it
 				if (t->flags & FL_TEAMSLAVE) {
-					for (gentity_t *master = t->teammaster; master; master = master->teamchain) {
+					for (gentity_t* master = t->teammaster; master; master = master->teamchain) {
 						if (master->teamchain == t) {
 							master->teamchain = t->teamchain;
 							break;
@@ -265,13 +266,13 @@ void G_UseTargets(gentity_t *ent, gentity_t *activator) {
 				else if (t->flags & FL_TEAMMASTER) {
 					t->teammaster->flags &= ~FL_TEAMMASTER;
 
-					gentity_t *new_master = t->teammaster->teamchain;
+					gentity_t* new_master = t->teammaster->teamchain;
 
 					if (new_master) {
 						new_master->flags |= FL_TEAMMASTER;
 						new_master->flags &= ~FL_TEAMSLAVE;
 
-						for (gentity_t *m = new_master; m; m = m->teamchain)
+						for (gentity_t* m = new_master; m; m = m->teamchain)
 							m->teammaster = new_master;
 					}
 				}
@@ -306,7 +307,8 @@ void G_UseTargets(gentity_t *ent, gentity_t *activator) {
 
 			if (t == ent) {
 				gi.Com_PrintFmt("{}: WARNING: Entity used itself.\n", __FUNCTION__);
-			} else {
+			}
+			else {
 				if (t->use)
 					t->use(t, ent, activator);
 			}
@@ -323,33 +325,35 @@ void G_UseTargets(gentity_t *ent, gentity_t *activator) {
 G_SetMovedir
 ===============
 */
-void G_SetMovedir(vec3_t &angles, vec3_t &movedir) {
-	static vec3_t VEC_UP		= { 0, -1, 0 };
-	static vec3_t MOVEDIR_UP	= { 0, 0, 1 };
-	static vec3_t VEC_DOWN		= { 0, -2, 0 };
-	static vec3_t MOVEDIR_DOWN	= { 0, 0, -1 };
+void G_SetMovedir(vec3_t& angles, vec3_t& movedir) {
+	static vec3_t VEC_UP = { 0, -1, 0 };
+	static vec3_t MOVEDIR_UP = { 0, 0, 1 };
+	static vec3_t VEC_DOWN = { 0, -2, 0 };
+	static vec3_t MOVEDIR_DOWN = { 0, 0, -1 };
 
 	if (angles == VEC_UP) {
 		movedir = MOVEDIR_UP;
-	} else if (angles == VEC_DOWN) {
+	}
+	else if (angles == VEC_DOWN) {
 		movedir = MOVEDIR_DOWN;
-	} else {
+	}
+	else {
 		AngleVectors(angles, movedir, nullptr, nullptr);
 	}
 
 	angles = {};
 }
 
-char *G_CopyString(const char *in, int32_t tag) {
+char* G_CopyString(const char* in, int32_t tag) {
 	if (!in)
 		return nullptr;
 	const size_t amt = strlen(in) + 1;
-	char *const out = static_cast<char *>(gi.TagMalloc(amt, tag));
+	char* const out = static_cast<char*>(gi.TagMalloc(amt, tag));
 	Q_strlcpy(out, in, amt);
 	return out;
 }
 
-void G_InitGentity(gentity_t *e) {
+void G_InitGentity(gentity_t* e) {
 	// FIXME -
 	//   this fixes a bug somewhere that is setting "nextthink" for an entity that has
 	//   already been released. nextthink is being set to FRAME_TIME_S after level.time,
@@ -378,8 +382,8 @@ instead of being removed and recreated, which can cause interpolated
 angles and bad trails.
 =================
 */
-gentity_t *G_Spawn() {
-	gentity_t *e = &g_entities[game.maxclients + 1];
+gentity_t* G_Spawn() {
+	gentity_t* e = &g_entities[game.maxclients + 1];
 	size_t i;
 
 	for (i = game.maxclients + 1; i < globals.num_entities; i++, e++) {
@@ -407,7 +411,7 @@ G_FreeEntity
 Marks the entity as free
 =================
 */
-THINK(G_FreeEntity) (gentity_t *ed) -> void {
+THINK(G_FreeEntity) (gentity_t* ed) -> void {
 	// already freed
 	if (!ed->inuse)
 		return;
@@ -434,7 +438,7 @@ THINK(G_FreeEntity) (gentity_t *ed) -> void {
 	ed->sv.init = false;
 }
 
-BoxEntitiesResult_t G_TouchTriggers_BoxFilter(gentity_t *hit, void *) {
+BoxEntitiesResult_t G_TouchTriggers_BoxFilter(gentity_t* hit, void*) {
 	if (!hit->touch)
 		return BoxEntitiesResult_t::Skip;
 
@@ -447,10 +451,10 @@ G_TouchTriggers
 
 ============
 */
-void G_TouchTriggers(gentity_t *ent) {
+void G_TouchTriggers(gentity_t* ent) {
 	int				num;
-	static gentity_t	*touch[MAX_ENTITIES];
-	gentity_t			*hit;
+	static gentity_t* touch[MAX_ENTITIES];
+	gentity_t* hit;
 
 	if (ent->client && ent->client->eliminated);
 	else
@@ -478,9 +482,9 @@ void G_TouchTriggers(gentity_t *ent) {
 
 // [Paril-KEX] scan for projectiles between our movement positions
 // to see if we need to collide against them
-void G_TouchProjectiles(gentity_t *ent, vec3_t previous_origin) {
+void G_TouchProjectiles(gentity_t* ent, vec3_t previous_origin) {
 	struct skipped_projectile {
-		gentity_t *projectile;
+		gentity_t* projectile;
 		int32_t		spawn_count;
 	};
 	// a bit ugly, but we'll store projectiles we are ignoring here.
@@ -506,7 +510,7 @@ void G_TouchProjectiles(gentity_t *ent, vec3_t previous_origin) {
 		G_Impact(ent, tr);
 	}
 
-	for (auto &skip : skipped)
+	for (auto& skip : skipped)
 		if (skip.projectile->inuse && skip.projectile->spawn_count == skip.spawn_count)
 			skip.projectile->svflags |= SVF_PROJECTILE;
 
@@ -530,14 +534,14 @@ of ent.
 =================
 */
 
-BoxEntitiesResult_t KillBox_BoxFilter(gentity_t *hit, void *) {
+BoxEntitiesResult_t KillBox_BoxFilter(gentity_t* hit, void*) {
 	if (!hit->solid || !hit->takedamage || hit->solid == SOLID_TRIGGER)
 		return BoxEntitiesResult_t::Skip;
 
 	return BoxEntitiesResult_t::Keep;
 }
 
-bool KillBox(gentity_t *ent, bool from_spawning, mod_id_t mod, bool bsp_clipping) {
+bool KillBox(gentity_t* ent, bool from_spawning, mod_id_t mod, bool bsp_clipping) {
 	// don't telefrag as spectator or noclip player...
 	if (ent->movetype == MOVETYPE_NOCLIP || ent->movetype == MOVETYPE_FREECAM)
 		return true;
@@ -549,8 +553,8 @@ bool KillBox(gentity_t *ent, bool from_spawning, mod_id_t mod, bool bsp_clipping
 		mask &= ~CONTENTS_PLAYER;
 
 	int		 i, num;
-	static gentity_t *touch[MAX_ENTITIES];
-	gentity_t *hit;
+	static gentity_t* touch[MAX_ENTITIES];
+	gentity_t* hit;
 
 	num = gi.BoxEntities(ent->absmin, ent->absmax, touch, MAX_ENTITIES, AREA_SOLID, KillBox_BoxFilter, nullptr);
 
@@ -588,7 +592,7 @@ bool KillBox(gentity_t *ent, bool from_spawning, mod_id_t mod, bool bsp_clipping
 
 /*--------------------------------------------------------------------------*/
 
-const char *Teams_TeamName(team_t team) {
+const char* Teams_TeamName(team_t team) {
 	switch (team) {
 	case TEAM_RED:
 		return "RED";
@@ -602,7 +606,7 @@ const char *Teams_TeamName(team_t team) {
 	return "NONE";
 }
 
-const char *Teams_OtherTeamName(team_t team) {
+const char* Teams_OtherTeamName(team_t team) {
 	switch (team) {
 	case TEAM_RED:
 		return "BLUE";
@@ -622,15 +626,15 @@ team_t Teams_OtherTeam(team_t team) {
 	return TEAM_SPECTATOR; // invalid value
 }
 
-constexpr const char *TEAM_RED_SKIN = "ctf_r";
-constexpr const char *TEAM_BLUE_SKIN = "ctf_b";
+constexpr const char* TEAM_RED_SKIN = "ctf_r";
+constexpr const char* TEAM_BLUE_SKIN = "ctf_b";
 
 /*
 =================
 G_AssignPlayerSkin
 =================
 */
-void G_AssignPlayerSkin(gentity_t *ent, const char *s) {
+void G_AssignPlayerSkin(gentity_t* ent, const char* s) {
 	int	  playernum = ent - g_entities - 1;
 	std::string_view t(s);
 
@@ -661,7 +665,7 @@ void G_AssignPlayerSkin(gentity_t *ent, const char *s) {
 G_AdjustPlayerScore
 ===================
 */
-void G_AdjustPlayerScore(gclient_t *cl, int32_t offset, bool adjust_team, int32_t team_offset) {
+void G_AdjustPlayerScore(gclient_t* cl, int32_t offset, bool adjust_team, int32_t team_offset) {
 	if (!cl) return;
 
 	if (cl->sess.is_banned)
@@ -687,7 +691,7 @@ void G_AdjustPlayerScore(gclient_t *cl, int32_t offset, bool adjust_team, int32_
 Horde_AdjustPlayerScore
 ===================
 */
-void Horde_AdjustPlayerScore(gclient_t *cl, int32_t offset) {
+void Horde_AdjustPlayerScore(gclient_t* cl, int32_t offset) {
 	if (notGT(GT_HORDE)) return;
 	if (!cl || !cl->pers.connected) return;
 
@@ -702,7 +706,7 @@ void Horde_AdjustPlayerScore(gclient_t *cl, int32_t offset) {
 G_SetPlayerScore
 ===================
 */
-void G_SetPlayerScore(gclient_t *cl, int32_t value) {
+void G_SetPlayerScore(gclient_t* cl, int32_t value) {
 	if (!cl) return;
 
 	if (IsScoringDisabled())
@@ -769,36 +773,46 @@ G_PlaceString
 Adapted from Quake III
 ===================
 */
-const char *G_PlaceString(int rank) {
+const char* G_PlaceString(int rank) {
 	static char	str[64];
-	const char *s, *t;
+	const char* s, * t;
 
 	if (rank & RANK_TIED_FLAG) {
 		rank &= ~RANK_TIED_FLAG;
 		t = "Tied for ";
-	} else {
+	}
+	else {
 		t = "";
 	}
 
 	if (rank == 1) {
 		s = "1st";
-	} else if (rank == 2) {
+	}
+	else if (rank == 2) {
 		s = "2nd";
-	} else if (rank == 3) {
+	}
+	else if (rank == 3) {
 		s = "3rd";
-	} else if (rank == 11) {
+	}
+	else if (rank == 11) {
 		s = "11th";
-	} else if (rank == 12) {
+	}
+	else if (rank == 12) {
 		s = "12th";
-	} else if (rank == 13) {
+	}
+	else if (rank == 13) {
 		s = "13th";
-	} else if (rank % 10 == 1) {
+	}
+	else if (rank % 10 == 1) {
 		s = G_Fmt("{}st", rank).data();
-	} else if (rank % 10 == 2) {
+	}
+	else if (rank % 10 == 2) {
 		s = G_Fmt("{}nd", rank).data();
-	} else if (rank % 10 == 3) {
+	}
+	else if (rank % 10 == 3) {
 		s = G_Fmt("{}rd", rank).data();
-	} else {
+	}
+	else {
 		s = G_Fmt("{}th", rank).data();
 	}
 	Q_strlcpy(str, G_Fmt("{}{}", t, s).data(), sizeof(str));
@@ -816,7 +830,7 @@ bool ItemSpawnsEnabled() {
 }
 
 
-static void loc_buildboxpoints(vec3_t(&p)[8], const vec3_t &org, const vec3_t &mins, const vec3_t &maxs) {
+static void loc_buildboxpoints(vec3_t(&p)[8], const vec3_t& org, const vec3_t& mins, const vec3_t& maxs) {
 	p[0] = org + mins;
 	p[1] = p[0];
 	p[1][0] -= mins[0];
@@ -835,7 +849,7 @@ static void loc_buildboxpoints(vec3_t(&p)[8], const vec3_t &org, const vec3_t &m
 	p[7][1] -= maxs[1];
 }
 
-bool loc_CanSee(gentity_t *targ, gentity_t *inflictor) {
+bool loc_CanSee(gentity_t* targ, gentity_t* inflictor) {
 	trace_t trace;
 	vec3_t	targpoints[8];
 	int		i;
@@ -851,7 +865,7 @@ bool loc_CanSee(gentity_t *targ, gentity_t *inflictor) {
 	viewpoint[2] += inflictor->viewheight;
 
 	for (i = 0; i < 8; i++) {
-		trace = gi.traceline(viewpoint, targpoints[i], inflictor, CONTENTS_MIST|MASK_WATER|MASK_SOLID);
+		trace = gi.traceline(viewpoint, targpoints[i], inflictor, CONTENTS_MIST | MASK_WATER | MASK_SOLID);
 		if (trace.fraction == 1.0f)
 			return true;
 	}
@@ -871,7 +885,7 @@ G_TimeString
 Format a match timer string with minute precision.
 =============
 */
-const char *G_TimeString(const int msec, bool state) {
+const char* G_TimeString(const int msec, bool state) {
 	static char buffer[32];
 	if (state) {
 		if (level.match_state < matchst_t::MATCH_COUNTDOWN)
@@ -892,7 +906,8 @@ const char *G_TimeString(const int msec, bool state) {
 
 	if (hours > 0) {
 		G_FmtTo(buffer, "{}{}:{:02}:{:02}", msec < 1000 ? "-" : "", hours, mins, seconds);
-	} else {
+	}
+	else {
 		G_FmtTo(buffer, "{}{:02}:{:02}", msec < 1000 ? "-" : "", mins, seconds);
 	}
 
@@ -905,7 +920,7 @@ G_TimeStringMs
 Format a match timer string with millisecond precision.
 =============
 */
-const char *G_TimeStringMs(const int msec, bool state) {
+const char* G_TimeStringMs(const int msec, bool state) {
 	static char buffer[32];
 	if (state) {
 		if (level.match_state < matchst_t::MATCH_COUNTDOWN)
@@ -926,24 +941,28 @@ const char *G_TimeStringMs(const int msec, bool state) {
 
 	if (hours > 0) {
 		G_FmtTo(buffer, "{}:{:02}:{:02}.{}", hours, mins, seconds, ms);
-	} else {
+	}
+	else {
 		G_FmtTo(buffer, "{:02}:{:02}.{}", mins, seconds, ms);
 	}
 
 	return buffer;
 }
 
-team_t StringToTeamNum(const char *in) {
+team_t StringToTeamNum(const char* in) {
 	if (!Q_strcasecmp(in, "spectator") || !Q_strcasecmp(in, "s")) {
 		return TEAM_SPECTATOR;
-	} else if (!Q_strcasecmp(in, "auto") || !Q_strcasecmp(in, "a")) {
+	}
+	else if (!Q_strcasecmp(in, "auto") || !Q_strcasecmp(in, "a")) {
 		return PickTeam(-1);
-	} else if (Teams()) {
+	}
+	else if (Teams()) {
 		if (!Q_strcasecmp(in, "blue") || !Q_strcasecmp(in, "b"))
 			return TEAM_BLUE;
 		else if (!Q_strcasecmp(in, "red") || !Q_strcasecmp(in, "r"))
 			return TEAM_RED;
-	} else {
+	}
+	else {
 		if (!Q_strcasecmp(in, "free") || !Q_strcasecmp(in, "f"))
 			return TEAM_FREE;
 	}
@@ -1001,7 +1020,7 @@ bool IsScoringDisabled() {
 	return false;
 }
 
-gametype_t GT_IndexFromString(const char *in) {
+gametype_t GT_IndexFromString(const char* in) {
 	for (size_t i = 0; i < gametype_t::GT_NUM_GAMETYPES; i++) {
 		if (!Q_strcasecmp(in, gt_short_name[i]))
 			return (gametype_t)i;
@@ -1023,7 +1042,7 @@ void BroadcastReadyReminderMessage() {
 	}
 }
 
-void TeleportPlayerToRandomSpawnPoint(gentity_t *ent, bool fx) {
+void TeleportPlayerToRandomSpawnPoint(gentity_t* ent, bool fx) {
 	bool	valid_spawn = false;
 	vec3_t	spawn_origin, spawn_angles;
 	bool	is_landmark = false;
@@ -1050,12 +1069,12 @@ ClientEntFromString
 Resolve a client entity from a name or validated numeric identifier string.
 =============
 */
-gentity_t *ClientEntFromString(const char *in) {
+gentity_t* ClientEntFromString(const char* in) {
 	for (auto ec : active_clients())
 		if (!strcmp(in, ec->client->resp.netname))
 			return ec;
 
-	char *end = nullptr;
+	char* end = nullptr;
 	errno = 0;
 	const unsigned long num = strtoul(in, &end, 10);
 	if (errno == ERANGE || !end || *end != '\0')
@@ -1071,7 +1090,7 @@ gentity_t *ClientEntFromString(const char *in) {
 RS_IndexFromString
 =================
 */
-ruleset_t RS_IndexFromString(const char *in) {
+ruleset_t RS_IndexFromString(const char* in) {
 	for (size_t i = 1; i < (int)RS_NUM_RULESETS; i++) {
 		if (!strcmp(in, rs_short_name[i]))
 			return (ruleset_t)i;
@@ -1081,13 +1100,14 @@ ruleset_t RS_IndexFromString(const char *in) {
 	return ruleset_t::RS_NONE;
 }
 
-void TeleporterVelocity(gentity_t *ent, gvec3_t angles) {
+void TeleporterVelocity(gentity_t* ent, gvec3_t angles) {
 	if (g_teleporter_freeze->integer) {
 		// clear the velocity and hold them in place briefly
 		ent->velocity = {};
 		ent->client->ps.pmove.pm_time = 160; // hold time
 		ent->client->ps.pmove.pm_flags |= PMF_TIME_TELEPORT;
-	} else {
+	}
+	else {
 		// preserve velocity and 'spit' them out of destination
 		float len = ent->velocity.length();
 
@@ -1097,7 +1117,7 @@ void TeleporterVelocity(gentity_t *ent, gvec3_t angles) {
 	}
 }
 
-static bool MS_Validation(gclient_t *cl, mstats_t index) {
+static bool MS_Validation(gclient_t* cl, mstats_t index) {
 	if (!cl)
 		return false;
 
@@ -1115,21 +1135,21 @@ static bool MS_Validation(gclient_t *cl, mstats_t index) {
 	return true;
 }
 
-int MS_Value(gclient_t *cl, mstats_t index) {
+int MS_Value(gclient_t* cl, mstats_t index) {
 	if (!MS_Validation(cl, index))
 		return 0;
 
 	return cl->resp.mstats[index];
 }
 
-void MS_Adjust(gclient_t *cl, mstats_t index, int count) {
+void MS_Adjust(gclient_t* cl, mstats_t index, int count) {
 	if (!MS_Validation(cl, index))
 		return;
 
 	cl->resp.mstats[index] += count;
 }
 
-void MS_AdjustDuo(gclient_t *cl, mstats_t index1, mstats_t index2, int count) {
+void MS_AdjustDuo(gclient_t* cl, mstats_t index1, mstats_t index2, int count) {
 	if (!MS_Validation(cl, index1))
 		return;
 
@@ -1137,7 +1157,7 @@ void MS_AdjustDuo(gclient_t *cl, mstats_t index1, mstats_t index2, int count) {
 	cl->resp.mstats[index2] += count;
 }
 
-void MS_Set(gclient_t *cl, mstats_t index, int value) {
+void MS_Set(gclient_t* cl, mstats_t index, int value) {
 	if (!MS_Validation(cl, index))
 		return;
 
@@ -1151,8 +1171,8 @@ stime
 Return a stable timestamp string for file naming.
 =============
 */
-const char *stime() {
-	struct tm *ltime;
+const char* stime() {
+	struct tm* ltime;
 	time_t gmtime;
 	static char buffer[32];
 
@@ -1171,7 +1191,7 @@ const char *stime() {
 	return buffer;
 }
 
-void AnnouncerSound(gentity_t *ent, const char *announcer_sound, const char *backup_sound, bool use_backup) {
+void AnnouncerSound(gentity_t* ent, const char* announcer_sound, const char* backup_sound, bool use_backup) {
 	for (auto ec : active_clients()) {
 		if (ent == world || ent == ec || (!ClientIsPlaying(ec->client) && ec->client->follow_target == ent)) {
 			if (ec->client->sess.is_a_bot)
@@ -1182,7 +1202,7 @@ void AnnouncerSound(gentity_t *ent, const char *announcer_sound, const char *bac
 				continue;
 			}
 			//gi.local_sound(ec, CHAN_AUTO | CHAN_RELIABLE, gi.soundindex(announcer_sound), 1, ATTN_NONE, 0);
-			
+
 			if (ec->client->sess.pc.use_expanded && announcer_sound)
 				gi.local_sound(ec, CHAN_RELIABLE | CHAN_NO_PHS_ADD | CHAN_AUX, gi.soundindex(G_Fmt("vo_evil/{}.wav", announcer_sound).data()), 1, ATTN_NONE, 0);
 		}
@@ -1192,7 +1212,7 @@ void AnnouncerSound(gentity_t *ent, const char *announcer_sound, const char *bac
 }
 
 
-void QLSound(gentity_t *ent, const char *ql_sound, const char *backup_sound, bool use_backup) {
+void QLSound(gentity_t* ent, const char* ql_sound, const char* backup_sound, bool use_backup) {
 	for (auto ec : active_clients()) {
 		if (ent == world || ent == ec || (!ClientIsPlaying(ec->client) && ec->client->follow_target == ent)) {
 			if (ec->client->sess.is_a_bot)
@@ -1203,19 +1223,19 @@ void QLSound(gentity_t *ent, const char *ql_sound, const char *backup_sound, boo
 				continue;
 			}
 			//gi.local_sound(ec, CHAN_AUTO | CHAN_RELIABLE, gi.soundindex(ql_sound), 1, ATTN_NONE, 0);
-			
+
 			if (ec->client->sess.pc.use_expanded && ql_sound)
 				gi.local_sound(ec, CHAN_RELIABLE | CHAN_NO_PHS_ADD | CHAN_AUX, gi.soundindex(G_Fmt("{}.wav", ql_sound).data()), 1, ATTN_NONE, 0);
 		}
 	}
 }
 
-void G_StuffCmd(gentity_t *e, const char *fmt, ...) {
+void G_StuffCmd(gentity_t* e, const char* fmt, ...) {
 	va_list		argptr;
 	char		text[512];
 
 	if (e && !e->client->pers.connected)
-		gi.Com_ErrorFmt("{}: Bad client %d for '%s'", __FUNCTION__, (int)(e - g_entities - 1), fmt);
+		gi.Com_ErrorFmt("{}: Bad client {} for '{}'", __FUNCTION__, (int)(e - g_entities - 1), fmt);
 
 	va_start(argptr, fmt);
 	vsnprintf(text, sizeof(text), fmt, argptr);
