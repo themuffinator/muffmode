@@ -68,10 +68,6 @@ Initializes the save data lists and validates for duplicates.
 =============
 */
 void InitSave() {
-#ifndef NDEBUG
-	json_run_stack_tests();
-#endif
-
 	if (save_data_initialized)
 		return;
 

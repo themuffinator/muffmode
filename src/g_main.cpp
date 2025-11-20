@@ -1067,7 +1067,7 @@ g_dm_item_respawn_rate = gi.cvar("g_dm_item_respawn_rate", "1.0", CVAR_NOFLAGS);
 
 	game = {};
 
-	const int32_t clamped_maxclients = std::clamp(maxclients->integer, 1, MAX_CLIENTS);
+	const int32_t clamped_maxclients = std::clamp<int32_t>(maxclients->integer, 1, static_cast<int32_t>(MAX_CLIENTS));
 
 	// initialize all entities for this game
 	game.maxentities = maxentities->integer;

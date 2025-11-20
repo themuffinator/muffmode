@@ -29,8 +29,8 @@ void FreeFollower(gentity_t *ent) {
 	ent->client->ps.screen_blend = {};
 	ent->client->ps.damage_blend = {};
 	ent->client->ps.rdflags = RDF_NONE;
-	ent->s.effects = 0;
-	ent->s.renderfx = 0;
+	ent->s.effects = EF_NONE;
+	ent->s.renderfx = RF_NONE;
 }
 
 /*

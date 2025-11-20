@@ -2,6 +2,8 @@
 // Licensed under the GNU General Public License 2.0.
 // g_phys.c
 
+#include <iterator>
+
 #include "g_runthink.h"
 
 /*
@@ -390,11 +392,11 @@ static bool G_Push(gentity_t *pusher, vec3_t &move, vec3_t &amove) {
 		if (already_touched)
 			continue;
 
-		if (num_touched < lengthof(touched))
+		if (num_touched < std::size(touched))
 			touched[num_touched++] = p->ent;
 
 		G_TouchTriggers(p->ent);
-	}
+		}
 
 	return true;
 }
