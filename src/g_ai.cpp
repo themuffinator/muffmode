@@ -3,6 +3,7 @@
 // g_ai.c
 
 #include "g_local.h"
+#include <vector>
 
 bool FindTarget(gentity_t *self);
 bool ai_checkattack(gentity_t *self, float dist);
@@ -28,8 +29,8 @@ gentity_t *AI_GetSightClient(gentity_t *self) {
 	if (level.intermission_time)
 		return nullptr;
 
-	gentity_t **visible_players = (gentity_t **)alloca(sizeof(gentity_t *) * game.maxclients);
-	size_t num_visible = 0;
+	std::vector<gentity_t *> visible_players;
+	visible_players.reserve(game.maxclients);
 
 	for (auto player : active_clients()) {
 		if (player->health <= 0 || player->deadflag || !player->solid)
@@ -43,13 +44,13 @@ gentity_t *AI_GetSightClient(gentity_t *self) {
 				continue;
 		}
 
-		visible_players[num_visible++] = player; // got one
+		visible_players.push_back(player); // got one
 	}
 
-	if (!num_visible)
+	if (visible_players.empty())
 		return nullptr;
 
-	return visible_players[irandom(num_visible)];
+	return visible_players[irandom(visible_players.size())];
 }
 
 //============================================================================
