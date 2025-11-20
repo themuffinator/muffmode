@@ -109,8 +109,25 @@ gentity_t* G_PickTarget(const char* targetname) {
 		});
 }
 
+/*
+=============
+Think_Delay
+
+Executes delayed target use and frees duplicated strings.
+=============
+*/
 static THINK(Think_Delay) (gentity_t* ent) -> void {
 	G_UseTargets(ent, ent->activator);
+
+	if (ent->message)
+		gi.TagFree((void*)ent->message);
+
+	if (ent->target)
+		gi.TagFree((void*)ent->target);
+
+	if (ent->killtarget)
+		gi.TagFree((void*)ent->killtarget);
+
 	G_FreeEntity(ent);
 }
 
@@ -235,9 +252,9 @@ void G_UseTargets(gentity_t* ent, gentity_t* activator) {
 		t->activator = activator;
 		if (!activator)
 			gi.Com_PrintFmt("{}: {} with no activator.\n", __FUNCTION__, *t);
-		t->message = ent->message;
-		t->target = ent->target;
-		t->killtarget = ent->killtarget;
+		t->message = G_CopyString(ent->message, TAG_LEVEL);
+		t->target = G_CopyString(ent->target, TAG_LEVEL);
+		t->killtarget = G_CopyString(ent->killtarget, TAG_LEVEL);
 		return;
 	}
 
