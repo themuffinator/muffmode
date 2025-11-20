@@ -102,7 +102,11 @@ gentity_t *G_PickTarget(const char *targetname) {
 		return nullptr;
 	}
 
-	return G_SelectRandomTarget(choices, irandom<size_t>);
+	return G_SelectRandomTarget(
+	choices,
+	[](size_t max_index) {
+	return static_cast<size_t>(irandom(static_cast<int32_t>(max_index)));
+	});
 }
 
 static THINK(Think_Delay) (gentity_t *ent) -> void {

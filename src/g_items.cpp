@@ -1860,7 +1860,7 @@ static bool Pickup_Doppelganger(gentity_t *ent, gentity_t *other) {
 	max_allowed = G_GetHoldableMax(g_dm_holdable_doppel_max->integer, ent->item->quantity_max, 1);
 	quantity = other->client->pers.inventory[ent->item->id];
 	if (quantity >= max_allowed) {
-		gi.cprintf(other, PRINT_LOW, "You can only carry %d %s\n", max_allowed, ent->item->pickup_name);
+		gi.Client_Print(other, PRINT_LOW, "You can only carry %d %s\n", max_allowed, ent->item->pickup_name);
 		return false;
 	}
 
