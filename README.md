@@ -1,15 +1,20 @@
-# Welcome to Muff Mode BETA!
+<div align="center">
+  <img src="assets/img/muffmode.png" alt="Logo" width="600">
+  <h2>Muff Mode BETA</h2>
+</div>
+<p align="center">
+<b>Muff Mode</b> is a server-side mod for <a href="https://github.com/id-Software/quake2-rerelease-dll" target="_blank">QUAKE II Remastered</a> [QUAKE II Remastered](https://github.com/id-Software/quake2-rerelease-dll) providing an enhanced multiplayer experience.
+</p>
 
-## What is Muff Mode?
-Muff Mode is a server-side mod for [QUAKE II Remastered](https://github.com/id-Software/quake2-rerelease-dll) providing overall enhances functionality and refinements.
+---
 
-### It is for Server Hosts
+### It's for Server Hosts
 With a focus on multiplayer, it provides refined match handling and an extensive set of new capabilities for server owners to configure the game in a host of new ways.
 
-### It is for Level Designers
+### It's for Level Designers
 New creative possibilities are unlocked for level designers, with an array of new map entities and keys and a range of added gametypes to design for.
 
-### It is for the Players(tm)
+### It's for the Players™
 Enhanced HUD info and a number of changable settings.
 
 ## Installation
