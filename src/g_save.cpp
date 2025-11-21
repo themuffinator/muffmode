@@ -113,6 +113,14 @@ void InitSave() {
 }
 // initializer for save data
 /*
+=============
+save_data_list_t::save_data_list_t
+
+Registers a save data entry and optionally links it into the global list used for lookups.
+=============
+*/
+save_data_list_t::save_data_list_t(const char *name_in, save_data_tag_t tag_in, const void *ptr_in, bool link, bool valid_in) :
+	name(name_in),
 	tag(tag_in),
 	ptr(ptr_in),
 	next(nullptr),
