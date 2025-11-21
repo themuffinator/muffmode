@@ -3,7 +3,7 @@
   <h2>Muff Mode BETA</h2>
 </div>
 <p align="center">
-<b>Muff Mode</b> is a server-side mod for <a href="https://github.com/id-Software/quake2-rerelease-dll" target="_blank">QUAKE II Remastered</a> [QUAKE II Remastered](https://github.com/id-Software/quake2-rerelease-dll) providing an enhanced multiplayer experience.
+<b>Muff Mode</b> is a server-side mod for <a href="https://github.com/id-Software/quake2-rerelease-dll" target="_blank">QUAKE II Rerelease</a> providing an enhanced multiplayer experience.
 </p>
 
 ---
