@@ -144,6 +144,7 @@
     <ClInclude Include="monsters\m_turret.h" />
     <ClInclude Include="monsters\m_widow.h" />
     <ClInclude Include="monsters\m_widow2.h" />
+    <ClInclude Include="p_hud_victor.h" />
     <ClInclude Include="p_menu.h" />
     <ClInclude Include="q_std.h" />
     <ClInclude Include="q_vec3.h" />
@@ -214,6 +215,7 @@
     <ClCompile Include="monsters\m_widow2.cpp" />
     <ClCompile Include="p_client.cpp" />
     <ClCompile Include="p_hud.cpp" />
+    <ClCompile Include="p_hud_victor.cpp" />
     <ClCompile Include="p_menu.cpp" />
     <ClCompile Include="p_move.cpp" />
     <ClCompile Include="p_trail.cpp" />

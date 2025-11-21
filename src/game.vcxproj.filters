@@ -126,6 +126,7 @@
     <ClInclude Include="monsters\m_widow2.h">
       <Filter>monsters</Filter>
     </ClInclude>
+    <ClInclude Include="p_hud_victor.h" />
     <ClInclude Include="p_menu.h" />
   </ItemGroup>
   <ItemGroup>
@@ -152,6 +153,7 @@
     <ClCompile Include="g_weapon.cpp" />
     <ClCompile Include="p_client.cpp" />
     <ClCompile Include="p_hud.cpp" />
+    <ClCompile Include="p_hud_victor.cpp" />
     <ClCompile Include="p_move.cpp" />
     <ClCompile Include="p_trail.cpp" />
     <ClCompile Include="p_view.cpp" />
