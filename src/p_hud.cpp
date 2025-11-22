@@ -543,10 +543,13 @@ void TeamsScoreboardMessage(gentity_t *ent, gentity_t *killer) {
 
 	if (total[0] - last[0] > 1) // couldn't fit everyone
 		fmt::format_to(std::back_inserter(string), FMT_STRING("xv -32 yv {} loc_string 1 $g_ctf_and_more {} "),
-			42 + (last[0] + 1) * 8, total[0] - last[0] - 1);
+				42 + (last[0] + 1) * 8, total[0] - last[0] - 1);
 	if (total[1] - last[1] > 1) // couldn't fit everyone
 		fmt::format_to(std::back_inserter(string), FMT_STRING("xv 208 yv {} loc_string 1 $g_ctf_and_more {} "),
-			42 + (last[1] + 1) * 8, total[1] - last[1] - 1);
+				42 + (last[1] + 1) * 8, total[1] - last[1] - 1);
+
+	fmt::format_to(std::back_inserter(string), FMT_STRING("xv 0 yb -24 cstring2 \"{}\" "), "www.darkmatter-quake.com");
+	fmt::format_to(std::back_inserter(string), FMT_STRING("xv 0 yb -12 cstring2 \"{}\" "), "community | tournaments | content | news");
 
 	gi.WriteByte(svc_layout);
 	gi.WriteString(string.c_str());
@@ -763,6 +766,9 @@ static void DuelScoreboardMessage(gentity_t *ent, gentity_t *killer) {
 		fmt::format_to(std::back_inserter(string), FMT_STRING("ifgef {} yb -48 xv 0 loc_cstring2 0 \"$m_eou_press_button\" endif "), (level.intermission_server_frame + (5_sec).frames()));
 	else
 		fmt::format_to(std::back_inserter(string), FMT_STRING("xv 0 yb -48 cstring2 \"{}\" "), "Show inventory to toggle menu.");
+	
+	fmt::format_to(std::back_inserter(string), FMT_STRING("xv 0 yb -24 cstring2 \"{}\" "), "www.darkmatter-quake.com");
+	fmt::format_to(std::back_inserter(string), FMT_STRING("xv 0 yb -12 cstring2 \"{}\" "), "community | tournaments | content | news");
 
 	gi.WriteByte(svc_layout);
 	gi.WriteString(string.c_str());
@@ -935,6 +941,9 @@ void DeathmatchScoreboardMessage(gentity_t *ent, gentity_t *killer) {
 
 		fmt::format_to(std::back_inserter(string), FMT_STRING("xv 0 yb -48 cstring2 \"{}\" "), "Use inventory bind to toggle menu.");
 	}
+
+	fmt::format_to(std::back_inserter(string), FMT_STRING("xv 0 yb -24 cstring2 \"{}\" "), "www.darkmatter-quake.com");
+	fmt::format_to(std::back_inserter(string), FMT_STRING("xv 0 yb -12 cstring2 \"{}\" "), "community | tournaments | content | news");
 
 	gi.WriteByte(svc_layout);
 	gi.WriteString(string.c_str());
