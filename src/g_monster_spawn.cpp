@@ -182,6 +182,20 @@ checks:
 
 bool CheckGroundSpawnPoint(const vec3_t &origin, const vec3_t &entMins, const vec3_t &entMaxs, float height, const vec3_t &gravityVector)
 {
+	vec3_t gravity_dir = gravityVector.normalized();
+
+	if (!gravity_dir)
+		gravity_dir = { 0.0f, 0.0f, -1.0f };
+
+	// don't spawn in or above water
+	if (gi.pointcontents(origin) & MASK_WATER)
+		return false;
+
+	trace_t contents_trace = gi.trace(origin, entMins, entMaxs, origin + (gravity_dir * height), nullptr, MASK_WATER);
+
+	if ((contents_trace.contents & MASK_WATER) || contents_trace.startsolid || contents_trace.allsolid)
+		return false;
+
 	if (!CheckSpawnPoint(origin, entMins, entMaxs, gravityVector))
 		return false;
 
