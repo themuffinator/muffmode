@@ -494,6 +494,14 @@ struct shadow_light_info_t {
 
 static shadow_light_info_t shadowlightinfo[MAX_SHADOW_LIGHTS];
 
+/*
+=============
+GetShadowLightData
+
+Returns the shadow light data for the specified entity number or nullptr when
+no matching entry exists.
+=============
+*/
 const shadow_light_data_t *GetShadowLightData(int32_t entity_number) {
 	for (size_t i = 0; i < level.shadow_light_count; i++) {
 		if (shadowlightinfo[i].entity_number == entity_number)
@@ -503,7 +511,20 @@ const shadow_light_data_t *GetShadowLightData(int32_t entity_number) {
 	return nullptr;
 }
 
+/*
+=============
+setup_shadow_lights
+
+Initializes shadow light data and configstrings while clamping to the maximum
+allowed lights to prevent out-of-bounds access.
+=============
+*/
 void setup_shadow_lights() {
+	if (level.shadow_light_count < 0)
+		level.shadow_light_count = 0;
+	else if (level.shadow_light_count > MAX_SHADOW_LIGHTS)
+		level.shadow_light_count = MAX_SHADOW_LIGHTS;
+
 	for (int i = 0; i < level.shadow_light_count; ++i) {
 		gentity_t *self = &g_entities[shadowlightinfo[i].entity_number];
 
@@ -544,7 +565,20 @@ void setup_shadow_lights() {
 // lights to be ordered wrong on return levels
 // if the spawn functions are changed.
 // this will work without changing the save/load code.
+/*
+=============
+G_LoadShadowLights
+
+Restores shadow light data from configstrings while ensuring the light count
+stays within valid bounds.
+=============
+*/
 void G_LoadShadowLights() {
+	if (level.shadow_light_count < 0)
+		level.shadow_light_count = 0;
+	else if (level.shadow_light_count > MAX_SHADOW_LIGHTS)
+		level.shadow_light_count = MAX_SHADOW_LIGHTS;
+
 	for (size_t i = 0; i < level.shadow_light_count; i++) {
 		const char *cstr = gi.get_configstring(CS_SHADOWLIGHTS + i);
 		const char *token = COM_ParseEx(&cstr, ";");
@@ -589,9 +623,21 @@ void G_LoadShadowLights() {
 }
 // ---------------------------------------------------------------------------------
 
+
+/*
+=============
+setup_dynamic_light
+
+Initializes a dynamic light entity and tracks it for shadow handling while
+respecting the maximum supported light count.
+=============
+*/
 static void setup_dynamic_light(gentity_t *self) {
 	// [Sam-KEX] Shadow stuff
 	if (st.sl.data.radius > 0) {
+		if (level.shadow_light_count >= MAX_SHADOW_LIGHTS)
+			return;
+
 		self->s.renderfx = RF_CASTSHADOW;
 		self->itemtarget = st.sl.lightstyletarget;
 
