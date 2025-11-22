@@ -27,7 +27,12 @@ T *G_SelectRandomTarget(const std::vector<T *> &choices, RandomFunc &&random_fun
 
 	const std::size_t max_index = choices.size() - 1;
 	const std::size_t generated_index = std::forward<RandomFunc>(random_func)(max_index);
-	const std::size_t clamped_index = generated_index > max_index ? max_index : generated_index;
-	return choices[clamped_index];
-}
+
+	if (generated_index > max_index) {
+		std::fprintf(stderr, "%s: generated index %zu exceeds max index %zu.\n", __FUNCTION__, generated_index, max_index);
+		return nullptr;
+	}
+
+	return choices[generated_index];
+	}
 
