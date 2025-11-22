@@ -4,6 +4,7 @@
 #pragma once
 
 // q_vec3 - vec3 stuff
+#include <cmath>
 #include <stdexcept>
 #include <type_traits>
 
@@ -20,7 +21,7 @@ struct vec3_t
 	Returns a vector containing the absolute value of each component.
 	=============
 	*/
-	[[nodiscard]] constexpr vec3_t abs() const
+	[[nodiscard]] inline vec3_t abs() const
 	{
 		return { fabsf(x), fabsf(y), fabsf(z) };
 	}
