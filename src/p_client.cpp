@@ -2355,7 +2355,20 @@ static THINK(BodySink) (gentity_t* ent) -> void {
 	gi.linkentity(ent);
 }
 
+
+/*
+=============
+CopyToBodyQue
+
+Copy the entity state into a body queue slot for later corpse handling.
+=============
+*/
 void CopyToBodyQue(gentity_t* ent) {
+	if (!ent->client) {
+		gi.unlinkentity(ent);
+		return;
+	}
+
 	// if we were completely removed, don't bother with a body
 	if (!ent->s.modelindex)
 		return;
