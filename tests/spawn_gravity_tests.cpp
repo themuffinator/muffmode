@@ -169,18 +169,63 @@ static void TestWallGravityProjectsSpawnVolume()
 {
 	gi.trace = TestTrace;
 	g_trace_calls = 0;
-
+	
 	vec3_t origin{ 5.0f, 5.0f, 5.0f };
 	vec3_t mins{ -2.0f, -2.0f, -2.0f };
 	vec3_t maxs{ 2.0f, 2.0f, 2.0f };
 	vec3_t gravity{ 1.0f, 0.0f, 0.0f };
-
+	
 	bool clear = CheckSpawnPoint(origin, mins, maxs, gravity);
-
+	
 	assert(clear);
 	assert(g_trace_calls >= 2);
-	vec3_t delta = g_last_trace_end - g_last_trace_start;
-	assert(delta[0] == gravity[0] && delta[1] == gravity[1] && delta[2] == gravity[2]);
+	
+	vec3_t gravity_dir = gravity.normalized();
+	
+	if (!gravity_dir)
+		gravity_dir = { 0.0f, 0.0f, -1.0f };
+	
+	vec3_t abs_gravity_dir = gravity_dir.abs();
+	const float negative_extent = Q_fabs(DotProduct(mins, abs_gravity_dir));
+	vec3_t expected_end = origin + (gravity_dir * negative_extent);
+	
+	assert(g_last_trace_start == origin);
+	assert(g_last_trace_end == expected_end);
+}
+
+/*
+=============
+TestNegativeGravityProjectsSpawnVolume
+
+Ensures CheckSpawnPoint projects extents correctly when gravity points into negative axes.
+=============
+*/
+static void TestNegativeGravityProjectsSpawnVolume()
+{
+	gi.trace = TestTrace;
+	g_trace_calls = 0;
+	
+	vec3_t origin{ -12.0f, 4.0f, 8.0f };
+	vec3_t mins{ -3.0f, -1.0f, -2.0f };
+	vec3_t maxs{ 5.0f, 2.0f, 3.0f };
+	vec3_t gravity{ -1.0f, -0.5f, 0.0f };
+	
+	bool clear = CheckSpawnPoint(origin, mins, maxs, gravity);
+	
+	assert(clear);
+	assert(g_trace_calls >= 2);
+	
+	vec3_t gravity_dir = gravity.normalized();
+	
+	if (!gravity_dir)
+		gravity_dir = { 0.0f, 0.0f, -1.0f };
+	
+	vec3_t abs_gravity_dir = gravity_dir.abs();
+	const float negative_extent = Q_fabs(DotProduct(mins, abs_gravity_dir));
+	vec3_t expected_end = origin + (gravity_dir * negative_extent);
+	
+	assert(g_last_trace_start == origin);
+	assert(g_last_trace_end == expected_end);
 }
 
 /*
@@ -253,6 +298,7 @@ int main()
 {
 	TestCeilingDropUsesGravity();
 	TestWallGravityProjectsSpawnVolume();
+	TestNegativeGravityProjectsSpawnVolume();
 	TestGroundChecksUseGravityVector();
 	TestGroundSpawnHonorsHeight();
 	return 0;
