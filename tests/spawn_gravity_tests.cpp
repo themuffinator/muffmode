@@ -325,6 +325,31 @@ static void TestGroundSpawnHonorsHeight()
 
 /*
 =============
+TestCreateFlyMonsterReturnsNullOnFailedSpawn
+
+Ensures CreateFlyMonster returns nullptr when CreateMonster fails.
+=============
+*/
+static void TestCreateFlyMonsterReturnsNullOnFailedSpawn()
+{
+	gi.trace = TestTrace;
+	gi.pointcontents = TestPointContents;
+	g_create_monster_should_fail = true;
+
+	vec3_t origin{ 12.0f, -4.0f, 20.0f };
+	vec3_t angles{ 0.0f, 45.0f, 0.0f };
+	vec3_t mins{ -4.0f, -4.0f, -4.0f };
+	vec3_t maxs{ 4.0f, 4.0f, 4.0f };
+
+	gentity_t *spawned = CreateFlyMonster(origin, angles, mins, maxs, "monster_flyer");
+
+	assert(spawned == nullptr);
+
+	g_create_monster_should_fail = false;
+}
+
+/*
+=============
 TestCreateGroundMonsterReturnsNullOnFailedSpawn
 
 Ensures CreateGroundMonster returns nullptr when CreateMonster fails.
@@ -359,6 +384,7 @@ int main()
 	TestNegativeGravityProjectsSpawnVolume();
 	TestGroundChecksUseGravityVector();
 	TestGroundSpawnHonorsHeight();
+	TestCreateFlyMonsterReturnsNullOnFailedSpawn();
 	TestCreateGroundMonsterReturnsNullOnFailedSpawn();
 	return 0;
 }

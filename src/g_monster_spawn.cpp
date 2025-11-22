@@ -70,7 +70,12 @@ gentity_t *CreateFlyMonster(const vec3_t &origin, const vec3_t &angles, const ve
 	if (!CheckSpawnPoint(origin, mins, maxs, { 0.0f, 0.0f, -1.0f }))
 		return nullptr;
 
-	return (CreateMonster(origin, angles, classname));
+	gentity_t *newEnt = CreateMonster(origin, angles, classname);
+
+	if (!newEnt)
+		return nullptr;
+
+	return newEnt;
 }
 
 /*
