@@ -41,6 +41,30 @@ static trace_t TestTrace(const vec3_t &start, const vec3_t &, const vec3_t &, co
 
 /*
 =============
+NoHitTrace
+
+Returns a full-length trace with no impact to simulate missing ground.
+=============
+*/
+static trace_t NoHitTrace(const vec3_t &start, const vec3_t &, const vec3_t &, const vec3_t &end, gentity_t *, contents_t)
+{
+	trace_t tr{};
+
+	g_last_trace_start = start;
+	g_last_trace_end = end;
+	g_trace_calls++;
+
+	tr.ent = world;
+	tr.endpos = end;
+	tr.fraction = 1.0f;
+	tr.startsolid = false;
+	tr.allsolid = false;
+
+	return tr;
+}
+
+/*
+=============
 G_FixStuckObject_Generic
 
 Trivial stub to satisfy FindSpawnPoint dependency.
@@ -186,6 +210,42 @@ static void TestGroundChecksUseGravityVector()
 
 /*
 =============
+TestGroundSpawnHonorsHeight
+
+Fails ground spawn validation when the surface is beyond the allowed height.
+=============
+*/
+static void TestGroundSpawnHonorsHeight()
+{
+	gi.trace = NoHitTrace;
+	g_trace_calls = 0;
+	g_last_trace_start = { 0.0f, 0.0f, 0.0f };
+	g_last_trace_end = { 0.0f, 0.0f, 0.0f };
+
+	vec3_t origin{ 0.0f, 0.0f, 0.0f };
+	vec3_t mins{ -8.0f, -8.0f, -8.0f };
+	vec3_t maxs{ 8.0f, 8.0f, 8.0f };
+	vec3_t gravity{ 0.0f, 0.0f, -1.0f };
+	float height = 64.0f;
+
+	bool grounded = CheckGroundSpawnPoint(origin, mins, maxs, height, gravity);
+
+	assert(!grounded);
+	assert(g_trace_calls >= 3);
+
+	vec3_t gravity_dir = gravity.normalized();
+
+	if (!gravity_dir)
+		gravity_dir = { 0.0f, 0.0f, -1.0f };
+
+	vec3_t expected_end = origin + (gravity_dir * height);
+
+	assert(g_last_trace_start == origin);
+	assert(g_last_trace_end == expected_end);
+}
+
+/*
+=============
 main
 =============
 */
@@ -194,5 +254,6 @@ int main()
 	TestCeilingDropUsesGravity();
 	TestWallGravityProjectsSpawnVolume();
 	TestGroundChecksUseGravityVector();
+	TestGroundSpawnHonorsHeight();
 	return 0;
 }
