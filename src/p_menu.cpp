@@ -20,10 +20,11 @@ void P_Menu_Dirty() {
 =============
 P_Menu_Open
 
-Open a menu for a client and duplicate entry data for safe modification.
+Open a menu for a client and duplicate entry data for safe modification. The
+owns_arg flag controls whether the menu should free arg on close.
 =============
 */
-menu_hnd_t *P_Menu_Open(gentity_t *ent, const menu_t *entries, int cur, int num, void *arg, UpdateFunc_t UpdateFunc) {
+menu_hnd_t *P_Menu_Open(gentity_t *ent, const menu_t *entries, int cur, int num, void *arg, bool owns_arg, UpdateFunc_t UpdateFunc) {
 	menu_hnd_t		*hnd;
 	const menu_t	*p;
 	size_t			i;
@@ -41,6 +42,7 @@ menu_hnd_t *P_Menu_Open(gentity_t *ent, const menu_t *entries, int cur, int num,
 	hnd->UpdateFunc = UpdateFunc;
 
 	hnd->arg = arg;
+	hnd->owns_arg = owns_arg;
 	hnd->entries = (menu_t *)gi.TagMalloc(sizeof(menu_t) * num, TAG_LEVEL);
 	memcpy(hnd->entries, entries, sizeof(menu_t) * num);
 	// duplicate the strings since they may be from static memory
@@ -94,7 +96,7 @@ void P_Menu_Close(gentity_t *ent) {
 
 	hnd = ent->client->menu;
 	gi.TagFree(hnd->entries);
-	if (hnd->arg)
+	if (hnd->owns_arg && hnd->arg)
 		gi.TagFree(hnd->arg);
 	gi.TagFree(hnd);
 	ent->client->menu = nullptr;
@@ -103,6 +105,7 @@ void P_Menu_Close(gentity_t *ent) {
 	gentity_t *e = ent->client->follow_target ? ent->client->follow_target : ent;
 	ent->client->ps.stats[STAT_SHOW_STATUSBAR] = !ClientIsPlaying(e->client) ? 0 : 1;
 }
+
 
 // only use on pmenu's that have been called with P_Menu_Open
 void P_Menu_UpdateEntry(menu_t *entry, const char *text, int align, SelectFunc_t SelectFunc) {
@@ -294,39 +297,39 @@ void P_Menu_Select(gentity_t *ent) {
 namespace {
 
 constexpr const char *BANNED_MENU_LINES[] = {
-        "You are banned from this mod",
-        "due to extremely poor behaviour",
-        "towards the community."
+	"You are banned from this mod",
+	"due to extremely poor behaviour",
+	"towards the community."
 };
 
 menu_t banned_menu_entries[] = {
-        { "", MENU_ALIGN_CENTER, nullptr },
-        { "", MENU_ALIGN_CENTER, nullptr },
-        { "", MENU_ALIGN_CENTER, nullptr },
+	{ "", MENU_ALIGN_CENTER, nullptr },
+	{ "", MENU_ALIGN_CENTER, nullptr },
+	{ "", MENU_ALIGN_CENTER, nullptr },
 };
 
 void P_Menu_Banned_Update(gentity_t *ent) {
-        (void)ent;
+	(void)ent;
 }
 
 void P_Menu_Banned_InitEntries() {
-        for (size_t i = 0; i < sizeof(banned_menu_entries) / sizeof(banned_menu_entries[0]); ++i)
-                Q_strlcpy(banned_menu_entries[i].text, BANNED_MENU_LINES[i], sizeof(banned_menu_entries[i].text));
+	for (size_t i = 0; i < sizeof(banned_menu_entries) / sizeof(banned_menu_entries[0]); ++i)
+	        Q_strlcpy(banned_menu_entries[i].text, BANNED_MENU_LINES[i], sizeof(banned_menu_entries[i].text));
 }
 
 } // namespace
 
 void P_Menu_OpenBanned(gentity_t *ent) {
-        if (!ent->client)
-                return;
+	if (!ent->client)
+		return;
 
-        P_Menu_Banned_InitEntries();
-        P_Menu_Open(ent, banned_menu_entries, -1, sizeof(banned_menu_entries) / sizeof(menu_t), nullptr, P_Menu_Banned_Update);
+	P_Menu_Banned_InitEntries();
+	P_Menu_Open(ent, banned_menu_entries, -1, sizeof(banned_menu_entries) / sizeof(menu_t), nullptr, false, P_Menu_Banned_Update);
 }
 
 bool P_Menu_IsBannedMenu(const menu_hnd_t *hnd) {
-        if (!hnd)
-                return false;
+	if (!hnd)
+		return false;
 
-        return hnd->UpdateFunc == P_Menu_Banned_Update;
+	return hnd->UpdateFunc == P_Menu_Banned_Update;
 }
