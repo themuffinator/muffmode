@@ -103,8 +103,6 @@ gentity_t *CreateGroundMonster(const vec3_t &origin, const vec3_t &angles, const
 	return newEnt;
 }
 
-#endif // MONSTER_SPAWN_TESTS
-
 
 
 /*
