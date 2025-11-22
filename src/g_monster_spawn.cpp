@@ -32,20 +32,26 @@ Spawns a monster entity with default downward gravity.
 gentity_t *CreateMonster(const vec3_t &origin, const vec3_t &angles, const char *classname)
 {
 	gentity_t *newEnt;
-	
+
 	newEnt = G_Spawn();
-	
+
 	newEnt->s.origin = origin;
 	newEnt->s.angles = angles;
 	newEnt->classname = classname;
 	newEnt->monsterinfo.aiflags |= AI_DO_NOT_COUNT;
-	
+
 	newEnt->gravityVector = { 0, 0, -1 };
 	ED_CallSpawn(newEnt);
 	newEnt->s.renderfx |= RF_IR_VISIBLE;
-	
+
 	return newEnt;
 }
+
+#else
+
+gentity_t *CreateMonster(const vec3_t &origin, const vec3_t &angles, const char *classname);
+
+#endif // MONSTER_SPAWN_TESTS
 
 /*
 =============
@@ -59,7 +65,12 @@ gentity_t *CreateFlyMonster(const vec3_t &origin, const vec3_t &angles, const ve
 	if (!CheckSpawnPoint(origin, mins, maxs, { 0.0f, 0.0f, -1.0f }))
 		return nullptr;
 
-	return (CreateMonster(origin, angles, classname));
+	gentity_t *newEnt = CreateMonster(origin, angles, classname);
+
+	if (!newEnt)
+		return nullptr;
+
+	return newEnt;
 }
 
 /*
@@ -86,10 +97,6 @@ gentity_t *CreateGroundMonster(const vec3_t &origin, const vec3_t &angles, const
 
 	return newEnt;
 }
-
-#endif // MONSTER_SPAWN_TESTS
-
-
 
 /*
 =============
