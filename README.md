@@ -1,6 +1,6 @@
 <table style="margin:0 auto; background:#5a2a8f; border-radius:16px; padding:24px 32px; border-collapse:separate; border-spacing:0; color:#f5e8ff; text-align:center;">
   <tr>
-    <td style="text-align:center; border:none;">
+    <td style="text-align:center; border:none; vertical-align:middle; display:flex; flex-direction:column; align-items:center;">
       <img src="assets/img/muffmode.png" alt="Muff Mode Logo" width="600" />
       <h1 style="margin:16px 0 8px; font-size:36px; color:#f5e8ff;">Muff Mode BETA</h1>
       <p style="margin:0; font-size:18px; color:#e7daf7;">
