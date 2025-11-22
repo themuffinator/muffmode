@@ -81,8 +81,8 @@ nullptr will be returned if the end of the list is reached.
 =============
 */
 gentity_t* G_PickTarget(const char* targetname) {
-	std::vector<gentity_t*> choices;
-	gentity_t* ent = nullptr;
+std::vector<gentity_t*> choices;
+gentity_t* ent = nullptr;
 
 	if (!targetname) {
 		gi.Com_PrintFmt("{}: called with nullptr targetname.\n", __FUNCTION__);
@@ -98,7 +98,6 @@ gentity_t* G_PickTarget(const char* targetname) {
 
 	if (choices.empty()) {
 		gi.Com_PrintFmt("{}: target {} not found\n", __FUNCTION__, targetname);
-		assert(!choices.empty());
 		return nullptr;
 	}
 
