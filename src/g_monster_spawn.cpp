@@ -117,7 +117,10 @@ bool FindSpawnPoint(const vec3_t &startpoint, const vec3_t &mins, const vec3_t &
 		if (G_FixStuckObject_Generic(spawnpoint, mins, maxs, [] (const vec3_t &start, const vec3_t &mins, const vec3_t &maxs, const vec3_t &end) {
 				return gi.trace(start, mins, maxs, end, nullptr, MASK_MONSTERSOLID);
 			}) == stuck_result_t::NO_GOOD_POSITION)
+		{
+			spawnpoint = { 0.0f, 0.0f, 0.0f };
 			return false;
+		}
 
 		// fixed, so drop again
 		if (drop && !M_droptofloor_generic(spawnpoint, mins, maxs, gravity_dir, nullptr, MASK_MONSTERSOLID, false))
