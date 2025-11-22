@@ -151,6 +151,8 @@ bool CheckSpawnPoint(const vec3_t &origin, const vec3_t &mins, const vec3_t &max
 	if (!gravity_dir)
 		gravity_dir = { 0.0f, 0.0f, -1.0f };
 
+	vec3_t abs_gravity_dir = gravity_dir.abs();
+
 	tr = gi.trace(origin, mins, maxs, origin, nullptr, MASK_MONSTERSOLID);
 	if (tr.startsolid || tr.allsolid)
 		return false;
@@ -158,16 +160,29 @@ bool CheckSpawnPoint(const vec3_t &origin, const vec3_t &mins, const vec3_t &max
 	if (tr.ent != world)
 		return false;
 
-	vec3_t projected_origin = origin + gravity_dir;
+	const float positive_extent = DotProduct(maxs, abs_gravity_dir);
+	const float negative_extent = Q_fabs(DotProduct(mins, abs_gravity_dir));
 
-	tr = gi.trace(origin, mins, maxs, projected_origin, nullptr, MASK_MONSTERSOLID);
-	if (tr.startsolid || tr.allsolid)
-		return false;
+	if (positive_extent > 0.0f)
+	{
+		vec3_t upward_check = origin - (gravity_dir * positive_extent);
+
+		tr = gi.trace(origin, mins, maxs, upward_check, nullptr, MASK_MONSTERSOLID);
+		if (tr.startsolid || tr.allsolid)
+			return false;
+	}
+
+	if (negative_extent > 0.0f)
+	{
+		vec3_t downward_check = origin + (gravity_dir * negative_extent);
+
+		tr = gi.trace(origin, mins, maxs, downward_check, nullptr, MASK_MONSTERSOLID);
+		if (tr.startsolid || tr.allsolid)
+			return false;
+	}
 
 	return true;
 }
-
-
 /*
 =============
 CheckGroundSpawnPoint
