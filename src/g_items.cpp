@@ -1125,12 +1125,20 @@ void Tech_ApplyTimeAccelSound(gentity_t* ent) {
 	}
 }
 
+/*
+=============
+Tech_ApplyAutoDoc
+
+Applies regeneration benefits when the Autodoc tech is owned.
+=============
+*/
 void Tech_ApplyAutoDoc(gentity_t* ent) {
 	bool		noise = false;
 	gclient_t* cl;
 	int			index;
 	float		volume = 1.0;
 	bool		mod = g_instagib->integer || g_nadefest->integer;
+	bool		has_autodoc = false;
 	bool		no_health = mod || GTF(GTF_ARENA) || g_no_health->integer;
 	int			max = g_vampiric_damage->integer ? ceil(g_vampiric_health_max->integer / 2) : mod ? 100 : 150;
 
@@ -1144,13 +1152,15 @@ void Tech_ApplyAutoDoc(gentity_t* ent) {
 	if (cl->silencer_shots)
 		volume = 0.2f;
 
+	has_autodoc = cl->pers.inventory[IT_TECH_AUTODOC];
+
+	if (!has_autodoc)
+		return;
+
 	if (mod && !cl->tech_regen_time) {
 		cl->tech_regen_time = level.time;
 		return;
 	}
-
-	if (!(cl->pers.inventory[IT_TECH_AUTODOC] || mod))
-		return;
 
 	if (cl->tech_regen_time < level.time) {
 		bool mm = !!(RS(RS_MM));
@@ -1184,12 +1194,21 @@ void Tech_ApplyAutoDoc(gentity_t* ent) {
 	}
 }
 
+/*
+=============
+Tech_HasRegeneration
+
+Returns true if the entity currently benefits from a regeneration effect.
+=============
+*/
 bool Tech_HasRegeneration(gentity_t* ent) {
-	if (!ent->client) return false;
-	if (ent->client->pers.inventory[IT_TECH_AUTODOC]) return true;
-	if (g_instagib->integer) return true;
-	if (g_nadefest->integer) return true;
-	return false;
+	if (!ent || !ent->client)
+		return false;
+
+	if (ent->client->pu_time_regeneration > level.time)
+		return true;
+
+	return ent->client->pers.inventory[IT_TECH_AUTODOC];
 }
 
 // ===============================================
