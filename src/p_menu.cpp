@@ -71,8 +71,18 @@ menu_hnd_t *P_Menu_Open(gentity_t *ent, const menu_t *entries, int cur, int num,
 	return hnd;
 }
 
+/*
+=============
+P_Menu_Close
+
+Closes the active menu for the entity and frees associated resources.
+=============
+*/
 void P_Menu_Close(gentity_t *ent) {
 	menu_hnd_t *hnd;
+
+	if (!ent->client)
+		return;
 
 	if (!ent->client->menu)
 		return;
@@ -84,7 +94,7 @@ void P_Menu_Close(gentity_t *ent) {
 	gi.TagFree(hnd);
 	ent->client->menu = nullptr;
 	ent->client->showscores = false;
-	
+
 	gentity_t *e = ent->client->follow_target ? ent->client->follow_target : ent;
 	ent->client->ps.stats[STAT_SHOW_STATUSBAR] = !ClientIsPlaying(e->client) ? 0 : 1;
 }
