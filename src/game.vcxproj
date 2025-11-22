@@ -217,6 +217,7 @@
     <ClCompile Include="p_hud.cpp" />
     <ClCompile Include="p_hud_victor.cpp" />
     <ClCompile Include="p_menu.cpp" />
+    <ClCompile Include="p_menu_statusbar.cpp" />
     <ClCompile Include="p_move.cpp" />
     <ClCompile Include="p_trail.cpp" />
     <ClCompile Include="p_view.cpp" />
