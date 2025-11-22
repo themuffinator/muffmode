@@ -2,6 +2,7 @@
 // Licensed under the GNU General Public License 2.0.
 #include "g_local.h"
 #include <cassert>
+#include <cstdio>
 
 /*
 ============
@@ -111,44 +112,56 @@ void P_Menu_UpdateEntry(menu_t *entry, const char *text, int align, SelectFunc_t
 	entry->SelectFunc = SelectFunc;
 }
 
-#include "g_statusbar.h"
+/*
+=============
+P_Menu_BuildLayoutString
 
-void P_Menu_Do_Update(gentity_t *ent) {
-	int			i;
-	menu_t		*p;
-	int			x;
-	menu_hnd_t	*hnd;
-	const char	*t;
-	bool		alt = false;
+Constructs the menu layout string using bounded concatenation and reports whether truncation occurred.
+=============
+*/
+bool P_Menu_BuildLayoutString(const menu_hnd_t *hnd, char *statusbar, size_t statusbar_size)
+{
+	if (!hnd || !statusbar || statusbar_size == 0)
+		return true;
 
-	if (!ent->client->menu) {
-		gi.Com_Print("Warning: ent has no menu\n");
-		return;
-	}
+	statusbar[0] = '\0';
 
-	hnd = ent->client->menu;
+	bool truncated = false;
 
-	if (hnd->UpdateFunc)
-		hnd->UpdateFunc(ent);
+	auto append_checked = [&](const char *text) {
+		if (Q_strlcat(statusbar, text, statusbar_size) >= statusbar_size)
+			truncated = true;
+	};
 
-	statusbar_t sb;
+	auto append_format = [&](const char *fmt, auto... args) {
+		char buffer[64];
+		const int written = std::snprintf(buffer, sizeof(buffer), fmt, args...);
+		buffer[sizeof(buffer) - 1] = '\0';
+		append_checked(buffer);
+		if (written < 0 || static_cast<size_t>(written) >= sizeof(buffer))
+			truncated = true;
+	};
 
-	sb.xv(32).yv(8).picn("inventory");
+	append_checked("xv 32 yv 8 picn inventory ");
 
-	for (i = 0, p = hnd->entries; i < hnd->num; i++, p++) {
+	for (int i = 0; i < hnd->num; i++) {
+		menu_t *p = hnd->entries + i;
+
 		if (!*(p->text))
-			continue; // blank line
+			continue;
 
-		t = p->text;
+		const char *t = p->text;
+		bool alt = false;
 
 		if (*t == '*') {
 			alt = true;
 			t++;
 		}
 
-		sb.yv(32 + i * 8);
+		append_format("yv %d ", 32 + i * 8);
 
 		const char *loc_func = "loc_string";
+		int x = 64;
 
 		if (p->align == MENU_ALIGN_CENTER) {
 			x = 0;
@@ -156,29 +169,57 @@ void P_Menu_Do_Update(gentity_t *ent) {
 		} else if (p->align == MENU_ALIGN_RIGHT) {
 			x = 260;
 			loc_func = "loc_rstring";
-		} else
-			x = 64;
-
-		sb.xv(x);
-
-		sb.sb << loc_func;
-
-		if (hnd->cur == i || alt)
-			sb.sb << '2';
-
-		sb.sb << " 1 \"" << t << "\" \"" << p->text_arg1 << "\" ";
-
-		if (hnd->cur == i) {
-			sb.xv(56);
-			sb.string2("\">\"");
 		}
 
-		alt = false;
+		append_format("xv %d ", x);
+		append_checked(loc_func);
+
+		if (hnd->cur == i || alt)
+			append_checked("2");
+
+		append_checked(" 1 \"");
+		append_checked(t);
+		append_checked("\" \"");
+		append_checked(p->text_arg1);
+		append_checked("\" ");
+
+		if (hnd->cur == i) {
+			append_checked("xv 56 ");
+			append_checked("string2 \">\" ");
+		}
 	}
 
-	gi.WriteByte(svc_layout);
-	gi.WriteString(sb.sb.str().c_str());
+	return truncated;
 }
+/*
+=============
+P_Menu_Do_Update
+
+Build and send the current menu layout using bounded concatenation helpers to avoid overflow.
+=============
+*/
+void P_Menu_Do_Update(gentity_t *ent)
+{
+	if (!ent->client->menu) {
+		gi.Com_Print("Warning: ent has no menu\n");
+		return;
+	}
+
+	menu_hnd_t *hnd = ent->client->menu;
+
+	if (hnd->UpdateFunc)
+		hnd->UpdateFunc(ent);
+
+	char statusbar[MAX_STRING_CHARS];
+	const bool truncated = P_Menu_BuildLayoutString(hnd, statusbar, sizeof(statusbar));
+
+	gi.WriteByte(svc_layout);
+	gi.WriteString(statusbar);
+
+	if (truncated)
+		gi.Com_Print("Warning: menu layout truncated for status bar.\n");
+}
+
 
 void P_Menu_Update(gentity_t *ent) {
 	if (!ent->client->menu) {
