@@ -14,6 +14,40 @@ static vec3_t g_last_trace_start;
 static vec3_t g_last_trace_end;
 static vec3_t g_last_bottom_fast;
 static vec3_t g_last_bottom_slow;
+static bool g_create_monster_should_fail = false;
+
+/*
+=============
+TestPointContents
+
+Treats all points as non-water for spawn validation.
+=============
+*/
+static contents_t TestPointContents(const vec3_t &)
+{
+	return 0;
+}
+
+/*
+=============
+CreateMonster
+
+Returns nullptr when configured to simulate spawn failure.
+=============
+*/
+gentity_t *CreateMonster(const vec3_t &origin, const vec3_t &angles, const char *classname)
+{
+	if (g_create_monster_should_fail)
+		return nullptr;
+
+	static gentity_t dummy_ent{};
+
+	dummy_ent.s.origin = origin;
+	dummy_ent.s.angles = angles;
+	dummy_ent.classname = classname;
+
+	return &dummy_ent;
+}
 
 /*
 =============
@@ -246,14 +280,39 @@ static void TestGroundSpawnHonorsHeight()
 
 /*
 =============
+TestCreateGroundMonsterReturnsNullOnFailedSpawn
+
+Ensures CreateGroundMonster returns nullptr when CreateMonster fails.
+=============
+*/
+static void TestCreateGroundMonsterReturnsNullOnFailedSpawn()
+{
+	gi.trace = TestTrace;
+	gi.pointcontents = TestPointContents;
+	g_create_monster_should_fail = true;
+
+	vec3_t origin{ 16.0f, 8.0f, 4.0f };
+	vec3_t angles{ 0.0f, 90.0f, 0.0f };
+	vec3_t mins{ -8.0f, -8.0f, -8.0f };
+	vec3_t maxs{ 8.0f, 8.0f, 8.0f };
+
+	gentity_t *spawned = CreateGroundMonster(origin, angles, mins, maxs, "monster_infantry", 64.0f);
+
+	assert(spawned == nullptr);
+}
+
+/*
+=============
 main
 =============
 */
 int main()
 {
+	gi.pointcontents = TestPointContents;
 	TestCeilingDropUsesGravity();
 	TestWallGravityProjectsSpawnVolume();
 	TestGroundChecksUseGravityVector();
 	TestGroundSpawnHonorsHeight();
+	TestCreateGroundMonsterReturnsNullOnFailedSpawn();
 	return 0;
 }

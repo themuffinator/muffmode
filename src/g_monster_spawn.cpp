@@ -43,9 +43,20 @@ gentity_t *CreateMonster(const vec3_t &origin, const vec3_t &angles, const char 
 	newEnt->gravityVector = { 0, 0, -1 };
 	ED_CallSpawn(newEnt);
 	newEnt->s.renderfx |= RF_IR_VISIBLE;
-	
+
 	return newEnt;
 }
+
+#else
+/*
+=============
+CreateMonster
+
+Provided by unit tests when MONSTER_SPAWN_TESTS is defined.
+=============
+*/
+gentity_t *CreateMonster(const vec3_t &origin, const vec3_t &angles, const char *classname);
+#endif
 
 /*
 =============
