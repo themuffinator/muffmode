@@ -9,7 +9,7 @@ Creates an activation message plan for the provided context.
 */
 activation_message_plan_t BuildActivationMessagePlan(bool has_message, bool has_activator, bool activator_is_monster, bool coop_global, bool coop_enabled, int noise_index)
 {
-	activation_message_plan_t plan;
+	activation_message_plan_t plan{};
 
 	if (!has_message)
 		return plan;
