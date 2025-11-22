@@ -107,22 +107,29 @@ void P_Menu_Close(gentity_t *ent) {
 }
 
 
-// only use on pmenu's that have been called with P_Menu_Open
+/*
+=============
+P_Menu_UpdateEntry
+
+Replaces the text and callbacks for a menu entry created by P_Menu_Open.
+=============
+*/
 void P_Menu_UpdateEntry(menu_t *entry, const char *text, int align, SelectFunc_t SelectFunc) {
 	Q_strlcpy(entry->text, text, sizeof(entry->text));
 	entry->align = align;
 	entry->SelectFunc = SelectFunc;
 }
 
-#include "g_statusbar.h"
+/*
+=============
+P_Menu_Do_Update
 
+Regenerates the menu status bar layout for the client using bounded string
+operations.
+=============
+*/
 void P_Menu_Do_Update(gentity_t *ent) {
-	int			i;
-	menu_t		*p;
-	int			x;
-	menu_hnd_t	*hnd;
-	const char	*t;
-	bool		alt = false;
+	menu_hnd_t		*hnd;
 
 	if (!ent->client->menu) {
 		gi.Com_Print("Warning: ent has no menu\n");
@@ -134,55 +141,22 @@ void P_Menu_Do_Update(gentity_t *ent) {
 	if (hnd->UpdateFunc)
 		hnd->UpdateFunc(ent);
 
-	statusbar_t sb;
+	char layout[MAX_STRING_CHARS] = {};
 
-	sb.xv(32).yv(8).picn("inventory");
-
-	for (i = 0, p = hnd->entries; i < hnd->num; i++, p++) {
-		if (!*(p->text))
-			continue; // blank line
-
-		t = p->text;
-
-		if (*t == '*') {
-			alt = true;
-			t++;
-		}
-
-		sb.yv(32 + i * 8);
-
-		const char *loc_func = "loc_string";
-
-		if (p->align == MENU_ALIGN_CENTER) {
-			x = 0;
-			loc_func = "loc_cstring";
-		} else if (p->align == MENU_ALIGN_RIGHT) {
-			x = 260;
-			loc_func = "loc_rstring";
-		} else
-			x = 64;
-
-		sb.xv(x);
-
-		sb.sb << loc_func;
-
-		if (hnd->cur == i || alt)
-			sb.sb << '2';
-
-		sb.sb << " 1 \"" << t << "\" \"" << p->text_arg1 << "\" ";
-
-		if (hnd->cur == i) {
-			sb.xv(56);
-			sb.string2("\">\"");
-		}
-
-		alt = false;
-	}
+	P_Menu_BuildStatusBar(hnd, layout, sizeof(layout));
 
 	gi.WriteByte(svc_layout);
-	gi.WriteString(sb.sb.str().c_str());
+	gi.WriteString(layout);
 }
 
+
+/*
+=============
+P_Menu_Update
+
+Performs periodic menu updates when the client is viewing a menu.
+=============
+*/
 void P_Menu_Update(gentity_t *ent) {
 	if (!ent->client->menu) {
 		gi.Com_Print("Warning: ent has no menu\n");
@@ -202,6 +176,13 @@ void P_Menu_Update(gentity_t *ent) {
 	gi.local_sound(ent, CHAN_AUTO, gi.soundindex("misc/menu2.wav"), 1, ATTN_NONE, 0);
 }
 
+/*
+=============
+P_Menu_Next
+
+Advances the menu cursor to the next selectable entry.
+=============
+*/
 void P_Menu_Next(gentity_t *ent) {
 	menu_hnd_t	*hnd;
 	int			i;
@@ -235,6 +216,13 @@ void P_Menu_Next(gentity_t *ent) {
 	P_Menu_Update(ent);
 }
 
+/*
+=============
+P_Menu_Prev
+
+Moves the menu cursor to the previous selectable entry.
+=============
+*/
 void P_Menu_Prev(gentity_t *ent) {
 	menu_hnd_t	*hnd;
 	int			i;
@@ -269,6 +257,13 @@ void P_Menu_Prev(gentity_t *ent) {
 	P_Menu_Update(ent);
 }
 
+/*
+=============
+P_Menu_Select
+
+Triggers the select callback for the current menu entry.
+=============
+*/
 void P_Menu_Select(gentity_t *ent) {
 	menu_hnd_t	*hnd;
 	menu_t		*p;
@@ -308,10 +303,24 @@ menu_t banned_menu_entries[] = {
 	{ "", MENU_ALIGN_CENTER, nullptr },
 };
 
+/*
+=============
+P_Menu_Banned_Update
+
+No-op update hook for the banned menu.
+=============
+*/
 void P_Menu_Banned_Update(gentity_t *ent) {
 	(void)ent;
 }
 
+/*
+=============
+P_Menu_Banned_InitEntries
+
+Initializes the static banned menu lines.
+=============
+*/
 void P_Menu_Banned_InitEntries() {
 	for (size_t i = 0; i < sizeof(banned_menu_entries) / sizeof(banned_menu_entries[0]); ++i)
 	        Q_strlcpy(banned_menu_entries[i].text, BANNED_MENU_LINES[i], sizeof(banned_menu_entries[i].text));
@@ -319,6 +328,13 @@ void P_Menu_Banned_InitEntries() {
 
 } // namespace
 
+/*
+=============
+P_Menu_OpenBanned
+
+Opens the banned notification menu for a client.
+=============
+*/
 void P_Menu_OpenBanned(gentity_t *ent) {
 	if (!ent->client)
 		return;
@@ -327,6 +343,13 @@ void P_Menu_OpenBanned(gentity_t *ent) {
 	P_Menu_Open(ent, banned_menu_entries, -1, sizeof(banned_menu_entries) / sizeof(menu_t), nullptr, false, P_Menu_Banned_Update);
 }
 
+/*
+=============
+P_Menu_IsBannedMenu
+
+Returns true when the supplied menu handle is the banned menu.
+=============
+*/
 bool P_Menu_IsBannedMenu(const menu_hnd_t *hnd) {
 	if (!hnd)
 		return false;
