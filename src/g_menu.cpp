@@ -228,7 +228,7 @@ static void G_Menu_Admin_Settings(gentity_t *ent, menu_hnd_t *p) {
 	settings->instantweap = g_instant_weapon_switch->integer != 0;
 	settings->match_lock = g_match_lock->integer != 0;
 
-	menu = P_Menu_Open(ent, def_setmenu, -1, sizeof(def_setmenu) / sizeof(menu_t), settings, nullptr);
+	menu = P_Menu_Open(ent, def_setmenu, -1, sizeof(def_setmenu) / sizeof(menu_t), settings, true, nullptr);
 	G_Menu_Admin_UpdateSettings(ent, menu);
 }
 
@@ -285,7 +285,7 @@ void G_Menu_Admin(gentity_t *ent, menu_hnd_t *p) {
 	}
 
 	P_Menu_Close(ent);
-	P_Menu_Open(ent, adminmenu, -1, sizeof(adminmenu) / sizeof(menu_t), nullptr, nullptr);
+	P_Menu_Open(ent, adminmenu, -1, sizeof(adminmenu) / sizeof(menu_t), nullptr, false, nullptr);
 }
 
 /*-----------------------------------------------------------------------*/
@@ -399,7 +399,7 @@ static void G_Menu_PMStats_Update(gentity_t *ent) {
 
 static void G_Menu_PMStats(gentity_t *ent, menu_hnd_t *p) {
 	P_Menu_Close(ent);
-	P_Menu_Open(ent, pmstatsmenu, -1, sizeof(pmstatsmenu) / sizeof(menu_t), nullptr, G_Menu_PMStats_Update);
+	P_Menu_Open(ent, pmstatsmenu, -1, sizeof(pmstatsmenu) / sizeof(menu_t), nullptr, false, G_Menu_PMStats_Update);
 }
 
 /*-----------------------------------------------------------------------*/
@@ -563,7 +563,7 @@ static void G_Menu_CallVote_Map_Update(gentity_t *ent) {
 
 void G_Menu_CallVote_Map(gentity_t *ent, menu_hnd_t *p) {
 	P_Menu_Close(ent);
-	P_Menu_Open(ent, pmcallvotemenu_map, -1, sizeof(pmcallvotemenu_map) / sizeof(menu_t), nullptr, G_Menu_CallVote_Map_Update);
+	P_Menu_Open(ent, pmcallvotemenu_map, -1, sizeof(pmcallvotemenu_map) / sizeof(menu_t), nullptr, false, G_Menu_CallVote_Map_Update);
 }
 
 void G_Menu_CallVote_NextMap(gentity_t *ent, menu_hnd_t *p) {
@@ -594,7 +594,7 @@ void G_Menu_CallVote_TimeLimit(gentity_t *ent, menu_hnd_t *p) {
 	//level.vote_arg.clear();
 	//VoteCommandStore(ent);
 	P_Menu_Close(ent);
-	P_Menu_Open(ent, pmcallvotemenu_timelimit, -1, sizeof(pmcallvotemenu_timelimit) / sizeof(menu_t), nullptr, G_Menu_CallVote_TimeLimit_Update);
+	P_Menu_Open(ent, pmcallvotemenu_timelimit, -1, sizeof(pmcallvotemenu_timelimit) / sizeof(menu_t), nullptr, false, G_Menu_CallVote_TimeLimit_Update);
 }
 
 void G_Menu_CallVote_ScoreLimit(gentity_t *ent, menu_hnd_t *p) {
@@ -665,7 +665,7 @@ static void G_Menu_CallVote_Update(gentity_t *ent) {
 
 static void G_Menu_CallVote(gentity_t *ent, menu_hnd_t *p) {
 	P_Menu_Close(ent);
-	P_Menu_Open(ent, pmcallvotemenu, -1, sizeof(pmcallvotemenu) / sizeof(menu_t), nullptr, G_Menu_CallVote_Update);
+	P_Menu_Open(ent, pmcallvotemenu, -1, sizeof(pmcallvotemenu) / sizeof(menu_t), nullptr, false, G_Menu_CallVote_Update);
 }
 /*-----------------------------------------------------------------------*/
 
@@ -750,7 +750,7 @@ static void G_Menu_Vote_Update(gentity_t *ent) {
 }
 
 void G_Menu_Vote_Open(gentity_t *ent) {
-	P_Menu_Open(ent, votemenu, -1, sizeof(votemenu) / sizeof(menu_t), nullptr, G_Menu_Vote_Update);
+	P_Menu_Open(ent, votemenu, -1, sizeof(votemenu) / sizeof(menu_t), nullptr, false, G_Menu_Vote_Update);
 }
 
 
@@ -925,7 +925,7 @@ void G_Menu_ChaseCam(gentity_t *ent, menu_hnd_t *p) {
 	GetFollowTarget(ent);
 
 	P_Menu_Close(ent);
-	P_Menu_Open(ent, nochasemenu, -1, sizeof(nochasemenu) / sizeof(menu_t), nullptr, G_Menu_NoChaseCamUpdate);
+	P_Menu_Open(ent, nochasemenu, -1, sizeof(nochasemenu) / sizeof(menu_t), nullptr, false, G_Menu_NoChaseCamUpdate);
 }
 
 void G_Menu_ReturnToMain(gentity_t *ent, menu_hnd_t *p) {
@@ -973,7 +973,7 @@ static void G_Menu_HostInfo_Update(gentity_t *ent) {
 
 void G_Menu_HostInfo(gentity_t *ent, menu_hnd_t *p) {
 	P_Menu_Close(ent);
-	P_Menu_Open(ent, hostinfomenu, -1, sizeof(hostinfomenu) / sizeof(menu_t), nullptr, G_Menu_HostInfo_Update);
+	P_Menu_Open(ent, hostinfomenu, -1, sizeof(hostinfomenu) / sizeof(menu_t), nullptr, false, G_Menu_HostInfo_Update);
 }
 
 static void G_Menu_ServerInfo_Update(gentity_t *ent) {
@@ -1187,7 +1187,7 @@ static void G_Menu_ServerInfo_Update(gentity_t *ent) {
 
 void G_Menu_ServerInfo(gentity_t *ent, menu_hnd_t *p) {
 	P_Menu_Close(ent);
-	P_Menu_Open(ent, svinfomenu, -1, sizeof(svinfomenu) / sizeof(menu_t), nullptr, G_Menu_ServerInfo_Update);
+	P_Menu_Open(ent, svinfomenu, -1, sizeof(svinfomenu) / sizeof(menu_t), nullptr, false, G_Menu_ServerInfo_Update);
 }
 
 static void G_Menu_GameRules_Update(gentity_t *ent) {
@@ -1202,7 +1202,7 @@ static void G_Menu_GameRules_Update(gentity_t *ent) {
 
 static void G_Menu_GameRules(gentity_t *ent, menu_hnd_t *p) {
 	P_Menu_Close(ent);
-	P_Menu_Open(ent, svinfomenu, -1, sizeof(svinfomenu) / sizeof(menu_t), nullptr, G_Menu_GameRules_Update);
+	P_Menu_Open(ent, svinfomenu, -1, sizeof(svinfomenu) / sizeof(menu_t), nullptr, false, G_Menu_GameRules_Update);
 }
 
 static void G_Menu_Join_Update(gentity_t *ent) {
@@ -1367,8 +1367,8 @@ void G_Menu_Join_Open(gentity_t *ent) {
 		else
 			team = brandom() ? TEAM_RED : TEAM_BLUE;
 
-		P_Menu_Open(ent, teams_join_menu, team, sizeof(teams_join_menu) / sizeof(menu_t), nullptr, G_Menu_Join_Update);
+		P_Menu_Open(ent, teams_join_menu, team, sizeof(teams_join_menu) / sizeof(menu_t), nullptr, false, G_Menu_Join_Update);
 	} else {
-		P_Menu_Open(ent, free_join_menu, TEAM_FREE, sizeof(free_join_menu) / sizeof(menu_t), nullptr, G_Menu_Join_Update);
+		P_Menu_Open(ent, free_join_menu, TEAM_FREE, sizeof(free_join_menu) / sizeof(menu_t), nullptr, false, G_Menu_Join_Update);
 	}
 }
