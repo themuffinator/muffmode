@@ -1,6 +1,7 @@
 // Copyright (c) ZeniMax Media Inc.
 // Licensed under the GNU General Public License 2.0.
 #include "g_local.h"
+#include <cassert>
 
 /*
 ============
@@ -15,10 +16,13 @@ void P_Menu_Dirty() {
 		}
 }
 
-// Note that the pmenu entries are duplicated
-// this is so that a static set of pmenu entries can be used
-// for multiple clients and changed without interference
-// note that arg will be freed when the menu is closed, it must be allocated memory
+/*
+=============
+P_Menu_Open
+
+Open a menu for a client and duplicate entry data for safe modification.
+=============
+*/
 menu_hnd_t *P_Menu_Open(gentity_t *ent, const menu_t *entries, int cur, int num, void *arg, UpdateFunc_t UpdateFunc) {
 	menu_hnd_t		*hnd;
 	const menu_t	*p;
@@ -40,8 +44,9 @@ menu_hnd_t *P_Menu_Open(gentity_t *ent, const menu_t *entries, int cur, int num,
 	hnd->entries = (menu_t *)gi.TagMalloc(sizeof(menu_t) * num, TAG_LEVEL);
 	memcpy(hnd->entries, entries, sizeof(menu_t) * num);
 	// duplicate the strings since they may be from static memory
-	for (i = 0; i < num; i++)
-		Q_strlcpy(hnd->entries[i].text, entries[i].text, sizeof(entries[i].text));
+	for (i = 0; i < num; i++) {
+		assert(Q_strlcpy(hnd->entries[i].text, entries[i].text, sizeof(hnd->entries[i].text)) < sizeof(hnd->entries[i].text));
+	}
 
 	hnd->num = num;
 
