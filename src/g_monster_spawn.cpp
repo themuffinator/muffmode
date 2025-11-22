@@ -234,11 +234,6 @@ bool CheckGroundSpawnPoint(const vec3_t &origin, const vec3_t &entMins, const ve
 	if (!CheckSpawnPoint(origin, entMins, entMaxs, gravityVector))
 		return false;
 
-	vec3_t gravity_dir = gravityVector.normalized();
-
-	if (!gravity_dir)
-		gravity_dir = { 0.0f, 0.0f, -1.0f };
-
 	trace_t trace = gi.trace(origin, entMins, entMaxs, origin + (gravity_dir * height), nullptr, MASK_MONSTERSOLID);
 
 	if (trace.fraction == 1.0f)
