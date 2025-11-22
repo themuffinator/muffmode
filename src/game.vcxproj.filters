@@ -276,6 +276,7 @@
       <Filter>monsters</Filter>
     </ClCompile>
     <ClCompile Include="p_menu.cpp" />
+    <ClCompile Include="p_menu_statusbar.cpp" />
     <ClCompile Include="g_menu.cpp" />
     <ClCompile Include="g_ctf.cpp" />
   </ItemGroup>

@@ -1744,7 +1744,7 @@ entity parsing.
 =============
 */
 static void G_TestCTFSpawnPoints() {
-	if (!GTF(GTF_CTF))
+	if (!(GTF(GTF_CTF)))
 		return;
 
 	auto ensure_linked = [](const char *classname) {
