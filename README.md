@@ -1,4 +1,4 @@
-<table style="width:100%; background:#2d1b3d; border-radius:16px; padding:24px; border-collapse:separate; color:#f5e8ff;">
+<table style="margin:0 auto; background:#5a2a8f; border-radius:16px; padding:24px 32px; border-collapse:separate; border-spacing:0; color:#f5e8ff; text-align:center;">
   <tr>
     <td style="text-align:center; border:none;">
       <img src="assets/img/muffmode.png" alt="Muff Mode Logo" width="600" />
