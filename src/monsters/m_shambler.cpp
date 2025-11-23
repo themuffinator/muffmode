@@ -22,6 +22,57 @@ static cached_soundindex sound_melee2;
 static cached_soundindex sound_smack;
 static cached_soundindex sound_boom;
 
+/*
+=============
+ShamblerIsExplosionMod
+
+Determines whether the provided mod represents explosion-style damage.
+=============
+*/
+static bool ShamblerIsExplosionMod(const mod_t &mod)
+{
+	switch (mod.id) {
+	case MOD_GRENADE:
+	case MOD_G_SPLASH:
+	case MOD_ROCKET:
+	case MOD_R_SPLASH:
+	case MOD_HANDGRENADE:
+	case MOD_HG_SPLASH:
+	case MOD_BFG_BLAST:
+	case MOD_BFG_EFFECT:
+	case MOD_EXPLOSIVE:
+	case MOD_BARREL:
+	case MOD_BOMB:
+	case MOD_SPLASH:
+	case MOD_RAILGUN_SPLASH:
+		return true;
+
+	default:
+		return false;
+	}
+}
+
+/*
+=============
+ShamblerApplyExplosionResistance
+
+Halves explosion damage, restoring the prevented amount to the shambler and
+returning the scaled value for pain handling.
+=============
+*/
+int ShamblerApplyExplosionResistance(gentity_t *self, int damage, const mod_t &mod)
+{
+	if (!ShamblerIsExplosionMod(mod))
+		return damage;
+
+	const int reduced_damage = (damage + 1) / 2;
+
+	if (damage > reduced_damage)
+		self->health += damage - reduced_damage;
+
+	return reduced_damage;
+}
+
 //
 // misc
 //
@@ -170,7 +221,6 @@ MONSTERINFO_RUN(shambler_run) (gentity_t *self) -> void {
 // pain
 //
 
-// FIXME: needs halved explosion damage
 
 mframe_t shambler_frames_pain[] = {
 	{ ai_move },
@@ -182,14 +232,23 @@ mframe_t shambler_frames_pain[] = {
 };
 MMOVE_T(shambler_move_pain) = { FRAME_pain01, FRAME_pain06, shambler_frames_pain, shambler_run };
 
+/*
+=============
+shambler_pain
+
+Handles shambler pain reactions with reduced explosion damage sensitivity.
+=============
+*/
 static PAIN(shambler_pain) (gentity_t *self, gentity_t *other, float kick, int damage, const mod_t &mod) -> void {
+	const int adjusted_damage = ShamblerApplyExplosionResistance(self, damage, mod);
+
 	if (level.time < self->timestamp)
 		return;
 
 	self->timestamp = level.time + 1_ms;
 	gi.sound(self, CHAN_AUTO, sound_pain, 1, ATTN_NORM, 0);
 
-	if (mod.id != MOD_CHAINFIST && damage <= 30 && frandom() > 0.2f)
+	if (mod.id != MOD_CHAINFIST && adjusted_damage <= 30 && frandom() > 0.2f)
 		return;
 
 	// If hard or nightmare, don't go into pain while attacking
