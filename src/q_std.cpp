@@ -9,6 +9,28 @@
 
 g_fmt_data_t g_fmt_data;
 
+static constexpr size_t COM_TOKEN_RING_SLOTS = 4;
+
+/*
+=============
+COM_GetThreadLocalTokenBuffer
+
+Returns a thread-local token buffer, rotating slots to allow nested calls
+without overwriting results.
+=============
+*/
+static char *COM_GetThreadLocalTokenBuffer(size_t &out_size)
+{
+	static thread_local size_t s_next_token_slot = 0;
+	static thread_local char s_com_token_ring[COM_TOKEN_RING_SLOTS][MAX_TOKEN_CHARS];
+
+	char *buffer = s_com_token_ring[s_next_token_slot];
+	out_size = MAX_TOKEN_CHARS;
+	s_next_token_slot = (s_next_token_slot + 1) % COM_TOKEN_RING_SLOTS;
+
+	return buffer;
+}
+
 bool COM_IsSeparator(char c, const char *seps)
 {
 	if (!c)
@@ -30,25 +52,26 @@ Parse a token out of a string
 */
 char *COM_ParseEx(const char **data_p, const char *seps, char *buffer, size_t buffer_size, bool *overflowed)
 {
-	static char com_token[MAX_TOKEN_CHARS];
-
+	size_t default_buffer_size = 0;
+	char *default_buffer = COM_GetThreadLocalTokenBuffer(default_buffer_size);
+	
 	bool overflow_flag = false;
-
+	
 	if (overflowed)
 		*overflowed = false;
-
+	
 	if (!buffer)
 	{
-		buffer = com_token;
-		buffer_size = MAX_TOKEN_CHARS;
+		buffer = default_buffer;
+		buffer_size = default_buffer_size;
 	}
 	else if (!buffer_size)
 	{
 		overflow_flag = true;
-		buffer = com_token;
-		buffer_size = MAX_TOKEN_CHARS;
+		buffer = default_buffer;
+		buffer_size = default_buffer_size;
 	}
-
+	
 	int					c;
 	size_t				len;
 	size_t				stored_len;
