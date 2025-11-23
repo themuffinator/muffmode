@@ -3,6 +3,9 @@
 
 #include "q_std.h"
 
+#include <algorithm>
+#include <vector>
+
 #define GAME_INCLUDE
 #include "bg_local.h"
 
@@ -21,11 +24,12 @@ stuck_result_t G_FixStuckObject_Generic(vec3_t& origin, const vec3_t& own_mins, 
 	if (!trace(origin, own_mins, own_maxs, origin).startsolid)
 		return stuck_result_t::GOOD_POSITION;
 
-	struct {
+	struct GoodPosition {
 		float distance;
 		vec3_t origin;
-	} good_positions[6];
-	size_t num_good_positions = 0;
+	};
+	std::vector<GoodPosition> good_positions;
+	good_positions.reserve(q_countof(side_checks));
 
 	constexpr struct {
 		std::array<int8_t, 3> normal;
@@ -138,18 +142,16 @@ stuck_result_t G_FixStuckObject_Generic(vec3_t& origin, const vec3_t& own_mins, 
 		if (tr.startsolid)
 			continue;
 
-		good_positions[num_good_positions].origin = new_origin;
-		good_positions[num_good_positions].distance = delta.lengthSquared();
-		num_good_positions++;
+		good_positions.emplace_back(GoodPosition{ delta.lengthSquared(), new_origin });
 	}
 
-	if (num_good_positions) {
-		std::sort(&good_positions[0], &good_positions[0] + num_good_positions, [](const auto& a, const auto& b) { return a.distance < b.distance; });
+	if (!good_positions.empty()) {
+		const auto best = std::ranges::min_element(good_positions, [](const auto& a, const auto& b) { return a.distance < b.distance; });
 
-		origin = good_positions[0].origin;
+		origin = best->origin;
 
 		return stuck_result_t::FIXED;
-}
+	}
 
 	return stuck_result_t::NO_GOOD_POSITION;
 }
