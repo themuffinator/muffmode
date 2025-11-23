@@ -1572,7 +1572,7 @@ static void G_LocateSpawnSpots(void) {
 
 /*
 =============
-ParseWorldEntityString
+	ParseWorldEntityString
 
 Loads the base entity string for the level and optionally overrides it with
 an external .ent file.
@@ -1869,6 +1869,8 @@ void SpawnEntities(const char *mapname, const char *entities, const char *spawnp
 
 	level.entstring = new_entstring;
 	ParseWorldEntityString(mapname, RS(RS_Q3A));
+
+	G_SaveLevelEntstring();
 
 	level.is_n64 = strncmp(level.mapname, "q64/", 4) == 0;
 
