@@ -152,6 +152,11 @@ save_data_list_t::save_data_list_t(const char *name_in, save_data_tag_t tag_in, 
 	ptr(ptr_in),
 	next(nullptr),
 	valid(valid_in) {
+	assert(name_in);
+
+	if (!name_in)
+		gi.Com_Error("save data entry name cannot be null");
+
 	if (save_data_initialized && link)
 		gi.Com_Error("attempted to create save_data_list at runtime");
 
