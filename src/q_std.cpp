@@ -9,8 +9,18 @@
 
 g_fmt_data_t g_fmt_data;
 
+/*
+=============
+COM_IsSeparator
+
+Returns true if the specified character is a separator.
+=============
+*/
 bool COM_IsSeparator(char c, const char *seps)
 {
+	if (!seps)
+		return true;
+
 	if (!c)
 		return true;
 
