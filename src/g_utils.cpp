@@ -7,6 +7,7 @@
 #include "g_utils_friendly_message.h"
 #include <cerrno>
 #include <vector>
+#include <span>
 #include "g_utils_target_selection.h"
 
 /*
@@ -20,16 +21,20 @@ nullptr will be returned if the end of the list is reached.
 =============
 */
 gentity_t* G_Find(gentity_t* from, std::function<bool(gentity_t* e)> matcher) {
-	if (!from)
-		from = g_entities;
-	else
-		from++;
+	const std::span<gentity_t> entities{ g_entities, static_cast<size_t>(globals.num_entities) };
+	size_t start_index = 0;
 
-	for (; from < &g_entities[globals.num_entities]; from++) {
-		if (!from->inuse)
+	if (from)
+		start_index = static_cast<size_t>((from - g_entities) + 1);
+
+	if (start_index >= entities.size())
+		return nullptr;
+
+	for (gentity_t& ent : entities.subspan(start_index)) {
+		if (!ent.inuse)
 			continue;
-		if (matcher(from))
-			return from;
+		if (matcher(&ent))
+			return &ent;
 	}
 
 	return nullptr;
