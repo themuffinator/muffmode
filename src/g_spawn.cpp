@@ -1979,8 +1979,9 @@ static void G_InitStatusbar() {
 		// top of screen coop respawn display
 		sb.ifstat(STAT_COOP_RESPAWN).xv(0).yt(0).loc_stat_cstring2(STAT_COOP_RESPAWN).endifstat();
 		
-		// coop lives
-		if (g_coop_enable_lives->integer && g_coop_num_lives->integer > 0)
+		// coop & horde lives
+const bool limited_lives = (g_coop_enable_lives->integer && g_coop_num_lives->integer > 0) || Horde_LivesEnabled();
+		if (limited_lives)
 			sb.ifstat(STAT_LIVES).xr(-16).yt(y = 2).lives_num(STAT_LIVES).xr(0).yt(y += text_adj).loc_rstring("$g_lives").endifstat();
 
 		// total monsters

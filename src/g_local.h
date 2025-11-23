@@ -2394,6 +2394,7 @@ extern cvar_t *g_coop_health_scaling;
 extern cvar_t *g_coop_instanced_items;
 extern cvar_t *g_coop_num_lives;
 extern cvar_t *g_coop_player_collision;
+extern cvar_t *g_horde_num_lives;
 extern cvar_t *g_coop_squad_respawn;
 extern cvar_t *g_corpse_sink_time;
 extern cvar_t *g_damage_scale;
@@ -3009,6 +3010,16 @@ void ClientBeginServerFrame(gentity_t *ent);
 void ClientUserinfoChanged(gentity_t *ent, const char *userinfo);
 void Match_Ghost_Assign(gentity_t *ent);
 void Match_Ghost_DoAssign(gentity_t *ent);
+
+struct player_life_state_t {
+	bool		playing;
+	bool		eliminated;
+	int32_t	health;
+	int32_t	lives;
+};
+
+bool Horde_LivesEnabled();
+bool Horde_NoLivesRemain(const std::vector<player_life_state_t> &states);
 void P_AssignClientSkinnum(gentity_t *ent);
 void P_ForceFogTransition(gentity_t *ent, bool instant);
 void P_SendLevelPOI(gentity_t *ent);

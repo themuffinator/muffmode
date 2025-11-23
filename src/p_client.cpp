@@ -980,6 +980,23 @@ static bool Match_CanScore() {
 }
 
 /*
+=============
+GetConfiguredLives
+
+Returns the configured life count for coop-style modes, including Horde.
+=============
+*/
+static int GetConfiguredLives() {
+	if (g_coop_enable_lives->integer)
+		return g_coop_num_lives->integer + 1;
+
+	if (Horde_LivesEnabled())
+		return g_horde_num_lives->integer + 1;
+
+	return 0;
+}
+
+/*
 ==================
 player_die
 ==================
@@ -1075,6 +1092,40 @@ DIE(player_die) (gentity_t* self, gentity_t* inflictor, gentity_t* attacker, int
 			if (deathmatch->integer && g_dm_force_respawn_time->integer) {
 				self->client->respawn_time = (level.time + gtime_t::from_sec(g_dm_force_respawn_time->value));
 			}
+		}
+
+		const bool limited_lives = g_coop_enable_lives->integer || Horde_LivesEnabled();
+		const bool squad_respawn = coop->integer && g_coop_squad_respawn->integer;
+
+		if (InCoopStyle() && (squad_respawn || limited_lives)) {
+			if (limited_lives && self->client->pers.lives) {
+				self->client->pers.lives--;
+				if (g_coop_enable_lives->integer)
+					self->client->resp.coop_respawn.lives--;
+			}
+
+			bool allPlayersDead = true;
+
+			for (auto player : active_clients())
+				if (player->health > 0 || (!level.deadly_kill_box && limited_lives && player->client->pers.lives > 0)) {
+					allPlayersDead = false;
+					break;
+				}
+
+			if (allPlayersDead) { // allow respawns for telefrags and weird shit
+				level.coop_level_restart_time = level.time + 5_sec;
+
+				for (auto player : active_clients())
+					gi.LocCenter_Print(player, "$g_coop_lose");
+			}
+
+			if (limited_lives && !self->client->pers.lives)
+				self->client->eliminated = true;
+
+			// in 3 seconds, attempt a respawn or put us into
+			// spectator mode
+			if (!level.coop_level_restart_time)
+				self->client->respawn_time = level.time + 3_sec;
 		}
 
 		LookAtKiller(self, inflictor, attacker);
@@ -1216,22 +1267,24 @@ DIE(player_die) (gentity_t* self, gentity_t* inflictor, gentity_t* attacker, int
 	}
 
 	if (!self->deadflag) {
-		if (InCoopStyle() && (g_coop_squad_respawn->integer || g_coop_enable_lives->integer)) {
-			if (g_coop_enable_lives->integer && self->client->pers.lives) {
+		const bool limited_lives = g_coop_enable_lives->integer || Horde_LivesEnabled();
+
+		if (InCoopStyle() && (g_coop_squad_respawn->integer || limited_lives)) {
+			if (limited_lives && self->client->pers.lives) {
 				self->client->pers.lives--;
-				self->client->resp.coop_respawn.lives--;
+				if (g_coop_enable_lives->integer)
+					self->client->resp.coop_respawn.lives--;
 			}
 
 			bool allPlayersDead = true;
 
 			for (auto player : active_clients())
-				if (player->health > 0 || (!level.deadly_kill_box && g_coop_enable_lives->integer && player->client->pers.lives > 0)) {
+				if (player->health > 0 || (!level.deadly_kill_box && limited_lives && player->client->pers.lives > 0)) {
 					allPlayersDead = false;
 					break;
 				}
 
-			if (allPlayersDead) // allow respawns for telefrags and weird shit
-			{
+			if (allPlayersDead) { // allow respawns for telefrags and weird shit
 				level.coop_level_restart_time = level.time + 5_sec;
 
 				for (auto player : active_clients())
@@ -1522,8 +1575,11 @@ void InitClientPersistant(gentity_t* ent, gclient_t* client) {
 		client->pers.lastweapon = client->pers.weapon;
 	}
 
-	if (InCoopStyle() && g_coop_enable_lives->integer)
-		client->pers.lives = g_coop_num_lives->integer + 1;
+	if (InCoopStyle()) {
+		int configured_lives = GetConfiguredLives();
+		if (configured_lives)
+			client->pers.lives = configured_lives;
+	}
 
 	if (ent->client->pers.autoshield >= AUTO_SHIELD_AUTO)
 		ent->flags |= FL_WANTS_POWER_ARMOR;
@@ -2773,8 +2829,11 @@ void ClientSpawn(gentity_t* ent) {
 			ClientSetEliminated(ent);
 	bool eliminated = ent->client->eliminated;
 	int lives = 0;
-	if (InCoopStyle() && g_coop_enable_lives->integer)
-		lives = ent->client->pers.spawned ? ent->client->pers.lives : g_coop_enable_lives->integer + 1;
+	if (InCoopStyle()) {
+		const int configured_lives = GetConfiguredLives();
+		if (configured_lives)
+			lives = ent->client->pers.spawned ? ent->client->pers.lives : configured_lives;
+	}
 
 	// clear velocity now, since landmark may change it
 	ent->velocity = {};
@@ -4671,18 +4730,19 @@ static bool G_CoopRespawn(gentity_t* ent) {
 	// don't do this in non-coop
 	if (!InCoopStyle())
 		return false;
+
+	const bool limited_lives = g_coop_enable_lives->integer || Horde_LivesEnabled();
 	// if we don't have squad or lives, it doesn't matter
-	if (!g_coop_squad_respawn->integer && !g_coop_enable_lives->integer)
+	if (!g_coop_squad_respawn->integer && !limited_lives)
 		return false;
 
 	respawn_state_t state = RESPAWN_NONE;
 
 	// first pass: if we have no lives left, just move to spectator
-	if (g_coop_enable_lives->integer) {
-		if (ent->client->pers.lives == 0) {
-			state = RESPAWN_SPECTATE;
-			ent->client->coop_respawn_state = COOP_RESPAWN_NO_LIVES;
-		}
+	if (limited_lives && ent->client->pers.lives == 0) {
+		state = RESPAWN_SPECTATE;
+		ent->client->coop_respawn_state = COOP_RESPAWN_NO_LIVES;
+		ClientSetEliminated(ent);
 	}
 
 	// second pass: check for where to spawn

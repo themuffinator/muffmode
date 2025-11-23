@@ -99,6 +99,7 @@ cvar_t *g_coop_health_scaling;
 cvar_t *g_coop_instanced_items;
 cvar_t *g_coop_num_lives;
 cvar_t *g_coop_player_collision;
+cvar_t *g_horde_num_lives;
 cvar_t *g_coop_squad_respawn;
 cvar_t *g_corpse_sink_time;
 cvar_t *g_damage_scale;
@@ -530,6 +531,13 @@ static void Horde_Init() {
 	*/
 }
 
+/*
+=============
+Horde_AllMonstersDead
+
+Returns true when no live monsters remain in the level.
+=============
+*/
 static bool Horde_AllMonstersDead() {
 	for (size_t i = 0; i < globals.max_entities; i++) {
 		if (!g_entities[i].inuse)
@@ -543,6 +551,42 @@ static bool Horde_AllMonstersDead() {
 	return true;
 }
 
+/*
+=============
+Horde_LivesEnabled
+
+Returns true when Horde is configured to use limited lives.
+=============
+*/
+bool Horde_LivesEnabled() {
+	return GT(GT_HORDE) && g_horde_num_lives->integer > 0;
+}
+
+/*
+=============
+Horde_NoLivesRemain
+
+Returns true when every playing client is out of lives or eliminated.
+=============
+*/
+bool Horde_NoLivesRemain(const std::vector<player_life_state_t> &states) {
+	bool	have_players = false;
+
+	for (const auto &state : states) {
+		if (!state.playing)
+			continue;
+
+		have_players = true;
+
+		if (state.health > 0)
+			return false;
+
+		if (!state.eliminated && state.lives > 0)
+			return false;
+	}
+
+	return have_players;
+}
 // =================================================
 
 
@@ -890,10 +934,11 @@ static void InitGame() {
 
 	// [Paril-KEX]
 	g_coop_player_collision = gi.cvar("g_coop_player_collision", "0", CVAR_LATCH);
-	g_coop_squad_respawn = gi.cvar("g_coop_squad_respawn", "1", CVAR_LATCH);
-	g_coop_enable_lives = gi.cvar("g_coop_enable_lives", "0", CVAR_LATCH);
-	g_coop_num_lives = gi.cvar("g_coop_num_lives", "2", CVAR_LATCH);
-	g_coop_instanced_items = gi.cvar("g_coop_instanced_items", "1", CVAR_LATCH);
+g_coop_squad_respawn = gi.cvar("g_coop_squad_respawn", "1", CVAR_LATCH);
+g_coop_enable_lives = gi.cvar("g_coop_enable_lives", "0", CVAR_LATCH);
+g_coop_num_lives = gi.cvar("g_coop_num_lives", "2", CVAR_LATCH);
+g_horde_num_lives = gi.cvar("g_horde_num_lives", "0", CVAR_SERVERINFO | CVAR_LATCH);
+g_coop_instanced_items = gi.cvar("g_coop_instanced_items", "1", CVAR_LATCH);
 	g_allow_grapple = gi.cvar("g_allow_grapple", "auto", CVAR_NOFLAGS);
 	g_allow_kill = gi.cvar("g_allow_kill", "1", CVAR_NOFLAGS);
 	g_grapple_offhand = gi.cvar("g_grapple_offhand", "0", CVAR_NOFLAGS);
@@ -1860,9 +1905,21 @@ static void CheckDMRoundState(void) {
 				Round_End();
 				return;
 			}
-			break;
-		}
+break;
+}
 		case GT_HORDE:
+			if (Horde_LivesEnabled()) {
+				std::vector<player_life_state_t> life_states;
+
+				for (auto ec : active_clients())
+					life_states.push_back({ ClientIsPlaying(ec->client), ec->client->eliminated, ec->health, ec->client->pers.lives });
+
+				if (Horde_NoLivesRemain(life_states)) {
+					gi.LocBroadcast_Print(PRINT_CENTER, "No lives remaining!\n");
+					QueueIntermission("OUT OF LIVES", true, false);
+					return;
+				}
+			}
 			Horde_RunSpawning();
 			//if (level.horde_all_spawned && Horde_AllMonstersDead()) {
 			if (level.horde_all_spawned && !(level.total_monsters - level.killed_monsters)) {
@@ -3669,13 +3726,25 @@ static void CheckCvars() {
 	CheckMinMaxPlayers();
 }
 
-static bool G_AnyDeadPlayersWithoutLives() {
+/*
+=============
+G_AnyDeadPlayersWithoutLives
+
+Checks for any dead players who have exhausted their lives and should remain eliminated.
+=============
+*/
+static bool G_AnyDeadPlayersWithoutLives(bool limited_lives) {
+	if (!limited_lives)
+		return false;
+
 	for (auto player : active_clients())
 		if (player->health <= 0 && (!player->client->pers.lives || player->client->eliminated))
 			return true;
 
 	return false;
 }
+
+
 
 /*
 ================
@@ -3773,18 +3842,20 @@ static inline void G_RunFrame_(bool main_loop) {
 	// clear client coop respawn states; this is done
 	// early since it may be set multiple times for different
 	// players
-	if (InCoopStyle() && (g_coop_enable_lives->integer || g_coop_squad_respawn->integer)) {
+	if (InCoopStyle() && (g_coop_squad_respawn->integer || g_coop_enable_lives->integer || Horde_LivesEnabled())) {
+		const bool limited_lives = g_coop_enable_lives->integer || Horde_LivesEnabled();
+
 		for (auto player : active_clients()) {
 			if (player->client->respawn_time >= level.time)
 				player->client->coop_respawn_state = COOP_RESPAWN_WAITING;
-			else if (g_coop_enable_lives->integer && player->health <= 0 && player->client->pers.lives == 0)
+			else if (limited_lives && player->health <= 0 && player->client->pers.lives == 0)
 				player->client->coop_respawn_state = COOP_RESPAWN_NO_LIVES;
-			else if (g_coop_enable_lives->integer && G_AnyDeadPlayersWithoutLives())
+			else if (G_AnyDeadPlayersWithoutLives(limited_lives))
 				player->client->coop_respawn_state = COOP_RESPAWN_NO_LIVES;
 			else
 				player->client->coop_respawn_state = COOP_RESPAWN_NONE;
-		}
-	}
+}
+}
 
 	//
 	// treat each object in turn
