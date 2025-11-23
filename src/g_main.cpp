@@ -683,6 +683,51 @@ int gt_ctf = 0;
 int gt_g_gametype = 0;
 bool gt_teams_on = false;
 gametype_t gt_check = GT_NONE;
+static char *gt_saved_entstring = nullptr;
+
+/*
+=============
+G_SaveGametypeEntityString
+
+Make a copy of the current level entity string so the level can be
+rebuilt without a full map load.
+=============
+*/
+static bool G_SaveGametypeEntityString() {
+	if (gt_saved_entstring) {
+		gi.TagFree(gt_saved_entstring);
+		gt_saved_entstring = nullptr;
+	}
+
+	if (level.entstring.empty())
+		return false;
+
+	size_t length = level.entstring.length() + 1;
+	gt_saved_entstring = (char *)gi.TagMalloc(length, TAG_GAME);
+	if (!gt_saved_entstring)
+		return false;
+
+	Q_strlcpy(gt_saved_entstring, level.entstring.c_str(), length);
+	return true;
+}
+
+/*
+=============
+G_LoadGametypeEntityString
+
+Reload the saved entity string and clear its cached copy.
+=============
+*/
+static bool G_LoadGametypeEntityString() {
+	if (!gt_saved_entstring)
+		return false;
+
+	SpawnEntities(level.mapname, gt_saved_entstring, game.spawnpoint);
+	gi.TagFree(gt_saved_entstring);
+	gt_saved_entstring = nullptr;
+	return true;
+}
+
 void GT_Changes() {
 	if (!deathmatch->integer)
 		return;
@@ -763,7 +808,8 @@ void GT_Changes() {
 		return;
 
 	//gi.Com_PrintFmt("GAMETYPE = {}\n", (int)gt);
-	
+	bool saved_entstring = G_SaveGametypeEntityString();
+
 	if (gt_teams_on != Teams()) {
 		team_reset = true;
 		gt_teams_on = Teams();
@@ -803,14 +849,19 @@ void GT_Changes() {
 		gt_check = (gametype_t)g_gametype->integer;
 	} else return;
 
-	//TODO: save ent string so we can simply reload it and Match_Reset
-	//gi.AddCommandString("map_restart");
+        if (saved_entstring && G_LoadGametypeEntityString()) {
+                Match_Reset();
+        } else {
+                if (gt_saved_entstring) {
+                        gi.TagFree(gt_saved_entstring);
+                        gt_saved_entstring = nullptr;
+                }
+                gi.AddCommandString(G_Fmt("gamemap {}\n", level.mapname).data());
+        }
 
-	gi.AddCommandString(G_Fmt("gamemap {}\n", level.mapname).data());
-
-	GT_PrecacheAssets();
-	GT_SetLongName();
-	gi.LocBroadcast_Print(PRINT_CENTER, "{}", level.gametype_name);
+        GT_PrecacheAssets();
+        GT_SetLongName();
+        gi.LocBroadcast_Print(PRINT_CENTER, "{}", level.gametype_name);
 }
 
 /*
