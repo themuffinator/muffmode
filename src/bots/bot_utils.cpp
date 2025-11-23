@@ -16,6 +16,7 @@ static void Player_UpdateState(gentity_t *player) {
 	const client_persistant_t &persistant = player->client->pers;
 
 	player->sv.ent_flags = SVFL_NONE;
+	player->sv.objective_state = objective_state_t::None;
 	if (player->groundentity != nullptr || (player->flags & FL_PARTIALGROUND) != 0) {
 		player->sv.ent_flags |= SVFL_ONGROUND;
 	} else {
@@ -171,6 +172,7 @@ Monster_UpdateState
 */
 static void Monster_UpdateState(gentity_t *monster) {
 	monster->sv.ent_flags = SVFL_NONE;
+	monster->sv.objective_state = objective_state_t::None;
 	if (monster->groundentity != nullptr) {
 		monster->sv.ent_flags |= SVFL_ONGROUND;
 	}
@@ -229,6 +231,7 @@ Item_UpdateState
 static void Item_UpdateState(gentity_t *item) {
 	item->sv.ent_flags = SVFL_IS_ITEM;
 	item->sv.respawntime = 0;
+	item->sv.objective_state = objective_state_t::None;
 
 	if (item->team != nullptr) {
 		item->sv.ent_flags |= SVFL_IN_TEAM;
@@ -251,7 +254,37 @@ static void Item_UpdateState(gentity_t *item) {
 	const item_id_t itemID = item->item->id;
 	if (itemID == IT_FLAG_RED || itemID == IT_FLAG_BLUE) {
 		item->sv.ent_flags |= SVFL_IS_OBJECTIVE;
-		// TODO: figure out if the objective is dropped/carried/home...
+		item->sv.team = (itemID == IT_FLAG_RED) ? TEAM_RED : TEAM_BLUE;
+
+		if (!item->sv.init) {
+			item->sv.start_origin = item->s.origin;
+		}
+
+		item->sv.end_origin = item->s.origin;
+
+		const bool isDroppedFlag = item->spawnflags.has(SPAWNFLAG_ITEM_DROPPED) || item->owner != nullptr;
+		const bool isHiddenFlag = (item->solid == SOLID_NOT) || ((item->svflags & SVF_NOCLIENT) != 0);
+		const bool isRespawning = ((item->svflags & SVF_RESPAWNING) != 0) || ((item->flags & FL_RESPAWN) != 0);
+
+		if (isDroppedFlag) {
+			item->sv.ent_flags |= SVFL_OBJECTIVE_DROPPED;
+			item->sv.objective_state = objective_state_t::Dropped;
+
+			if (item->nextthink.milliseconds() > 0) {
+				const gtime_t pendingRespawnTime = (item->nextthink - level.time);
+				item->sv.respawntime = static_cast<int32_t>(pendingRespawnTime.milliseconds());
+			}
+		} else if (isHiddenFlag && isRespawning) {
+			item->sv.ent_flags |= SVFL_OBJECTIVE_CARRIED;
+			item->sv.objective_state = objective_state_t::Carried;
+
+			if (item->sv.respawntime == 0) {
+				item->sv.respawntime = Item_UnknownRespawnTime;
+			}
+		} else {
+			item->sv.ent_flags |= SVFL_OBJECTIVE_AT_BASE;
+			item->sv.objective_state = objective_state_t::AtBase;
+		}
 	}
 
 	// always need to update these for items, since random item spawning
@@ -275,6 +308,7 @@ Trap_UpdateState
 static void Trap_UpdateState(gentity_t *danger) {
 	danger->sv.ent_flags = SVFL_TRAP_DANGER;
 	danger->sv.velocity = danger->velocity;
+	danger->sv.objective_state = objective_state_t::None;
 
 	if (danger->owner != nullptr && danger->owner->client != nullptr) {
 		player_skinnum_t pl_skinnum;
@@ -314,6 +348,7 @@ Mover_UpdateState
 static void Mover_UpdateState(gentity_t *entity) {
 	entity->sv.ent_flags = SVFL_NONE;
 	entity->sv.health = entity->health;
+	entity->sv.objective_state = objective_state_t::None;
 
 	if (entity->takedamage) {
 		entity->sv.ent_flags |= SVFL_TAKES_DAMAGE;

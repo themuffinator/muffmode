@@ -1677,10 +1677,20 @@ enum g_ent_flags_t : uint64_t {
 	SVFL_WAS_TELEFRAGGED = bit_v< 26 >,
 	SVFL_TRAP_DANGER = bit_v< 27 >,
 	SVFL_ACTIVE = bit_v< 28 >,
-	SVFL_IS_SPECTATOR = bit_v< 29 >,
-	SVFL_IN_TEAM = bit_v< 30 >
+SVFL_IS_SPECTATOR = bit_v< 29 >,
+SVFL_IN_TEAM = bit_v< 30 >,
+SVFL_OBJECTIVE_AT_BASE = bit_v< 31 >,
+SVFL_OBJECTIVE_CARRIED = bit_v< 32 >,
+SVFL_OBJECTIVE_DROPPED = bit_v< 33 >
 };
 MAKE_ENUM_BITFLAGS(g_ent_flags_t);
+
+enum class objective_state_t : int32_t {
+None = 0,
+AtBase,
+Carried,
+Dropped
+};
 
 static constexpr int Max_Armor_Types = 3;
 
@@ -1691,9 +1701,10 @@ struct armorInfo_t {
 
 // Used by AI/Tools on the engine side...
 struct g_entity_t {
-	bool                        init;
-	g_ent_flags_t              ent_flags;
-	button_t                    buttons;
+bool                        init;
+g_ent_flags_t              ent_flags;
+objective_state_t           objective_state = objective_state_t::None;
+button_t                    buttons;
 	uint32_t	                spawnflags;
 	int32_t                     item_id;
 	int32_t                     armor_type;
