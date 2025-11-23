@@ -3403,8 +3403,6 @@ static void Cmd_SetMap_f(gentity_t *ent) {
 	ExitLevel();
 }
 
-extern void ClearWorldEntities();
-
 /*
 =============
 Cmd_MapRestart_f
@@ -3415,9 +3413,12 @@ Reset the match and world state before reloading the current map.
 static void Cmd_MapRestart_f(gentity_t *ent) {
 	gi.Broadcast_Print(PRINT_HIGH, "[ADMIN]: Session reset.\n");
 
+	G_SaveLevelEntstring();
 	Match_Reset();
-	ClearWorldEntities();
-	SpawnEntities(level.mapname, level.entstring.c_str(), nullptr);
+
+	if (G_ResetLevelFromSavedEntstring())
+		return;
+
 	gi.AddCommandString(G_Fmt("gamemap {}\n", level.mapname).data());
 }
 

@@ -3167,6 +3167,9 @@ bool InAMatch();
 void ChangeGametype(gametype_t gt);
 void GT_Changes();
 void SpawnEntities(const char *mapname, const char *entities, const char *spawnpoint);
+void ClearWorldEntities();
+void G_SaveLevelEntstring();
+bool G_ResetLevelFromSavedEntstring();
 void G_LoadMOTD();
 
 //

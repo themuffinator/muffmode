@@ -34,6 +34,8 @@ gentity_t *g_entities;
 
 cvar_t *hostname;
 
+static std::string saved_level_entstring;
+
 cvar_t *deathmatch;
 cvar_t *ctf;
 cvar_t *teamplay;
@@ -803,14 +805,48 @@ void GT_Changes() {
 		gt_check = (gametype_t)g_gametype->integer;
 	} else return;
 
-	//TODO: save ent string so we can simply reload it and Match_Reset
-	//gi.AddCommandString("map_restart");
-
+	G_SaveLevelEntstring();
 	gi.AddCommandString(G_Fmt("gamemap {}\n", level.mapname).data());
 
 	GT_PrecacheAssets();
 	GT_SetLongName();
 	gi.LocBroadcast_Print(PRINT_CENTER, "{}", level.gametype_name);
+}
+
+/*
+=============
+G_SaveLevelEntstring
+
+Preserve the currently loaded entity string so it can be reused when rebuilding the level without a full map reload.
+=============
+*/
+void G_SaveLevelEntstring() {
+	if (!level.entstring.empty())
+		saved_level_entstring = level.entstring;
+}
+
+/*
+=============
+G_ResetLevelFromSavedEntstring
+
+Rebuild the level using the cached entity string if available, avoiding a full map reload. Returns true when the reset completed using the cached data.
+=============
+*/
+bool G_ResetLevelFromSavedEntstring() {
+	const char *entities = nullptr;
+
+	if (!saved_level_entstring.empty())
+		entities = saved_level_entstring.c_str();
+	else if (!level.entstring.empty())
+		entities = level.entstring.c_str();
+
+	if (!entities)
+		return false;
+
+	ClearWorldEntities();
+	SpawnEntities(level.mapname, entities, nullptr);
+
+	return true;
 }
 
 /*
