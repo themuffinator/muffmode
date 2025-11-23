@@ -3168,6 +3168,7 @@ void ChangeGametype(gametype_t gt);
 void GT_Changes();
 void SpawnEntities(const char *mapname, const char *entities, const char *spawnpoint);
 void G_LoadMOTD();
+bool G_IsAdminSocialId(const char *social_id);
 
 //
 // g_chase.cpp
