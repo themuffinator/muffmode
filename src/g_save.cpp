@@ -25,6 +25,9 @@
 constexpr size_t SAVE_FORMAT_VERSION = 1;
 
 #include <unordered_map>
+#include <vector>
+#include <memory>
+#include <cstring>
 
 // Professor Daniel J. Bernstein; https://www.partow.net/programming/hashfunctions/#APHashFunction MIT
 struct cstring_hash {
@@ -57,6 +60,28 @@ static const save_data_list_t *list_head = nullptr;
 static std::unordered_map<const void *, const save_data_list_t *> list_hash;
 static std::unordered_map<const char *, const save_data_list_t *, cstring_hash, cstring_equal> list_str_hash;
 static std::unordered_map<std::tuple<const void *, save_data_tag_t>, const save_data_list_t *, ptr_tag_hash> list_from_ptr_hash;
+static std::vector<std::unique_ptr<char[]>> list_name_storage;
+
+/*
+=============
+StoreListNameCopy
+
+Duplicates a save data name for safe storage in the string hash map.
+=============
+*/
+static const char *StoreListNameCopy(const char *name) {
+	if (!name)
+		return nullptr;
+
+	const size_t name_len = strlen(name) + 1;
+	std::unique_ptr<char[]> stored_name = std::make_unique<char[]>(name_len);
+
+	memcpy(stored_name.get(), name, name_len);
+
+	list_name_storage.emplace_back(std::move(stored_name));
+
+	return list_name_storage.back().get();
+}
 
 #include <cassert>
 
@@ -105,9 +130,11 @@ void InitSave() {
 		}
 
 		list_hash.emplace(link_ptr, link);
-		list_str_hash.emplace(link->name, link);
+		const char *stored_name = StoreListNameCopy(link->name);
+		list_str_hash.emplace(stored_name ? stored_name : link->name, link);
 		list_from_ptr_hash.emplace(std::make_tuple(link->ptr, link->tag), link);
 	}
+
 
 	save_data_initialized = true;
 }
