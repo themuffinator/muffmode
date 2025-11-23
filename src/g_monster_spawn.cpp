@@ -122,26 +122,50 @@ bool FindSpawnPoint(const vec3_t &startpoint, const vec3_t &mins, const vec3_t &
 	if (!gravity_dir)
 		gravity_dir = { 0.0f, 0.0f, -1.0f };
 
-	// drop first
-	if (!drop || !M_droptofloor_generic(spawnpoint, mins, maxs, gravity_dir, nullptr, MASK_MONSTERSOLID, false))
+	auto try_drop = [&] (vec3_t testpoint) -> bool
 	{
-		spawnpoint = startpoint;
+		spawnpoint = testpoint;
 
-		// fix stuck if we couldn't drop initially
+		if (!CheckSpawnPoint(spawnpoint, mins, maxs, gravityVector))
+			return false;
+
+		if (!drop)
+			return true;
+
+		if (M_droptofloor_generic(spawnpoint, mins, maxs, gravity_dir, nullptr, MASK_MONSTERSOLID, false))
+			return true;
+
+		spawnpoint = testpoint;
+
 		if (G_FixStuckObject_Generic(spawnpoint, mins, maxs, [] (const vec3_t &start, const vec3_t &mins, const vec3_t &maxs, const vec3_t &end) {
 				return gi.trace(start, mins, maxs, end, nullptr, MASK_MONSTERSOLID);
-			}) == stuck_result_t::NO_GOOD_POSITION)
+			}) != stuck_result_t::NO_GOOD_POSITION)
 		{
-			spawnpoint = { 0.0f, 0.0f, 0.0f };
-			return false;
+			return !drop || M_droptofloor_generic(spawnpoint, mins, maxs, gravity_dir, nullptr, MASK_MONSTERSOLID, false);
 		}
 
-		// fixed, so drop again
-		if (drop && !M_droptofloor_generic(spawnpoint, mins, maxs, gravity_dir, nullptr, MASK_MONSTERSOLID, false))
-			return false; // ???
+		spawnpoint = { 0.0f, 0.0f, 0.0f };
+		return false;
+	};
+
+	// drop first
+	if (try_drop(startpoint))
+		return true;
+
+	vec3_t against_gravity = gravity_dir * -1.0f;
+	float  move_amount = 16.0f;
+
+	while (move_amount <= maxMoveUp)
+	{
+		vec3_t raised_start = startpoint + (against_gravity * move_amount);
+
+		if (try_drop(raised_start))
+			return true;
+
+		move_amount += 16.0f;
 	}
 
-	return true;
+	return false;
 }
 
 
