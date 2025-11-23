@@ -24,6 +24,22 @@
 //   does have some C-isms in here.
 constexpr size_t SAVE_FORMAT_VERSION = 1;
 
+/*
+=============
+GetEngineBuildString
+
+Fetches the engine build string from the version cvar.
+=============
+*/
+static const char *GetEngineBuildString() {
+	cvar_t *engine_version = gi.cvar("version", "", 0);
+
+	if (!engine_version || !engine_version->string)
+		return "";
+
+	return engine_version->string;
+}
+
 #include <unordered_map>
 #include <vector>
 #include <memory>
@@ -2361,6 +2377,13 @@ void read_save_struct_json(const Json::Value &json, void *data, const save_struc
 #include <fstream>
 #include <memory>
 
+/*
+=============
+parseJson
+
+Parses a JSON string into a Json::Value and errors on failure.
+=============
+*/
 static Json::Value parseJson(const char *jsonString) {
 	Json::CharReaderBuilder reader;
 	reader["allowSpecialFloats"] = true;
@@ -2377,12 +2400,19 @@ static Json::Value parseJson(const char *jsonString) {
 	return json;
 }
 
+/*
+=============
+saveJson
+
+Serializes a Json::Value to a TagMalloc'ed string buffer.
+=============
+*/
 static char *saveJson(const Json::Value &json, size_t *out_size) {
 	Json::StreamWriterBuilder builder;
 	builder["indentation"] = "\t";
 	builder["useSpecialFloats"] = true;
 	const std::unique_ptr<Json::StreamWriter> writer(builder.newStreamWriter());
-	std::stringstream						  ss(std::ios_base::out | std::ios_base::binary);
+	std::stringstream ss(std::ios_base::out | std::ios_base::binary);
 	writer->write(json, &ss);
 	*out_size = ss.tellp();
 	char *const out = static_cast<char *>(gi.TagMalloc(*out_size + 1, TAG_GAME));
@@ -2393,8 +2423,13 @@ static char *saveJson(const Json::Value &json, size_t *out_size) {
 	return out;
 }
 
-// new entry point for WriteGame.
-// returns pointer to TagMalloc'd JSON string.
+/*
+=============
+WriteGameJson
+
+Serializes the current game state to TagMalloc'd JSON data.
+=============
+*/
 char *WriteGameJson(bool autosave, size_t *out_size) {
 	if (!autosave)
 		SaveClientData();
@@ -2402,7 +2437,7 @@ char *WriteGameJson(bool autosave, size_t *out_size) {
 	Json::Value json(Json::objectValue);
 
 	json["save_version"] = SAVE_FORMAT_VERSION;
-	// TODO: engine version ID?
+	json["engine_version"] = GetEngineBuildString();
 
 	// write game
 	game.autosaved = autosave;
@@ -2423,13 +2458,51 @@ char *WriteGameJson(bool autosave, size_t *out_size) {
 
 void PrecacheInventoryItems();
 
-// new entry point for ReadGame.
-// takes in pointer to JSON data. does
-// not store or modify it.
+/*
+=============
+ValidateEngineVersion
+
+Validates the engine version recorded in the save JSON and warns or aborts on mismatches.
+=============
+*/
+static void ValidateEngineVersion(const Json::Value &json) {
+	const Json::Value &engine_version_json = json["engine_version"];
+	const char *current_engine_version = GetEngineBuildString();
+
+	if (!engine_version_json.isString()) {
+		if (g_strict_saves->integer)
+			gi.Com_Error("expected \"engine_version\" to be string");
+		else
+			gi.Com_Print("warning: save file missing engine version info; continuing load anyway.\n");
+
+		return;
+	}
+
+	const std::string save_engine_version = engine_version_json.asString();
+	const char *actual_engine_version = (current_engine_version && current_engine_version[0]) ? current_engine_version : "<unknown>";
+
+	if (save_engine_version != actual_engine_version) {
+		const std::string warning = fmt::format("Save was created with engine version \"{}\" but current engine is \"{}\".", save_engine_version, actual_engine_version);
+
+		if (g_strict_saves->integer)
+			gi.Com_Error(warning.c_str());
+		else
+			gi.Com_PrintFmt("{}\n", warning);
+	}
+}
+
+/*
+=============
+ReadGameJson
+
+Loads game state from JSON data and restores entities and clients.
+=============
+*/
 void ReadGameJson(const char *jsonString) {
 	gi.FreeTags(TAG_GAME);
 
 	Json::Value json = parseJson(jsonString);
+	ValidateEngineVersion(json);
 
 	uint32_t max_entities = game.maxentities;
 	uint32_t max_clients = game.maxclients;
@@ -2463,8 +2536,13 @@ void ReadGameJson(const char *jsonString) {
 	PrecacheInventoryItems();
 }
 
-// new entry point for WriteLevel.
-// returns pointer to TagMalloc'd JSON string.
+/*
+=============
+WriteLevelJson
+
+Serializes the current level state to TagMalloc'd JSON data.
+=============
+*/
 char *WriteLevelJson(bool transition, size_t *out_size) {
 	// update current level entry now, just so we can
 	// use gamemap to test EOU
@@ -2479,7 +2557,7 @@ char *WriteLevelJson(bool transition, size_t *out_size) {
 
 	// write entities
 	Json::Value entities(Json::objectValue);
-	char		number[16];
+	char			number[16];
 
 	for (size_t i = 0; i < globals.num_entities; i++) {
 		if (!globals.gentities[i].inuse)
@@ -2505,9 +2583,13 @@ char *WriteLevelJson(bool transition, size_t *out_size) {
 	return saveJson(json, out_size);
 }
 
-// new entry point for ReadLevel.
-// takes in pointer to JSON data. does
-// not store or modify it.
+/*
+=============
+ReadLevelJson
+
+Loads level state from JSON data and repopulates entities.
+=============
+*/
 void ReadLevelJson(const char *jsonString) {
 	// free any dynamic memory allocated by loading the level
 	// base state
@@ -2535,7 +2617,7 @@ void ReadLevelJson(const char *jsonString) {
 		const char *dummy;
 		const char *id = it.memberName(&dummy);
 		const Json::Value &value = *it;//json[key];
-		uint32_t		   number = strtoul(id, nullptr, 10);
+		uint32_t			number = strtoul(id, nullptr, 10);
 
 		if (number >= globals.num_entities)
 			globals.num_entities = number + 1;
