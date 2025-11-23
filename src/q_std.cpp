@@ -54,6 +54,14 @@ char *COM_ParseEx(const char **data_p, const char *seps, char *buffer, size_t bu
 	size_t				stored_len;
 	const char *data;
 
+	if (!data_p || !*data_p)
+	{
+		buffer[0] = '\0';
+		if (data_p)
+			*data_p = nullptr;
+		return buffer;
+	}
+
 	data = *data_p;
 	len = 0;
 	stored_len = 0;
