@@ -689,15 +689,24 @@ static void P_WorldEffects() {
 		if (breather || envirosuit) {
 			current_player->air_finished = level.time + 10_sec;
 
-			if (((current_client->pu_time_rebreather - level.time).milliseconds() % 2500) == 0) {
-				if (!current_client->breather_sound)
-					gi.sound(current_player, CHAN_AUTO, gi.soundindex("player/u_breath1.wav"), 1, ATTN_NORM, 0);
-				else
-					gi.sound(current_player, CHAN_AUTO, gi.soundindex("player/u_breath2.wav"), 1, ATTN_NORM, 0);
-				current_client->breather_sound ^= 1;
-				PlayerNoise(current_player, current_player->s.origin, PNOISE_SELF);
-				// FIXME: release a bubble?
-			}
+				if (((current_client->pu_time_rebreather - level.time).milliseconds() % 2500) == 0) {
+					if (!current_client->breather_sound)
+						gi.sound(current_player, CHAN_AUTO, gi.soundindex("player/u_breath1.wav"), 1, ATTN_NORM, 0);
+					else
+						gi.sound(current_player, CHAN_AUTO, gi.soundindex("player/u_breath2.wav"), 1, ATTN_NORM, 0);
+					current_client->breather_sound ^= 1;
+					PlayerNoise(current_player, current_player->s.origin, PNOISE_SELF);
+
+					vec3_t breath_origin = current_player->s.origin;
+					breath_origin[2] += current_player->viewheight;
+					vec3_t bubble_end = breath_origin + (up * 8);
+
+					gi.WriteByte(svc_temp_entity);
+					gi.WriteByte(TE_BUBBLETRAIL);
+					gi.WritePosition(breath_origin);
+					gi.WritePosition(bubble_end);
+					gi.multicast(breath_origin, MULTICAST_PVS, false);
+				}
 		}
 
 		// if out of air, start drowning
