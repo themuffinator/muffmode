@@ -81,6 +81,10 @@ void UpdateChaseCam(gentity_t *ent) {
 	ent->client->ps.screen_blend = targ->client->ps.screen_blend;
 	ent->client->ps.damage_blend = targ->client->ps.damage_blend;
 	ent->client->ps.rdflags = targ->client->ps.rdflags;
+	std::copy(targ->client->ps.stats.begin() + STAT_POWERUP_INFO_START, targ->client->ps.stats.begin() + STAT_POWERUP_INFO_END + 1, ent->client->ps.stats.begin() + STAT_POWERUP_INFO_START);
+	ent->client->ps.stats[STAT_FLASHES] = targ->client->ps.stats[STAT_FLASHES];
+	ent->client->ps.stats[STAT_POWERUP_ICON] = targ->client->ps.stats[STAT_POWERUP_ICON];
+	ent->client->ps.stats[STAT_POWERUP_TIME] = targ->client->ps.stats[STAT_POWERUP_TIME];
 	ent->s.effects = targ->s.effects;
 	ent->s.renderfx = targ->s.renderfx;
 

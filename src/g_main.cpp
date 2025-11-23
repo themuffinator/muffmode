@@ -5,6 +5,10 @@
 #include "bots/bot_includes.h"
 #include "monsters/m_player.h"	// match starts
 #include <algorithm>
+#include <cctype>
+#include <fstream>
+#include <string>
+#include <unordered_set>
 
 CHECK_GCLIENT_INTEGRITY;
 CHECK_ENTITY_INTEGRITY;
@@ -64,6 +68,8 @@ static cvar_t *maxclients;
 static cvar_t *maxentities;
 cvar_t *maxplayers;
 cvar_t *minplayers;
+
+static std::unordered_set<std::string> g_admin_social_ids;
 
 cvar_t *ai_allow_dm_spawn;
 cvar_t *ai_damage_scale;
@@ -621,37 +627,142 @@ static void InitGametype() {
 	bool force_dm = false;
 
 	if (g_gametype->integer < 0 || g_gametype->integer >= GT_NUM_GAMETYPES)
-		gi.cvar_forceset("g_gametype", G_Fmt("{}", clamp(g_gametype->integer, (int)GT_FIRST, (int)GT_LAST)).data());
-	
+	gi.cvar_forceset("g_gametype", G_Fmt("{}", clamp(g_gametype->integer, (int)GT_FIRST, (int)GT_LAST)).data());
+
 	if (ctf->integer) {
-		force_dm = true;
-		// force coop off
-		if (coop->integer)
-			gi.cvar_set(COOP, "0");
-		// force tdm off
-		if (teamplay->integer)
-			gi.cvar_set("teamplay", "0");
+	force_dm = true;
+	// force coop off
+	if (coop->integer)
+	gi.cvar_set(COOP, "0");
+	// force tdm off
+	if (teamplay->integer)
+	gi.cvar_set("teamplay", "0");
 	}
 	if (teamplay->integer) {
-		force_dm = true;
-		// force coop off
-		if (coop->integer)
-			gi.cvar_set(COOP, "0");
+	force_dm = true;
+	// force coop off
+	if (coop->integer)
+	gi.cvar_set(COOP, "0");
 	}
 
 	if (force_dm && !deathmatch->integer) {
-		gi.Com_Print("Forcing deathmatch.\n");
-		gi.cvar_forceset("deathmatch", "1");
+	gi.Com_Print("Forcing deathmatch.\n");
+	gi.cvar_forceset("deathmatch", "1");
 	}
 
 	// force even maxplayers value during teamplay
 	if (Teams()) {
-		int pmax = maxplayers->integer;
+	int pmax = maxplayers->integer;
 
-		if (pmax != floor(pmax / 2))
-			gi.cvar_set("maxplayers", G_Fmt("{}", floor(pmax / 2) * 2).data());
+	if (pmax != floor(pmax / 2))
+	gi.cvar_set("maxplayers", G_Fmt("{}", floor(pmax / 2) * 2).data());
 	}
-}
+	}
+
+/*
+=============
+G_Admins_NormalizeId
+
+Converts a social ID to lowercase for comparison.
+=============
+*/
+static std::string G_Admins_NormalizeId(const std::string &input) {
+	std::string normalized;
+	normalized.reserve(input.size());
+
+	for (char ch : input)
+	normalized.push_back((char)std::tolower((uint8_t)ch));
+
+	return normalized;
+	}
+
+/*
+=============
+G_Admins_TrimLine
+
+Strips comments and whitespace from a config line.
+=============
+*/
+static std::string G_Admins_TrimLine(const std::string &line) {
+	std::string trimmed = line;
+
+	size_t comment = trimmed.find_first_of("#;");
+	if (comment != std::string::npos)
+	trimmed = trimmed.substr(0, comment);
+
+	size_t start = trimmed.find_first_not_of(" \t\r\n");
+	if (start == std::string::npos)
+	return {};
+
+	size_t end = trimmed.find_last_not_of(" \t\r\n");
+	return trimmed.substr(start, end - start + 1);
+	}
+
+/*
+=============
+G_IsAdminSocialId
+
+Checks whether the provided social ID is in the admin list.
+=============
+*/
+bool G_IsAdminSocialId(const char *social_id) {
+	if (!social_id || !*social_id)
+	return false;
+
+	std::string normalized = G_Admins_NormalizeId(social_id);
+	return g_admin_social_ids.find(normalized) != g_admin_social_ids.end();
+	}
+
+/*
+=============
+G_LoadAdminList
+
+Loads admins from the admins.txt configuration file.
+=============
+*/
+static void G_LoadAdminList() {
+	g_admin_social_ids.clear();
+
+	const char *filename = "admins.txt";
+	std::ifstream file(filename);
+
+	if (!file.is_open()) {
+	gi.Com_PrintFmt("G_LoadAdminList: {} not found, skipping admin preload.\n", filename);
+	return;
+	}
+
+	size_t line_number = 0;
+	std::string line;
+
+	while (std::getline(file, line)) {
+	++line_number;
+
+	std::string trimmed = G_Admins_TrimLine(line);
+	if (trimmed.empty())
+	continue;
+
+	if (trimmed.size() >= MAX_INFO_VALUE) {
+	gi.Com_PrintFmt("G_LoadAdminList: line {} exceeds maximum length, ignoring.\n", line_number);
+	continue;
+	}
+
+	if (trimmed.find_first_of(" \t") != std::string::npos) {
+	gi.Com_PrintFmt("G_LoadAdminList: unexpected whitespace on line {}, ignoring.\n", line_number);
+	continue;
+	}
+
+	std::string normalized = G_Admins_NormalizeId(trimmed);
+
+	if (normalized.empty()) {
+	gi.Com_PrintFmt("G_LoadAdminList: invalid entry on line {}, ignoring.\n", line_number);
+	continue;
+	}
+
+	g_admin_social_ids.insert(normalized);
+	}
+
+	gi.Com_PrintFmt("G_LoadAdminList: loaded {} admin entr{}.\n", g_admin_social_ids.size(), g_admin_social_ids.size() == 1 ? "y" : "ies");
+	}
 
 void ChangeGametype(gametype_t gt) {
 	switch (gt) {
@@ -685,6 +796,51 @@ int gt_ctf = 0;
 int gt_g_gametype = 0;
 bool gt_teams_on = false;
 gametype_t gt_check = GT_NONE;
+static char *gt_saved_entstring = nullptr;
+
+/*
+=============
+G_SaveGametypeEntityString
+
+Make a copy of the current level entity string so the level can be
+rebuilt without a full map load.
+=============
+*/
+static bool G_SaveGametypeEntityString() {
+	if (gt_saved_entstring) {
+		gi.TagFree(gt_saved_entstring);
+		gt_saved_entstring = nullptr;
+	}
+
+	if (level.entstring.empty())
+		return false;
+
+	size_t length = level.entstring.length() + 1;
+	gt_saved_entstring = (char *)gi.TagMalloc(length, TAG_GAME);
+	if (!gt_saved_entstring)
+		return false;
+
+	Q_strlcpy(gt_saved_entstring, level.entstring.c_str(), length);
+	return true;
+}
+
+/*
+=============
+G_LoadGametypeEntityString
+
+Reload the saved entity string and clear its cached copy.
+=============
+*/
+static bool G_LoadGametypeEntityString() {
+	if (!gt_saved_entstring)
+		return false;
+
+	SpawnEntities(level.mapname, gt_saved_entstring, game.spawnpoint);
+	gi.TagFree(gt_saved_entstring);
+	gt_saved_entstring = nullptr;
+	return true;
+}
+
 void GT_Changes() {
 	if (!deathmatch->integer)
 		return;
@@ -765,7 +921,8 @@ void GT_Changes() {
 		return;
 
 	//gi.Com_PrintFmt("GAMETYPE = {}\n", (int)gt);
-	
+	bool saved_entstring = G_SaveGametypeEntityString();
+
 	if (gt_teams_on != Teams()) {
 		team_reset = true;
 		gt_teams_on = Teams();
@@ -805,12 +962,19 @@ void GT_Changes() {
 		gt_check = (gametype_t)g_gametype->integer;
 	} else return;
 
-	G_SaveLevelEntstring();
-	gi.AddCommandString(G_Fmt("gamemap {}\n", level.mapname).data());
+        if (saved_entstring && G_LoadGametypeEntityString()) {
+                Match_Reset();
+        } else {
+                if (gt_saved_entstring) {
+                        gi.TagFree(gt_saved_entstring);
+                        gt_saved_entstring = nullptr;
+                }
+                gi.AddCommandString(G_Fmt("gamemap {}\n", level.mapname).data());
+        }
 
-	GT_PrecacheAssets();
-	GT_SetLongName();
-	gi.LocBroadcast_Print(PRINT_CENTER, "{}", level.gametype_name);
+        GT_PrecacheAssets();
+        GT_SetLongName();
+        gi.LocBroadcast_Print(PRINT_CENTER, "{}", level.gametype_name);
 }
 
 /*
@@ -1092,6 +1256,8 @@ g_dm_item_respawn_rate = gi.cvar("g_dm_item_respawn_rate", "1.0", CVAR_NOFLAGS);
 	g_warmup_ready_percentage = gi.cvar("g_warmup_ready_percentage", "0.51f", CVAR_NOFLAGS);
 	g_weapon_projection = gi.cvar("g_weapon_projection", "0", CVAR_NOFLAGS);
 	g_weapon_respawn_time = gi.cvar("g_weapon_respawn_time", "30", CVAR_NOFLAGS);
+
+	G_LoadAdminList();
 
 	bot_name_prefix = gi.cvar("bot_name_prefix", "B|", CVAR_NOFLAGS);
 

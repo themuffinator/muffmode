@@ -3794,11 +3794,9 @@ bool ClientConnect(gentity_t* ent, char* userinfo, const char* social_id, bool i
 
 	// entity 1 is always server host, so make admin
 	if (ent == &g_entities[1])
-		ent->client->sess.admin = true;
-	else {
-		//TODO: check admins.txt for social_id
-
-	}
+	ent->client->sess.admin = true;
+	else if (G_IsAdminSocialId(social_id))
+	ent->client->sess.admin = true;
 
 	// count current clients and rank for scoreboard
 	CalculateRanks();

@@ -122,31 +122,73 @@ bool FindSpawnPoint(const vec3_t &startpoint, const vec3_t &mins, const vec3_t &
 	if (!gravity_dir)
 		gravity_dir = { 0.0f, 0.0f, -1.0f };
 
-	// drop first
-	if (!drop || !M_droptofloor_generic(spawnpoint, mins, maxs, gravity_dir, nullptr, MASK_MONSTERSOLID, false))
+	auto try_drop = [&] (vec3_t testpoint) -> bool
 	{
-		spawnpoint = startpoint;
+		spawnpoint = testpoint;
 
-		// fix stuck if we couldn't drop initially
+		if (!CheckSpawnPoint(spawnpoint, mins, maxs, gravityVector))
+			return false;
+
+		if (!drop)
+			return true;
+
+		if (M_droptofloor_generic(spawnpoint, mins, maxs, gravity_dir, nullptr, MASK_MONSTERSOLID, false))
+			return true;
+
+		spawnpoint = testpoint;
+
 		if (G_FixStuckObject_Generic(spawnpoint, mins, maxs, [] (const vec3_t &start, const vec3_t &mins, const vec3_t &maxs, const vec3_t &end) {
 				return gi.trace(start, mins, maxs, end, nullptr, MASK_MONSTERSOLID);
-			}) == stuck_result_t::NO_GOOD_POSITION)
+			}) != stuck_result_t::NO_GOOD_POSITION)
 		{
-			spawnpoint = { 0.0f, 0.0f, 0.0f };
-			return false;
+			return !drop || M_droptofloor_generic(spawnpoint, mins, maxs, gravity_dir, nullptr, MASK_MONSTERSOLID, false);
 		}
 
-		// fixed, so drop again
-		if (drop && !M_droptofloor_generic(spawnpoint, mins, maxs, gravity_dir, nullptr, MASK_MONSTERSOLID, false))
-			return false; // ???
+		spawnpoint = { 0.0f, 0.0f, 0.0f };
+		return false;
+	};
+
+	// drop first
+	if (try_drop(startpoint))
+		return true;
+
+	vec3_t against_gravity = gravity_dir * -1.0f;
+	float  move_amount = 16.0f;
+
+	while (move_amount <= maxMoveUp)
+	{
+		vec3_t raised_start = startpoint + (against_gravity * move_amount);
+
+		if (try_drop(raised_start))
+			return true;
+
+		move_amount += 16.0f;
 	}
 
-	return true;
+	return false;
 }
 
 
 // FIXME - all of this needs to be tweaked to handle the new gravity rules
 // if we ever want to spawn stuff on the roof
+
+/*
+=============
+BoxExtentAlongDirection
+
+Returns the projection of the bounding box extents along the specified direction.
+=============
+*/
+static float BoxExtentAlongDirection(const vec3_t &mins, const vec3_t &maxs, const vec3_t &dir)
+{
+	vec3_t corner {
+		dir[0] >= 0.0f ? maxs[0] : mins[0],
+		dir[1] >= 0.0f ? maxs[1] : mins[1],
+		dir[2] >= 0.0f ? maxs[2] : mins[2]
+	};
+
+	return DotProduct(corner, dir);
+}
 
 /*
 =============
@@ -168,34 +210,29 @@ bool CheckSpawnPoint(const vec3_t &origin, const vec3_t &mins, const vec3_t &max
 	if (!gravity_dir)
 		gravity_dir = { 0.0f, 0.0f, -1.0f };
 
-	vec3_t abs_gravity_dir = gravity_dir.abs();
-	
 	tr = gi.trace(origin, mins, maxs, origin, nullptr, MASK_MONSTERSOLID);
 	if (tr.startsolid || tr.allsolid)
 		return false;
-	
+
 	if (tr.ent != world)
 		return false;
-	
-	const float positive_extent = DotProduct(maxs, abs_gravity_dir);
-	const float negative_extent = Q_fabs(DotProduct(mins, abs_gravity_dir));
-	
-	vec3_t upward_projection = gravity_dir * positive_extent;
-	vec3_t downward_projection = gravity_dir * negative_extent;
-	
-	if (positive_extent > 0.0f)
+
+	const float along_gravity_extent = BoxExtentAlongDirection(mins, maxs, gravity_dir);
+	const float against_gravity_extent = BoxExtentAlongDirection(mins, maxs, -gravity_dir);
+
+	if (against_gravity_extent > 0.0f)
 	{
-		vec3_t upward_check = origin - upward_projection;
-	
+		vec3_t upward_check = origin - (gravity_dir * against_gravity_extent);
+
 		tr = gi.trace(origin, mins, maxs, upward_check, nullptr, MASK_MONSTERSOLID);
 		if (tr.startsolid || tr.allsolid)
 			return false;
 	}
-	
-	if (negative_extent > 0.0f)
+
+	if (along_gravity_extent > 0.0f)
 	{
-		vec3_t downward_check = origin + downward_projection;
-	
+		vec3_t downward_check = origin + (gravity_dir * along_gravity_extent);
+
 		tr = gi.trace(origin, mins, maxs, downward_check, nullptr, MASK_MONSTERSOLID);
 		if (tr.startsolid || tr.allsolid)
 			return false;
@@ -203,6 +240,43 @@ bool CheckSpawnPoint(const vec3_t &origin, const vec3_t &mins, const vec3_t &max
 
 	return true;
 }
+
+/*
+=============
+SpawnCheckAndDropToFloor
+
+Checks spawn clearance along the provided gravity vector and drops the origin to the nearest surface.
+=============
+*/
+bool SpawnCheckAndDropToFloor(vec3_t &origin, const vec3_t &mins, const vec3_t &maxs, const vec3_t &gravityVector)
+{
+	vec3_t gravity_dir = gravityVector.normalized();
+
+	if (!gravity_dir)
+		gravity_dir = { 0.0f, 0.0f, -1.0f };
+
+	const float along_gravity_extent = BoxExtentAlongDirection(mins, maxs, gravity_dir);
+	const float against_gravity_extent = BoxExtentAlongDirection(mins, maxs, -gravity_dir);
+
+	if (!CheckSpawnPoint(origin, mins, maxs, gravity_dir))
+		return false;
+
+	vec3_t trace_start = origin - (gravity_dir * against_gravity_extent);
+	vec3_t trace_end = origin + (gravity_dir * (along_gravity_extent + against_gravity_extent + 256.0f));
+
+	trace_t tr = gi.trace(trace_start, mins, maxs, trace_end, nullptr, MASK_MONSTERSOLID);
+
+	if (tr.startsolid || tr.allsolid)
+		return false;
+
+	if (tr.fraction == 1.0f)
+		return false;
+
+	origin = tr.endpos + (gravity_dir * against_gravity_extent);
+
+	return CheckSpawnPoint(origin, mins, maxs, gravity_dir);
+}
+
 /*
 =============
 CheckGroundSpawnPoint

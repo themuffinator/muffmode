@@ -3171,6 +3171,7 @@ void ClearWorldEntities();
 void G_SaveLevelEntstring();
 bool G_ResetLevelFromSavedEntstring();
 void G_LoadMOTD();
+bool G_IsAdminSocialId(const char *social_id);
 
 //
 // g_chase.cpp
@@ -3235,6 +3236,7 @@ gentity_t *CreateGroundMonster(const vec3_t &origin, const vec3_t &angles, const
 bool     FindSpawnPoint(const vec3_t &startpoint, const vec3_t &mins, const vec3_t &maxs, vec3_t &spawnpoint,
 	float maxMoveUp, bool drop = true, const vec3_t &gravityVector = { 0.0f, 0.0f, -1.0f });
 bool     CheckSpawnPoint(const vec3_t &origin, const vec3_t &mins, const vec3_t &maxs, const vec3_t &gravityVector = { 0.0f, 0.0f, -1.0f });
+bool     SpawnCheckAndDropToFloor(vec3_t &origin, const vec3_t &mins, const vec3_t &maxs, const vec3_t &gravityVector = { 0.0f, 0.0f, -1.0f });
 bool     CheckGroundSpawnPoint(const vec3_t &origin, const vec3_t &entMins, const vec3_t &entMaxs, float height,
 	const vec3_t &gravityVector = { 0.0f, 0.0f, -1.0f });
 void	 SpawnGrow_Spawn(const vec3_t &startpos, float start_size, float end_size);
