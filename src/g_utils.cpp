@@ -50,10 +50,6 @@ findradius (origin, radius)
 =================
 */
 gentity_t* findradius(gentity_t* from, const vec3_t& org, float rad) {
-	const auto compute_center = [](const gentity_t* ent) {
-		return ent->s.origin + (ent->mins + ent->maxs) * 0.5f;
-	};
-
 	if (!from)
 		from = g_entities;
 	else
@@ -63,7 +59,8 @@ gentity_t* findradius(gentity_t* from, const vec3_t& org, float rad) {
 			continue;
 		if (from->solid == SOLID_NOT)
 			continue;
-		const vec3_t eorg = org - compute_center(from);
+		const vec3_t entity_center = from->s.origin + (from->mins + from->maxs) * 0.5f;
+		const vec3_t eorg = org - entity_center;
 		if (eorg.length() > rad)
 			continue;
 		return from;
@@ -71,6 +68,7 @@ gentity_t* findradius(gentity_t* from, const vec3_t& org, float rad) {
 
 	return nullptr;
 }
+
 
 
 
