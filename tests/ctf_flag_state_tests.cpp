@@ -242,18 +242,34 @@ static void TestFlagDroppedState()
 
 /*
 =============
-main
+SetupTestEnvironment
+
+Resets shared test state and installs required engine stubs.
 =============
 */
-int main()
+static void SetupTestEnvironment()
 {
 	g_next_entity = 0;
 	std::memset(g_entity_storage, 0, sizeof(g_entity_storage));
+	std::memset(&level, 0, sizeof(level));
+	std::memset(&globals, 0, sizeof(globals));
+	gi = {};
+
 	gi.Info_ValueForKey = StubInfoValueForKey;
 	gi.Bot_RegisterEntity = StubBotRegisterEntity;
 	gi.game_import_t::trace = StubTrace;
 	gi.Com_Print = StubComPrint;
 	globals.num_entities = kTestEntityCount;
+}
+
+/*
+=============
+main
+=============
+*/
+int main()
+{
+	SetupTestEnvironment();
 
 	TestFlagAtBaseState();
 	TestFlagCarriedState();
