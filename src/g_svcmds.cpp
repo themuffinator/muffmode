@@ -3,6 +3,10 @@
 
 #include "g_local.h"
 #include <cstdint>
+#include <filesystem>
+#include <fstream>
+#include <cerrno>
+#include <system_error>
 
 /*
 =============
@@ -225,45 +229,52 @@ static void SVCmd_NextMap_f() {
 
 /*
 =================
-G_WriteIP_f
+SVCmd_WriteIP_f
+
+Serializes the current filterban value and IP filters to listip.cfg using
+platform-aware file handling.
 =================
 */
 static void SVCmd_WriteIP_f(void) {
-	// KEX_FIXME: Sys_FOpen isn't available atm, just commenting this out since i don't think we even need this functionality - sponge
-	/*
-	FILE* f;
+	byte b[4];
+	int i;
+	cvar_t *game;
 
-	byte	b[4];
-	int		i;
-	cvar_t* game;
+	game = gi.cvar("game", "", static_cast<cvar_flags_t>(0));
 
-	game = gi.cvar("game", "", 0);
+	std::filesystem::path listip_path = *game->string ? std::filesystem::path(game->string) : std::filesystem::path(GAMEVERSION);
+	listip_path /= "listip.cfg";
 
-	std::string name;
-	if (!*game->string)
-		name = std::string(GAMEVERSION) + "/listip.cfg";
-	else
-		name = std::string(game->string) + "/listip.cfg";
+	gi.LocClient_Print(nullptr, PRINT_HIGH, "Writing {}.\n", listip_path.string().c_str());
 
-	gi.LocClient_Print(nullptr, PRINT_HIGH, "Writing {}.\n", name.c_str());
+	if (!listip_path.parent_path().empty()) {
+		std::error_code create_error;
+		std::filesystem::create_directories(listip_path.parent_path(), create_error);
+		if (create_error) {
+			gi.LocClient_Print(nullptr, PRINT_HIGH, "Couldn't write {} ({})\n", listip_path.string().c_str(), create_error.message().c_str());
+			return;
+		}
+	}
 
-	f = Sys_FOpen(name.c_str(), "wb");
-	if (!f)
-	{
-		gi.LocClient_Print(nullptr, PRINT_HIGH, "Couldn't open {}\n", name.c_str());
+	std::ofstream file(listip_path, std::ios::out | std::ios::binary | std::ios::trunc);
+	if (!file.is_open()) {
+		const std::error_code open_error(errno, std::generic_category());
+		gi.LocClient_Print(nullptr, PRINT_HIGH, "Couldn't write {} ({})\n", listip_path.string().c_str(), open_error.message().c_str());
 		return;
 	}
 
-	fprintf(f, "set filterban %d\n", filterban->integer);
+	file << "set filterban " << filterban->integer << '\n';
 
-	for (i = 0; i < numipfilters; i++)
-	{
-		*(unsigned*)b = ipfilters[i].compare;
-		fprintf(f, "sv addip %i.%i.%i.%i\n", b[0], b[1], b[2], b[3]);
+	for (i = 0; i < numipfilters; i++) {
+		*(unsigned *)b = ipfilters[i].compare;
+		file << "sv addip " << static_cast<int>(b[0]) << '.' << static_cast<int>(b[1]) << '.' << static_cast<int>(b[2]) << '.' << static_cast<int>(b[3]) << '\n';
 	}
 
-	fclose(f);
-	*/
+	file.close();
+	if (file.fail()) {
+		const std::error_code close_error(errno, std::generic_category());
+		gi.LocClient_Print(nullptr, PRINT_HIGH, "Couldn't write {} ({})\n", listip_path.string().c_str(), close_error.message().c_str());
+	}
 }
 
 /*
