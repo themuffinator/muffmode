@@ -1140,7 +1140,7 @@ void Tech_ApplyAutoDoc(gentity_t* ent) {
 	bool		mod = g_instagib->integer || g_nadefest->integer;
 	bool		has_autodoc = false;
 	bool		no_health = mod || GTF(GTF_ARENA) || g_no_health->integer;
-	int			max = g_vampiric_damage->integer ? ceil(g_vampiric_health_max->integer / 2) : mod ? 100 : 150;
+	int			max = G_GetTechRegenMax(g_vampiric_health_max->integer, g_vampiric_damage->integer, mod);
 
 	cl = ent->client;
 	if (!cl)
