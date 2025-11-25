@@ -64,11 +64,28 @@ Confirms that exhausted lives across the roster force elimination.
 static void TestNoLivesTriggersElimination()
 {
 	std::vector<player_life_state_t> states = {
-		{ true, false, -10, 0 },
+		{ true, false, 0, 0 },
 		{ true, true, -15, 0 }
 	};
 
 	Expect(Horde_NoLivesRemain(states), "No lives should trigger elimination");
+}
+
+/*
+=============
+TestZeroHealthAndNoLivesEliminate
+
+Ensures zero health paired with exhausted lives results in elimination.
+=============
+*/
+static void TestZeroHealthAndNoLivesEliminate()
+{
+	std::vector<player_life_state_t> states = {
+		{ true, false, 0, 0 },
+		{ true, false, -1, 0 }
+	};
+
+	Expect(Horde_NoLivesRemain(states), "Zero health with no lives should eliminate players");
 }
 
 /*
@@ -83,6 +100,7 @@ int main()
 	TestAlivePlayerPreventsElimination();
 	TestRemainingLivesPreventFailure();
 	TestNoLivesTriggersElimination();
+	TestZeroHealthAndNoLivesEliminate();
 
 	return g_failures == 0 ? 0 : 1;
 }

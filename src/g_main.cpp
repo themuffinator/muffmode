@@ -574,7 +574,7 @@ bool Horde_LivesEnabled() {
 =============
 Horde_NoLivesRemain
 
-Returns true when every playing client is out of lives or eliminated.
+Returns true when every playing client is out of lives and unable to continue the wave.
 =============
 */
 bool Horde_NoLivesRemain(const std::vector<player_life_state_t> &states) {
@@ -589,7 +589,7 @@ bool Horde_NoLivesRemain(const std::vector<player_life_state_t> &states) {
 		if (state.health > 0)
 			return false;
 
-		if (!state.eliminated && state.lives > 0)
+		if (state.lives > 0)
 			return false;
 	}
 
