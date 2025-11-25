@@ -221,6 +221,40 @@ std::string json_error_stack;
 
 /*
 =============
+json_stack_segment
+
+Pushes a stack segment on construction and pops it on destruction to ensure
+balanced JSON stack usage.
+=============
+*/
+class json_stack_segment {
+public:
+	/*
+	=============
+	json_stack_segment
+
+	Pushes the provided stack segment when the guard is constructed.
+	=============
+	*/
+	template<typename T>
+	explicit json_stack_segment(const T &stack) {
+		json_push_stack(stack);
+	}
+
+	/*
+	=============
+	~json_stack_segment
+
+	Pops the active stack segment when the guard is destroyed.
+	=============
+	*/
+	~json_stack_segment() {
+		json_pop_stack();
+	}
+};
+
+/*
+=============
 json_push_stack
 
 Pushes a new context onto the JSON error stack.
@@ -1778,9 +1812,8 @@ void read_save_type_json(const Json::Value &json, void *data, const save_type_t 
 		return;
 	case ST_STRUCT:
 		if (!json.isNull()) {
-			json_push_stack(field);
+			json_stack_segment stack_guard(field);
 			read_save_struct_json(json, data, type->structure);
-			json_pop_stack();
 		}
 		return;
 	case ST_ENTITY:
@@ -1855,18 +1888,16 @@ void read_save_type_json(const Json::Value &json, void *data, const save_type_t 
 				const Json::Value &value = *it;
 
 				if (!value.isInt()) {
-					json_push_stack(classname);
+					json_stack_segment stack_guard(classname);
 					json_print_error(field, "expected integer", false);
-					json_pop_stack();
 					continue;
 				}
 
 				gitem_t *item = FindItemByClassname(classname);
 
 				if (!item) {
-					json_push_stack(classname);
+					json_stack_segment stack_guard(classname);
 					json_print_error(field, G_Fmt("can't find item {}", classname).data(), false);
-					json_pop_stack();
 					continue;
 				}
 
@@ -1890,45 +1921,39 @@ void read_save_type_json(const Json::Value &json, void *data, const save_type_t 
 				const Json::Value &value = json[i];
 
 				if (!value.isObject()) {
-					json_push_stack(fmt::format("{}", i));
+					json_stack_segment stack_guard(fmt::format("{}", i));
 					json_print_error(field, "expected object", false);
-					json_pop_stack();
 					continue;
 				}
 
 				// quick type checks
 
 				if (!value["classname"].isString()) {
-					json_push_stack(fmt::format("{}.classname", i));
+					json_stack_segment stack_guard(fmt::format("{}.classname", i));
 					json_print_error(field, "expected string", false);
-					json_pop_stack();
 					continue;
 				}
 
 				if (!value["mins"].isArray() || value["mins"].size() != 3) {
-					json_push_stack(fmt::format("{}.mins", i));
+					json_stack_segment stack_guard(fmt::format("{}.mins", i));
 					json_print_error(field, "expected array[3]", false);
-					json_pop_stack();
 					continue;
 				}
 
 				if (!value["maxs"].isArray() || value["maxs"].size() != 3) {
-					json_push_stack(fmt::format("{}.maxs", i));
+					json_stack_segment stack_guard(fmt::format("{}.maxs", i));
 					json_print_error(field, "expected array[3]", false);
-					json_pop_stack();
 					continue;
 				}
 
 				if (!value["strength"].isInt()) {
-					json_push_stack(fmt::format("{}.strength", i));
+					json_stack_segment stack_guard(fmt::format("{}.strength", i));
 					json_print_error(field, "expected int", false);
-					json_pop_stack();
 					continue;
 				}
 
 				p->classname = G_CopyString(value["classname"].asCString(), TAG_LEVEL);
 				p->strength = value["strength"].asInt();
-
 				for (int32_t x = 0; x < 3; x++) {
 					p->mins[x] = value["mins"][x].asInt();
 					p->maxs[x] = value["maxs"][x].asInt();
@@ -2513,9 +2538,8 @@ void ReadGameJson(const char *jsonString) {
 	globals.gentities = g_entities;
 
 	// read game
-	json_push_stack("game");
+	json_stack_segment game_stack("game");
 	read_save_struct_json(json["game"], &game, &game_locals_t_savestruct);
-	json_pop_stack();
 
 	// read clients
 	const Json::Value &clients = json["clients"];
@@ -2528,9 +2552,8 @@ void ReadGameJson(const char *jsonString) {
 	size_t i = 0;
 
 	for (auto &v : clients) {
-		json_push_stack(fmt::format("clients[{}]", i));
+		json_stack_segment stack_guard(fmt::format("clients[{}]", i));
 		read_save_struct_json(v, &game.clients[i++], &gclient_t_savestruct);
-		json_pop_stack();
 	}
 
 	PrecacheInventoryItems();
@@ -2602,9 +2625,8 @@ void ReadLevelJson(const char *jsonString) {
 	globals.num_entities = game.maxclients + 1;
 
 	// read level
-	json_push_stack("level");
+	json_stack_segment level_stack("level");
 	read_save_struct_json(json["level"], &level, &level_locals_t_savestruct);
-	json_pop_stack();
 
 	// read entities
 	const Json::Value &entities = json["entities"];
@@ -2624,9 +2646,8 @@ void ReadLevelJson(const char *jsonString) {
 
 		gentity_t *ent = &g_entities[number];
 		G_InitGentity(ent);
-		json_push_stack(fmt::format("entities[{}]", number));
+		json_stack_segment stack_guard(fmt::format("entities[{}]", number));
 		read_save_struct_json(value, ent, &gentity_t_savestruct);
-		json_pop_stack();
 		gi.linkentity(ent);
 	}
 
