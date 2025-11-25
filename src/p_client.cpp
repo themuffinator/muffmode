@@ -309,8 +309,9 @@ Load or create the player's configuration file on connect.
 =============
 */
 static void PCfg_ClientInitPConfig(gentity_t* ent) {
-	bool file_exists = false;
-	bool cfg_valid = true;
+bool file_exists = false;
+bool cfg_valid = true;
+const char* cfg_error = nullptr;
 	client_config_t default_pc = ent->client->sess.pc;
 	client_config_t parsed_pc = default_pc;
 
@@ -364,20 +365,24 @@ static void PCfg_ClientInitPConfig(gentity_t* ent) {
 
 		if (fseek(f, 0, SEEK_END) != 0) {
 			cfg_valid = false;
+			cfg_error = "seek to end failed";
 		}
 		if (cfg_valid) {
 			file_length = ftell(f);
 			if (file_length < 0) {
 				cfg_valid = false;
+				cfg_error = "file length negative";
 			}
 		}
 		if (cfg_valid && fseek(f, 0, SEEK_SET) != 0) {
 			cfg_valid = false;
+			cfg_error = "seek to start failed";
 		}
 		if (cfg_valid) {
 			length = static_cast<size_t>(file_length);
 			if (length > 0x40000) {
 				cfg_valid = false;
+				cfg_error = "config too large";
 			}
 		}
 		if (cfg_valid) {
@@ -387,6 +392,7 @@ static void PCfg_ClientInitPConfig(gentity_t* ent) {
 
 				if (length != read_length) {
 					cfg_valid = false;
+					cfg_error = "partial config read";
 				}
 			}
 			buffer[length] = '\0';
@@ -398,9 +404,22 @@ static void PCfg_ClientInitPConfig(gentity_t* ent) {
 			if (buffer) {
 				gi.TagFree(buffer);
 			}
-			gi.Com_PrintFmt("{}: Player config load error for \"{}\", discarding.\n", __FUNCTION__, name);
+			gi.Com_PrintFmt("{}: Player config load error for \"{}\" ({}) - regenerating default.\n", __FUNCTION__, name, cfg_error ? cfg_error : "unknown error");
+			if (std::remove(name) != 0) {
+				FILE* truncate = std::fopen(name, "wb");
+				if (truncate) {
+					std::fclose(truncate);
+					gi.Com_PrintFmt("{}: Truncated corrupt player config \"{}\".\n", __FUNCTION__, name);
+				}
+				else {
+					gi.Com_PrintFmt("{}: Failed to remove or truncate corrupt player config \"{}\".\n", __FUNCTION__, name);
+				}
+			}
+			ent->client->sess.pc = default_pc;
+			PCfg_WriteConfig(ent);
 			return;
 		}
+	}
 
 		if (buffer && length) {
 			char* cursor = buffer;
