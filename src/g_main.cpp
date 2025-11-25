@@ -606,6 +606,13 @@ Loads the server message of the day text into persistent memory.
 =============
 */
 void G_LoadMOTD() {
+	if (game.motd_buffer) {
+		gi.TagFree(game.motd_buffer);
+		game.motd_buffer = nullptr;
+	}
+
+	game.motd.clear();
+
 	// load up ent override
 	const char *name = G_Fmt("baseq2/{}", g_motd_filename->string[0] ? g_motd_filename->string : "motd.txt").data();
 	FILE *f = fopen(name, "rb");
@@ -638,14 +645,19 @@ void G_LoadMOTD() {
 		fclose(f);
 
 		if (valid) {
-			game.motd = (const char *)buffer;
+			game.motd_buffer = buffer;
+			game.motd.assign(buffer, length);
 			game.motd_mod_count++;
 			if (g_verbose->integer)
 				gi.Com_PrintFmt("{}: MotD file verified and loaded: \"{}\"\n", __FUNCTION__, name);
 		} else {
 			gi.Com_PrintFmt("{}: MotD file load error for \"{}\", discarding.\n", __FUNCTION__, name);
-			if (buffer)
+			if (buffer) {
 				gi.TagFree(buffer);
+				buffer = nullptr;
+			}
+			game.motd_buffer = nullptr;
+			game.motd.clear();
 		}
 	}
 }

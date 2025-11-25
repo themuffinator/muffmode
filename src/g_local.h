@@ -1455,6 +1455,7 @@ struct game_locals_t {
 
 	gametype_t	gametype;
 	std::string motd;
+	char *motd_buffer = nullptr;
 	int motd_mod_count = 0;
 
 	ruleset_t	ruleset;
