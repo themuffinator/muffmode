@@ -35,10 +35,11 @@ size_t Q_strlcpy(char *dst, const char *src, size_t siz)
 			*d = '\0';
 		while (*s++)
 			;
-		}
+	}
 
 	return static_cast<size_t>(s - src - 1);
-		}
+}
+
 /*
 =============
 Q_strlcat
@@ -66,17 +67,19 @@ size_t Q_strlcat(char *dst, const char *src, size_t siz)
 		if (n != 1) {
 			*d++ = *s;
 			n--;
-		}		s++;
-}
+		}
+		s++;
+	}
 
 	*d = '\0';
 
 	return dlen + static_cast<size_t>(s - src);
-		}#endif
+}
+#endif
 
 /*
 =============
-			P_Menu_Appendf
+P_Menu_Appendf
 
 Appends formatted text to a layout buffer while ensuring the destination is
 not overrun.
@@ -95,7 +98,8 @@ static bool P_Menu_Appendf(char *layout, size_t layout_size, const char *fmt, ..
 	va_end(args);
 
 	return Q_strlcat(layout, chunk.data(), layout_size) < layout_size;
-		}
+}
+
 /*
 =============
 P_Menu_BuildStatusBar

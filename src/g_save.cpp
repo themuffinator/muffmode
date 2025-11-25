@@ -32,7 +32,7 @@ Fetches the engine build string from the version cvar.
 =============
 */
 static const char *GetEngineBuildString() {
-	cvar_t *engine_version = gi.cvar("version", "", 0);
+	cvar_t *engine_version = gi.cvar("version", "", CVAR_NOFLAGS);
 
 	if (!engine_version || !engine_version->string)
 		return "";
@@ -218,6 +218,9 @@ const save_data_list_t *save_data_list_t::fetch(const void *ptr, save_data_tag_t
 }
 
 std::string json_error_stack;
+
+void json_push_stack(const std::string &stack);
+void json_pop_stack();
 
 /*
 =============

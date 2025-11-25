@@ -148,14 +148,6 @@ std::array<uint8_t, MAX_REINFORCEMENTS> M_PickReinforcements(gentity_t *self, in
 		remaining -= self->monsterinfo.reinforcements.reinforcements[chosen[num_chosen]].strength;
 	}
 
-	if (developer->integer) {
-		gi.dprintf("[Medic] Reinforcement picks (slots %d used %d):", self->monsterinfo.monster_slots, self->monsterinfo.monster_used);
-		for (int32_t i = 0; i < num_chosen; i++) {
-			gi.dprintf(" %d", chosen[i]);
-		}
-		gi.dprintf("\n");
-	}
-
 	return chosen;
 }
 
