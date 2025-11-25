@@ -23,26 +23,27 @@ Generic code to detect & fix a stuck object.
 stuck_result_t G_FixStuckObject_Generic(vec3_t& origin, const vec3_t& own_mins, const vec3_t& own_maxs, std::function<stuck_object_trace_fn_t> trace) {
 	if (!trace(origin, own_mins, own_maxs, origin).startsolid)
 		return stuck_result_t::GOOD_POSITION;
-
+	
 	struct GoodPosition {
-		float distance;
-		vec3_t origin;
+	float distance;
+	vec3_t origin;
 	};
+	
+	constexpr struct {
+	std::array<int8_t, 3> normal;
+	std::array<int8_t, 3> mins, maxs;
+	} side_checks[] = {
+	{ { 0, 0, 1 }, { -1, -1, 0 }, { 1, 1, 0 } },
+	{ { 0, 0, -1 }, { -1, -1, 0 }, { 1, 1, 0 } },
+	{ { 1, 0, 0 }, { 0, -1, -1 }, { 0, 1, 1 } },
+	{ { -1, 0, 0 }, { 0, -1, -1 }, { 0, 1, 1 } },
+	{ { 0, 1, 0 }, { -1, 0, -1 }, { 1, 0, 1 } },
+	{ { 0, -1, 0 }, { -1, 0, -1 }, { 1, 0, 1 } },
+	};
+	
 	std::vector<GoodPosition> good_positions;
 	good_positions.reserve(q_countof(side_checks));
-
-	constexpr struct {
-		std::array<int8_t, 3> normal;
-		std::array<int8_t, 3> mins, maxs;
-	} side_checks[] = {
-		{ { 0, 0, 1 }, { -1, -1, 0 }, { 1, 1, 0 } },
-		{ { 0, 0, -1 }, { -1, -1, 0 }, { 1, 1, 0 } },
-		{ { 1, 0, 0 }, { 0, -1, -1 }, { 0, 1, 1 } },
-		{ { -1, 0, 0 }, { 0, -1, -1 }, { 0, 1, 1 } },
-		{ { 0, 1, 0 }, { -1, 0, -1 }, { 1, 0, 1 } },
-		{ { 0, -1, 0 }, { -1, 0, -1 }, { 1, 0, 1 } },
-	};
-
+	
 	for (size_t sn = 0; sn < q_countof(side_checks); sn++) {
 		auto& side = side_checks[sn];
 		vec3_t start = origin;
@@ -146,13 +147,15 @@ stuck_result_t G_FixStuckObject_Generic(vec3_t& origin, const vec3_t& own_mins, 
 	}
 
 	if (!good_positions.empty()) {
-		const auto best = std::ranges::min_element(good_positions, [](const auto& a, const auto& b) { return a.distance < b.distance; });
-
+		const auto best = std::min_element(good_positions.begin(), good_positions.end(), [](const auto &a, const auto &b) {
+			return a.distance < b.distance;
+		});
+	
 		origin = best->origin;
-
+	
 		return stuck_result_t::FIXED;
 	}
-
+	
 	return stuck_result_t::NO_GOOD_POSITION;
 }
 
