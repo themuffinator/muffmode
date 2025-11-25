@@ -73,6 +73,20 @@ static void TestNoLivesTriggersElimination()
 
 /*
 =============
+TestEmptyRosterTriggersElimination
+
+Ensures waves complete when no playing clients remain.
+=============
+*/
+static void TestEmptyRosterTriggersElimination()
+{
+	std::vector<player_life_state_t> states;
+
+	Expect(Horde_NoLivesRemain(states), "No playing clients should end the wave");
+}
+
+/*
+=============
 main
 
 Runs Horde life exhaustion regression checks.
@@ -83,6 +97,7 @@ int main()
 	TestAlivePlayerPreventsElimination();
 	TestRemainingLivesPreventFailure();
 	TestNoLivesTriggersElimination();
+	TestEmptyRosterTriggersElimination();
 
 	return g_failures == 0 ? 0 : 1;
 }

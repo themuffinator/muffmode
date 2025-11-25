@@ -593,7 +593,7 @@ bool Horde_NoLivesRemain(const std::vector<player_life_state_t> &states) {
 			return false;
 	}
 
-	return have_players;
+	return true;
 }
 // =================================================
 
