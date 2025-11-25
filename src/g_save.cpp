@@ -286,8 +286,11 @@ Prints JSON load errors with the current stack context, optionally treating them
 =============
 */
 void json_print_error(const char *field, const char *message, bool fatal) {
-	if (fatal || g_strict_saves->integer)
+	if (fatal || g_strict_saves->integer) {
 		gi.Com_ErrorFmt("Error loading JSON\n{}.{}: {}", json_error_stack, field, message);
+
+		return;
+	}
 
 	gi.Com_PrintFmt("Warning loading JSON\n{}.{}: {}\n", json_error_stack, field, message);
 }
