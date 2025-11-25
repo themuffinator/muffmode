@@ -8,6 +8,8 @@
 #endif
 /*freeze*/
 
+void PCfg_WriteConfig(gentity_t *ent);
+
 enum cmd_flags_t : uint32_t {
 	CF_NONE				= 0,
 	CF_ALLOW_DEAD		= bit_v<0>,
@@ -2379,6 +2381,7 @@ Cmd_CrosshairID_f
 static void Cmd_CrosshairID_f(gentity_t *ent) {
 	ent->client->sess.pc.show_id ^= true;
 	gi.LocClient_Print(ent, PRINT_HIGH, "Player identication display: {}\n", ent->client->sess.pc.show_id ? "ON" : "OFF");
+	PCfg_WriteConfig(ent);
 }
 
 /*
@@ -2389,6 +2392,7 @@ Cmd_Timer_f
 static void Cmd_Timer_f(gentity_t *ent) {
 	ent->client->sess.pc.show_timer ^= true;
 	gi.LocClient_Print(ent, PRINT_HIGH, "Match timer display: {}\n", ent->client->sess.pc.show_timer ? "ON" : "OFF");
+	PCfg_WriteConfig(ent);
 }
 
 /*
@@ -2399,6 +2403,7 @@ Cmd_FragMessages_f
 static void Cmd_FragMessages_f(gentity_t *ent) {
 	ent->client->sess.pc.show_fragmessages ^= true;
 	gi.LocClient_Print(ent, PRINT_HIGH, "{} frag messages.\n", ent->client->sess.pc.show_fragmessages ? "Activating" : "Disabling");
+	PCfg_WriteConfig(ent);
 }
 
 /*
@@ -2409,6 +2414,7 @@ Cmd_Announcer_f
 static void Cmd_Announcer_f(gentity_t *ent) {
 	ent->client->sess.pc.use_expanded ^= true;
 	gi.LocClient_Print(ent, PRINT_HIGH, "Match announcer: {}\n", ent->client->sess.pc.use_expanded ? "ON" : "OFF");
+	PCfg_WriteConfig(ent);
 }
 
 /*
@@ -2430,8 +2436,8 @@ static void Cmd_KillBeep_f(gentity_t *ent) {
 	const char *sb[5] = { "off", "clang", "beep-boop", "insane", "tang-tang" };
 	ent->client->sess.pc.killbeep_num = num;
 	gi.LocClient_Print(ent, PRINT_HIGH, "Kill beep changed to: {}\n", sb[num]);
+	PCfg_WriteConfig(ent);
 }
-
 
 /*
 =================
@@ -3068,6 +3074,7 @@ Cmd_FollowKiller_f
 static void Cmd_FollowKiller_f(gentity_t *ent) {
 	ent->client->sess.pc.follow_killer ^= true;
 	gi.LocClient_Print(ent, PRINT_HIGH, "Auto-follow killer: {}\n", ent->client->sess.pc.follow_killer ? "ON" : "OFF");
+	PCfg_WriteConfig(ent);
 }
 
 /*
@@ -3083,6 +3090,7 @@ static void Cmd_FollowLeader_f(gentity_t *ent) {
 			ent->client->sess.pc.follow_leader = false;
 			gi.Client_Print(ent, PRINT_HIGH, "No leader available to follow.\n");
 			gi.LocClient_Print(ent, PRINT_HIGH, "Auto-follow leader: OFF\n");
+			PCfg_WriteConfig(ent);
 			return;
 		}
 	}
@@ -3095,6 +3103,8 @@ static void Cmd_FollowLeader_f(gentity_t *ent) {
 		ent->client->follow_update = true;
 		UpdateChaseCam(ent);
 	}
+
+	PCfg_WriteConfig(ent);
 }
 
 /*
@@ -3105,10 +3115,9 @@ Cmd_FollowPowerup_f
 static void Cmd_FollowPowerup_f(gentity_t *ent) {
 	ent->client->sess.pc.follow_powerup ^= true;
 	gi.LocClient_Print(ent, PRINT_HIGH, "Auto-follow powerup pick-ups: {}\n", ent->client->sess.pc.follow_powerup ? "ON" : "OFF");
+	PCfg_WriteConfig(ent);
 }
-
 /*----------------------------------------------------------------*/
-
 /*
 =================
 Cmd_LockTeam_f
