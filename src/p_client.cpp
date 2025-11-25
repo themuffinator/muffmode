@@ -390,7 +390,7 @@ static void PCfg_ClientInitPConfig(gentity_t* ent) {
 	client_config_t default_pc = ent->client->sess.pc;
 	client_config_t parsed_pc = default_pc;
 
-	if (!ent->client)
+	if (!ent || !ent->client)
 		return;
 	if (ent->svflags & SVF_BOT)
 		return;
@@ -405,55 +405,39 @@ static void PCfg_ClientInitPConfig(gentity_t* ent) {
 	const std::string path = std::string(G_Fmt("baseq2/pcfg/{}.cfg", sanitized_id));
 	const char *name = path.c_str();
 
-	// enforce sane defaults before parsing
 	if (default_pc.killbeep_num < 0 || default_pc.killbeep_num > 4)
 		default_pc.killbeep_num = 0;
 	parsed_pc = default_pc;
 	ent->client->sess.pc = default_pc;
 
+	std::string buffer;
 	FILE* f = fopen(name, "rb");
-	char* buffer = nullptr;
-	if (f != NULL) {
-		size_t length = 0;
-		size_t read_length;
+	if (f) {
 		long file_length = 0;
-
 		if (fseek(f, 0, SEEK_END) != 0) {
 			cfg_valid = false;
 		}
-		if (cfg_valid) {
+		else {
 			file_length = ftell(f);
-			if (file_length < 0) {
+			if (file_length < 0 || file_length > 0x40000)
 				cfg_valid = false;
-			}
 		}
-		if (cfg_valid && fseek(f, 0, SEEK_SET) != 0) {
-			cfg_valid = false;
-		}
-		if (cfg_valid) {
-			length = static_cast<size_t>(file_length);
-			if (length > 0x40000) {
-				cfg_valid = false;
-			}
-		}
-		if (cfg_valid) {
-			buffer = (char*)gi.TagMalloc(length + 1, TAG_GAME);
-			if (length) {
-				read_length = fread(buffer, 1, length, f);
 
-				if (length != read_length) {
-					cfg_valid = false;
-				}
-			}
-			buffer[length] = '\0';
+		if (cfg_valid && fseek(f, 0, SEEK_SET) != 0)
+			cfg_valid = false;
+
+		if (cfg_valid && file_length > 0) {
+			buffer.resize(static_cast<size_t>(file_length));
+			size_t read_length = fread(buffer.data(), 1, buffer.size(), f);
+
+			if (read_length != buffer.size())
+				cfg_valid = false;
 		}
+
 		file_exists = true;
 		fclose(f);
 
 		if (!cfg_valid) {
-			if (buffer) {
-				gi.TagFree(buffer);
-			}
 			gi.Com_PrintFmt("{}: Player config load error for \"{}\", regenerating defaults.\n", __FUNCTION__, name);
 			if (file_exists) {
 				if (std::remove(name) != 0) {
@@ -469,118 +453,111 @@ static void PCfg_ClientInitPConfig(gentity_t* ent) {
 				else {
 					gi.Com_PrintFmt("{}: Removed bad player config \"{}\".\n", __FUNCTION__, name);
 				}
-		}
+			}
 
-		ent->client->sess.pc = default_pc;
+			ent->client->sess.pc = default_pc;
 			PCfg_WriteConfig(ent);
 			return;
-		}
 	}
 
-		if (buffer && length) {
-		char* cursor = buffer;
-		while (cursor && *cursor) {
-			char* line = cursor;
-			char* newline = std::strchr(cursor, '\n');
-			if (newline) {
-				*newline = '\0';
-				cursor = newline + 1;
-			}
-			else {
-				cursor = nullptr;
-			}
+	if (!buffer.empty()) {
+		size_t cursor = 0;
+		while (cursor < buffer.size()) {
+			size_t newline = buffer.find('\n', cursor);
+			std::string line = buffer.substr(cursor, newline == std::string::npos ? std::string::npos : newline - cursor);
+			cursor = (newline == std::string::npos) ? buffer.size() : newline + 1;
 
-			while (*line == ' ' || *line == '\t')
-				++line;
+			size_t first_char = line.find_first_not_of(" \t\r");
+			if (first_char == std::string::npos)
+				continue;
+			line = line.substr(first_char);
 
-			if (!*line || (line[0] == '/' && line[1] == '/'))
+			if (line.rfind("//", 0) == 0)
 				continue;
 
-			char* value = nullptr;
-			for (char* walker = line; *walker; ++walker) {
-				if (*walker == ' ' || *walker == '\t') {
-					*walker = '\0';
-					value = walker + 1;
-					break;
-				}
-			}
-
-			if (!value) {
-				gi.Com_PrintFmt("{}: Ignoring malformed line in \"{}\": {}\n", __FUNCTION__, name, line);
+			size_t split = line.find_first_of(" \t");
+			if (split == std::string::npos) {
+				gi.Com_PrintFmt("{}: Ignoring malformed line in \"{}\": {}\n", __FUNCTION__, name, line.c_str());
 				continue;
 			}
 
-			while (*value == ' ' || *value == '\t')
-				++value;
+			std::string key = line.substr(0, split);
+			size_t value_start = line.find_first_not_of(" \t", split);
+			if (value_start == std::string::npos) {
+				gi.Com_PrintFmt("{}: Missing value for \"{}\" in \"{}\".\n", __FUNCTION__, key.c_str(), name);
+				continue;
+			}
 
-			char* comment = std::strstr(value, "//");
-			if (comment)
-				*comment = '\0';
+			std::string value = line.substr(value_start);
+			size_t comment_pos = value.find("//");
+			if (comment_pos != std::string::npos)
+				value = value.substr(0, comment_pos);
 
-			char* end_value = value + std::strlen(value);
-			while (end_value > value && (end_value[-1] == ' ' || end_value[-1] == '\t' || end_value[-1] == '\r'))
-				--end_value;
-			*end_value = '\0';
+			size_t value_end = value.find_last_not_of(" \t\r");
+			if (value_end != std::string::npos)
+				value = value.substr(0, value_end + 1);
+			else
+				value.clear();
 
-			auto parse_bool = [&](const char* key, const char* str, bool default_value, bool* out) {
+			auto parse_bool = [&](const char* key_name, const std::string& str, bool default_value, bool* out) {
 				char* end_ptr = nullptr;
-				long val = std::strtol(str, &end_ptr, 10);
-				if (end_ptr == str || *end_ptr != '\0') {
-					gi.Com_PrintFmt("{}: Invalid boolean for \"{}\" in \"{}\": {}\n", __FUNCTION__, key, name, str);
+				long parsed = std::strtol(str.c_str(), &end_ptr, 10);
+				if (end_ptr == str.c_str() || *end_ptr != '\0') {
+					gi.Com_PrintFmt("{}: Invalid boolean for \"{}\" in \"{}\": {}\n", __FUNCTION__, key_name, name, str.c_str());
 					return default_value;
 				}
 
-				if (val == 0)
+				if (parsed == 0)
 					return (*out = false);
-				if (val == 1)
+				if (parsed == 1)
 					return (*out = true);
 
-				gi.Com_PrintFmt("{}: Out of range boolean for \"{}\" in \"{}\": {}\n", __FUNCTION__, key, name, str);
+				gi.Com_PrintFmt("{}: Out of range boolean for \"{}\" in \"{}\": {}\n", __FUNCTION__, key_name, name, str.c_str());
 				return default_value;
 			};
 
-			auto parse_int = [&](const char* key, const char* str, int default_value, int min, int max, int* out) {
+			auto parse_int = [&](const char* key_name, const std::string& str, int default_value, int min, int max, int* out) {
 				char* end_ptr = nullptr;
-				long val = std::strtol(str, &end_ptr, 10);
-				if (end_ptr == str || *end_ptr != '\0') {
-					gi.Com_PrintFmt("{}: Invalid integer for \"{}\" in \"{}\": {}\n", __FUNCTION__, key, name, str);
+				long parsed = std::strtol(str.c_str(), &end_ptr, 10);
+				if (end_ptr == str.c_str() || *end_ptr != '\0') {
+					gi.Com_PrintFmt("{}: Invalid integer for \"{}\" in \"{}\": {}\n", __FUNCTION__, key_name, name, str.c_str());
 					return default_value;
 				}
 
-				if (val < min || val > max) {
-					gi.Com_PrintFmt("{}: Out of range integer for \"{}\" in \"{}\": {} ({}-{})\n", __FUNCTION__, key, name, str, min, max);
+				if (parsed < min || parsed > max) {
+					gi.Com_PrintFmt("{}: Out of range integer for \"{}\" in \"{}\": {} ({}-{})\n", __FUNCTION__, key_name, name, str.c_str(), min, max);
 					return default_value;
 				}
 
-				return (*out = static_cast<int>(val));
+				return (*out = static_cast<int>(parsed));
 			};
 
-			if (!std::strcmp(line, "show_id"))
-				parsed_pc.show_id = parse_bool(line, value, default_pc.show_id, &parsed_pc.show_id);
-			else if (!std::strcmp(line, "show_fragmessages"))
-				parsed_pc.show_fragmessages = parse_bool(line, value, default_pc.show_fragmessages, &parsed_pc.show_fragmessages);
-			else if (!std::strcmp(line, "show_timer"))
-				parsed_pc.show_timer = parse_bool(line, value, default_pc.show_timer, &parsed_pc.show_timer);
-			else if (!std::strcmp(line, "killbeep_num"))
-				parsed_pc.killbeep_num = parse_int(line, value, default_pc.killbeep_num, 0, 4, &parsed_pc.killbeep_num);
-			else if (!std::strcmp(line, "follow_killer"))
-				parsed_pc.follow_killer = parse_bool(line, value, default_pc.follow_killer, &parsed_pc.follow_killer);
-			else if (!std::strcmp(line, "follow_leader"))
-				parsed_pc.follow_leader = parse_bool(line, value, default_pc.follow_leader, &parsed_pc.follow_leader);
-			else if (!std::strcmp(line, "follow_powerup"))
-				parsed_pc.follow_powerup = parse_bool(line, value, default_pc.follow_powerup, &parsed_pc.follow_powerup);
-			else if (!std::strcmp(line, "use_expanded"))
-				parsed_pc.use_expanded = parse_bool(line, value, default_pc.use_expanded, &parsed_pc.use_expanded);
+			if (key == "show_id")
+				parsed_pc.show_id = parse_bool(key.c_str(), value, default_pc.show_id, &parsed_pc.show_id);
+			else if (key == "show_fragmessages")
+				parsed_pc.show_fragmessages = parse_bool(key.c_str(), value, default_pc.show_fragmessages, &parsed_pc.show_fragmessages);
+			else if (key == "show_timer")
+				parsed_pc.show_timer = parse_bool(key.c_str(), value, default_pc.show_timer, &parsed_pc.show_timer);
+			else if (key == "killbeep_num")
+				parsed_pc.killbeep_num = parse_int(key.c_str(), value, default_pc.killbeep_num, 0, 4, &parsed_pc.killbeep_num);
+			else if (key == "follow_killer")
+				parsed_pc.follow_killer = parse_bool(key.c_str(), value, default_pc.follow_killer, &parsed_pc.follow_killer);
+			else if (key == "follow_leader")
+				parsed_pc.follow_leader = parse_bool(key.c_str(), value, default_pc.follow_leader, &parsed_pc.follow_leader);
+			else if (key == "follow_powerup")
+				parsed_pc.follow_powerup = parse_bool(key.c_str(), value, default_pc.follow_powerup, &parsed_pc.follow_powerup);
+			else if (key == "use_expanded")
+				parsed_pc.use_expanded = parse_bool(key.c_str(), value, default_pc.use_expanded, &parsed_pc.use_expanded);
 			else
-				gi.Com_PrintFmt("{}: Unknown config key in \"{}\": {}\n", __FUNCTION__, name, line);
+				gi.Com_PrintFmt("{}: Unknown config key in \"{}\": {}\n", __FUNCTION__, name, key.c_str());
 		}
+
 		ent->client->sess.pc = parsed_pc;
 	}
 
-	if (buffer) {
-		gi.TagFree(buffer);
-		buffer = nullptr;
-	}
+	if (buffer.empty())
+		return;
+}
 //=======================================================================
 struct mon_name_t {
 	const char* classname;
