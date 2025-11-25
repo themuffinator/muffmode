@@ -301,7 +301,40 @@ static void PCfg_ClientInitPConfig(gentity_t* ent) {
 	if (!ent->client) return;
 	if (ent->svflags & SVF_BOT) return;
 
-	const std::string path = std::string(G_Fmt("baseq2/pcfg/{}.cfg", ent->client->pers.social_id));
+	const char *social_id = ent->client->pers.social_id;
+	if (!social_id || !*social_id) {
+		gi.Com_PrintFmt("{}: Invalid player social id.\n", __FUNCTION__);
+		return;
+	}
+
+	if (std::strstr(social_id, "..")) {
+		gi.Com_PrintFmt("{}: Rejected player social id with traversal sequence.\n", __FUNCTION__);
+		return;
+	}
+
+	std::string sanitized_id;
+	sanitized_id.reserve(std::strlen(social_id));
+
+	for (const char *c = social_id; *c; ++c) {
+		if (*c == '/' || *c == '\\') {
+			gi.Com_PrintFmt("{}: Rejected player social id containing path separators.\n", __FUNCTION__);
+			return;
+		}
+
+		if (std::isalnum(static_cast<unsigned char>(*c)) || *c == '_' || *c == '-') {
+			sanitized_id.push_back(*c);
+		}
+		else {
+			sanitized_id.push_back('_');
+		}
+	}
+
+	if (sanitized_id.empty()) {
+		gi.Com_PrintFmt("{}: Invalid player social id after sanitization.\n", __FUNCTION__);
+		return;
+	}
+
+	const std::string path = std::string(G_Fmt("baseq2/pcfg/{}.cfg", sanitized_id));
 	const char *name = path.c_str();
 
 	FILE* f = fopen(name, "rb");
