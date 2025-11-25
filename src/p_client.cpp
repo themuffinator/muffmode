@@ -3,6 +3,9 @@
 #include "g_local.h"
 #include "monsters/m_player.h"
 #include "bots/bot_includes.h"
+#include <cerrno>
+#include <cstring>
+#include <sys/stat.h>
 
 void SP_misc_teleporter_dest(gentity_t* ent);
 
@@ -289,6 +292,66 @@ static void PCfg_WriteConfig(gentity_t *ent) {
 */
 /*
 =============
+PCfg_SanitizeSocialId
+
+Allow only alphanumeric characters and underscores in the social ID.
+=============
+*/
+static std::string PCfg_SanitizeSocialId(const char* social_id) {
+	std::string sanitized;
+
+	if (!social_id)
+		return sanitized;
+
+	for (const char* ch = social_id; *ch; ++ch) {
+		if ((*ch >= '0' && *ch <= '9') ||
+			(*ch >= 'A' && *ch <= 'Z') ||
+			(*ch >= 'a' && *ch <= 'z') ||
+			*ch == '_') {
+			sanitized.push_back(*ch);
+		}
+	}
+
+	return sanitized;
+}
+
+/*
+=============
+PCfg_EnsureConfigDirectory
+
+Create or validate the baseq2/pcfg directory path.
+=============
+*/
+static bool PCfg_EnsureConfigDirectory(void) {
+	struct stat st;
+
+	if (stat("baseq2", &st) != 0) {
+		if (mkdir("baseq2", 0777) != 0 && errno != EEXIST) {
+			gi.Com_PrintFmt("{}: Cannot create base config directory \"baseq2\": {}\n", __FUNCTION__, std::strerror(errno));
+			return false;
+		}
+	}
+	else if (!S_ISDIR(st.st_mode)) {
+		gi.Com_PrintFmt("{}: Config base path \"baseq2\" is not a directory.\n", __FUNCTION__);
+		return false;
+	}
+
+	if (stat("baseq2/pcfg", &st) != 0) {
+		if (mkdir("baseq2/pcfg", 0777) != 0) {
+			gi.Com_PrintFmt("{}: Cannot create player config directory \"baseq2/pcfg\": {}\n", __FUNCTION__, std::strerror(errno));
+			return false;
+		}
+	}
+	else if (!S_ISDIR(st.st_mode)) {
+		gi.Com_PrintFmt("{}: Player config path \"baseq2/pcfg\" is not a directory.\n", __FUNCTION__);
+		return false;
+	}
+
+	return true;
+}
+
+/*
+=============
 PCfg_ClientInitPConfig
 
 Load or create the player's configuration file on connect.
@@ -301,7 +364,23 @@ static void PCfg_ClientInitPConfig(gentity_t* ent) {
 	if (!ent->client) return;
 	if (ent->svflags & SVF_BOT) return;
 
-	const std::string path = std::string(G_Fmt("baseq2/pcfg/{}.cfg", ent->client->pers.social_id));
+	const std::string sanitized_id = PCfg_SanitizeSocialId(ent->client->pers.social_id);
+
+	if (sanitized_id.find('/') != std::string::npos || sanitized_id.find('\\') != std::string::npos) {
+		gi.Com_PrintFmt("{}: Refusing unsafe player config id: {}\n", __FUNCTION__, ent->client->pers.social_id);
+		return;
+	}
+
+	if (sanitized_id.empty()) {
+		gi.Com_PrintFmt("{}: Invalid player config id for: {}\n", __FUNCTION__, ent->client->pers.social_id);
+		return;
+	}
+
+	if (!PCfg_EnsureConfigDirectory()) {
+		return;
+	}
+
+	const std::string path = std::string(G_Fmt("baseq2/pcfg/{}.cfg", sanitized_id));
 	const char *name = path.c_str();
 
 	FILE* f = fopen(name, "rb");
