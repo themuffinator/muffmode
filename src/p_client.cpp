@@ -309,7 +309,6 @@ Load or create the player's configuration file on connect.
 =============
 */
 static void PCfg_ClientInitPConfig(gentity_t* ent) {
-	bool file_exists = false;
 	bool cfg_valid = true;
 	client_config_t default_pc = ent->client->sess.pc;
 	client_config_t parsed_pc = default_pc;
@@ -391,14 +390,25 @@ static void PCfg_ClientInitPConfig(gentity_t* ent) {
 			}
 			buffer[length] = '\0';
 		}
-		file_exists = true;
 		fclose(f);
 
 		if (!cfg_valid) {
 			if (buffer) {
 				gi.TagFree(buffer);
+				buffer = nullptr;
 			}
-			gi.Com_PrintFmt("{}: Player config load error for \"{}\", discarding.\n", __FUNCTION__, name);
+			gi.Com_PrintFmt("{}: Player config load error for \"{}\"; resetting to defaults.\n", __FUNCTION__, name);
+			if (std::remove(name) != 0) {
+				FILE* truncate = std::fopen(name, "wb");
+				if (truncate) {
+					std::fclose(truncate);
+				}
+				else {
+					gi.Com_PrintFmt("{}: Unable to remove or truncate corrupt player config \"{}\".\n", __FUNCTION__, name);
+				}
+			}
+			ent->client->sess.pc = default_pc;
+			PCfg_WriteConfig(ent);
 			return;
 		}
 
