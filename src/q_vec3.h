@@ -4,8 +4,8 @@
 #pragma once
 
 // q_vec3 - vec3 stuff
+#include <cassert>
 #include <cmath>
-#include <stdexcept>
 #include <type_traits>
 
 using nullptr_t = std::nullptr_t;
@@ -26,26 +26,42 @@ struct vec3_t
 		return { fabsf(x), fabsf(y), fabsf(z) };
 	}
 
-	[[nodiscard]] constexpr const float &operator[](size_t i) const
-	{
-		if (i == 0)
-			return x;
-		else if (i == 1)
-			return y;
-		else if (i == 2)
-			return z;
-		throw std::out_of_range("i");
-	}
+	/*
+	=============
+	operator[]
 
+	Provides checked mutable access to vector components.
+	=============
+	*/
 	[[nodiscard]] constexpr float &operator[](size_t i)
 	{
+		assert(i < 3);
+
 		if (i == 0)
 			return x;
 		else if (i == 1)
 			return y;
-		else if (i == 2)
-			return z;
-		throw std::out_of_range("i");
+
+		return z;
+	}
+
+	/*
+	=============
+	operator[]
+
+	Provides checked read-only access to vector components.
+	=============
+	*/
+	[[nodiscard]] constexpr const float &operator[](size_t i) const
+	{
+		assert(i < 3);
+
+		if (i == 0)
+			return x;
+		else if (i == 1)
+			return y;
+
+		return z;
 	}
 
 	// comparison
