@@ -115,6 +115,9 @@ size_t P_Menu_BuildStatusBar(const menu_hnd_t *hnd, char *layout, size_t layout_
 
 	layout[0] = '\0';
 
+	if (!hnd->entries)
+		return 0;
+
 	P_Menu_Appendf(layout, layout_size, "xv %d yv %d picn %s ", 32, 8, "inventory");
 
 	bool alt = false;
