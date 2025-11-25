@@ -298,8 +298,22 @@ static void PCfg_ClientInitPConfig(gentity_t* ent) {
 	bool file_exists = false;
 	bool cfg_valid = true;
 
-	if (!ent->client) return;
-	if (ent->svflags & SVF_BOT) return;
+	// sensible defaults
+	if (ent->client) {
+		ent->client->sess.pc.show_id = true;
+		ent->client->sess.pc.show_timer = true;
+		ent->client->sess.pc.show_fragmessages = true;
+		ent->client->sess.pc.killbeep_num = 1;
+		ent->client->sess.pc.follow_killer = false;
+		ent->client->sess.pc.follow_leader = false;
+		ent->client->sess.pc.follow_powerup = false;
+		ent->client->sess.pc.use_expanded = false;
+	}
+
+	if (!ent->client)
+		return;
+	if (ent->svflags & SVF_BOT)
+		return;
 
 	const std::string path = std::string(G_Fmt("baseq2/pcfg/{}.cfg", ent->client->pers.social_id));
 	const char *name = path.c_str();
@@ -337,6 +351,95 @@ static void PCfg_ClientInitPConfig(gentity_t* ent) {
 			}
 			gi.Com_PrintFmt("{}: Player config load error for \"{}\", discarding.\n", __FUNCTION__, name);
 			return;
+		}
+
+		if (buffer && length) {
+			char* context = nullptr;
+			for (char* line = strtok_r(buffer, "\n\r", &context); line; line = strtok_r(nullptr, "\n\r", &context)) {
+				while (*line == ' ' || *line == '\t')
+					++line;
+
+				if (!*line || (line[0] == '/' && line[1] == '/'))
+					continue;
+
+				char* key = line;
+				while (*line && *line != ' ' && *line != '\t')
+					++line;
+
+				if (!*line) {
+					gi.Com_PrintFmt("{}: Invalid config line (missing value): {}\n", __FUNCTION__, key);
+					continue;
+				}
+
+				*line++ = '\0';
+				while (*line == ' ' || *line == '\t')
+					++line;
+
+				if (!*line) {
+					gi.Com_PrintFmt("{}: Invalid config line (missing value): {}\n", __FUNCTION__, key);
+					continue;
+				}
+
+				char* value = line;
+				bool handled = true;
+				char* end = nullptr;
+
+				if (!Q_stricmp(key, "show_id")) {
+					long val = strtol(value, &end, 10);
+					if (*end == '\0' && (val == 0 || val == 1))
+						ent->client->sess.pc.show_id = val != 0;
+					else
+						gi.Com_PrintFmt("{}: Invalid show_id value: {}\n", __FUNCTION__, value);
+				}
+				else if (!Q_stricmp(key, "show_timer")) {
+					long val = strtol(value, &end, 10);
+					if (*end == '\0' && (val == 0 || val == 1))
+						ent->client->sess.pc.show_timer = val != 0;
+					else
+						gi.Com_PrintFmt("{}: Invalid show_timer value: {}\n", __FUNCTION__, value);
+				}
+				else if (!Q_stricmp(key, "show_fragmessages")) {
+					long val = strtol(value, &end, 10);
+					if (*end == '\0' && (val == 0 || val == 1))
+						ent->client->sess.pc.show_fragmessages = val != 0;
+					else
+						gi.Com_PrintFmt("{}: Invalid show_fragmessages value: {}\n", __FUNCTION__, value);
+				}
+				else if (!Q_stricmp(key, "killbeep_num")) {
+					long val = strtol(value, &end, 10);
+					if (*end == '\0' && val >= 0 && val <= 4)
+						ent->client->sess.pc.killbeep_num = val;
+					else
+						gi.Com_PrintFmt("{}: Invalid killbeep_num value: {}\n", __FUNCTION__, value);
+				}
+				else if (!Q_stricmp(key, "follow_killer")) {
+					long val = strtol(value, &end, 10);
+					if (*end == '\0' && (val == 0 || val == 1))
+						ent->client->sess.pc.follow_killer = val != 0;
+					else
+						gi.Com_PrintFmt("{}: Invalid follow_killer value: {}\n", __FUNCTION__, value);
+				}
+				else if (!Q_stricmp(key, "follow_leader")) {
+					long val = strtol(value, &end, 10);
+					if (*end == '\0' && (val == 0 || val == 1))
+						ent->client->sess.pc.follow_leader = val != 0;
+					else
+						gi.Com_PrintFmt("{}: Invalid follow_leader value: {}\n", __FUNCTION__, value);
+				}
+				else if (!Q_stricmp(key, "follow_powerup")) {
+					long val = strtol(value, &end, 10);
+					if (*end == '\0' && (val == 0 || val == 1))
+						ent->client->sess.pc.follow_powerup = val != 0;
+					else
+						gi.Com_PrintFmt("{}: Invalid follow_powerup value: {}\n", __FUNCTION__, value);
+				}
+				else {
+					handled = false;
+				}
+
+				if (!handled)
+					gi.Com_PrintFmt("{}: Unknown config key: {}\n", __FUNCTION__, key);
+			}
 		}
 
 		if (buffer) {
