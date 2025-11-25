@@ -183,17 +183,23 @@ void BroadcastFriendlyMessage(team_t team, const char* msg) {
 
 	for (auto ce : active_clients()) {
 		const bool playing = ClientIsPlaying(ce->client);
+		bool following_team = false;
 		if (!playing) {
 			if (!Teams())
 				continue;
 			gentity_t* follow = ce->client->follow_target;
 			if (!follow || !follow->client || follow->client->sess.team != team)
 				continue;
+
+			following_team = true;
 		}
 		else if (Teams() && ce->client->sess.team != team) {
 			continue;
 		}
-		gi.LocClient_Print(ce, PRINT_HIGH, G_Fmt("{}{}", playing && ce->client->sess.team != TEAM_SPECTATOR ? "[TEAM]: " : "", msg).data());
+
+		const bool is_team_player = playing && ce->client->sess.team == team && ce->client->sess.team != TEAM_SPECTATOR;
+		const bool prefix_team = FriendlyMessageShouldPrefixTeam(Teams(), team == TEAM_SPECTATOR, playing, is_team_player, following_team);
+		gi.LocClient_Print(ce, PRINT_HIGH, G_Fmt("{}{}", prefix_team ? "[TEAM]: " : "", msg).data());
 	}
 }
 

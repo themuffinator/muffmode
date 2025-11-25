@@ -24,5 +24,9 @@ int main()
 	bounded[255] = '\0';
 	assert(FriendlyMessageHasText(bounded));
 
+	assert(FriendlyMessageShouldPrefixTeam(true, false, false, false, true));
+	assert(!FriendlyMessageShouldPrefixTeam(true, false, false, false, false));
+	assert(FriendlyMessageShouldPrefixTeam(true, false, true, true, false));
+
 	return 0;
 }
