@@ -387,6 +387,7 @@ Load or create the player's configuration file on connect.
 static void PCfg_ClientInitPConfig(gentity_t* ent) {
 	bool file_exists = false;
 	bool cfg_valid = true;
+	std::string invalid_reason;
 	client_config_t default_pc = ent->client->sess.pc;
 	client_config_t parsed_pc = default_pc;
 
@@ -416,29 +417,37 @@ static void PCfg_ClientInitPConfig(gentity_t* ent) {
 		long file_length = 0;
 		if (fseek(f, 0, SEEK_END) != 0) {
 			cfg_valid = false;
+			invalid_reason = "failed to seek to end";
 		}
 		else {
 			file_length = ftell(f);
-			if (file_length < 0 || file_length > 0x40000)
+			if (file_length <= 0 || file_length > 0x40000) {
 				cfg_valid = false;
+				invalid_reason = std::string(G_Fmt("invalid size {} bytes", file_length));
+			}
 		}
 
-		if (cfg_valid && fseek(f, 0, SEEK_SET) != 0)
+		if (cfg_valid && fseek(f, 0, SEEK_SET) != 0) {
 			cfg_valid = false;
+			invalid_reason = "failed to rewind";
+		}
 
 		if (cfg_valid && file_length > 0) {
 			buffer.resize(static_cast<size_t>(file_length));
 			size_t read_length = fread(buffer.data(), 1, buffer.size(), f);
 
-			if (read_length != buffer.size())
+			if (read_length != buffer.size()) {
 				cfg_valid = false;
+				invalid_reason = std::string(G_Fmt("read {} of {} bytes", read_length, buffer.size()));
+			}
 		}
 
 		file_exists = true;
 		fclose(f);
 
 		if (!cfg_valid) {
-			gi.Com_PrintFmt("{}: Player config load error for \"{}\", regenerating defaults.\n", __FUNCTION__, name);
+			gi.Com_PrintFmt("{}: Player config load error for \"{}\" ({})\n", __FUNCTION__, name,
+				invalid_reason.empty() ? "unknown error" : invalid_reason.c_str());
 			if (file_exists) {
 				if (std::remove(name) != 0) {
 					FILE* truncate = fopen(name, "wb");
@@ -458,6 +467,7 @@ static void PCfg_ClientInitPConfig(gentity_t* ent) {
 			ent->client->sess.pc = default_pc;
 			PCfg_WriteConfig(ent);
 			return;
+		}
 	}
 
 	if (!buffer.empty()) {
