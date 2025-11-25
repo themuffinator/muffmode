@@ -358,15 +358,27 @@ static void PCfg_ClientInitPConfig(gentity_t* ent) {
 	FILE* f = fopen(name, "rb");
 	char* buffer = nullptr;
 	if (f != NULL) {
-		size_t length;
+		size_t length = 0;
 		size_t read_length;
+		long file_length = 0;
 
-		fseek(f, 0, SEEK_END);
-		length = ftell(f);
-		fseek(f, 0, SEEK_SET);
-
-		if (length > 0x40000) {
+		if (fseek(f, 0, SEEK_END) != 0) {
 			cfg_valid = false;
+		}
+		if (cfg_valid) {
+			file_length = ftell(f);
+			if (file_length < 0) {
+				cfg_valid = false;
+			}
+		}
+		if (cfg_valid && fseek(f, 0, SEEK_SET) != 0) {
+			cfg_valid = false;
+		}
+		if (cfg_valid) {
+			length = static_cast<size_t>(file_length);
+			if (length > 0x40000) {
+				cfg_valid = false;
+			}
 		}
 		if (cfg_valid) {
 			buffer = (char*)gi.TagMalloc(length + 1, TAG_GAME);
