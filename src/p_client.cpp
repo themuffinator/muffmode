@@ -398,9 +398,27 @@ static void PCfg_ClientInitPConfig(gentity_t* ent) {
 			if (buffer) {
 				gi.TagFree(buffer);
 			}
-			gi.Com_PrintFmt("{}: Player config load error for \"{}\", discarding.\n", __FUNCTION__, name);
+			gi.Com_PrintFmt("{}: Player config load error for \"{}\", regenerating defaults.\n", __FUNCTION__, name);
+			if (file_exists) {
+				if (std::remove(name) != 0) {
+					FILE* truncate = fopen(name, "wb");
+					if (truncate) {
+						fclose(truncate);
+						gi.Com_PrintFmt("{}: Truncated bad player config \"{}\".\n", __FUNCTION__, name);
+					}
+					else {
+						gi.Com_PrintFmt("{}: Failed to remove or truncate bad config \"{}\".\n", __FUNCTION__, name);
+					}
+				}
+				else {
+					gi.Com_PrintFmt("{}: Removed bad player config \"{}\".\n", __FUNCTION__, name);
+				}
+			}
+			ent->client->sess.pc = default_pc;
+			PCfg_WriteConfig(ent);
 			return;
 		}
+	}
 
 		if (buffer && length) {
 			char* cursor = buffer;
