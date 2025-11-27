@@ -1,5 +1,7 @@
 // Copyright (c) ZeniMax Media Inc.
 // Licensed under the GNU General Public License 2.0.
+#include <array>
+
 #include "g_local.h"
 #include "bots/bot_includes.h"
 
@@ -845,7 +847,7 @@ THINK(monster_think) (gentity_t *self) -> void {
 			if (enemy_trace.fraction < 1.0f && enemy_trace.ent == &g_entities[1])
 				T_Damage(self, &g_entities[1], &g_entities[1], { 0, 0, -1 }, self->s.origin, { 0, 0, -1 }, 9999, 9999, DAMAGE_NO_PROTECTION, MOD_BFG_BLAST);
 			else {
-				static vec3_t points[64];
+				std::array<vec3_t, 64> points;
 
 				if (self->disintegrator_time <= level.time) {
 					PathRequest request;
@@ -857,8 +859,8 @@ THINK(monster_think) (gentity_t *self) -> void {
 					request.start = self->s.origin;
 					request.traversals.dropHeight = 9999;
 					request.traversals.jumpHeight = 9999;
-					request.pathPoints.array = points;
-					request.pathPoints.count = q_countof(points);
+					request.pathPoints.array = points.data();
+					request.pathPoints.count = points.size();
 
 					PathInfo info;
 
@@ -867,14 +869,14 @@ THINK(monster_think) (gentity_t *self) -> void {
 							info.returnCode != PathReturnCode::NoGoalNode &&
 							info.returnCode != PathReturnCode::NoPathFound &&
 							info.returnCode != PathReturnCode::NoNavAvailable &&
-							info.numPathPoints < q_countof(points)) {
+							info.numPathPoints < points.size()) {
 							if (CheckPathVisibility(g_entities[1].s.origin + vec3_t{ 0.f, 0.f, g_entities[1].mins.z }, points[info.numPathPoints - 1]) &&
-								CheckPathVisibility(self->s.origin + vec3_t{ 0.f, 0.f, self->mins.z }, points[0])) {
-								size_t i = 0;
+									CheckPathVisibility(self->s.origin + vec3_t{ 0.f, 0.f, self->mins.z }, points[0])) {
+									size_t i = 0;
 
-								for (; i < info.numPathPoints - 1; i++)
-									if (!CheckPathVisibility(points[i], points[i + 1]))
-										break;
+									for (; i < info.numPathPoints - 1; i++)
+										if (!CheckPathVisibility(points[i], points[i + 1]))
+											break;
 
 								if (i == info.numPathPoints - 1)
 									T_Damage(self, &g_entities[1], &g_entities[1], { 0, 0, 1 }, self->s.origin, { 0, 0, 1 }, 9999, 9999, DAMAGE_NO_PROTECTION, MOD_BFG_BLAST);
