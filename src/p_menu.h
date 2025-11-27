@@ -1,8 +1,9 @@
 // Copyright (c) ZeniMax Media Inc.
 // Licensed under the GNU General Public License 2.0.
 
-#include <array>
 #include <cstddef>
+#include <cstring>
+#include <string>
 
 struct gentity_t;
 
@@ -27,32 +28,30 @@ struct menu_hnd_t {
 
 using SelectFunc_t = void (*)(gentity_t *ent, menu_hnd_t *hnd);
 
+constexpr size_t MENU_TEXT_MAX = 256;
+constexpr size_t MENU_TEXT_ARG_MAX = 64;
+
 /*
 =============
 P_Menu_InitText
 
-Creates a fixed-size character buffer from the provided source string.
+Creates a bounded std::string from the provided source string.
 =============
 */
 template <size_t N>
-constexpr std::array<char, N> P_Menu_InitText(const char *src) {
-	std::array<char, N> dest{};
+inline std::string P_Menu_InitText(const char *src) {
+	if (!src)
+		return {};
 
-	size_t i = 0;
-	if (src) {
-		for (; src[i] != '\0' && i + 1 < dest.size(); ++i)
-			dest[i] = src[i];
-	}
-	dest[i] = '\0';
-
-	return dest;
+	const size_t length = std::strnlen(src, N - 1);
+	return std::string(src, length);
 }
 
 struct menu_t {
-	std::array<char, 256>	text;	// 26]; // [64];
-	int				align;
+	std::string		text;
+	int			align;
 	SelectFunc_t	SelectFunc;
-	std::array<char, 64>	text_arg1;
+	std::string		text_arg1;
 };
 
 /*
@@ -62,8 +61,8 @@ P_Menu_CreateEntry
 Initializes a menu_t instance with bounded text and optional callback data.
 =============
 */
-constexpr menu_t P_Menu_CreateEntry(const char *text, int align, SelectFunc_t SelectFunc = nullptr, const char *text_arg1 = "") {
-	return { P_Menu_InitText<256>(text), align, SelectFunc, P_Menu_InitText<64>(text_arg1) };
+inline menu_t P_Menu_CreateEntry(const char *text, int align, SelectFunc_t SelectFunc = nullptr, const char *text_arg1 = "") {
+	return { P_Menu_InitText<MENU_TEXT_MAX>(text), align, SelectFunc, P_Menu_InitText<MENU_TEXT_ARG_MAX>(text_arg1) };
 }
 
 void		P_Menu_Dirty();

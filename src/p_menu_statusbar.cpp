@@ -125,10 +125,10 @@ size_t P_Menu_BuildStatusBar(const menu_hnd_t *hnd, char *layout, size_t layout_
 	for (int i = 0; i < hnd->num; i++) {
 		const menu_t *p = hnd->entries + i;
 
-if (!p->text[0])
-continue;
+		if (p->text.empty())
+			continue;
 
-const char *t = p->text.data();
+		const char *t = p->text.c_str();
 
 		if (*t == '*') {
 			alt = true;
@@ -149,7 +149,7 @@ const char *t = p->text.data();
 			loc_func = "loc_rstring";
 		}
 		P_Menu_Appendf(layout, layout_size, "yv %d ", y);
-P_Menu_Appendf(layout, layout_size, "xv %d %s%s 1 \"%s\" \"%s\" ", x, loc_func, (hnd->cur == i || alt) ? "2" : "", t, p->text_arg1.data());
+		P_Menu_Appendf(layout, layout_size, "xv %d %s%s 1 \"%s\" \"%s\" ", x, loc_func, (hnd->cur == i || alt) ? "2" : "", t, p->text_arg1.c_str());
 
 		if (hnd->cur == i)
 			P_Menu_Appendf(layout, layout_size, "xv %d string2 \"%s\" ", caret_x, ">\"");
@@ -159,3 +159,4 @@ P_Menu_Appendf(layout, layout_size, "xv %d %s%s 1 \"%s\" \"%s\" ", x, loc_func, 
 
 	return std::strlen(layout);
 }
+
