@@ -2,6 +2,7 @@
 // Licensed under the GNU General Public License 2.0.
 // g_phys.c
 
+#include <array>
 #include <iterator>
 
 #include "g_runthink.h"
@@ -230,7 +231,8 @@ struct pushed_t {
 	float	 yaw;
 };
 
-pushed_t pushed[MAX_ENTITIES], *pushed_p;
+std::array<pushed_t, MAX_ENTITIES> pushed;
+size_t pushed_p;
 
 gentity_t *obstacle;
 
@@ -245,7 +247,6 @@ otherwise riders would continue to slide.
 static bool G_Push(gentity_t *pusher, vec3_t &move, vec3_t &amove) {
 	gentity_t *check, *block = nullptr;
 	vec3_t	  mins, maxs;
-	pushed_t *p;
 	vec3_t	  org, org2, move2, forward, right, up;
 
 	// find the bounding box
@@ -257,10 +258,12 @@ static bool G_Push(gentity_t *pusher, vec3_t &move, vec3_t &amove) {
 	AngleVectors(org, forward, right, up);
 
 	// save the pusher's original position
-	pushed_p->ent = pusher;
-	pushed_p->origin = pusher->s.origin;
-	pushed_p->angles = pusher->s.angles;
-	pushed_p->rotated = false;
+	if (pushed_p >= pushed.size())
+		gi.Com_Error("pushed_p >= pushed.size(), memory corrupted");
+	pushed[pushed_p].ent = pusher;
+	pushed[pushed_p].origin = pusher->s.origin;
+	pushed[pushed_p].angles = pusher->s.angles;
+	pushed[pushed_p].rotated = false;
 	pushed_p++;
 
 	// move the pusher to it's final position
@@ -294,12 +297,14 @@ static bool G_Push(gentity_t *pusher, vec3_t &move, vec3_t &amove) {
 
 		if ((pusher->movetype == MOVETYPE_PUSH) || (check->groundentity == pusher)) {
 			// move this entity
-			pushed_p->ent = check;
-			pushed_p->origin = check->s.origin;
-			pushed_p->angles = check->s.angles;
-			pushed_p->rotated = !!amove[YAW];
-			if (pushed_p->rotated)
-				pushed_p->yaw =
+			if (pushed_p >= pushed.size())
+				gi.Com_Error("pushed_p >= pushed.size(), memory corrupted");
+			pushed[pushed_p].ent = check;
+			pushed[pushed_p].origin = check->s.origin;
+			pushed[pushed_p].angles = check->s.angles;
+			pushed[pushed_p].rotated = !!amove[YAW];
+			if (pushed[pushed_p].rotated)
+				pushed[pushed_p].yaw =
 				pusher->client ? (float)pusher->client->ps.pmove.delta_angles[YAW] : pusher->s.angles[YAW];
 			pushed_p++;
 
@@ -358,16 +363,17 @@ static bool G_Push(gentity_t *pusher, vec3_t &move, vec3_t &amove) {
 		// move back any entities we already moved
 		// go backwards, so if the same entity was pushed
 		// twice, it goes back to the original position
-		for (p = pushed_p - 1; p >= pushed; p--) {
-			p->ent->s.origin = p->origin;
-			p->ent->s.angles = p->angles;
-			if (p->rotated) {
-				//if (p->ent->client)
-				//	p->ent->client->ps.pmove.delta_angles[YAW] = p->yaw;
+		for (size_t i = pushed_p; i-- > 0;) {
+			auto &p = pushed[i];
+			p.ent->s.origin = p.origin;
+			p.ent->s.angles = p.angles;
+			if (p.rotated) {
+				//if (p.ent->client)
+				//	p.ent->client->ps.pmove.delta_angles[YAW] = p.yaw;
 				//else
-				p->ent->s.angles[YAW] = p->yaw;
+				p.ent->s.angles[YAW] = p.yaw;
 			}
-			gi.linkentity(p->ent);
+			gi.linkentity(p.ent);
 		}
 		return false;
 	}
@@ -379,11 +385,12 @@ static bool G_Push(gentity_t *pusher, vec3_t &move, vec3_t &amove) {
 	gentity_t *touched[MAX_ENTITIES];
 	uint32_t num_touched = 0;
 
-	for (p = pushed_p - 1; p >= pushed; p--) {
+	for (size_t i = pushed_p; i-- > 0;) {
+		auto &p = pushed[i];
 		bool already_touched = false;
 
-		for (uint32_t i = 0; i < num_touched; i++) {
-			if (touched[i] == p->ent) {
+		for (uint32_t j = 0; j < num_touched; j++) {
+			if (touched[j] == p.ent) {
 				already_touched = true;
 				break;
 			}
@@ -393,10 +400,10 @@ static bool G_Push(gentity_t *pusher, vec3_t &move, vec3_t &amove) {
 			continue;
 
 		if (num_touched < std::size(touched))
-			touched[num_touched++] = p->ent;
+			touched[num_touched++] = p.ent;
 
-		G_TouchTriggers(p->ent);
-		}
+		G_TouchTriggers(p.ent);
+	}
 
 	return true;
 }
@@ -421,7 +428,7 @@ static void G_Physics_Pusher(gentity_t *ent) {
 	// any moves or calling any think functions
 	// if the move is blocked, all moved objects will be backed out
 retry:
-	pushed_p = pushed;
+	pushed_p = 0;
 	for (part = ent; part; part = part->teamchain) {
 		if (part->velocity[0] || part->velocity[1] || part->velocity[2] || part->avelocity[0] || part->avelocity[1] ||
 			part->avelocity[2]) { // object is moving
@@ -432,7 +439,7 @@ retry:
 				break; // move was blocked
 		}
 	}
-	if (pushed_p > &pushed[MAX_ENTITIES])
+	if (pushed_p > pushed.size())
 		gi.Com_Error("pushed_p > &pushed[MAX_ENTITIES], memory corrupted");
 
 	if (part) {
