@@ -47,7 +47,8 @@ menu_hnd_t *P_Menu_Open(gentity_t *ent, const menu_t *entries, int cur, int num,
 	memcpy(hnd->entries, entries, sizeof(menu_t) * num);
 	// duplicate the strings since they may be from static memory
 	for (i = 0; i < num; i++) {
-		assert(Q_strlcpy(hnd->entries[i].text, entries[i].text, sizeof(hnd->entries[i].text)) < sizeof(hnd->entries[i].text));
+		assert(Q_strlcpy(hnd->entries[i].text.data(), entries[i].text.data(), hnd->entries[i].text.size()) < hnd->entries[i].text.size());
+		assert(Q_strlcpy(hnd->entries[i].text_arg1.data(), entries[i].text_arg1.data(), hnd->entries[i].text_arg1.size()) < hnd->entries[i].text_arg1.size());
 	}
 
 	hnd->num = num;
@@ -115,7 +116,7 @@ Replaces the text and callbacks for a menu entry created by P_Menu_Open.
 =============
 */
 void P_Menu_UpdateEntry(menu_t *entry, const char *text, int align, SelectFunc_t SelectFunc) {
-	Q_strlcpy(entry->text, text, sizeof(entry->text));
+	Q_strlcpy(entry->text.data(), text, entry->text.size());
 	entry->align = align;
 	entry->SelectFunc = SelectFunc;
 }
@@ -323,7 +324,7 @@ Initializes the static banned menu lines.
 */
 void P_Menu_Banned_InitEntries() {
 	for (size_t i = 0; i < sizeof(banned_menu_entries) / sizeof(banned_menu_entries[0]); ++i)
-	        Q_strlcpy(banned_menu_entries[i].text, BANNED_MENU_LINES[i], sizeof(banned_menu_entries[i].text));
+		Q_strlcpy(banned_menu_entries[i].text.data(), BANNED_MENU_LINES[i], banned_menu_entries[i].text.size());
 }
 
 } // namespace

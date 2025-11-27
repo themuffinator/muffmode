@@ -7,6 +7,13 @@
 
 constexpr const char *BREAKER = "\35\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\37";
 
+/*
+=============
+Vote_Menu_Active
+
+Returns true when the player can participate in a vote.
+=============
+*/
 bool Vote_Menu_Active(gentity_t *ent) {
 	if (level.vote_time <= 0_sec)
 		return false;
@@ -19,19 +26,43 @@ bool Vote_Menu_Active(gentity_t *ent) {
 
 	return true;
 }
+/*
+=============
+G_Menu_SetHostName
 
+Loads the server hostname into the supplied menu entry text field.
+=============
+*/
 static void G_Menu_SetHostName(menu_t *p) {
-	Q_strlcpy(p->text, hostname->string, sizeof(p->text));
+	Q_strlcpy(p->text.data(), hostname->string, p->text.size());
 }
+/*
+=============
+G_Menu_SetGamemodName
 
+Sets the current mod name on the menu entry.
+=============
+*/
 static void G_Menu_SetGamemodName(menu_t *p) {
-	Q_strlcpy(p->text, level.gamemod_name, sizeof(p->text));
+	Q_strlcpy(p->text.data(), level.gamemod_name, p->text.size());
 }
+/*
+=============
+G_Menu_SetGametypeName
 
+Writes the active gametype name into the menu entry.
+=============
+*/
 static void G_Menu_SetGametypeName(menu_t *p) {
-	Q_strlcpy(p->text, level.gametype_name, sizeof(p->text));
+	Q_strlcpy(p->text.data(), level.gametype_name, p->text.size());
 }
+/*
+=============
+G_Menu_SetLevelName
 
+Formats the level name string for display.
+=============
+*/
 static void G_Menu_SetLevelName(menu_t *p) {
 	static char levelname[33];
 
@@ -41,7 +72,7 @@ static void G_Menu_SetLevelName(menu_t *p) {
 	else
 		Q_strlcpy(levelname + 1, level.mapname, sizeof(levelname) - 1);
 	levelname[sizeof(levelname) - 1] = 0;
-	Q_strlcpy(p->text, levelname, sizeof(p->text));
+	Q_strlcpy(p->text.data(), levelname, p->text.size());
 }
 
 /*----------------------------------------------------------------------------------*/
@@ -276,11 +307,11 @@ void G_Menu_Admin(gentity_t *ent, menu_hnd_t *p) {
 	adminmenu[4].SelectFunc = nullptr;
 
 	if (level.match_state <= matchst_t::MATCH_COUNTDOWN) {
-		Q_strlcpy(adminmenu[3].text, "Force start match", sizeof(adminmenu[3].text));
+		Q_strlcpy(adminmenu[3].text.data(), "Force start match", adminmenu[3].text.size());
 		adminmenu[3].SelectFunc = G_Menu_Admin_MatchSet;
 
 	} else if (level.match_state == matchst_t::MATCH_IN_PROGRESS) {
-		Q_strlcpy(adminmenu[3].text, "Reset match", sizeof(adminmenu[3].text));
+		Q_strlcpy(adminmenu[3].text.data(), "Reset match", adminmenu[3].text.size());
 		adminmenu[3].SelectFunc = G_Menu_Admin_MatchSet;
 	}
 
@@ -325,32 +356,32 @@ static void G_Menu_PMStats_Update(gentity_t *ent) {
 	}
 
 	if (i < ent->client->menu->num)
-		Q_strlcpy(entries[i].text, "Player Stats for Match", sizeof(entries[i].text));
+		Q_strlcpy(entries[i].text.data(), "Player Stats for Match", entries[i].text.size());
 	i++;
 
 	if (value[0]) {
 		if (i < ent->client->menu->num)
-			Q_strlcpy(entries[i].text, G_Fmt("{}", value).data(), sizeof(entries[i].text));
+			Q_strlcpy(entries[i].text.data(), G_Fmt("{}", value).data(), entries[i].text.size());
 		i++;
 	}
 
 	if (i < ent->client->menu->num)
-		Q_strlcpy(entries[i].text, BREAKER, sizeof(entries[i].text));
+		Q_strlcpy(entries[i].text.data(), BREAKER, entries[i].text.size());
 	i++;
 
 	if (i < ent->client->menu->num)
-		Q_strlcpy(entries[i].text, G_Fmt("kills: {}", st->total_kills).data(), sizeof(entries[i].text));
+		Q_strlcpy(entries[i].text.data(), G_Fmt("kills: {}", st->total_kills).data(), entries[i].text.size());
 	i++;
 	if (i < ent->client->menu->num)
-		Q_strlcpy(entries[i].text, G_Fmt("deaths: {}", st->total_deaths).data(), sizeof(entries[i].text));
+		Q_strlcpy(entries[i].text.data(), G_Fmt("deaths: {}", st->total_deaths).data(), entries[i].text.size());
 	i++;
 	if (st->total_kills) {
 		if (i < ent->client->menu->num) {
 			if (st->total_deaths > 0) {
 				float val = (float)st->total_kills / (float)st->total_deaths;
-				Q_strlcpy(entries[i].text, G_Fmt("k/d ratio: {:2}", val).data(), sizeof(entries[i].text));
+				Q_strlcpy(entries[i].text.data(), G_Fmt("k/d ratio: {:2}", val).data(), entries[i].text.size());
 			} else {
-				Q_strlcpy(entries[i].text, "k/d ratio: N/A", sizeof(entries[i].text));
+				Q_strlcpy(entries[i].text.data(), "k/d ratio: N/A", entries[i].text.size());
 			}
 		}
 		i++;
@@ -359,18 +390,18 @@ static void G_Menu_PMStats_Update(gentity_t *ent) {
 		entries[i].text[0] = '\0';
 	i++;
 	if (i < ent->client->menu->num)
-		Q_strlcpy(entries[i].text, G_Fmt("dmg dealt: {}", st->total_dmg_dealt).data(), sizeof(entries[i].text));
+		Q_strlcpy(entries[i].text.data(), G_Fmt("dmg dealt: {}", st->total_dmg_dealt).data(), entries[i].text.size());
 	i++;
 	if (i < ent->client->menu->num)
-		Q_strlcpy(entries[i].text, G_Fmt("dmg received: {}", st->total_dmg_received).data(), sizeof(entries[i].text));
+		Q_strlcpy(entries[i].text.data(), G_Fmt("dmg received: {}", st->total_dmg_received).data(), entries[i].text.size());
 	i++;
 	if (st->total_dmg_dealt) {
 		if (i < ent->client->menu->num) {
 			if (st->total_dmg_received > 0) {
 				float val = (float)st->total_dmg_dealt / (float)st->total_dmg_received;
-				Q_strlcpy(entries[i].text, G_Fmt("dmg ratio: {:02}", val).data(), sizeof(entries[i].text));
+				Q_strlcpy(entries[i].text.data(), G_Fmt("dmg ratio: {:02}", val).data(), entries[i].text.size());
 			} else {
-				Q_strlcpy(entries[i].text, "dmg ratio: N/A", sizeof(entries[i].text));
+				Q_strlcpy(entries[i].text.data(), "dmg ratio: N/A", entries[i].text.size());
 			}
 		}
 		i++;
@@ -379,18 +410,18 @@ static void G_Menu_PMStats_Update(gentity_t *ent) {
 		entries[i].text[0] = '\0';
 	i++;
 	if (i < ent->client->menu->num)
-		Q_strlcpy(entries[i].text, G_Fmt("shots fired: {}", st->total_shots).data(), sizeof(entries[i].text));
+		Q_strlcpy(entries[i].text.data(), G_Fmt("shots fired: {}", st->total_shots).data(), entries[i].text.size());
 	i++;
 	if (i < ent->client->menu->num)
-		Q_strlcpy(entries[i].text, G_Fmt("shots on target: {}", st->total_hits).data(), sizeof(entries[i].text));
+		Q_strlcpy(entries[i].text.data(), G_Fmt("shots on target: {}", st->total_hits).data(), entries[i].text.size());
 	i++;
 	if (st->total_hits) {
 		if (i < ent->client->menu->num) {
 			if (st->total_shots > 0) {
 				int val = (int)(((float)st->total_hits / (float)st->total_shots) * 100.f);
-				Q_strlcpy(entries[i].text, G_Fmt("total accuracy: {}%", val).data(), sizeof(entries[i].text));
+				Q_strlcpy(entries[i].text.data(), G_Fmt("total accuracy: {}%", val).data(), entries[i].text.size());
 			} else {
-				Q_strlcpy(entries[i].text, "total accuracy: N/A", sizeof(entries[i].text));
+				Q_strlcpy(entries[i].text.data(), "total accuracy: N/A", entries[i].text.size());
 			}
 		}
 		i++;
@@ -511,7 +542,7 @@ void G_Menu_CallVote_Map_Selection(gentity_t *ent, menu_hnd_t *p) {
 	}
 
 	level.vote = cc;
-	level.vote_arg = selected.text;
+	level.vote_arg = selected.text.data();
 
 	VoteCommandStore(ent);
 	P_Menu_Close(ent);
@@ -556,7 +587,7 @@ static void G_Menu_CallVote_Map_Update(gentity_t *ent) {
 	}
 
 	for (num = 0, i = 2; num < values.size() && num < 15; num++, i++) {
-		Q_strlcpy(entries[i].text, values[num].c_str(), sizeof(entries[i].text));
+		Q_strlcpy(entries[i].text.data(), values[num].c_str(), entries[i].text.size());
 		entries[i].SelectFunc = G_Menu_CallVote_Map_Selection;
 	}
 }
@@ -635,7 +666,7 @@ static void G_Menu_CallVote_Update(gentity_t *ent) {
 	menu_t *entries = ent->client->menu->entries;
 	int i = 0;
 
-	Q_strlcpy(entries[i].text, "Call a Vote", sizeof(entries[i].text));
+	Q_strlcpy(entries[i].text.data(), "Call a Vote", entries[i].text.size());
 	i++;
 	i++;
 	/*
@@ -721,32 +752,32 @@ static void G_Menu_Vote_Update(gentity_t *ent) {
 
 	menu_t *entries = ent->client->menu->entries;
 	int i = 2;
-	Q_strlcpy(entries[i].text, G_Fmt("{} called a vote:", level.vote_client->resp.netname).data(), sizeof(entries[i].text));
+	Q_strlcpy(entries[i].text.data(), G_Fmt("{} called a vote:", level.vote_client->resp.netname).data(), entries[i].text.size());
 	
 	i = 4;
-	Q_strlcpy(entries[i].text, G_Fmt("{} {}", level.vote->name, level.vote_arg).data(), sizeof(entries[i].text));
+	Q_strlcpy(entries[i].text.data(), G_Fmt("{} {}", level.vote->name, level.vote_arg).data(), entries[i].text.size());
 
 	if (level.vote_time + 3_sec > level.time) {
 		i = 7;
-		Q_strlcpy(entries[i].text, "GET READY TO VOTE!", sizeof(entries[i].text));
+		Q_strlcpy(entries[i].text.data(), "GET READY TO VOTE!", entries[i].text.size());
 		entries[i].SelectFunc = nullptr;
 
 		i = 8;
 		int time = 3 - (level.time - level.vote_time).seconds<int>();
-		Q_strlcpy(entries[i].text, G_Fmt("{}...", time).data(), sizeof(entries[i].text));
+		Q_strlcpy(entries[i].text.data(), G_Fmt("{}...", time).data(), entries[i].text.size());
 		entries[i].SelectFunc = nullptr;
 		return;
 	}
 
 	i = 7;
-	Q_strlcpy(entries[i].text, "[ YES ]", sizeof(entries[i].text));
+	Q_strlcpy(entries[i].text.data(), "[ YES ]", entries[i].text.size());
 	entries[i].SelectFunc = G_Menu_Vote_Yes;
 	i = 8;
-	Q_strlcpy(entries[i].text, "[ NO ]", sizeof(entries[i].text));
+	Q_strlcpy(entries[i].text.data(), "[ NO ]", entries[i].text.size());
 	entries[i].SelectFunc = G_Menu_Vote_No;
 
 	i = 16;
-	Q_strlcpy(entries[i].text, G_Fmt("{}", timeout).data(), sizeof(entries[i].text));
+	Q_strlcpy(entries[i].text.data(), G_Fmt("{}", timeout).data(), entries[i].text.size());
 }
 
 void G_Menu_Vote_Open(gentity_t *ent) {
@@ -940,9 +971,9 @@ static void G_Menu_HostInfo_Update(gentity_t *ent) {
 	bool	limits = false;
 
 	if (hostname->string[0]) {
-		Q_strlcpy(entries[i].text, "Server Name:", sizeof(entries[i].text));
+		Q_strlcpy(entries[i].text.data(), "Server Name:", entries[i].text.size());
 		i++;
-		Q_strlcpy(entries[i].text, hostname->string, sizeof(entries[i].text));
+		Q_strlcpy(entries[i].text.data(), hostname->string, entries[i].text.size());
 		i++;
 		i++;
 	}
@@ -952,22 +983,22 @@ static void G_Menu_HostInfo_Update(gentity_t *ent) {
 		gi.Info_ValueForKey(g_entities[1].client->pers.userinfo, "name", value, sizeof(value));
 
 		if (value[0]) {
-			Q_strlcpy(entries[i].text, "Host:", sizeof(entries[i].text));
+			Q_strlcpy(entries[i].text.data(), "Host:", entries[i].text.size());
 			i++;
-			Q_strlcpy(entries[i].text, value, sizeof(entries[i].text));
+			Q_strlcpy(entries[i].text.data(), value, entries[i].text.size());
 			i++;
 			i++;
 		}
 	}
 
 	if (game.motd.size()) {
-		Q_strlcpy(entries[i].text, "Message of the Day:", sizeof(entries[i].text));
+		Q_strlcpy(entries[i].text.data(), "Message of the Day:", entries[i].text.size());
 		i++;
 		// 26 char line width
 		// 9 lines
 		// = 234
 
-		Q_strlcpy(entries[i].text, G_Fmt("{}", game.motd.c_str()).data(), sizeof(entries[i].text));
+		Q_strlcpy(entries[i].text.data(), G_Fmt("{}", game.motd.c_str()).data(), entries[i].text.size());
 	}
 }
 
@@ -984,188 +1015,188 @@ static void G_Menu_ServerInfo_Update(gentity_t *ent) {
 	bool	items = ItemSpawnsEnabled();
 	int		scorelimit = GT_ScoreLimit();
 	
-	Q_strlcpy(entries[i].text, "Match Info", sizeof(entries[i].text));
+	Q_strlcpy(entries[i].text.data(), "Match Info", entries[i].text.size());
 	i++;
 
-	Q_strlcpy(entries[i].text, BREAKER, sizeof(entries[i].text));
+	Q_strlcpy(entries[i].text.data(), BREAKER, entries[i].text.size());
 	i++;
 
-	Q_strlcpy(entries[i].text, level.gametype_name, sizeof(entries[i].text));
+	Q_strlcpy(entries[i].text.data(), level.gametype_name, entries[i].text.size());
 	i++;
 	
 	if (level.level_name[0]) {
-		Q_strlcpy(entries[i].text, G_Fmt("map: {}", level.level_name).data(), sizeof(entries[i].text));
+		Q_strlcpy(entries[i].text.data(), G_Fmt("map: {}", level.level_name).data(), entries[i].text.size());
 		i++;
 	}
 	if (level.mapname[0]) {
-		Q_strlcpy(entries[i].text, G_Fmt("mapname: {}", level.mapname).data(), sizeof(entries[i].text));
+		Q_strlcpy(entries[i].text.data(), G_Fmt("mapname: {}", level.mapname).data(), entries[i].text.size());
 		i++;
 	}
 	if (level.author[0]) {
-		Q_strlcpy(entries[i].text, G_Fmt("author: {}", level.author).data(), sizeof(entries[i].text));
+		Q_strlcpy(entries[i].text.data(), G_Fmt("author: {}", level.author).data(), entries[i].text.size());
 		i++;
 	}
 	if (level.author2[0] && level.author[0]) {
-		Q_strlcpy(entries[i].text, G_Fmt("      {}", level.author2).data(), sizeof(entries[i].text));
+		Q_strlcpy(entries[i].text.data(), G_Fmt("      {}", level.author2).data(), entries[i].text.size());
 		i++;
 	}
 
-	Q_strlcpy(entries[i].text, G_Fmt("ruleset: {}", rs_long_name[(int)game.ruleset]).data(), sizeof(entries[i].text));
+	Q_strlcpy(entries[i].text.data(), G_Fmt("ruleset: {}", rs_long_name[(int)game.ruleset]).data(), entries[i].text.size());
 	i++;
 
 	if (scorelimit) {
-		Q_strlcpy(entries[i].text, G_Fmt("{} limit: {}", GT_ScoreLimitString(), scorelimit).data(), sizeof(entries[i].text));
+		Q_strlcpy(entries[i].text.data(), G_Fmt("{} limit: {}", GT_ScoreLimitString(), scorelimit).data(), entries[i].text.size());
 		i++;
 		limits = true;
 	}
 
 	if (timelimit->value > 0) {
-		Q_strlcpy(entries[i].text, G_Fmt("time limit: {}", G_TimeString(timelimit->value * 60000, false)).data(), sizeof(entries[i].text));
+		Q_strlcpy(entries[i].text.data(), G_Fmt("time limit: {}", G_TimeString(timelimit->value * 60000, false)).data(), entries[i].text.size());
 		i++;
 		limits = true;
 	}
 
 	if (limits) {
-		Q_strlcpy(entries[i].text, BREAKER, sizeof(entries[i].text));
+		Q_strlcpy(entries[i].text.data(), BREAKER, entries[i].text.size());
 		i++;
 	}
 
 	if (g_instagib->integer) {
 		if (g_instagib_splash->integer) {
-			Q_strlcpy(entries[i].text, "InstaGib + Rail Splash", sizeof(entries[i].text));
+			Q_strlcpy(entries[i].text.data(), "InstaGib + Rail Splash", entries[i].text.size());
 		} else {
-			Q_strlcpy(entries[i].text, "InstaGib", sizeof(entries[i].text));
+			Q_strlcpy(entries[i].text.data(), "InstaGib", entries[i].text.size());
 		}
 		i++;
 	}
 	if (g_vampiric_damage->integer) {
-		Q_strlcpy(entries[i].text, "Vampiric Damage", sizeof(entries[i].text));
+		Q_strlcpy(entries[i].text.data(), "Vampiric Damage", entries[i].text.size());
 		i++;
 	}
 	if (g_frenzy->integer) {
-		Q_strlcpy(entries[i].text, "Weapons Frenzy", sizeof(entries[i].text));
+		Q_strlcpy(entries[i].text.data(), "Weapons Frenzy", entries[i].text.size());
 		i++;
 	}
 	if (g_nadefest->integer) {
-		Q_strlcpy(entries[i].text, "Nade Fest", sizeof(entries[i].text));
+		Q_strlcpy(entries[i].text.data(), "Nade Fest", entries[i].text.size());
 		i++;
 	}
 	if (g_quadhog->integer) {
-		Q_strlcpy(entries[i].text, "Quad Hog", sizeof(entries[i].text));
+		Q_strlcpy(entries[i].text.data(), "Quad Hog", entries[i].text.size());
 		i++;
 	}
 
-	Q_strlcpy(entries[i].text, BREAKER, sizeof(entries[i].text));
+	Q_strlcpy(entries[i].text.data(), BREAKER, entries[i].text.size());
 	i++;
 
 	if (items) {
 		if (g_dm_weapons_stay->integer) {
-			Q_strlcpy(entries[i].text, "weapons stay", sizeof(entries[i].text));
+			Q_strlcpy(entries[i].text.data(), "weapons stay", entries[i].text.size());
 			i++;
 		} else {
 			if (g_weapon_respawn_time->integer != 30) {
-				Q_strlcpy(entries[i].text, G_Fmt("weapon respawn delay: {}", g_weapon_respawn_time->integer).data(), sizeof(entries[i].text));
+				Q_strlcpy(entries[i].text.data(), G_Fmt("weapon respawn delay: {}", g_weapon_respawn_time->integer).data(), entries[i].text.size());
 				i++;
 			}
 		}
 	}
 
 	if (g_infinite_ammo->integer && !infiniteammo) {
-		Q_strlcpy(entries[i].text, "infinite ammo", sizeof(entries[i].text));
+		Q_strlcpy(entries[i].text.data(), "infinite ammo", entries[i].text.size());
 		i++;
 	}
 	if (Teams() && g_friendly_fire->integer) {
-		Q_strlcpy(entries[i].text, "friendly fire", sizeof(entries[i].text));
+		Q_strlcpy(entries[i].text.data(), "friendly fire", entries[i].text.size());
 		i++;
 	}
 
 	if (g_allow_grapple->integer) {
 		if (i >= 16) return;
-		Q_strlcpy(entries[i].text, G_Fmt("{}grapple enabled", g_grapple_offhand->integer ? "off-hand " : "").data(), sizeof(entries[i].text));
+		Q_strlcpy(entries[i].text.data(), G_Fmt("{}grapple enabled", g_grapple_offhand->integer ? "off-hand " : "").data(), entries[i].text.size());
 		i++;
 	}
 
 	if (g_inactivity->integer > 0) {
 		if (i >= 16) return;
-		Q_strlcpy(entries[i].text, G_Fmt("inactivity timer: {} sec", g_inactivity->integer).data(), sizeof(entries[i].text));
+		Q_strlcpy(entries[i].text.data(), G_Fmt("inactivity timer: {} sec", g_inactivity->integer).data(), entries[i].text.size());
 		i++;
 	}
 
 	if (g_teleporter_freeze->integer) {
 		if (i >= 16) return;
-		Q_strlcpy(entries[i].text, "teleporter freeze", sizeof(entries[i].text));
+		Q_strlcpy(entries[i].text.data(), "teleporter freeze", entries[i].text.size());
 		i++;
 	}
 
 	if (Teams() && g_teamplay_force_balance->integer && notGT(GT_RR)) {
 		if (i >= 16) return;
-		Q_strlcpy(entries[i].text, "forced team balancing", sizeof(entries[i].text));
+		Q_strlcpy(entries[i].text.data(), "forced team balancing", entries[i].text.size());
 		i++;
 	}
 
 	if (g_dm_random_items->integer && items) {
 		if (i >= 16) return;
-		Q_strlcpy(entries[i].text, "random items", sizeof(entries[i].text));
+		Q_strlcpy(entries[i].text.data(), "random items", entries[i].text.size());
 		i++;
 	}
 
 	if (g_dm_force_join->integer) {
 		if (i >= 16) return;
-		Q_strlcpy(entries[i].text, "forced game joining", sizeof(entries[i].text));
+		Q_strlcpy(entries[i].text.data(), "forced game joining", entries[i].text.size());
 		i++;
 	}
 
 	if (!g_dm_powerup_drop->integer) {
 		if (i >= 16) return;
-		Q_strlcpy(entries[i].text, "no powerup drops", sizeof(entries[i].text));
+		Q_strlcpy(entries[i].text.data(), "no powerup drops", entries[i].text.size());
 		i++;
 	}
 
 	if (g_knockback_scale->value != 1) {
 		if (i >= 16) return;
-		Q_strlcpy(entries[i].text, G_Fmt("knockback scale: {}", g_knockback_scale->value).data(), sizeof(entries[i].text));
+		Q_strlcpy(entries[i].text.data(), G_Fmt("knockback scale: {}", g_knockback_scale->value).data(), entries[i].text.size());
 		i++;
 	}
 
 	if (g_dm_no_self_damage->integer) {
 		if (i >= 16) return;
-		Q_strlcpy(entries[i].text, "no self-damage", sizeof(entries[i].text));
+		Q_strlcpy(entries[i].text.data(), "no self-damage", entries[i].text.size());
 		i++;
 	}
 
 	if (g_dm_no_fall_damage->integer) {
 		if (i >= 16) return;
-		Q_strlcpy(entries[i].text, "no falling damage", sizeof(entries[i].text));
+		Q_strlcpy(entries[i].text.data(), "no falling damage", entries[i].text.size());
 		i++;
 	}
 
 	if (!g_dm_instant_items->integer) {
 		if (i >= 16) return;
-		Q_strlcpy(entries[i].text, "no instant items", sizeof(entries[i].text));
+		Q_strlcpy(entries[i].text.data(), "no instant items", entries[i].text.size());
 		i++;
 	}
 
 	if (items) {
 		if (i >= 16) return;
 		if (g_no_items->integer) {
-			Q_strlcpy(entries[i].text, "no items", sizeof(entries[i].text));
+			Q_strlcpy(entries[i].text.data(), "no items", entries[i].text.size());
 			i++;
 		} else {
 			if (i >= 16) return;
 			if (g_no_health->integer) {
-				Q_strlcpy(entries[i].text, "no health spawns", sizeof(entries[i].text));
+				Q_strlcpy(entries[i].text.data(), "no health spawns", entries[i].text.size());
 				i++;
 			}
 
 			if (i >= 16) return;
 			if (g_no_armor->integer) {
-				Q_strlcpy(entries[i].text, "no armor spawns", sizeof(entries[i].text));
+				Q_strlcpy(entries[i].text.data(), "no armor spawns", entries[i].text.size());
 				i++;
 			}
 
 			if (i >= 16) return;
 			if (g_no_mines->integer) {
-				Q_strlcpy(entries[i].text, "no mines", sizeof(entries[i].text));
+				Q_strlcpy(entries[i].text.data(), "no mines", entries[i].text.size());
 				i++;
 			}
 		}
@@ -1173,13 +1204,13 @@ static void G_Menu_ServerInfo_Update(gentity_t *ent) {
 
 	if (g_dm_allow_exit->integer) {
 		if (i >= 16) return;
-		Q_strlcpy(entries[i].text, "allow exiting", sizeof(entries[i].text));
+		Q_strlcpy(entries[i].text.data(), "allow exiting", entries[i].text.size());
 		i++;
 	}
 
 	if (g_mover_speed_scale->value != 1.0f) {
 		if (i >= 16) return;
-		Q_strlcpy(entries[i].text, G_Fmt("mover speed scale: {}", g_mover_speed_scale->value).data(), sizeof(entries[i].text));
+		Q_strlcpy(entries[i].text.data(), G_Fmt("mover speed scale: {}", g_mover_speed_scale->value).data(), entries[i].text.size());
 		i++;
 	}
 
@@ -1195,9 +1226,9 @@ static void G_Menu_GameRules_Update(gentity_t *ent) {
 	int		i = 0;
 	bool	limits = false;
 
-	Q_strlcpy(entries[i].text, "Game Rules", sizeof(entries[i].text)); i++;
-	Q_strlcpy(entries[i].text, BREAKER, sizeof(entries[i].text)); i++;
-	Q_strlcpy(entries[i].text, G_Fmt("{}", level.gametype_name).data(), sizeof(entries[i].text)); i++;
+	Q_strlcpy(entries[i].text.data(), "Game Rules", entries[i].text.size()); i++;
+	Q_strlcpy(entries[i].text.data(), BREAKER, entries[i].text.size()); i++;
+	Q_strlcpy(entries[i].text.data(), G_Fmt("{}", level.gametype_name).data(), entries[i].text.size()); i++;
 }
 
 static void G_Menu_GameRules(gentity_t *ent, menu_hnd_t *p) {
@@ -1235,37 +1266,37 @@ static void G_Menu_Join_Update(gentity_t *ent) {
 
 	if (Teams()) {
 		if (!g_teamplay_allow_team_pick->integer && !level.locked[TEAM_RED] && !level.locked[TEAM_BLUE]) {
-			Q_strlcpy(entries[jmenu_teams_join_red].text, G_Fmt("Join a Team ({}/{})", num_red + num_blue, pmax).data(), sizeof(entries[jmenu_teams_join_red].text));
-			Q_strlcpy(entries[jmenu_teams_join_blue].text, "", sizeof(entries[jmenu_teams_join_blue].text));
+			Q_strlcpy(entries[jmenu_teams_join_red].text.data(), G_Fmt("Join a Team ({}/{})", num_red + num_blue, pmax).data(), entries[jmenu_teams_join_red].text.size());
+			Q_strlcpy(entries[jmenu_teams_join_blue].text.data(), "", entries[jmenu_teams_join_blue].text.size());
 
 			entries[jmenu_teams_join_red].SelectFunc = G_Menu_Join_Team_Red;
 			entries[jmenu_teams_join_blue].SelectFunc = nullptr;
 		} else {
 			if (level.locked[TEAM_RED] || level.match_state >= matchst_t::MATCH_COUNTDOWN && g_match_lock->integer) {
-				Q_strlcpy(entries[jmenu_teams_join_red].text, G_Fmt("{} is LOCKED during play", Teams_TeamName(TEAM_RED)).data(), sizeof(entries[jmenu_teams_join_red].text));
+				Q_strlcpy(entries[jmenu_teams_join_red].text.data(), G_Fmt("{} is LOCKED during play", Teams_TeamName(TEAM_RED)).data(), entries[jmenu_teams_join_red].text.size());
 				entries[jmenu_teams_join_red].SelectFunc = nullptr;
 			} else {
-				Q_strlcpy(entries[jmenu_teams_join_red].text, G_Fmt("Join {} ({}/{})", Teams_TeamName(TEAM_RED), num_red, floor(pmax / 2)).data(), sizeof(entries[jmenu_teams_join_red].text));
+				Q_strlcpy(entries[jmenu_teams_join_red].text.data(), G_Fmt("Join {} ({}/{})", Teams_TeamName(TEAM_RED), num_red, floor(pmax / 2)).data(), entries[jmenu_teams_join_red].text.size());
 				entries[jmenu_teams_join_red].SelectFunc = G_Menu_Join_Team_Red;
 			}
 			if (level.locked[TEAM_BLUE] || level.match_state >= matchst_t::MATCH_COUNTDOWN && g_match_lock->integer) {
-				Q_strlcpy(entries[jmenu_teams_join_blue].text, G_Fmt("{} is LOCKED during play", Teams_TeamName(TEAM_BLUE)).data(), sizeof(entries[jmenu_teams_join_blue].text));
+				Q_strlcpy(entries[jmenu_teams_join_blue].text.data(), G_Fmt("{} is LOCKED during play", Teams_TeamName(TEAM_BLUE)).data(), entries[jmenu_teams_join_blue].text.size());
 				entries[jmenu_teams_join_blue].SelectFunc = nullptr;
 			} else {
-				Q_strlcpy(entries[jmenu_teams_join_blue].text, G_Fmt("Join {} ({}/{})", Teams_TeamName(TEAM_BLUE), num_blue, floor(pmax / 2)).data(), sizeof(entries[jmenu_teams_join_blue].text));
+				Q_strlcpy(entries[jmenu_teams_join_blue].text.data(), G_Fmt("Join {} ({}/{})", Teams_TeamName(TEAM_BLUE), num_blue, floor(pmax / 2)).data(), entries[jmenu_teams_join_blue].text.size());
 				entries[jmenu_teams_join_blue].SelectFunc = G_Menu_Join_Team_Blue;
 			}
 
 		}
 	} else {
 		if (level.locked[TEAM_FREE] || level.match_state >= matchst_t::MATCH_COUNTDOWN && g_match_lock->integer) {
-			Q_strlcpy(entries[jmenu_free_join].text, "Match LOCKED during play", sizeof(entries[jmenu_free_join].text));
+			Q_strlcpy(entries[jmenu_free_join].text.data(), "Match LOCKED during play", entries[jmenu_free_join].text.size());
 			entries[jmenu_free_join].SelectFunc = nullptr;
 		} else if (GT(GT_DUEL) && level.num_playing_clients == 2) {
-			Q_strlcpy(entries[jmenu_free_join].text, G_Fmt("Join Queue to Play ({}/{})", num_queue, pmax - 2).data(), sizeof(entries[jmenu_free_join].text));
+			Q_strlcpy(entries[jmenu_free_join].text.data(), G_Fmt("Join Queue to Play ({}/{})", num_queue, pmax - 2).data(), entries[jmenu_free_join].text.size());
 			entries[jmenu_free_join].SelectFunc = G_Menu_Join_Team_Free;
 		} else {
-			Q_strlcpy(entries[jmenu_free_join].text, G_Fmt("Join Match ({}/{})", num_free, GT(GT_DUEL) ? 2 : pmax).data(), sizeof(entries[jmenu_free_join].text));
+			Q_strlcpy(entries[jmenu_free_join].text.data(), G_Fmt("Join Match ({}/{})", num_free, GT(GT_DUEL) ? 2 : pmax).data(), entries[jmenu_free_join].text.size());
 			entries[jmenu_free_join].SelectFunc = G_Menu_Join_Team_Free;
 		}
 	}
@@ -1273,11 +1304,11 @@ static void G_Menu_Join_Update(gentity_t *ent) {
 	if (!g_matchstats->integer) {
 		;
 		int index = Teams() ? jmenu_teams_player : jmenu_free_player;
-		Q_strlcpy(entries[index].text, "", sizeof(entries[index].text));
+		Q_strlcpy(entries[index].text.data(), "", entries[index].text.size());
 		entries[index].SelectFunc = nullptr;
 	} else {
 		int index = Teams() ? jmenu_teams_player : jmenu_free_player;
-		Q_strlcpy(entries[index].text, "Player Stats", sizeof(entries[index].text));
+		Q_strlcpy(entries[index].text.data(), "Player Stats", entries[index].text.size());
 		entries[index].SelectFunc = G_Menu_PMStats;
 	}
 
@@ -1295,9 +1326,9 @@ static void G_Menu_Join_Update(gentity_t *ent) {
 
 	int index = Teams() ? jmenu_teams_chase : jmenu_free_chase;
 	if (ent->client->follow_target)
-		Q_strlcpy(entries[index].text, "$g_pc_leave_chase_camera", sizeof(entries[index].text));
+		Q_strlcpy(entries[index].text.data(), "$g_pc_leave_chase_camera", entries[index].text.size());
 	else
-		Q_strlcpy(entries[index].text, "$g_pc_chase_camera", sizeof(entries[index].text));
+		Q_strlcpy(entries[index].text.data(), "$g_pc_chase_camera", entries[index].text.size());
 
 	G_Menu_SetHostName(entries + jmenu_hostname);
 	G_Menu_SetGametypeName(entries + jmenu_gametype);
@@ -1313,32 +1344,32 @@ static void G_Menu_Join_Update(gentity_t *ent) {
 	case matchst_t::MATCH_WARMUP_DELAYED:
 	case matchst_t::MATCH_WARMUP_DEFAULT:
 	case matchst_t::MATCH_WARMUP_READYUP:
-		Q_strlcpy(entries[jmenu_match].text, "*MATCH WARMUP", sizeof(entries[jmenu_match].text));
+		Q_strlcpy(entries[jmenu_match].text.data(), "*MATCH WARMUP", entries[jmenu_match].text.size());
 		break;
 
 	case matchst_t::MATCH_COUNTDOWN:
-		Q_strlcpy(entries[jmenu_match].text, "*MATCH IS STARTING", sizeof(entries[jmenu_match].text));
+		Q_strlcpy(entries[jmenu_match].text.data(), "*MATCH IS STARTING", entries[jmenu_match].text.size());
 		break;
 
 	case matchst_t::MATCH_IN_PROGRESS:
-		Q_strlcpy(entries[jmenu_match].text, "*MATCH IN PROGRESS", sizeof(entries[jmenu_match].text));
+		Q_strlcpy(entries[jmenu_match].text.data(), "*MATCH IN PROGRESS", entries[jmenu_match].text.size());
 		break;
 
 	default:
-		Q_strlcpy(entries[jmenu_match].text, BREAKER, sizeof(entries[jmenu_match].text));
+		Q_strlcpy(entries[jmenu_match].text.data(), BREAKER, entries[jmenu_match].text.size());
 		break;
 	}
 
 	int admin_index = Teams() ? jmenu_teams_admin : jmenu_free_admin;
 	if (ent->client->sess.admin) {
-		Q_strlcpy(entries[admin_index].text, "Admin", sizeof(entries[admin_index].text));
+		Q_strlcpy(entries[admin_index].text.data(), "Admin", entries[admin_index].text.size());
 		entries[admin_index].SelectFunc = G_Menu_Admin;
 	} else {
-		Q_strlcpy(entries[admin_index].text, "", sizeof(entries[admin_index].text));
+		Q_strlcpy(entries[admin_index].text.data(), "", entries[admin_index].text.size());
 		entries[admin_index].SelectFunc = nullptr;
 	}
 
-	Q_strlcpy(entries[jmenu_notice].text, "github.com/themuffinator", sizeof(entries[jmenu_notice].text));
+	Q_strlcpy(entries[jmenu_notice].text.data(), "github.com/themuffinator", entries[jmenu_notice].text.size());
 }
 
 void G_Menu_Join_Open(gentity_t *ent) {

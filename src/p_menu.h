@@ -1,6 +1,7 @@
 // Copyright (c) ZeniMax Media Inc.
 // Licensed under the GNU General Public License 2.0.
 
+#include <array>
 #include <cstddef>
 
 struct gentity_t;
@@ -27,10 +28,10 @@ struct menu_hnd_t {
 using SelectFunc_t = void (*)(gentity_t *ent, menu_hnd_t *hnd);
 
 struct menu_t {
-	char		 text[256];	// 26];	// [64];
-	int			 align;
-	SelectFunc_t SelectFunc;
-	char         text_arg1[64];
+	std::array<char, 256>	text;	// 26];	// [64];
+	int				 align;
+	SelectFunc_t	 SelectFunc;
+	std::array<char, 64>	text_arg1;
 };
 
 void		P_Menu_Dirty();
