@@ -9,11 +9,11 @@ P_Menu_Dirty
 ============
 */
 void P_Menu_Dirty() {
-	for (auto player : active_clients())
-		if (player->client->menu) {
-			player->client->menudirty = true;
-			player->client->menutime = level.time;
-		}
+for (auto player : active_clients())
+if (player->client->menu) {
+player->client->menudirty = true;
+player->client->menutime = level.time;
+}
 }
 
 /*
@@ -41,14 +41,15 @@ menu_hnd_t *P_Menu_Open(gentity_t *ent, const menu_t *entries, int cur, int num,
 	hnd = (menu_hnd_t *)gi.TagMalloc(sizeof(*hnd), TAG_LEVEL);
 	hnd->UpdateFunc = UpdateFunc;
 
-	hnd->arg = arg;
-	hnd->owns_arg = owns_arg;
-	hnd->entries = (menu_t *)gi.TagMalloc(sizeof(menu_t) * num, TAG_LEVEL);
-	memcpy(hnd->entries, entries, sizeof(menu_t) * num);
-	// duplicate the strings since they may be from static memory
-	for (i = 0; i < num; i++) {
-		assert(Q_strlcpy(hnd->entries[i].text, entries[i].text, sizeof(hnd->entries[i].text)) < sizeof(hnd->entries[i].text));
-	}
+hnd->arg = arg;
+hnd->owns_arg = owns_arg;
+hnd->entries = (menu_t *)gi.TagMalloc(sizeof(menu_t) * num, TAG_LEVEL);
+memcpy(hnd->entries, entries, sizeof(menu_t) * num);
+// duplicate the strings since they may be from static memory
+for (i = 0; i < num; i++) {
+assert(Q_strlcpy(hnd->entries[i].text.data(), entries[i].text.data(), hnd->entries[i].text.size()) < hnd->entries[i].text.size());
+assert(Q_strlcpy(hnd->entries[i].text_arg1.data(), entries[i].text_arg1.data(), hnd->entries[i].text_arg1.size()) < hnd->entries[i].text_arg1.size());
+}
 
 	hnd->num = num;
 
@@ -115,9 +116,9 @@ Replaces the text and callbacks for a menu entry created by P_Menu_Open.
 =============
 */
 void P_Menu_UpdateEntry(menu_t *entry, const char *text, int align, SelectFunc_t SelectFunc) {
-	Q_strlcpy(entry->text, text, sizeof(entry->text));
-	entry->align = align;
-	entry->SelectFunc = SelectFunc;
+Q_strlcpy(entry->text.data(), text, entry->text.size());
+entry->align = align;
+entry->SelectFunc = SelectFunc;
 }
 
 /*
@@ -298,9 +299,9 @@ constexpr const char *BANNED_MENU_LINES[] = {
 };
 
 menu_t banned_menu_entries[] = {
-	{ "", MENU_ALIGN_CENTER, nullptr },
-	{ "", MENU_ALIGN_CENTER, nullptr },
-	{ "", MENU_ALIGN_CENTER, nullptr },
+{ P_Menu_InitText<256>(""), MENU_ALIGN_CENTER, nullptr, P_Menu_InitText<64>("") },
+{ P_Menu_InitText<256>(""), MENU_ALIGN_CENTER, nullptr, P_Menu_InitText<64>("") },
+{ P_Menu_InitText<256>(""), MENU_ALIGN_CENTER, nullptr, P_Menu_InitText<64>("") },
 };
 
 /*
@@ -322,8 +323,8 @@ Initializes the static banned menu lines.
 =============
 */
 void P_Menu_Banned_InitEntries() {
-	for (size_t i = 0; i < sizeof(banned_menu_entries) / sizeof(banned_menu_entries[0]); ++i)
-	        Q_strlcpy(banned_menu_entries[i].text, BANNED_MENU_LINES[i], sizeof(banned_menu_entries[i].text));
+for (size_t i = 0; i < sizeof(banned_menu_entries) / sizeof(banned_menu_entries[0]); ++i)
+Q_strlcpy(banned_menu_entries[i].text.data(), BANNED_MENU_LINES[i], banned_menu_entries[i].text.size());
 }
 
 } // namespace
