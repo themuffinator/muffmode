@@ -707,18 +707,25 @@ struct type_loaders_t {
 			return static_cast<T>(atoi(s));
 	}
 
-	template<typename T, std::enable_if_t<std::is_same_v<T, vec3_t>, int> = 0>
-	static T load(const char *s) {
-		vec3_t vec;
-		static char vec_buffer[32];
-		const char *token = COM_Parse(&s, vec_buffer, sizeof(vec_buffer));
-		vec.x = atof(token);
-		token = COM_Parse(&s);
-		vec.y = atof(token);
-		token = COM_Parse(&s);
-		vec.z = atof(token);
-		return vec;
-	}
+		template<typename T, std::enable_if_t<std::is_same_v<T, vec3_t>, int> = 0>
+		/*
+		=============
+		type_loaders_t::load
+
+		Parses a vec3 from the given string.
+		=============
+		*/
+		static T load(const char *s) {
+			vec3_t vec;
+			std::array<char, 32> vec_buffer{};
+			const char *token = COM_Parse(&s, vec_buffer.data(), vec_buffer.size());
+			vec.x = atof(token);
+			token = COM_Parse(&s, vec_buffer.data(), vec_buffer.size());
+			vec.y = atof(token);
+			token = COM_Parse(&s, vec_buffer.data(), vec_buffer.size());
+			vec.z = atof(token);
+			return vec;
+		}
 };
 
 #define AUTO_LOADER_FUNC(M) \
@@ -726,15 +733,22 @@ struct type_loaders_t {
 		e->M = type_loaders_t::load<decltype(e->M)>(s); \
 	}
 
+/*
+=============
+ED_LoadColor
+
+Parses a color value from the given string.
+=============
+*/
 static int32_t ED_LoadColor(const char *value) {
 	// space means rgba as values
 	if (strchr(value, ' ')) {
-		static char color_buffer[32];
+		std::array<char, 32> color_buffer{};
 		std::array<float, 4> raw_values{ 0, 0, 0, 1.0f };
 		bool is_float = true;
 
 		for (auto &v : raw_values) {
-			const char *token = COM_Parse(&value, color_buffer, sizeof(color_buffer));
+			const char *token = COM_Parse(&value, color_buffer.data(), color_buffer.size());
 
 			if (*token) {
 				v = atof(token);
