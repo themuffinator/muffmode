@@ -2445,11 +2445,26 @@ static char *saveJson(const Json::Value &json, size_t *out_size) {
 	const std::unique_ptr<Json::StreamWriter> writer(builder.newStreamWriter());
 	std::stringstream ss(std::ios_base::out | std::ios_base::binary);
 	writer->write(json, &ss);
-	*out_size = ss.tellp();
+
+	const std::streampos pos = ss.tellp();
+	if (ss.fail() || pos < 0) {
+		*out_size = 0;
+		return nullptr;
+	}
+
+	const std::streamoff offset = pos;
+	const size_t expected_size = static_cast<size_t>(offset);
+	std::string v = ss.str();
+	const size_t actual_size = v.size();
+
+	if (expected_size != actual_size)
+		*out_size = actual_size;
+	else
+		*out_size = expected_size;
+
 	char *const out = static_cast<char *>(gi.TagMalloc(*out_size + 1, TAG_GAME));
 	// FIXME: some day...
-	std::string v = ss.str();
-	memcpy(out, v.c_str(), *out_size);
+	memcpy(out, v.data(), *out_size);
 	out[*out_size] = '\0';
 	return out;
 }
