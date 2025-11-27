@@ -3,6 +3,8 @@
 
 // standard library stuff for game DLL
 
+#include <array>
+
 #include "g_local.h"
 
 //====================================================================================
@@ -31,6 +33,35 @@ bool COM_IsSeparator(char c, const char *seps)
 	return false;
 }
 
+namespace
+{
+	static std::array<char, MAX_TOKEN_CHARS> g_com_token{};
+
+/*
+=============
+COM_GetTokenBuffer
+
+Returns the static token buffer.
+=============
+*/
+	char *COM_GetTokenBuffer()
+{
+		return g_com_token.data();
+}
+
+/*
+=============
+COM_GetTokenBufferSize
+
+Returns the size of the static token buffer.
+=============
+*/
+	size_t COM_GetTokenBufferSize()
+{
+		return g_com_token.size();
+}
+}
+
 /*
 ==============
 COM_ParseEx
@@ -40,24 +71,22 @@ Parse a token out of a string
 */
 char *COM_ParseEx(const char **data_p, const char *seps, char *buffer, size_t buffer_size, bool *overflowed)
 {
-	static char com_token[MAX_TOKEN_CHARS];
-
 	bool overflow_flag = false;
 
 	if (overflowed)
 		*overflowed = false;
 
 	if (!buffer)
-	{
-		buffer = com_token;
-		buffer_size = MAX_TOKEN_CHARS;
-	}
+{
+		buffer = COM_GetTokenBuffer();
+		buffer_size = COM_GetTokenBufferSize();
+}
 	else if (!buffer_size)
-	{
+{
 		overflow_flag = true;
-		buffer = com_token;
-		buffer_size = MAX_TOKEN_CHARS;
-	}
+		buffer = COM_GetTokenBuffer();
+		buffer_size = COM_GetTokenBufferSize();
+}
 
 	int					c;
 	size_t				len;
