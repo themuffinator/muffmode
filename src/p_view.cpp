@@ -234,9 +234,10 @@ void P_DamageFeedback(gentity_t *player) {
 		for (size_t i = 0; i < client->num_damage_indicators; i++) {
 			auto &indicator = client->damage_indicators[i];
 
+			const int32_t average_damage = (indicator.health + indicator.power + indicator.armor) / 3;
+
 			// encode total damage into 5 bits
-				const int32_t averaged_damage = (indicator.health + indicator.power + indicator.armor) / 3;
-				uint8_t encoded = static_cast<uint8_t>((std::clamp)(averaged_damage, 1, 0x1F));
+			uint8_t encoded = static_cast<uint8_t>(std::clamp<int32_t>(average_damage, 1, 0x1F));
 
 			// encode types in the latter 3 bits
 			if (indicator.health)
