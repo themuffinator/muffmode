@@ -1997,17 +1997,27 @@ int TeamBalance(bool force) {
 
 	team_t stack_team = red_count > blue_count ? TEAM_RED : TEAM_BLUE;
 
+	constexpr size_t index_capacity = MAX_CLIENTS_KEX / 2;
 	size_t count = 0;
-	int index[MAX_CLIENTS_KEX/2];
+	size_t skipped = 0;
+	int index[index_capacity];
 	memset(index, 0, sizeof(index));
 
 	// assemble list of client nums of everyone on stacked team
 	for (auto ec : active_clients()) {
 		if (ec->client->sess.team != stack_team)
 			continue;
+
+		if (count >= index_capacity) {
+			skipped++;
+			continue;
+		}
 		index[count] = ec - g_entities;
 		count++;
 	}
+
+	if (skipped)
+		gi.Com_PrintFmt("Team balance queue overflow: skipped {} stacked players (capacity: {}).\n", skipped, index_capacity);
 
 	// sort client num list by join time
 	qsort(index, count, sizeof(index[0]), PlayerSortByJoinTime);
