@@ -260,8 +260,11 @@ enum player_stat_t {
 
 	STAT_MEDAL,
 
-	// don't use; just for verification
-	STAT_LAST
+// don't use; just for verification
+STAT_LAST
 };
 
-static_assert(STAT_LAST <= MAX_STATS + 1, "stats list overflow");
+constexpr size_t STAT_COUNT = static_cast<size_t>(STAT_LAST) + 1;
+
+static_assert(STAT_LAST < MAX_STATS, "stats list overflow");
+static_assert(STAT_COUNT <= MAX_STATS, "player_state_t::stats overflow");
