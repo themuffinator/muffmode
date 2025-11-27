@@ -2,6 +2,33 @@
 // Licensed under the GNU General Public License 2.0.
 #include "g_local.h"
 #include <cassert>
+#include <new>
+
+/*
+=============
+P_Menu_ClampString
+
+Bounds a menu string to the provided maximum length.
+=============
+*/
+static void P_Menu_ClampString(std::string &value, size_t max_length)
+{
+	if (value.size() >= max_length)
+		value.resize(max_length - 1);
+}
+
+/*
+=============
+P_Menu_ClampEntry
+
+Ensures both menu string fields respect their intended limits.
+=============
+*/
+static void P_Menu_ClampEntry(menu_t &entry)
+{
+	P_Menu_ClampString(entry.text, MENU_TEXT_MAX);
+	P_Menu_ClampString(entry.text_arg1, MENU_TEXT_ARG_MAX);
+}
 
 /*
 ============
@@ -9,12 +36,13 @@ P_Menu_Dirty
 ============
 */
 void P_Menu_Dirty() {
-for (auto player : active_clients())
-if (player->client->menu) {
-player->client->menudirty = true;
-player->client->menutime = level.time;
+	for (auto player : active_clients())
+		if (player->client->menu) {
+			player->client->menudirty = true;
+			player->client->menutime = level.time;
+		}
 }
-}
+
 
 /*
 =============
@@ -41,29 +69,27 @@ menu_hnd_t *P_Menu_Open(gentity_t *ent, const menu_t *entries, int cur, int num,
 	hnd = (menu_hnd_t *)gi.TagMalloc(sizeof(*hnd), TAG_LEVEL);
 	hnd->UpdateFunc = UpdateFunc;
 
-hnd->arg = arg;
-hnd->owns_arg = owns_arg;
-hnd->entries = (menu_t *)gi.TagMalloc(sizeof(menu_t) * num, TAG_LEVEL);
-memcpy(hnd->entries, entries, sizeof(menu_t) * num);
-// duplicate the strings since they may be from static memory
-for (i = 0; i < num; i++) {
-assert(Q_strlcpy(hnd->entries[i].text.data(), entries[i].text.data(), hnd->entries[i].text.size()) < hnd->entries[i].text.size());
-assert(Q_strlcpy(hnd->entries[i].text_arg1.data(), entries[i].text_arg1.data(), hnd->entries[i].text_arg1.size()) < hnd->entries[i].text_arg1.size());
-}
+	hnd->arg = arg;
+	hnd->owns_arg = owns_arg;
+	hnd->entries = (menu_t *)gi.TagMalloc(sizeof(menu_t) * num, TAG_LEVEL);
+	for (i = 0; i < static_cast<size_t>(num); i++) {
+		new (&hnd->entries[i]) menu_t(entries[i]);
+		P_Menu_ClampEntry(hnd->entries[i]);
+	}
 
 	hnd->num = num;
 
 	if (cur < 0 || !entries[cur].SelectFunc) {
-		for (i = 0, p = entries; i < num; i++, p++)
+		for (i = 0, p = entries; i < static_cast<size_t>(num); i++, p++)
 			if (p->SelectFunc)
 				break;
 	} else
-		i = cur;
+		i = static_cast<size_t>(cur);
 
-	if (i >= num)
+	if (i >= static_cast<size_t>(num))
 		hnd->cur = -1;
 	else
-		hnd->cur = i;
+		hnd->cur = static_cast<int>(i);
 
 	ent->client->showscores = true;
 	ent->client->inmenu = true;
@@ -96,6 +122,8 @@ void P_Menu_Close(gentity_t *ent) {
 		return;
 
 	hnd = ent->client->menu;
+	for (int i = 0; i < hnd->num; i++)
+		hnd->entries[i].~menu_t();
 	gi.TagFree(hnd->entries);
 	if (hnd->owns_arg && hnd->arg)
 		gi.TagFree(hnd->arg);
@@ -116,10 +144,12 @@ Replaces the text and callbacks for a menu entry created by P_Menu_Open.
 =============
 */
 void P_Menu_UpdateEntry(menu_t *entry, const char *text, int align, SelectFunc_t SelectFunc) {
-Q_strlcpy(entry->text.data(), text, entry->text.size());
-entry->align = align;
-entry->SelectFunc = SelectFunc;
+	entry->text = P_Menu_InitText<MENU_TEXT_MAX>(text);
+	entry->align = align;
+	entry->SelectFunc = SelectFunc;
+	P_Menu_ClampEntry(*entry);
 }
+
 
 /*
 =============
@@ -299,9 +329,9 @@ constexpr const char *BANNED_MENU_LINES[] = {
 };
 
 menu_t banned_menu_entries[] = {
-{ P_Menu_InitText<256>(""), MENU_ALIGN_CENTER, nullptr, P_Menu_InitText<64>("") },
-{ P_Menu_InitText<256>(""), MENU_ALIGN_CENTER, nullptr, P_Menu_InitText<64>("") },
-{ P_Menu_InitText<256>(""), MENU_ALIGN_CENTER, nullptr, P_Menu_InitText<64>("") },
+	{ P_Menu_InitText<MENU_TEXT_MAX>(""), MENU_ALIGN_CENTER, nullptr, P_Menu_InitText<MENU_TEXT_ARG_MAX>("") },
+	{ P_Menu_InitText<MENU_TEXT_MAX>(""), MENU_ALIGN_CENTER, nullptr, P_Menu_InitText<MENU_TEXT_ARG_MAX>("") },
+	{ P_Menu_InitText<MENU_TEXT_MAX>(""), MENU_ALIGN_CENTER, nullptr, P_Menu_InitText<MENU_TEXT_ARG_MAX>("") },
 };
 
 /*
@@ -323,8 +353,10 @@ Initializes the static banned menu lines.
 =============
 */
 void P_Menu_Banned_InitEntries() {
-for (size_t i = 0; i < sizeof(banned_menu_entries) / sizeof(banned_menu_entries[0]); ++i)
-Q_strlcpy(banned_menu_entries[i].text.data(), BANNED_MENU_LINES[i], banned_menu_entries[i].text.size());
+	for (size_t i = 0; i < sizeof(banned_menu_entries) / sizeof(banned_menu_entries[0]); ++i) {
+		banned_menu_entries[i].text = P_Menu_InitText<MENU_TEXT_MAX>(BANNED_MENU_LINES[i]);
+		P_Menu_ClampEntry(banned_menu_entries[i]);
+	}
 }
 
 } // namespace
