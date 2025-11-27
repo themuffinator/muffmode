@@ -235,7 +235,8 @@ void P_DamageFeedback(gentity_t *player) {
 			auto &indicator = client->damage_indicators[i];
 
 			// encode total damage into 5 bits
-			uint8_t encoded = std::clamp((indicator.health + indicator.power + indicator.armor) / 3, 1, 0x1F);
+				const int32_t averaged_damage = (indicator.health + indicator.power + indicator.armor) / 3;
+				uint8_t encoded = static_cast<uint8_t>((std::clamp)(averaged_damage, 1, 0x1F));
 
 			// encode types in the latter 3 bits
 			if (indicator.health)
@@ -845,8 +846,8 @@ static void G_SetClientEffects(gentity_t *ent) {
 		if (ent->client->invisibility_fade_time <= level.time)
 			ent->s.alpha = 0.05f;
 		else {
-			float x = (ent->client->invisibility_fade_time - level.time).seconds() / INVISIBILITY_TIME.seconds();
-			ent->s.alpha = std::clamp(x, 0.05f, 0.2f);
+				float x = (ent->client->invisibility_fade_time - level.time).seconds() / INVISIBILITY_TIME.seconds();
+				ent->s.alpha = (std::clamp)(x, 0.05f, 0.2f);
 		}
 	}
 }
