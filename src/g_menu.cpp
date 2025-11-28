@@ -575,25 +575,100 @@ void G_Menu_CallVote_Restart(gentity_t *ent, menu_hnd_t *p) {
 	P_Menu_Close(ent);
 }
 
-void G_Menu_CallVote_GameType(gentity_t *ent, menu_hnd_t *p) {
+/*
+=============
+G_Menu_CallVote_GameType
 
+Starts a vote to change the gametype using the currently selected menu entry as the argument.
+=============
+*/
+void G_Menu_CallVote_GameType(gentity_t *ent, menu_hnd_t *p) {
+	vcmds_t *cc = FindVoteCmdByName("gametype");
+	if (!cc) {
+	gi.Com_PrintFmt("{}: missing gametype vote command.\n", __FUNCTION__);
+	return;
+	}
+
+	if (!p || !p->entries || p->cur < 0 || p->cur >= p->num || !p->entries[p->cur].text[0]) {
+	gi.Com_PrintFmt("{}: no gametype selected.\n", __FUNCTION__);
+	return;
+	}
+
+	level.vote = cc;
+	level.vote_arg = p->entries[p->cur].text;
+
+	VoteCommandStore(ent);
+	P_Menu_Close(ent);
 }
 
+/*
+=============
+G_Menu_CallVote_TimeLimit_Update
+
+Assigns selection handlers for the time limit vote menu and clears any pending vote arguments.
+=============
+*/
 void G_Menu_CallVote_TimeLimit_Update(gentity_t *ent) {
+	menu_t *entries = ent->client->menu->entries;
+
+	for (int i = 2; i < 16; i++) {
+	if (entries[i].text[0])
+	entries[i].SelectFunc = G_Menu_CallVote_TimeLimit;
+	}
 
 	level.vote_arg.clear();
 }
 
+/*
+=============
+G_Menu_CallVote_TimeLimit
+
+Starts a vote to change the time limit using the selected numeric value or opens the selection menu if none is chosen.
+=============
+*/
 void G_Menu_CallVote_TimeLimit(gentity_t *ent, menu_hnd_t *p) {
-	//level.vote = FindVoteCmdByName("timelimit");
-	//level.vote_arg.clear();
-	//VoteCommandStore(ent);
+	vcmds_t *cc = FindVoteCmdByName("timelimit");
+	if (!cc) {
+	gi.Com_PrintFmt("{}: missing timelimit vote command.\n", __FUNCTION__);
+	return;
+	}
+
+	if (!p || !p->entries || p->cur < 0 || p->cur >= p->num || !p->entries[p->cur].text[0]
+	|| !isdigit(p->entries[p->cur].text[0])) {
 	P_Menu_Close(ent);
 	P_Menu_Open(ent, pmcallvotemenu_timelimit, -1, sizeof(pmcallvotemenu_timelimit) / sizeof(menu_t), nullptr, false, G_Menu_CallVote_TimeLimit_Update);
+	return;
+	}
+
+	level.vote = cc;
+	level.vote_arg = p->entries[p->cur].text;
+
+	VoteCommandStore(ent);
+	P_Menu_Close(ent);
 }
 
-void G_Menu_CallVote_ScoreLimit(gentity_t *ent, menu_hnd_t *p) {
+/*
+=============
+G_Menu_CallVote_ScoreLimit
 
+Starts a vote to change the score limit using the selected value or the current limit when no selection text is numeric.
+=============
+*/
+void G_Menu_CallVote_ScoreLimit(gentity_t *ent, menu_hnd_t *p) {
+	vcmds_t *cc = FindVoteCmdByName("scorelimit");
+	if (!cc) {
+	gi.Com_PrintFmt("{}: missing scorelimit vote command.\n", __FUNCTION__);
+	return;
+	}
+
+	const menu_t *selected = (p && p->entries && p->cur >= 0 && p->cur < p->num) ? &p->entries[p->cur] : nullptr;
+	const char *text = (selected && selected->text[0] && isdigit(selected->text[0])) ? selected->text.data() : nullptr;
+
+	level.vote = cc;
+	level.vote_arg = text ? text : G_Fmt("{}", GT_ScoreLimit()).data();
+
+	VoteCommandStore(ent);
+	P_Menu_Close(ent);
 }
 
 void G_Menu_CallVote_ShuffleTeams(gentity_t *ent, menu_hnd_t *p) {
@@ -611,8 +686,28 @@ void G_Menu_CallVote_BalanceTeams(gentity_t *ent, menu_hnd_t *p) {
 
 }
 
-void G_Menu_CallVote_Unlagged(gentity_t *ent, menu_hnd_t *p) {
+/*
+=============
+G_Menu_CallVote_Unlagged
 
+Starts a vote to toggle lag compensation, using the selected option when provided or toggling the current setting.
+=============
+*/
+void G_Menu_CallVote_Unlagged(gentity_t *ent, menu_hnd_t *p) {
+	vcmds_t *cc = FindVoteCmdByName("unlagged");
+	if (!cc) {
+	gi.Com_PrintFmt("{}: missing unlagged vote command.\n", __FUNCTION__);
+	return;
+	}
+
+	const menu_t *selected = (p && p->entries && p->cur >= 0 && p->cur < p->num) ? &p->entries[p->cur] : nullptr;
+	const char *text = (selected && selected->text[0] && isdigit(selected->text[0])) ? selected->text.data() : nullptr;
+
+	level.vote = cc;
+	level.vote_arg = text ? text : (g_lag_compensation->integer ? "0" : "1");
+
+	VoteCommandStore(ent);
+	P_Menu_Close(ent);
 }
 
 void G_Menu_CallVote_Cointoss(gentity_t *ent, menu_hnd_t *p) {
@@ -622,8 +717,28 @@ void G_Menu_CallVote_Cointoss(gentity_t *ent, menu_hnd_t *p) {
 	P_Menu_Close(ent);
 }
 
-void G_Menu_CallVote_Random(gentity_t *ent, menu_hnd_t *p) {
+/*
+=============
+G_Menu_CallVote_Random
 
+Starts a vote to generate a random number up to the selected limit or a default maximum when no selection is provided.
+=============
+*/
+void G_Menu_CallVote_Random(gentity_t *ent, menu_hnd_t *p) {
+	vcmds_t *cc = FindVoteCmdByName("random");
+	if (!cc) {
+	gi.Com_PrintFmt("{}: missing random vote command.\n", __FUNCTION__);
+	return;
+	}
+
+	const menu_t *selected = (p && p->entries && p->cur >= 0 && p->cur < p->num) ? &p->entries[p->cur] : nullptr;
+	const char *text = (selected && selected->text[0] && isdigit(selected->text[0])) ? selected->text.data() : nullptr;
+
+	level.vote = cc;
+	level.vote_arg = text ? text : "100";
+
+	VoteCommandStore(ent);
+	P_Menu_Close(ent);
 }
 
 static void G_Menu_CallVote_Update(gentity_t *ent) {
