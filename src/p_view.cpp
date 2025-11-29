@@ -847,8 +847,8 @@ static void G_SetClientEffects(gentity_t *ent) {
 		if (ent->client->invisibility_fade_time <= level.time)
 			ent->s.alpha = 0.05f;
 		else {
-			float x = (ent->client->invisibility_fade_time - level.time).seconds() / INVISIBILITY_TIME.seconds();
-			ent->s.alpha = std::clamp(x, 0.05f, 0.2f);
+				float x = (ent->client->invisibility_fade_time - level.time).seconds() / INVISIBILITY_TIME.seconds();
+				ent->s.alpha = (std::clamp)(x, 0.05f, 0.2f);
 		}
 	}
 }

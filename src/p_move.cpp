@@ -704,7 +704,7 @@ static void PM_AddCurrents(vec3_t& wishvel) {
 		}
 		else if (pm->cmd.forwardmove) {
 			// [Paril-KEX] clamp the speed a bit so we're not too fast
-			float ladder_speed = std::clamp(pm->cmd.forwardmove, -200.f, 200.f);
+			float ladder_speed = (std::clamp)(pm->cmd.forwardmove, -200.f, 200.f);
 
 			if (pm->cmd.forwardmove > 0) {
 				if (pm->viewangles[PITCH] < 15)
@@ -732,7 +732,7 @@ static void PM_AddCurrents(vec3_t& wishvel) {
 			// have them move you perpendicular to the ladder plane
 			if (pm->cmd.sidemove) {
 				// clamp side speed so it's not jarring...
-				float ladder_speed = std::clamp(pm->cmd.sidemove, -150.f, 150.f);
+				float ladder_speed = (std::clamp)(pm->cmd.sidemove, -150.f, 150.f);
 
 				if (pm->waterlevel < WATER_WAIST)
 					ladder_speed *= pm_laddermod;
