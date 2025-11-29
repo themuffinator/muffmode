@@ -43,7 +43,9 @@ inline std::string P_Menu_InitText(const char *src) {
 	if (!src)
 		return {};
 
-	const size_t length = std::strnlen(src, N - 1);
+	size_t length = 0;
+	while (length < N - 1 && src[length] != '\0')
+		length++;
 	return std::string(src, length);
 }
 
