@@ -167,6 +167,13 @@ static void G_Menu_Admin_ChangeMatchLock(gentity_t *ent, menu_hnd_t *p) {
 	G_Menu_Admin_UpdateSettings(ent, p);
 }
 
+/*
+=============
+G_Menu_Admin_UpdateSettings
+
+Refreshes the admin settings menu entries to reflect the current values.
+=============
+*/
 void G_Menu_Admin_UpdateSettings(gentity_t *ent, menu_hnd_t *setmenu) {
 	int				  i = 2;
 	admin_settings_t *settings = (admin_settings_t *)setmenu->arg;
@@ -187,6 +194,8 @@ void G_Menu_Admin_UpdateSettings(gentity_t *ent, menu_hnd_t *setmenu) {
 	i++;
 
 	P_Menu_UpdateEntry(setmenu->entries + i, G_Fmt("match lock: {}", settings->match_lock ? "Yes" : "No").data(), MENU_ALIGN_LEFT, G_Menu_Admin_ChangeMatchLock);
+}
+
 const menu_t def_setmenu[] = {
 	P_Menu_CreateEntry("*Settings Menu", MENU_ALIGN_CENTER),
 	P_Menu_CreateEntry("", MENU_ALIGN_LEFT),
