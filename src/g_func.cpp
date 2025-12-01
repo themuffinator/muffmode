@@ -3023,7 +3023,7 @@ MOVEINFO_ENDFUNC(door_secret2_move5) (gentity_t *self) -> void {
 	self->think = door_secret2_move6;
 }
 
-static THINK(door_secret2_move6) (gentity_t *self) -> void {
+void door_secret2_move6(gentity_t *self) {
 	Move_Calc(self, self->move_origin, door_secret2_done);
 }
 

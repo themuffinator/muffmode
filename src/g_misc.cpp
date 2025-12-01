@@ -2273,13 +2273,17 @@ static THINK(info_world_text_think) (gentity_t *self) -> void {
 
 	if (deathmatch->integer && self->spawnflags.has(SPAWNFLAG_WORLD_TEXT_LEADER_BOARD)) {
 		gentity_t *e = &g_entities[level.sorted_clients[0] + 1];
-		if (level.match_state == matchst_t::MATCH_WARMUP_READYUP)
-			s = G_Fmt("Welcome to Muff Mode\nKindly ready the fuck up...").data();
-		else if (level.match_state <= matchst_t::MATCH_WARMUP_DEFAULT)
-			s = G_Fmt("Welcome to Muff Mode").data();
-		else if (e && e->client && level.total_player_deaths > 0 && e->client->resp.score > 0)
-			s = G_Fmt("{} is in the lead\nwith a score of {}",
-				e->client->resp.netname, e->client->resp.score).data();
+		if (level.match_state == matchst_t::MATCH_WARMUP_READYUP) {
+			static const std::string welcome_msg = fmt::format("Welcome to Muff Mode\nKindly ready the fuck up...");
+			s = welcome_msg.c_str();
+		} else if (level.match_state <= matchst_t::MATCH_WARMUP_DEFAULT) {
+			static const std::string welcome_msg = fmt::format("Welcome to Muff Mode");
+			s = welcome_msg.c_str();
+		} else if (e && e->client && level.total_player_deaths > 0 && e->client->resp.score > 0) {
+			static std::string score_msg;
+			score_msg = G_Fmt("{} is in the lead\nwith a score of {}", e->client->resp.netname, e->client->resp.score);
+			s = score_msg.c_str();
+		}
 	}
 
 	if (self->s.angles[YAW] == -3.0f) {

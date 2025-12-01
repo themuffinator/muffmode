@@ -13,6 +13,7 @@ constexpr const char *sb_nums[2][11] =
 	}
 };
 
+#undef CHAR_WIDTH
 constexpr int32_t CHAR_WIDTH = 16;
 constexpr int32_t CONCHAR_WIDTH = 8;
 
