@@ -56,7 +56,7 @@ template<size_t N, typename... Args>
 inline size_t G_FmtTo(char (&buffer)[N], std::format_string<Args...> format_str, Args &&... args)
 #else
 #define G_FmtTo(buffer, str, ...) \
-	G_FmtTo_(buffer, FMT_STRING(str), __VA_ARGS__)
+	G_FmtTo_(buffer, FMT_STRING(str), ##__VA_ARGS__)
 
 template<size_t N, typename S, typename... Args>
 inline size_t G_FmtTo_(char (&buffer)[N], const S &format_str, Args &&... args)
@@ -77,7 +77,7 @@ template<typename... Args>
 #else
 
 #define G_Fmt(str, ...) \
-	G_Fmt_(FMT_STRING(str), __VA_ARGS__)
+	G_Fmt_(FMT_STRING(str), ##__VA_ARGS__)
 
 template<typename S, typename... Args>
 [[nodiscard]] inline std::string_view G_Fmt_(const S &format_str, Args &&... args)

@@ -43,7 +43,7 @@ static gtime_t protection_drop_timeout_hack;
 void	   Use_Regeneration(gentity_t* ent, gitem_t* item);
 static gtime_t regeneration_drop_timeout_hack;
 
-static void UsedMessage(gentity_t* ent, gitem_t* item) {
+void UsedMessage(gentity_t* ent, gitem_t* item) {
 	if (!ent || !item)
 		return;
 
@@ -2175,7 +2175,7 @@ void Use_Haste(gentity_t* ent, gitem_t* item) {
 
 //======================================================================
 
-static void Use_Double(gentity_t* ent, gitem_t* item) {
+void Use_Double(gentity_t* ent, gitem_t* item) {
 	gtime_t timeout;
 
 	ent->client->pers.inventory[item->id]--;
@@ -2209,7 +2209,7 @@ static void Use_Envirosuit(gentity_t* ent, gitem_t* item) {
 
 //======================================================================
 
-static void Use_Protection(gentity_t* ent, gitem_t* item) {
+void Use_Protection(gentity_t* ent, gitem_t* item) {
 	gtime_t timeout;
 
 	ent->client->pers.inventory[item->id]--;
@@ -2273,7 +2273,7 @@ void Powerup_ApplyRegeneration(gentity_t* ent) {
 	}
 }
 
-static void Use_Regeneration(gentity_t* ent, gitem_t* item) {
+void Use_Regeneration(gentity_t* ent, gitem_t* item) {
 	gtime_t timeout;
 
 	ent->client->pers.inventory[item->id]--;
@@ -2291,7 +2291,7 @@ static void Use_Regeneration(gentity_t* ent, gitem_t* item) {
 	Use_Powerup_BroadcastMsg(ent, item, "items/protect.wav", "regeneration");
 }
 
-static void Use_Invisibility(gentity_t* ent, gitem_t* item) {
+void Use_Invisibility(gentity_t* ent, gitem_t* item) {
 	gtime_t timeout;
 
 	ent->client->pers.inventory[item->id]--;
