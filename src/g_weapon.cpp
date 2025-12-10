@@ -566,7 +566,7 @@ Grenade_Explode
 Handle grenade detonation damage and visual effects.
 =============
 */
-static THINK(Grenade_Explode) (gentity_t *ent) -> void {
+void Grenade_Explode(gentity_t *ent) {
 	vec3_t	explosion_origin;
 	vec3_t	origin;
 	mod_t	mod;
